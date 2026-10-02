@@ -1,0 +1,35 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Node.js, Next.js and NestJS
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+*.log
+
+# Flutter and Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+ios/Pods/
+
+# Testing
+playwright-report/
+test-results/
+
+# Temporary files
+*.tmp
+*.swp
