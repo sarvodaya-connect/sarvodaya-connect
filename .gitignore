@@ -16,6 +16,7 @@ node_modules/
 dist/
 coverage/
 *.log
+*.tsbuildinfo
 
 # Flutter and Dart
 .dart_tool/

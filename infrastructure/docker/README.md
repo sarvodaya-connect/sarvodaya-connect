@@ -6,8 +6,7 @@ Docker configuration for running Sarvodaya Connect services consistently across 
 
 - NestJS backend API
 - PostgreSQL database
-- WSO2 Identity Server
-- WSO2 API Manager
+
 
 ## Purpose
 
