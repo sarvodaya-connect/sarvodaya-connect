@@ -28,8 +28,6 @@ The system will provide a Flutter mobile application, a Next.js administration d
 - Next.js, React and TypeScript
 - Node.js and NestJS
 - PostgreSQL and Prisma
-- WSO2 Identity Server
-- WSO2 API Manager
 - Docker and Docker Compose
 - GitHub Actions
 - Jira and GitHub
@@ -46,4 +44,5 @@ The system will provide a Flutter mobile application, a Next.js administration d
 Example branch:
 
 ```text
-feature/SC-10-user-authentication
+feat/SC-10-user-authentication
+```
