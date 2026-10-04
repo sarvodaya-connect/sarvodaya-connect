@@ -1,0 +1,94 @@
+name: Node.js CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "apps/dashboard/**"
+      - ".nvmrc"
+      - ".github/workflows/node-ci.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "apps/dashboard/**"
+      - ".nvmrc"
+      - ".github/workflows/node-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: NestJS API checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install API dependencies
+        run: npm ci
+
+      - name: Lint API
+        run: npm run lint
+
+      - name: Run API unit tests
+        run: npm test
+
+      - name: Run API end-to-end tests
+        run: npm run test:e2e
+
+      - name: Build API
+        run: npm run build
+
+      - name: Audit API production dependencies
+        run: npm audit --omit=dev
+
+  dashboard:
+    name: Next.js dashboard checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: apps/dashboard
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install dashboard dependencies
+        run: npm ci
+
+      - name: Lint dashboard
+        run: npm run lint
+
+      - name: Build dashboard
+        run: npm run build
+
+      - name: Audit dashboard production dependencies
+        run: npm audit --omit=dev
