@@ -98,8 +98,16 @@ postgresql://sarvodaya_dev:<password>@localhost:5432/sarvodaya_connect
 
 If the values in `.env` were changed, use those values instead. To confirm that the port is reachable from the local machine:
 
+macOS or Linux:
+
 ```bash
 nc -zv 127.0.0.1 5432
+```
+
+Windows (PowerShell):
+
+```powershell
+Test-NetConnection 127.0.0.1 -Port 5432
 ```
 
 ### Stopping and Restarting
@@ -124,7 +132,7 @@ docker compose up -d
 ### Troubleshooting
 
 - **Cannot connect to the Docker daemon:** Start Docker Desktop and wait until it reports that it is running.
-- **Port 5432 is already in use:** Identify the process with `lsof -i :5432`. Stop it, or set `POSTGRES_PORT` to another value (for example `5433`) in `.env` and run `docker compose up -d` again.
+- **Port 5432 is already in use:** Identify the process using the port: on macOS or Linux run `lsof -i :5432`; on Windows PowerShell run `Get-NetTCPConnection -LocalPort 5432 -ErrorAction SilentlyContinue`. Stop it, or set `POSTGRES_PORT` to another value (for example `5433`) in `.env` and run `docker compose up -d` again.
 - **Error stating that a variable must be set in `.env`:** The `.env` file has not been created. Run `cp .env.example .env`.
 - **Changes to the user, password or database name have no effect:** PostgreSQL applies these values only when the volume is first created. Run `docker compose down -v` followed by `docker compose up -d`. This deletes all local data.
 - **Service remains in the `starting` or `unhealthy` state:** Review the output of `docker compose logs postgres`.
