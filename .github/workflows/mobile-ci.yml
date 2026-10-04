@@ -1,0 +1,49 @@
+name: Flutter CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    name: Flutter mobile checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+
+      - name: Restore Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter application
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
