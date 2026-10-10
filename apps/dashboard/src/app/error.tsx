@@ -1,29 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
+
+import { Brand } from "@/components/dashboard/brand";
+import { ErrorState } from "@/components/dashboard/data-states";
+
 export default function Error({
-  reset,
+  error,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-6">
-      <section className="max-w-lg rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-950">
-          Something went wrong
-        </h1>
-
-        <p className="mt-3 text-zinc-600">
-          The dashboard could not complete this request. Please try again.
-        </p>
-
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-6 rounded-lg bg-zinc-950 px-4 py-2 font-medium text-white"
-        >
-          Try again
-        </button>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f4f5ef] px-6 py-12">
+      <Brand />
+      <section className="mt-8 w-full max-w-lg rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
+        <ErrorState onRetry={retry} reference={error.digest} />
       </section>
     </main>
   );
