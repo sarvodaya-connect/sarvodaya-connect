@@ -11,6 +11,7 @@
 
 # Node.js, Next.js and NestJS
 node_modules/
+packages/api-contracts/dist/
 .pnpm-store/
 .next/
 dist/
