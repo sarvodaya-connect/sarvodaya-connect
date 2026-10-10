@@ -87,3 +87,8 @@ ALTER TABLE "societies"
 ALTER TABLE "society_contacts"
   ADD CONSTRAINT "society_contacts_phone_or_email_check"
   CHECK ("phone" IS NOT NULL OR "email" IS NOT NULL);
+
+-- At most one primary contact per society.
+CREATE UNIQUE INDEX "society_contacts_one_primary_per_society_idx"
+  ON "society_contacts" ("society_id")
+  WHERE "is_primary" = true;
