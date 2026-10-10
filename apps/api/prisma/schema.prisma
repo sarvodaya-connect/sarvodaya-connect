@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Provisional values based on the Sarvodaya proposal (Society status).
+// To be confirmed with Sarvodaya.
+enum SocietyStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_REVIEW
+  SUSPENDED
+
+  @@map("society_status")
+}
+
+model District {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String    @unique @db.VarChar(10)
+  nameEn    String    @unique @map("name_en") @db.VarChar(100)
+  societies Society[]
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("districts")
+}
+
+model Society {
+  id            String           @id @default(uuid()) @db.Uuid
+  societyCode   String           @unique @map("society_code") @db.VarChar(20)
+  nameEn        String           @map("name_en") @db.VarChar(150)
+  nameLocal     String?          @map("name_local") @db.VarChar(150)
+  districtId    String           @map("district_id") @db.Uuid
+  district      District         @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  dsDivision    String?          @map("ds_division") @db.VarChar(100)
+  gnDivision    String?          @map("gn_division") @db.VarChar(100)
+  village       String?          @db.VarChar(100)
+  addressLine   String?          @map("address_line") @db.VarChar(255)
+  latitude      Float?
+  longitude     Float?
+  establishedOn DateTime?        @map("established_on") @db.Date
+  status        SocietyStatus    @default(UNDER_REVIEW)
+  contacts      SocietyContact[]
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([districtId])
+  @@index([status])
+  @@index([nameEn])
+  @@map("societies")
+}
+
+model SocietyContact {
+  id        String   @id @default(uuid()) @db.Uuid
+  societyId String   @map("society_id") @db.Uuid
+  society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  label     String?  @db.VarChar(100)
+  phone     String?  @db.VarChar(30)
+  email     String?  @db.VarChar(254)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([societyId])
+  @@map("society_contacts")
+}
