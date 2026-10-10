@@ -1,27 +1,23 @@
 import Link from "next/link";
 
+import { Brand } from "@/components/dashboard/brand";
+import { EmptyState, primaryButtonClass } from "@/components/dashboard/data-states";
+
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-6">
-      <section className="max-w-lg text-center">
-        <p className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
-          Error 404
-        </p>
-
-        <h1 className="mt-3 text-3xl font-semibold text-zinc-950">
-          Page not found
-        </h1>
-
-        <p className="mt-3 text-zinc-600">
-          The requested dashboard page does not exist.
-        </p>
-
-        <Link
-          href="/"
-          className="mt-6 inline-block rounded-lg bg-zinc-950 px-4 py-2 font-medium text-white"
-        >
-          Return to dashboard
-        </Link>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f4f5ef] px-6 py-12">
+      <Brand />
+      <section className="mt-8 w-full max-w-lg rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
+        <EmptyState
+          action={
+            <Link className={primaryButtonClass} href="/societies">
+              Go to societies
+            </Link>
+          }
+          description="The page you requested does not exist or may have moved."
+          icon="search"
+          title="Page not found"
+        />
       </section>
     </main>
   );

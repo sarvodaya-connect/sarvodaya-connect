@@ -124,6 +124,9 @@ jobs:
       - name: Lint dashboard
         run: npm run lint
 
+      - name: Test dashboard
+        run: npm test
+
       - name: Build dashboard
         run: npm run build
 

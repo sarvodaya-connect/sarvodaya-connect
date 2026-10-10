@@ -60,12 +60,15 @@ http://localhost:3000
 ```bash
 npm run dev
 npm run lint
+npm test
 npm run build
 npm run start
 ```
 
 - `npm run dev` starts the development server.
 - `npm run lint` checks the source code for quality problems.
+- `npm test` runs the component tests once with Vitest and React Testing Library.
+- `npm run test:watch` re-runs the tests when files change.
 - `npm run build` creates and validates the production build.
 - `npm run start` runs the completed production build.
 
@@ -75,13 +78,34 @@ The dashboard currently includes:
 
 - A Sarvodaya Connect placeholder page
 - Environment-based API URL configuration
-- A loading state
-- An application error state
+- Loading, error, empty and no-search-results states
 - A custom not-found page
+- Component tests with Vitest and React Testing Library
 - TypeScript and ESLint configuration
 - Tailwind CSS styling
 
 Business features and final user-interface designs will be implemented through separate Jira work items.
+
+## Data states
+
+Every registry view handles incomplete and failed data instead of showing a blank page:
+
+- **Loading** — skeleton rows inside the dashboard shell (`src/app/(dashboard)/loading.tsx`).
+- **Error** — a message with a safe **Try again** action and a link back to the registry (`src/app/(dashboard)/error.tsx`). Technical error details are not shown; only a reference code.
+- **Empty** — a clear message when there are no societies or submissions.
+- **No search results** — lists the active search and filters, with buttons to remove one filter or clear them all.
+
+The shared components are in `src/components/dashboard/data-states.tsx`.
+
+The dashboard currently uses fictional fixtures, so these states can be demonstrated on the Societies page with a query parameter:
+
+| URL | State shown |
+| --- | --- |
+| `/societies?demo=loading` | Loading skeleton for about 2.5 seconds, then the registry |
+| `/societies?demo=empty` | Empty registry |
+| `/societies?demo=error` | Error state with retry |
+
+To see the no-search-results state, search the Societies page for a name that does not exist. The demonstration scenarios live in `src/lib/demo-scenarios.ts` and will be removed when the registry is loaded from the API.
 
 ## Before opening a pull request
 
@@ -89,6 +113,7 @@ Run:
 
 ```bash
 npm run lint
+npm test
 npm run build
 npm audit --omit=dev
 ```
