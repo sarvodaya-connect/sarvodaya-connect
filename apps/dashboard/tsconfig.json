@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sarvodaya-connect/api-contracts": [
+        "../../packages/api-contracts/src/index.ts"
+      ]
     }
   },
   "include": [
