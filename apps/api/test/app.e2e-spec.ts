@@ -3,22 +3,30 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { PrismaService } from './../src/prisma/prisma.service.js';
 
 describe('Health endpoint (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication<App> | undefined;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<App>();
     app.setGlobalPrefix('api/v1');
     await app.init();
   });
 
-  it('GET /api/v1/health', () => {
-    return request(app.getHttpServer())
+  it('GET /api/v1/health', async () => {
+    if (!app) {
+      throw new Error('Test application was not initialized');
+    }
+
+    await request(app.getHttpServer())
       .get('/api/v1/health')
       .expect(200)
       .expect({
@@ -28,6 +36,7 @@ describe('Health endpoint (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    await app?.close();
+    app = undefined;
   });
 });
