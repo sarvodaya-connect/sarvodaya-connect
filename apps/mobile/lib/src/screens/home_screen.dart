@@ -1,0 +1,442 @@
+import 'package:flutter/material.dart';
+
+import '../app.dart';
+import '../data/demo_data.dart';
+import '../format.dart';
+import '../models/submission.dart';
+import '../state/demo_store.dart';
+import '../theme/app_theme.dart';
+import '../widgets/demo_loader.dart';
+import '../widgets/demo_options_sheet.dart';
+import '../widgets/section_card.dart';
+import '../widgets/state_views.dart';
+import '../widgets/status_chip.dart';
+import 'changes_requested_screen.dart';
+import 'council_screen.dart';
+import 'submission_detail_screen.dart';
+
+/// M05 · Society Officer home.
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final firstName = store.user?.displayName.split(' ').first ?? '';
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${_greeting(store.now)}, $firstName'),
+        actions: [
+          IconButton(
+            tooltip: 'Demo options',
+            icon: const Icon(Icons.tune),
+            onPressed: () => showDemoOptions(context),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (store.offline) const OfflineBanner(),
+          Expanded(
+            child: DemoLoader(
+              loadingLabel: 'Loading your society',
+              builder: (context) => const _HomeContent(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _greeting(DateTime now) {
+    if (now.hour < 12) return 'Good morning';
+    if (now.hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+}
+
+class _HomeContent extends StatelessWidget {
+  const _HomeContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final society = store.society;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SectionCard(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        society.nameEn,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (society.nameLocal != null)
+                        Text(
+                          society.nameLocal!,
+                          style: const TextStyle(color: AppColors.inkSoft),
+                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${society.societyCode} · ${society.district.nameEn}'
+                        '${society.lastVerifiedOn == null ? '' : ' · Verified ${formatDate(society.lastVerifiedOn!)}'}',
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const StatusChip(
+                  StatusStyle(
+                    'Active',
+                    Icons.check_circle_outline,
+                    Color(0xFF25643F),
+                    Color(0xFFE5F3E8),
+                  ),
+                  compact: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const _CompletenessCard(),
+        const SizedBox(height: 12),
+        const _CurrentSubmissionCard(),
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Needs your attention',
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          children: [
+            _AttentionTile(
+              icon: Icons.description_outlined,
+              title: 'AGM minutes requested',
+              subtitle: 'From HQ · due 14 Oct 2026',
+              chip: const StatusChip(
+                StatusStyle(
+                  'Due soon',
+                  Icons.schedule,
+                  Color(0xFF7A5A00),
+                  Color(0xFFFFF2CC),
+                ),
+                compact: true,
+              ),
+              onTap: () => store.selectTab(HomeShell.documentsTab),
+            ),
+            _AttentionTile(
+              icon: Icons.verified_outlined,
+              title: 'Audit FY 2025/26',
+              subtitle: 'Report not uploaded',
+              chip: const StatusChip(
+                StatusStyle(
+                  'Overdue',
+                  Icons.warning_amber,
+                  Color(0xFFA8312A),
+                  Color(0xFFFBE9E7),
+                ),
+                compact: true,
+              ),
+              onTap: () => store.selectTab(HomeShell.documentsTab),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Quick actions',
+          children: [
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.4,
+              children: [
+                _QuickAction(
+                  icon: Icons.badge_outlined,
+                  label: 'View Society Profile',
+                  onTap: () => store.selectTab(HomeShell.societyTab),
+                ),
+                _QuickAction(
+                  icon: Icons.groups_outlined,
+                  label: 'Update Committee',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CouncilScreen(),
+                    ),
+                  ),
+                ),
+                _QuickAction(
+                  icon: Icons.insights_outlined,
+                  label: 'Report Activity',
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Activity reporting is built in a separate task.',
+                      ),
+                    ),
+                  ),
+                ),
+                _QuickAction(
+                  icon: Icons.upload_file_outlined,
+                  label: 'Upload Document',
+                  onTap: () => store.selectTab(HomeShell.documentsTab),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CompletenessCard extends StatelessWidget {
+  const _CompletenessCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = DemoScope.of(context).society.profileCompleteness;
+    return SectionCard(
+      title: 'Profile completeness',
+      trailing: Text(
+        '$percent%',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      children: [
+        Semantics(
+          label: 'Profile $percent percent complete',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: percent / 100,
+              minHeight: 8,
+              backgroundColor: AppColors.mint,
+              color: AppColors.leaf,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${demoCompletedSections.length} sections complete · Missing: ${demoMissingSections.join(', ')}',
+          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        ),
+      ],
+    );
+  }
+}
+
+/// Current-submission card with one variant per status (SC-25 M02).
+class _CurrentSubmissionCard extends StatelessWidget {
+  const _CurrentSubmissionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final submission = store.councilSubmission;
+    final draft = store.draft;
+
+    void openCouncil() => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const CouncilScreen()));
+    void openDetail(SocietySubmission s) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SubmissionDetailScreen(submissionId: s.id),
+      ),
+    );
+
+    if (submission == null ||
+        (submission.status == SubmissionStatus.approved && draft != null)) {
+      if (draft == null) {
+        return SectionCard(
+          title: 'Current submission',
+          children: [
+            const Text(
+              'No active submission. Changes you make are saved as a draft until you send them.',
+              style: TextStyle(color: AppColors.muted),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: openCouncil,
+              child: const Text('Update Committee'),
+            ),
+          ],
+        );
+      }
+      return SectionCard(
+        title: 'Current submission',
+        highlight: true,
+        trailing: StatusChip.submission(SubmissionStatus.draft, compact: true),
+        children: [
+          Text(
+            'Council update · ${draft.fullName} replaces ${store.memberById(draft.memberId)?.fullName ?? 'a member'}',
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Not sent yet. Only you can see this draft.',
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: openCouncil,
+            child: const Text('Continue draft'),
+          ),
+        ],
+      );
+    }
+
+    final review = submission.latestReview;
+    return SectionCard(
+      title: 'Current submission',
+      trailing: StatusChip.submission(submission.status, compact: true),
+      children: [
+        Text(
+          '${submission.title} · ${submission.reference}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _summary(submission),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+        if (submission.status == SubmissionStatus.changesRequested &&
+            review?.comment != null) ...[
+          const SizedBox(height: 10),
+          NoticeBanner(
+            icon: Icons.undo,
+            tone: NoticeTone.warning,
+            title: '${review!.reviewerDisplayName} returned 1 field',
+            message: '“${review.comment}”',
+          ),
+        ],
+        const SizedBox(height: 12),
+        if (submission.status == SubmissionStatus.changesRequested)
+          FilledButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ChangesRequestedScreen(submissionId: submission.id),
+              ),
+            ),
+            child: const Text('Open returned submission'),
+          )
+        else
+          OutlinedButton(
+            onPressed: () => openDetail(submission),
+            child: const Text('Track submission'),
+          ),
+      ],
+    );
+  }
+
+  static String _summary(
+    SocietySubmission submission,
+  ) => switch (submission.status) {
+    SubmissionStatus.draft => 'Not sent yet.',
+    SubmissionStatus.submitted =>
+      'Sent ${formatDateTime(submission.submittedAt!)}. Waiting for $demoReviewerOffice to review it.',
+    SubmissionStatus.underReview =>
+      '${submission.reviewerDisplayName ?? 'The District Manager'} is reviewing it. It is locked until the review is finished.',
+    SubmissionStatus.changesRequested => 'The District Centre needs you to fix 1 field. Everything else is accepted.',
+    SubmissionStatus.resubmitted =>
+      'Correction sent. Waiting for the District Manager to check it.',
+    SubmissionStatus.approved =>
+      'Approved. The Council record has been updated. ${submission.latestReview?.comment ?? ''}',
+    SubmissionStatus.rejected =>
+      'Rejected: ${submission.latestReview?.comment ?? 'see the tracker for the reason.'}',
+  };
+}
+
+class _AttentionTile extends StatelessWidget {
+  const _AttentionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.chip,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget chip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.mintSoft,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.leaf, size: 20),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      trailing: chip,
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.mintSoft,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.leaf, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
