@@ -44,6 +44,8 @@ Run the application with `flutter run -d DEVICE_ID`, replacing `DEVICE_ID` with 
 
 The initial Flutter application structure has been created. Business features will be implemented through separate Jira tasks and pull requests.
 
+The approved low-fidelity Society Officer journey and the SC-26 implementation boundary are documented in [SC-25 Mobile Society Profile Flow](../../docs/mobile-society-profile-flow.md).
+
 ## Security
 
 Do not commit passwords, API keys, access tokens, client information or local environment files.
