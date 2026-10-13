@@ -4,11 +4,16 @@ import '../format.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/council_widgets.dart';
+import '../models/profile_draft.dart';
 import '../widgets/demo_loader.dart';
+import '../widgets/map_preview.dart';
+import '../widgets/profile_widgets.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
 import 'council_screen.dart';
+import 'edit_profile_screen.dart';
+import 'profile_review_screen.dart';
 
 /// M06 · Society profile (approved registry record, read-only).
 class SocietyProfileScreen extends StatelessWidget {
@@ -41,15 +46,25 @@ class _ProfileContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final society = store.society;
-    final societyPhone = society.contacts
-        .where((contact) => contact.label == 'Society phone')
-        .firstOrNull;
-    final societyEmail = society.contacts
-        .where(
-          (contact) =>
-              contact.email != null && contact.label == 'Society email',
-        )
-        .firstOrNull;
+    final approved = store.approvedProfile;
+    final draft = store.profileDraft;
+    final pending = store.pendingProfileSubmission;
+    final draftChanged = draft == null
+        ? const <String>{}
+        : draft.values.changedFieldsComparedTo(approved).toSet();
+    String? orNull(String value) => value.isEmpty ? null : value;
+    List<Widget> field(String label, String? value) => [
+      InfoRow(label: label, value: value),
+      if (draftChanged.contains(label))
+        DraftValueTag(
+          draft!.values.valueOf(label)?.isNotEmpty == true
+              ? draft.values.valueOf(label)!
+              : '(removed)',
+        ),
+    ];
+    void openEdit() => Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const EditProfileScreen()));
     final officeBearers = store.council
         .where((member) => member.isOfficeBearer)
         .toList();
@@ -66,6 +81,52 @@ class _ProfileContent extends StatelessWidget {
               'Changes you make are drafts until the District Centre approves them.',
         ),
         const SizedBox(height: 12),
+        if (pending != null) ...[
+          NoticeBanner(
+            icon: Icons.lock_outline,
+            tone: NoticeTone.warning,
+            title: 'Profile update waiting for the District Centre',
+            message:
+                '${pending.reference} is being reviewed. You can edit the profile again after it has been reviewed.',
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (draft != null && store.profileDraftOutdated) ...[
+          ConflictNotice(
+            updatedBy: store.recordUpdatedBy ?? 'The District Centre',
+            updatedAt: store.recordUpdatedAt ?? store.now,
+            onReload: () {
+              store.reloadProfileDraft();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Record reloaded. Your draft changes are kept.',
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+        ] else if (draft != null) ...[
+          NoticeBanner(
+            icon: Icons.edit_note,
+            title: 'You have draft profile changes',
+            message: 'Draft values are marked “Draft”. Only you can see them; the approved values have not changed.',
+            action: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ProfileReviewScreen(),
+                  ),
+                ),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: const Text('Review draft'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         SectionCard(
           title: 'Registration',
           children: [
@@ -126,11 +187,16 @@ class _ProfileContent extends StatelessWidget {
         const SizedBox(height: 12),
         SectionCard(
           title: 'Address and contact',
+          trailing: TextButton.icon(
+            onPressed: pending == null ? openEdit : null,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit Profile'),
+          ),
           children: [
-            InfoRow(label: 'Address', value: society.address.addressLine),
-            InfoRow(label: 'Village or town', value: society.address.village),
-            InfoRow(label: 'Society phone', value: societyPhone?.phone),
-            InfoRow(label: 'Society email', value: societyEmail?.email),
+            ...field(ProfileField.address, orNull(approved.addressLine)),
+            ...field(ProfileField.village, orNull(approved.village)),
+            ...field(ProfileField.phone, orNull(approved.phone)),
+            ...field(ProfileField.email, orNull(approved.email)),
             InfoRow(
               label: 'Primary contact',
               value:
@@ -142,14 +208,9 @@ class _ProfileContent extends StatelessWidget {
         SectionCard(
           title: 'Location',
           children: [
-            const _MapPreview(),
+            MapPreview(location: society.location),
             const SizedBox(height: 12),
-            InfoRow(
-              label: 'GPS',
-              value: society.location == null
-                  ? null
-                  : '${society.location!.latitude.toStringAsFixed(4)}° N, ${society.location!.longitude.toStringAsFixed(4)}° E',
-            ),
+            ...field(ProfileField.location, society.location?.label),
           ],
         ),
         const SizedBox(height: 12),
@@ -200,65 +261,4 @@ class _ProfileContent extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Simple drawn map placeholder; a map package is not needed for the demo.
-class _MapPreview extends StatelessWidget {
-  const _MapPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Map showing the society location',
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: SizedBox(
-          height: 140,
-          child: CustomPaint(
-            painter: _MapPainter(),
-            child: const Center(
-              child: Icon(Icons.location_on, color: AppColors.action, size: 36),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MapPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFE7F0DF),
-    );
-    final road = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 6
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(
-      Offset(0, size.height * 0.7),
-      Offset(size.width, size.height * 0.35),
-      road,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.35, 0),
-      Offset(size.width * 0.55, size.height),
-      road..strokeWidth = 4,
-    );
-    final water = Paint()..color = const Color(0xFFCFE3EA);
-    canvas.drawOval(
-      Rect.fromLTWH(
-        size.width * 0.72,
-        size.height * 0.55,
-        size.width * 0.22,
-        size.height * 0.3,
-      ),
-      water,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

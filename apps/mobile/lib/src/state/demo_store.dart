@@ -4,6 +4,7 @@ import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/committee.dart';
 import '../models/document.dart';
+import '../models/profile_draft.dart';
 import '../models/society.dart';
 import '../models/submission.dart';
 import '../models/user.dart';
@@ -57,6 +58,10 @@ class DemoStore extends ChangeNotifier {
   bool failLoads = false;
   bool emptyTracker = false;
 
+  /// Demo: the phone has refused location access, so "Use my location" shows
+  /// the permission-denied state. No real permission is ever requested.
+  bool locationPermissionDenied = false;
+
   /// Increases whenever a demo option changes, so screens can reload and show the new state.
   int optionsVersion = 0;
 
@@ -71,7 +76,16 @@ class DemoStore extends ChangeNotifier {
   AuthenticatedUser? _user;
   AuthenticatedUser? get user => _user;
 
-  SocietyDetails get society => demoSociety;
+  SocietyDetails _society = demoSociety;
+
+  /// The approved society record. Drafts never change it directly.
+  SocietyDetails get society => _society;
+
+  /// Version of the approved record. It increases when the District Centre
+  /// (simulated in the demo) saves a newer version.
+  int recordVersion = 1;
+  DateTime? recordUpdatedAt;
+  String? recordUpdatedBy;
 
   final List<CommitteeMember> _council = List.of(demoCouncil);
   List<CommitteeMember> get council => List.unmodifiable(_council);
@@ -171,10 +185,17 @@ class DemoStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setDemoOptions({bool? offline, bool? failLoads, bool? emptyTracker}) {
+  void setDemoOptions({
+    bool? offline,
+    bool? failLoads,
+    bool? emptyTracker,
+    bool? locationPermissionDenied,
+  }) {
     this.offline = offline ?? this.offline;
     this.failLoads = failLoads ?? this.failLoads;
     this.emptyTracker = emptyTracker ?? this.emptyTracker;
+    this.locationPermissionDenied =
+        locationPermissionDenied ?? this.locationPermissionDenied;
     optionsVersion++;
     notifyListeners();
   }
@@ -271,6 +292,197 @@ class DemoStore extends ChangeNotifier {
           proposedValue: startDate,
         ),
     ];
+  }
+
+  // ----- Society profile editing (SC-25 M04) -----
+
+  /// Fictional coordinates returned by "Use my location" in the demo.
+  static const demoDeviceLocation = GeoLocation(
+    latitude: 7.4675,
+    longitude: 80.0419,
+  );
+
+  ProfileEditDraft? _profileDraft;
+  ProfileEditDraft? get profileDraft => _profileDraft;
+
+  ProfileValues get approvedProfile => ProfileValues.fromSociety(_society);
+
+  /// True when the saved profile draft was started from an older record version.
+  bool get profileDraftOutdated =>
+      _profileDraft != null && _profileDraft!.baseVersion != recordVersion;
+
+  /// The profile update waiting for review, if any.
+  SocietySubmission? get pendingProfileSubmission {
+    for (final submission in _submissions.reversed) {
+      if (submission.type == SubmissionType.profileUpdate &&
+          submission.isLocked) {
+        return submission;
+      }
+    }
+    return null;
+  }
+
+  /// Saves the edits as a draft on the phone. Throws [ConflictingUpdateException]
+  /// when [baseVersion] is older than the approved record, so an outdated draft
+  /// can never silently replace newer data.
+  void saveProfileDraft({
+    required ProfileValues values,
+    required ProfileValues base,
+    required int baseVersion,
+    required LocationSource locationSource,
+  }) {
+    if (baseVersion != recordVersion) throw const ConflictingUpdateException();
+    _profileDraft = ProfileEditDraft(
+      values: values,
+      base: base,
+      baseVersion: baseVersion,
+      locationSource: locationSource,
+      savedAt: now,
+    );
+    notifyListeners();
+  }
+
+  void discardProfileDraft() {
+    _profileDraft = null;
+    notifyListeners();
+  }
+
+  /// Rebases [values] (started from [base]) onto the latest approved record.
+  /// Fields the officer did not change take the newer approved value; fields the
+  /// officer changed keep the officer's value. Returns the rebased values and the
+  /// fields that were changed both by the officer and in the newer record.
+  ({ProfileValues values, List<String> bothChanged}) rebaseProfile(
+    ProfileValues values,
+    ProfileValues base,
+  ) {
+    final latest = approvedProfile;
+    final officerChanged = values.changedFieldsComparedTo(base).toSet();
+    final recordChanged = latest.changedFieldsComparedTo(base).toSet();
+    final rebased = ProfileValues(
+      addressLine: officerChanged.contains(ProfileField.address)
+          ? values.addressLine
+          : latest.addressLine,
+      village: officerChanged.contains(ProfileField.village)
+          ? values.village
+          : latest.village,
+      phone: officerChanged.contains(ProfileField.phone)
+          ? values.phone
+          : latest.phone,
+      email: officerChanged.contains(ProfileField.email)
+          ? values.email
+          : latest.email,
+      location: officerChanged.contains(ProfileField.location)
+          ? values.location
+          : latest.location,
+    );
+    return (
+      values: rebased,
+      bothChanged: officerChanged.intersection(recordChanged).toList(),
+    );
+  }
+
+  /// "Reload Record" for a saved draft: keeps the officer's edits on top of the
+  /// newer approved record. Returns fields that need the officer's attention.
+  List<String> reloadProfileDraft() {
+    final draft = _profileDraft;
+    if (draft == null) return const [];
+    final result = rebaseProfile(draft.values, draft.base);
+    _profileDraft = ProfileEditDraft(
+      values: result.values,
+      base: approvedProfile,
+      baseVersion: recordVersion,
+      locationSource: draft.locationSource,
+      savedAt: now,
+    );
+    notifyListeners();
+    return result.bothChanged;
+  }
+
+  /// Fields that differ between the draft and the approved record.
+  List<SubmissionChange> profileDraftChanges() {
+    final draft = _profileDraft;
+    if (draft == null) return const [];
+    final approved = approvedProfile;
+    return [
+      for (final field in draft.values.changedFieldsComparedTo(approved))
+        SubmissionChange(
+          field: 'society.${field.toLowerCase().replaceAll(' ', '_')}',
+          label: field,
+          previousValue: approved.valueOf(field),
+          proposedValue: draft.values.valueOf(field) ?? '',
+        ),
+    ];
+  }
+
+  /// Sends the profile draft to the District Manager. The approved record is not
+  /// changed until the update is approved.
+  Future<SocietySubmission> submitProfileUpdate() async {
+    final draft = _profileDraft;
+    if (draft == null) throw StateError('There is no profile draft to submit.');
+    if (draft.baseVersion != recordVersion) {
+      throw const ConflictingUpdateException();
+    }
+    await Future<void>.delayed(loadDelay);
+    if (offline) throw const OfflineException();
+    final submittedAt = now;
+    final reference =
+        'SUB-2026-${(_nextReference++).toString().padLeft(4, '0')}';
+    final submission = SocietySubmission(
+      id: 'sub-profile-$reference',
+      reference: reference,
+      societyId: society.id,
+      type: SubmissionType.profileUpdate,
+      title: 'Society profile update',
+      submittedBy: _user?.displayName ?? demoOfficer.displayName,
+      status: SubmissionStatus.submitted,
+      changes: profileDraftChanges(),
+      submittedAt: submittedAt,
+      updatedAt: submittedAt,
+      timeline: [
+        TimelineEvent(
+          status: SubmissionStatus.draft,
+          title: 'Draft started',
+          at: draft.savedAt,
+        ),
+        TimelineEvent(
+          status: SubmissionStatus.submitted,
+          title: 'Submitted to District Manager',
+          at: submittedAt,
+          detail: 'Awaiting review by the $demoReviewerOffice',
+        ),
+      ],
+    );
+    _submissions.add(submission);
+    _profileDraft = null;
+    notifyListeners();
+    return submission;
+  }
+
+  /// Demo: the District Centre saves a newer version of the society record
+  /// (here, a corrected society phone number) while the officer has a draft open.
+  void demoNewerRecord() {
+    final nextPhone = recordVersion.isOdd
+        ? '+94 00 000 0011'
+        : '+94 00 000 0012';
+    _society = _society.copyWith(
+      contacts: [
+        for (final contact in _society.contacts)
+          contact.label == 'Society phone'
+              ? SocietyContact(
+                  id: contact.id,
+                  label: contact.label,
+                  phone: nextPhone,
+                  isPrimary: contact.isPrimary,
+                )
+              : contact,
+      ],
+      updatedAt: now,
+    );
+    recordVersion++;
+    recordUpdatedAt = now;
+    recordUpdatedBy = demoReviewerName;
+    optionsVersion++;
+    notifyListeners();
   }
 
   /// Sends the draft to the District Manager. Throws [OfflineException] when offline;

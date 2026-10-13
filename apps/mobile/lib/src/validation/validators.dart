@@ -89,6 +89,67 @@ class Validators {
     return null;
   }
 
+  static String? addressLine(String? value) {
+    final missing = required(value, 'address');
+    if (missing != null) return missing;
+    final text = value!.trim();
+    if (text.length < 5) {
+      return 'Enter the full address, for example No. 12, Temple Road.';
+    }
+    if (text.length > 120) return 'Use 120 characters or fewer.';
+    return null;
+  }
+
+  static final RegExp _placePattern = RegExp(
+    r"^[\p{L}\p{M}\p{N} .,'\-]+$",
+    unicode: true,
+  );
+
+  static String? villageName(String? value) {
+    final missing = required(value, 'village or town');
+    if (missing != null) return missing;
+    final text = value!.trim();
+    if (text.length < 2) return 'Enter at least 2 letters.';
+    if (text.length > 60) return 'Use 60 characters or fewer.';
+    if (!_placePattern.hasMatch(text)) {
+      return 'Use letters, numbers, spaces, commas, full stops or hyphens only.';
+    }
+    return null;
+  }
+
+  /// Rough bounding box of Sri Lanka, so a mistyped coordinate is caught.
+  static const latitudeRange = (min: 5.8, max: 10.0);
+  static const longitudeRange = (min: 79.4, max: 82.0);
+
+  static String? latitude(String? value) =>
+      _coordinate(value, 'latitude', latitudeRange, '7.4672');
+
+  static String? longitude(String? value) =>
+      _coordinate(value, 'longitude', longitudeRange, '80.0412');
+
+  static String? _coordinate(
+    String? value,
+    String label,
+    ({double min, double max}) range,
+    String example,
+  ) {
+    final missing = required(value, label);
+    if (missing != null) return missing;
+    final number = double.tryParse(value!.trim());
+    if (number == null) {
+      return 'Enter the $label as a number, for example $example.';
+    }
+    if (number < range.min || number > range.max) {
+      return 'This $label is outside Sri Lanka (${range.min}–${range.max}).';
+    }
+    return null;
+  }
+
+  static String? gpsLocation(Object? location) {
+    if (location == null) return "Add the society's GPS location.";
+    return null;
+  }
+
   static String normalisePhone(String value) =>
       value.replaceAll(RegExp(r'[\s\-]'), '');
 }

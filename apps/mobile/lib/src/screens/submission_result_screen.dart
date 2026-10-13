@@ -21,7 +21,7 @@ class SubmissionResultScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Council update'),
+        title: Text(submission?.title ?? 'Submission'),
       ),
       body: submission == null
           ? const SizedBox.shrink()

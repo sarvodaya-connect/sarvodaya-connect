@@ -36,6 +36,19 @@ class GeoLocation {
 
   final double latitude;
   final double longitude;
+
+  /// 7.4672° N, 80.0412° E
+  String get label =>
+      '${latitude.toStringAsFixed(4)}° N, ${longitude.toStringAsFixed(4)}° E';
+
+  @override
+  bool operator ==(Object other) =>
+      other is GeoLocation &&
+      other.latitude == latitude &&
+      other.longitude == longitude;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude);
 }
 
 class SocietyContact {
@@ -96,6 +109,33 @@ class SocietyDetails {
   final List<SocietyContact> contacts;
   final DateTime? lastVerifiedOn;
   final String? lastVerifiedBy;
+
+  /// Copy with an updated address, location, contacts or update time.
+  SocietyDetails copyWith({
+    SocietyAddress? address,
+    GeoLocation? location,
+    List<SocietyContact>? contacts,
+    DateTime? updatedAt,
+  }) {
+    return SocietyDetails(
+      id: id,
+      societyCode: societyCode,
+      nameEn: nameEn,
+      nameLocal: nameLocal,
+      district: district,
+      status: status,
+      verificationStatus: verificationStatus,
+      profileCompleteness: profileCompleteness,
+      updatedAt: updatedAt ?? this.updatedAt,
+      registrationNumber: registrationNumber,
+      establishedOn: establishedOn,
+      address: address ?? this.address,
+      location: location ?? this.location,
+      contacts: contacts ?? this.contacts,
+      lastVerifiedOn: lastVerifiedOn,
+      lastVerifiedBy: lastVerifiedBy,
+    );
+  }
 
   SocietyContact? get primaryContact {
     for (final contact in contacts) {
