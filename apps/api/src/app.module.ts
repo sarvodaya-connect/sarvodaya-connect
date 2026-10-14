@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { dirname, resolve } from 'node:path';
@@ -6,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { PrismaService } from './prisma/prisma.service.js';
+import { PrismaModule } from './prisma/prisma.module.js';
 import { DistrictsController } from './districts/districts.controller.js';
 import { SocietiesController } from './societies/societies.controller.js';
 import { SocietiesService } from './societies/societies.service.js';
@@ -24,15 +23,11 @@ const repositoryEnvironmentFile = resolve(
       envFilePath: repositoryEnvironmentFile,
       isGlobal: true,
     }),
+    PrismaModule,
   ],
-  controllers: [
-    AppController,
-    DistrictsController,
-    SocietiesController,
-  ],
+  controllers: [AppController, DistrictsController, SocietiesController],
   providers: [
     AppService,
-    PrismaService,
     SocietiesService,
     SocietiesRepository,
     DistrictsService,
