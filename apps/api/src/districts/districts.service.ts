@@ -1,5 +1,5 @@
-
 import { Injectable } from '@nestjs/common';
+import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
@@ -7,14 +7,16 @@ export class DistrictsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list() {
-    const districts = await this.prisma.district.findMany({
-      include: {
-        _count: {
-          select: { societies: true },
+    const districts = await executeDatabaseOperation(() =>
+      this.prisma.district.findMany({
+        include: {
+          _count: {
+            select: { societies: true },
+          },
         },
-      },
-      orderBy: { nameEn: 'asc' },
-    });
+        orderBy: { nameEn: 'asc' },
+      }),
+    );
 
     return {
       data: districts.map((district) => ({

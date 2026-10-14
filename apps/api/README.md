@@ -10,10 +10,10 @@ The API will be shared by the Flutter mobile application and the Next.js adminis
 - NestJS
 - TypeScript
 - Express
+- PostgreSQL 17
+- Prisma ORM
 - Vitest
 - Oxlint
-
-PostgreSQL and Prisma will be configured in a separate Jira task.
 
 ## Requirements
 
@@ -85,8 +85,39 @@ The API loads environment variables from the `.env` file at the repository root.
 |---|---|---|
 | `NODE_ENV` | Application environment | `development` |
 | `API_PORT` | Port used by the NestJS API | `3001` |
+| `DATABASE_URL` | PostgreSQL connection URL used by Prisma | No runtime default |
 
 Use `.env.example` as the safe configuration template. Do not place passwords, tokens, private keys or real client information in committed files.
+
+## Local database and fictional data
+
+Start PostgreSQL by following `infrastructure/docker/README.md`. Then set the
+root `.env` `DATABASE_URL` to the same local user, password, port and database.
+For the committed development defaults, the URL has this form:
+
+```text
+postgresql://sarvodaya_dev:change_me_dev_only@localhost:5432/sarvodaya_connect
+```
+
+Apply the committed migrations and load the repeatable fictional dataset:
+
+```bash
+npm run prisma:deploy
+npm run prisma:seed
+```
+
+Start the API and confirm that Prisma can retrieve the seeded records:
+
+```bash
+npm run start:dev
+curl http://localhost:3001/api/v1/districts
+curl "http://localhost:3001/api/v1/societies?page=1&pageSize=10"
+curl http://localhost:3001/api/v1/societies/29000000-0000-4000-8000-000000000101
+```
+
+The list response should contain the fictional societies created by
+`prisma/seed.ts`. Database failures return a safe service-unavailable response;
+connection strings and database error details are never returned to clients.
 
 ## Available commands
 
