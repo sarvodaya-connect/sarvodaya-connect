@@ -1,7 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import '../auth/auth_service.dart';
+import '../auth/demo_auth_service.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
+import '../models/app_language.dart';
 import '../models/committee.dart';
 import '../models/document.dart';
 import '../models/profile_draft.dart';
@@ -40,16 +43,23 @@ class CouncilReplacementDraft {
   final DateTime startDate;
 }
 
-/// Safe, in-memory demonstration state for SC-26. Nothing is written to a backend:
-/// the real API and WSO2 sign-in replace this in later tasks.
+/// Safe, in-memory demonstration state. Nothing is written to a backend:
+/// the real API and Amazon Cognito replace the local services in later tasks.
 class DemoStore extends ChangeNotifier {
   DemoStore({
     this.loadDelay = const Duration(milliseconds: 700),
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+    AuthService? authService,
+    this.showSplash = true,
+    this.languageChosen = false,
+    this.firstTimeSetupComplete = false,
+  }) : _clock = clock ?? DateTime.now {
+    _authService = authService ?? DemoAuthService(isOnline: () => !offline);
+  }
 
   final Duration loadDelay;
   final DateTime Function() _clock;
+  late final AuthService _authService;
 
   DateTime get now => _clock();
 
@@ -61,6 +71,34 @@ class DemoStore extends ChangeNotifier {
   /// Demo: the phone has refused location access, so "Use my location" shows
   /// the permission-denied state. No real permission is ever requested.
   bool locationPermissionDenied = false;
+
+  // M01-M04 first-run and authentication state.
+  bool showSplash;
+  bool languageChosen;
+  bool firstTimeSetupComplete;
+  bool notificationsEnabled = true;
+  AppLanguage selectedLanguage = AppLanguage.english;
+  bool _accountRequiresSetup = false;
+
+  void finishSplash() {
+    showSplash = false;
+    notifyListeners();
+  }
+
+  void chooseLanguage(AppLanguage language) {
+    selectedLanguage = language;
+    languageChosen = true;
+    notifyListeners();
+  }
+
+  bool get needsFirstTimeSetup =>
+      _user != null && _accountRequiresSetup && !firstTimeSetupComplete;
+
+  void completeFirstTimeSetup({required bool notificationsEnabled}) {
+    this.notificationsEnabled = notificationsEnabled;
+    firstTimeSetupComplete = true;
+    notifyListeners();
+  }
 
   /// Increases whenever a demo option changes, so screens can reload and show the new state.
   int optionsVersion = 0;
@@ -165,22 +203,30 @@ class DemoStore extends ChangeNotifier {
     if (failLoads) throw const DemoLoadException();
   }
 
-  /// Returns true when the demo credentials match. Never stores the password.
+  /// Signs in through an injected identity provider. Never stores the password.
   Future<bool> signIn(String username, String password) async {
     await Future<void>.delayed(loadDelay);
-    if (offline) throw const OfflineException();
-    final matches =
-        username.trim().toLowerCase() == DemoAccount.username &&
-        password == DemoAccount.password;
-    if (matches) {
-      _user = demoOfficer;
+    if (failLoads) throw const AuthServiceException();
+    try {
+      final session = await _authService.signIn(
+        username: username,
+        password: password,
+      );
+      if (session == null) return false;
+      _user = session.user;
+      _accountRequiresSetup = session.requiresSetup;
       notifyListeners();
+      return true;
+    } on AuthNetworkException {
+      throw const OfflineException();
+    } on AuthServiceException {
+      rethrow;
     }
-    return matches;
   }
 
   void signOut() {
     _user = null;
+    _accountRequiresSetup = false;
     _selectedTab = 0;
     notifyListeners();
   }
