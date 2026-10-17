@@ -42,14 +42,20 @@ Run the application with `flutter run -d DEVICE_ID`, replacing `DEVICE_ID` with 
 
 ## Current Status
 
-The Society Officer demonstration flow from [SC-25 Mobile Society Profile Flow](../../docs/mobile-society-profile-flow.md) is implemented (SC-26), following Screen Catalogue v2:
+The Society Officer flow follows the approved Screen Catalogue v3. SC-38 adds the M01-M04 first-run journey:
+
+Splash → Choose Sinhala, Tamil or English → Sign in → Confirm society and role → Home.
+
+The splash and reusable brand mark use the client-approved Sarvodaya Connect logo on the requested white background. Sign-in uses an injected authentication service, with fictional credentials locally and a boundary ready for Amazon Cognito.
+
+The society-profile demonstration flow from [SC-25 Mobile Society Profile Flow](../../docs/mobile-society-profile-flow.md) remains available:
 
 Sign in → Home → Society profile → Executive Council → Replace Treasurer → Documents → Review and submit → Submitted → Tracker → Changes Requested → Correct → Resubmit → Approved.
 
 The officer can also edit the society profile: **Society → Edit Profile** (address, village or town, society phone, society email and GPS location) → **Check profile changes** → **Submit to District**. Edits are saved as a draft and shown as "Draft: …" next to the approved values, which do not change until the District Centre approves the update.
 
 - All data is fictional and held in memory (`lib/src/data/demo_data.dart`, `lib/src/state/demo_store.dart`). Nothing is written to a backend, and closing the app resets the demo.
-- Sign in with **Use demo account** on the sign-in screen. Production sign-in will use WSO2 Identity Server in a later task.
+- Sign in with **Use demo account** on the sign-in screen. Production authentication will be connected through Amazon Cognito.
 - On a submission's tracker page, the **Demo: District Manager actions** buttons (Start review, Return start date, Approve) stand in for the reviewer, whose real actions happen on the web dashboard.
 - The document chooser lists demonstration files, including one that is too large and one with a type that is not accepted, to show the upload errors.
 
@@ -72,6 +78,7 @@ Open **Demo options** (sliders icon on Home) to show these states during a demon
 ### Code structure
 
 - `lib/src/models` — Dart versions of the shared API contracts in `packages/api-contracts`
+- `lib/src/auth` — identity-provider boundary and fictional local implementation
 - `lib/src/screens` — one file per screen
 - `lib/src/widgets` — reusable widgets (status chips, cards, loading, empty, error, offline and locked states)
 - `lib/src/validation` — form validation rules (names, Sri Lankan phone, email, address, coordinates, Council ages and dates)
