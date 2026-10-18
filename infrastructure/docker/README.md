@@ -67,7 +67,7 @@ docker compose up -d
 docker compose ps
 ```
 
-`docker compose config` validates the configuration. After `docker compose up -d`, the `docker compose ps` command should report the `postgres` service as `healthy`. The first start may take approximately 20 seconds.
+`docker compose config` validates the configuration. After `docker compose up -d`, the `docker compose ps` command should report the `postgres` service as `healthy`. The first start downloads the `postgres:17-alpine` image, which can take a few minutes on a slow connection; later starts take about 10-20 seconds.
 
 ### Inspecting the Database
 
@@ -120,6 +120,24 @@ docker compose restart postgres
 
 `docker compose down` stops and removes the container. The data is preserved in the named volume `postgres_data`, and it is available again after the next `docker compose up -d`.
 
+### Verifying That Data Persists
+
+After the database has been migrated and seeded (see `apps/api/README.md`), confirm that the data survives a container being removed. `docker compose down` removes the container but keeps the named volume.
+
+```bash
+docker compose down
+docker volume ls
+docker compose up -d
+docker compose ps
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) FROM societies;"'
+```
+
+`docker volume ls` should still list `sarvodaya-connect_postgres_data`, and the count should be unchanged after the restart.
+
+### Next Steps
+
+Once the database is `healthy`, continue with the migration and seed steps in `apps/api/README.md`.
+
 ### Resetting the Database
 
 The following commands permanently delete all local database data:
@@ -137,3 +155,6 @@ docker compose up -d
 - **Changes to the user, password or database name have no effect:** PostgreSQL applies these values only when the volume is first created. Run `docker compose down -v` followed by `docker compose up -d`. This deletes all local data.
 - **Service remains in the `starting` or `unhealthy` state:** Review the output of `docker compose logs postgres`.
 - **Password authentication failed:** Confirm that the password in use matches the value in `.env`, and see the previous item if it was changed after the first start.
+- **`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine` (Windows):** Docker Desktop is not running yet. Start it and wait until it reports that the engine is running.
+- **`no configuration file provided: not found`:** The command was run outside `infrastructure/docker`. Run `cd infrastructure/docker` first.
+- **Prisma reports `P1000` (authentication failed) after the password was changed:** The existing volume still uses the old credentials. Make sure `DATABASE_URL` in the root `.env` matches `.env` in this folder; if the values were changed after the first start, run `docker compose down -v` and `docker compose up -d` (this deletes all local data).
