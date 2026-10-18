@@ -10,7 +10,7 @@ const _agmFile = 'AGM minutes 2026-09-28.pdf';
 
 Future<void> _openDocuments(WidgetTester tester) async {
   await signInWithDemoAccount(tester);
-  await tester.tap(find.text('Documents'));
+  await tester.tap(find.text('Submit'));
   await tester.pumpAndSettle();
 }
 

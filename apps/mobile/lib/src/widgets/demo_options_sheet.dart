@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
+import '../models/user.dart';
 
 /// Lets the presenter show the offline, error, empty, location-permission and
 /// conflicting-update states during the demo.
@@ -32,6 +33,36 @@ Future<void> showDemoOptions(BuildContext context) {
                   style: TextStyle(color: AppColors.muted),
                 ),
               ),
+              if (store.user != null) ...[
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Text(
+                    'Preview role home',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                RadioGroup<UserRole>(
+                  groupValue: store.activeRole,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    store.switchDemoRole(value);
+                    Navigator.of(context).pop();
+                  },
+                  child: Column(
+                    children: [
+                      for (final role in UserRole.values)
+                        RadioListTile<UserRole>(
+                          value: role,
+                          title: Text(role.label),
+                          subtitle: const Text(
+                            'Fictional demonstration account',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
               SwitchListTile(
                 title: const Text('Offline'),
                 subtitle: const Text(

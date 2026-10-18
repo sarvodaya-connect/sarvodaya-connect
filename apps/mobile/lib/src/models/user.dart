@@ -8,6 +8,7 @@ class AuthenticatedUser {
     required this.displayName,
     this.email,
     required this.roles,
+    this.districtIds = const [],
     required this.societyIds,
   });
 
@@ -15,5 +16,16 @@ class AuthenticatedUser {
   final String displayName;
   final String? email;
   final List<UserRole> roles;
+  final List<String> districtIds;
   final List<String> societyIds;
+
+  UserRole get primaryRole => roles.first;
+}
+
+extension UserRoleLabels on UserRole {
+  String get label => switch (this) {
+    UserRole.societyOfficer => 'Society Officer',
+    UserRole.districtManager => 'District Manager',
+    UserRole.hqAdmin => 'HQ Administrator',
+  };
 }

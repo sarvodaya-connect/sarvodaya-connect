@@ -140,6 +140,21 @@ class DemoStore extends ChangeNotifier {
 
   AuthenticatedUser? _user;
   AuthenticatedUser? get user => _user;
+  UserRole get activeRole => _user?.primaryRole ?? UserRole.societyOfficer;
+
+  /// Changes the fictional signed-in user so every role home can be reviewed
+  /// without using real accounts. This control is exposed only in Demo options.
+  void switchDemoRole(UserRole role) {
+    _user = switch (role) {
+      UserRole.societyOfficer => demoOfficer,
+      UserRole.districtManager => demoDistrictManager,
+      UserRole.hqAdmin => demoHqAdmin,
+    };
+    _accountRequiresSetup = false;
+    firstTimeSetupComplete = true;
+    _selectedTab = 0;
+    notifyListeners();
+  }
 
   SocietyDetails _society = demoSociety;
 

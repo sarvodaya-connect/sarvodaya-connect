@@ -35,6 +35,24 @@ const demoOfficer = AuthenticatedUser(
   societyIds: ['society-pahala-kosgama'],
 );
 
+const demoDistrictManager = AuthenticatedUser(
+  id: 'user-demo-district-manager',
+  displayName: 'R. Fernando',
+  email: 'district.manager@example.invalid',
+  roles: [UserRole.districtManager],
+  districtIds: ['district-kurunegala'],
+  societyIds: [],
+);
+
+const demoHqAdmin = AuthenticatedUser(
+  id: 'user-demo-hq-admin',
+  displayName: 'S. Perera',
+  email: 'hq.admin@example.invalid',
+  roles: [UserRole.hqAdmin],
+  districtIds: [],
+  societyIds: [],
+);
+
 final demoSociety = SocietyDetails(
   id: 'society-pahala-kosgama',
   societyCode: 'SSS-104233',
