@@ -5,6 +5,7 @@
 import '../models/audit.dart';
 import '../models/committee.dart';
 import '../models/document.dart';
+import '../models/membership.dart';
 import '../models/notification.dart';
 import '../models/society.dart';
 import '../models/submission.dart';
@@ -22,6 +23,12 @@ const demoDistrict = DistrictRef(
   id: 'district-kurunegala',
   code: 'KG',
   nameEn: 'Kurunegala',
+);
+
+const demoAnuradhapuraDistrict = DistrictRef(
+  id: 'district-anuradhapura',
+  code: 'AD',
+  nameEn: 'Anuradhapura',
 );
 
 const demoReviewerName = 'R. Fernando';
@@ -91,6 +98,47 @@ final demoSociety = SocietyDetails(
   lastVerifiedBy: demoReviewerName,
 );
 
+/// Directory records used by the role-filtered M20 My Societies screen.
+final demoSocieties = <SocietyDetails>[
+  demoSociety,
+  SocietyDetails(
+    id: 'society-mawathagama',
+    societyCode: 'SSS-104287',
+    nameEn: 'Mawathagama SSS',
+    district: demoDistrict,
+    status: SocietyStatus.active,
+    verificationStatus: VerificationStatus.verified,
+    profileCompleteness: 72,
+    updatedAt: DateTime(2026, 10, 1),
+    registrationNumber: 'DEMO/KG/1984/018',
+    address: const SocietyAddress(
+      addressLine: 'No. 4, Station Road',
+      village: 'Mawathagama',
+      gnDivision: 'Mawathagama 1020',
+      dsDivision: 'Mawathagama',
+    ),
+    contacts: const [],
+  ),
+  SocietyDetails(
+    id: 'society-wariyapola',
+    societyCode: 'SSS-105012',
+    nameEn: 'Wariyapola SSS',
+    district: demoAnuradhapuraDistrict,
+    status: SocietyStatus.active,
+    verificationStatus: VerificationStatus.verified,
+    profileCompleteness: 94,
+    updatedAt: DateTime(2026, 10, 3),
+    registrationNumber: 'DEMO/AD/1981/076',
+    address: const SocietyAddress(
+      addressLine: 'No. 8, Temple Street',
+      village: 'Wariyapola',
+      gnDivision: 'Wariyapola 1012',
+      dsDivision: 'Wariyapola',
+    ),
+    contacts: const [],
+  ),
+];
+
 /// Sections counted for profile completeness. Society email is deliberately missing in the demo.
 const demoCompletedSections = [
   'Registration',
@@ -111,6 +159,7 @@ CommitteeMember _member(
   int? age,
   bool primary = false,
   DateTime? appointedOn,
+  String? email,
 }) {
   return CommitteeMember(
     id: id,
@@ -118,6 +167,7 @@ CommitteeMember _member(
     position: position,
     seatType: seat,
     phone: '+94 00 000 ${phoneSuffix.toString().padLeft(4, '0')}',
+    email: email ?? '$id@example.invalid',
     age: age,
     appointedOn: appointedOn ?? DateTime(2024, 6, 1),
     isActive: true,
@@ -125,7 +175,7 @@ CommitteeMember _member(
   );
 }
 
-/// 23 of 25 seats filled: Children 3/3, Youth 2/3, Mothers 3/3, Ordinary 9/9, Elders 6/7.
+/// All 25 seats filled: Children 3/3, Youth 3/3, Mothers 3/3, Ordinary 9/9, Elders 7/7.
 final demoCouncil = <CommitteeMember>[
   _member(
     'cm-president',
@@ -188,6 +238,14 @@ final demoCouncil = <CommitteeMember>[
     CouncilSeatType.youth,
     15,
     age: 23,
+  ),
+  _member(
+    'cm-youth-3',
+    'D. Fernando',
+    'Executive member',
+    CouncilSeatType.youth,
+    25,
+    age: 21,
   ),
   _member(
     'cm-mother-1',
@@ -294,7 +352,26 @@ final demoCouncil = <CommitteeMember>[
     CouncilSeatType.elder,
     36,
   ),
+  _member(
+    'cm-elder-7',
+    'P. Senanayake',
+    'Elders Council',
+    CouncilSeatType.elder,
+    37,
+  ),
 ];
+
+/// Fictional member counts for the approved 2026 membership snapshot.
+const demoMembership = MembershipSummary(
+  year: 2026,
+  categories: [
+    MembershipCategoryCounts(category: 'Children', female: 178, male: 164),
+    MembershipCategoryCounts(category: 'Youth', female: 246, male: 219),
+    MembershipCategoryCounts(category: 'Mothers', female: 526, male: 0),
+    MembershipCategoryCounts(category: 'Ordinary', female: 1485, male: 1328),
+    MembershipCategoryCounts(category: 'Elders Council', female: 82, male: 65),
+  ],
+);
 
 final demoDocuments = <SocietyDocument>[
   SocietyDocument(
