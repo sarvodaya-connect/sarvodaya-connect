@@ -10,6 +10,7 @@ import '../models/notification.dart';
 import '../models/society.dart';
 import '../models/submission.dart';
 import '../models/user.dart';
+import '../models/village_profile.dart';
 
 class DemoAccount {
   const DemoAccount._();
@@ -138,6 +139,37 @@ final demoSocieties = <SocietyDetails>[
     contacts: const [],
   ),
 ];
+
+/// Fictional annual village snapshot for M06b. These figures are demonstration
+/// values only and do not describe a real community.
+const demoVillageProfile = VillageProfile(
+  name: 'Kosgama GN',
+  gnDivision: 'Kosgama 1056',
+  population: 2540,
+  households: 680,
+  womenHeadedHouseholds: 108,
+  residentsWithDisabilities: 64,
+  eldersOverSixty: 402,
+  femaleShare: 52,
+  maleShare: 48,
+  keyStatistics: [
+    VillageStatistic(label: 'Safe drinking water', value: '58% of homes'),
+    VillageStatistic(label: 'Electricity', value: '96%'),
+    VillageStatistic(label: 'On Aswesuma (welfare)', value: '197 homes'),
+    VillageStatistic(label: 'Disaster risk', value: 'Drought, elephants'),
+  ],
+  livelihoods: [
+    VillageShare(name: 'Agriculture and livestock', percent: 42),
+    VillageShare(name: 'Daily wage work', percent: 24),
+    VillageShare(name: 'Small business and trade', percent: 18),
+    VillageShare(name: 'Other livelihoods', percent: 16),
+  ],
+  priorityIssues: [
+    'Reliable irrigation water through the dry season',
+    'Reducing elephant damage to crops and home gardens',
+    'Safer road access to the weekly market during heavy rain',
+  ],
+);
 
 /// Sections counted for profile completeness. Society email is deliberately missing in the demo.
 const demoCompletedSections = [

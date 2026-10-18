@@ -5,6 +5,7 @@ import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/profile_draft.dart';
 import '../models/submission.dart';
+import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/profile_widgets.dart';
@@ -116,6 +117,21 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (store.activeRole != UserRole.societyOfficer) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Society profile')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: StateMessage(
+              icon: Icons.lock_outline,
+              title: 'Read-only access',
+              message: 'Your role can view society information but cannot submit profile changes.',
+            ),
+          ),
+        ),
+      );
+    }
     final draft = store.profileDraft;
     if (draft == null) {
       return Scaffold(

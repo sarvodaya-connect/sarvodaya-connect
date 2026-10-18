@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { EmptyState, ErrorState, NoResultsState, TableSkeleton } from "./data-states";
+import { AccessDeniedState, EmptyState, ErrorState, NoResultsState, TableSkeleton } from "./data-states";
 
 describe("TableSkeleton", () => {
   it("announces a single busy loading status", () => {
@@ -80,5 +80,15 @@ describe("NoResultsState", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear all filters" }));
     expect(onClearAll).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AccessDeniedState", () => {
+  it("explains the blocked area and provides a return path", () => {
+    render(<AccessDeniedState role="National Administrator" />);
+
+    expect(screen.getByRole("heading", { name: "You do not have access to this area" })).toBeInTheDocument();
+    expect(screen.getByText(/Current preview role:/)).toHaveTextContent("National Administrator");
+    expect(screen.getByRole("link", { name: "Return to overview" })).toHaveAttribute("href", "/dashboard");
   });
 });
