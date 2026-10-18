@@ -107,6 +107,29 @@ The dashboard currently uses fictional fixtures, so these states can be demonstr
 
 To see the no-search-results state, search the Societies page for a name that does not exist. The demonstration scenarios live in `src/lib/demo-scenarios.ts` and will be removed when the registry is loaded from the API.
 
+The same `?demo=loading`, `?demo=empty` and `?demo=error` parameters work on `/compliance`, `/documents` and `/notifications`.
+
+## Compliance, documents and notifications (SC-48)
+
+| Page | Catalogue | What it shows |
+| --- | --- | --- |
+| `/compliance` | D11 Audits & compliance | The four annual Registrar documents (audit report, AGM minutes, office-bearer list and signed members list) for every society in scope. Each document is **Completed** (approved), **Pending** (under review or returned) or **Missing** (not submitted; overdue after 30 Sep 2026). Status cards, the Registrar strip, search and the district, document type and status filters narrow the list. **Send reminder** is recorded on the page only. |
+| `/documents` | D12 Documents library | Every society document the viewer may see, with search across names, societies and the text read from scanned files, category list, district, society and status filters, and a preview panel. Downloads are switched off for the demonstration files. |
+| `/notifications` | D19 Notification centre | Approvals, returns, audit reminders, document requests, emergency, stale-data and system notifications for the viewer's role, with category filters, unread markers and **Mark all read**. The bell in the header and the navigation show the unread count. |
+
+### Provisional role-based visibility
+
+Use **Viewing as** in the header to switch between fictional staff members. The choice is stored in a cookie, and the rules in `src/lib/access.ts` are applied on the server, so restricted records are never sent to the browser.
+
+| Viewer | Compliance | Documents | Notifications |
+| --- | --- | --- | --- |
+| HQ Administrator | All districts | All documents, including signed members lists | National, emergency and system |
+| District Manager (Kurunegala) | Own district | Own district, including signed members lists | Own district |
+| Programme Coordinator (Phase 2) | No permission | Activity and registration documents of assigned societies only; no audit, Registrar, finance or members-list files | Assigned societies |
+| System Administrator | No permission | No permission | System only |
+
+These rules follow the provisional permissions for the MVP and will be enforced by the API when real sign-in is connected. Read state for notifications is kept in the browser until the notification service exists.
+
 ## Before opening a pull request
 
 Run:
