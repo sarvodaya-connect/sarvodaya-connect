@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AuthModule } from './auth/auth.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
+import { StorageModule } from './storage/storage.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { DistrictsController } from './districts/districts.controller.js';
 import { SocietiesController } from './societies/societies.controller.js';
@@ -24,6 +28,10 @@ const repositoryEnvironmentFile = resolve(
       isGlobal: true,
     }),
     PrismaModule,
+    AuthModule,
+    StorageModule,
+    NotificationsModule,
+    DocumentsModule,
   ],
   controllers: [AppController, DistrictsController, SocietiesController],
   providers: [
