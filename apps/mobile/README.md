@@ -57,8 +57,17 @@ The officer can also edit the society profile: **Society → Edit Profile** (add
 SC-47 adds the Society Officer's audit, document and notification screens:
 
 - **M12 Audit** (Home → **Audit FY 2025/26**, or **Documents → Annual audit checklist**): the required audit steps for the current financial year with their status (Complete, In progress, Not started, Overdue), how late the report is, **Upload audit report**, and last year's approved audit. Uploading the audit report completes the report steps and marks the audit as waiting for District review.
-- **M13 Documents** (**Documents** tab): the four Registrar documents, then the document library with each file's type, status, uploader and upload date, filtered by type. Choosing one of the fictional files records it in the library on the phone. A failed upload keeps the chosen type and file and offers **Retry upload**. If the sheet is closed, the file stays under **Not uploaded** with **Retry** and **Remove**.
-- **M16 Notifications** (bell on Home, with the unread count): Today and Earlier groups, unread items tinted, bold and marked with a dot (and "Unread" for screen readers), and **Mark all read**. Tapping a notification marks it read and opens its item: the Documents tab, the audit checklist, a submission in the tracker or the society profile. Returning or approving a Council update with the demo District Manager actions adds a notification.
+- **M13 Documents** (**Submit** tab): the four Registrar documents, then the document library with each file's type, status, uploader and upload date, filtered by type. Choosing one of the fictional files records it in the library on the phone. A failed upload keeps the chosen type and file and offers **Retry upload**. If the sheet is closed, the file stays under **Not uploaded** with **Retry** and **Remove**.
+- **M16 Notifications** (bell on Home, with the unread count): Today and Earlier groups, unread items tinted, bold and marked with a dot (and "Unread" for screen readers), and **Mark all read**. Tapping a notification marks it read and opens its item: the Submit tab, the audit checklist, a submission in Requests or the society profile. Returning or approving a Council update with the demo District Manager actions adds a notification.
+
+SC-39 adds role-aware mobile homes and navigation:
+
+- **M05 / M05i Society Officer Home:** society identity, profile completeness with a completion action, attention items, quick actions and Tamil home/navigation labels.
+- **District Manager Home:** assigned-society totals, pending reviews, incomplete profiles, overdue work and district progress. Its navigation exposes Societies, Reviews and Alerts, but not Society Officer submission actions.
+- **HQ Administrator Home:** national society totals, verification and Registrar completion indicators, plus Societies, Reports and Alerts. District review actions and Society Officer submission actions are hidden.
+- **M17 More:** signed-in identity and role, items waiting to send, language selection, help, notifications where permitted and sign out.
+- **M26 states:** role homes and work areas use the shared loading, empty, offline and error states. Existing workflows continue to use success and named locked-during-review states.
+- Use **Demo options → Preview role home** to switch between the three fictional roles when reviewing the UI. Production roles will come from Amazon Cognito claims.
 
 - All data is fictional and held in memory (`lib/src/data/demo_data.dart`, `lib/src/state/demo_store.dart`). Nothing is written to a backend, and closing the app resets the demo.
 - Sign in with **Use demo account** on the sign-in screen. Production authentication will be connected through Amazon Cognito.
@@ -74,8 +83,8 @@ Open **Demo options** (sliders icon on Home) to show these states during a demon
 | Loading | Shown briefly whenever a screen loads (including Audit, Documents and Notifications), and again after changing a demo option |
 | Offline | Turn on **Offline**. Screens show the offline state with Try again; sending and uploading keep the draft on the phone |
 | General error | Turn on **Loading error**. Screens, including Audit, Documents and Notifications, show "Something went wrong" with Try again |
-| Empty tracker | Turn on **No submissions yet**, then open **Tracker** |
-| Empty documents, audit and notifications | Turn on **New society with no records**, then open **Documents**, **Audit** or **Notifications** |
+| Empty tracker | Turn on **No submissions yet**, then open **Requests** |
+| Empty documents, audit and notifications | Turn on **New society with no records**, then open **Submit**, **Audit** or **Notifications** |
 | Failed upload and retry | Turn on **Next upload fails**, then upload a document. The upload fails once and shows **Retry upload**; close the sheet to see it under **Not uploaded** with **Retry** |
 | Validation | Save a form with empty or invalid fields (for example phone `12345` or email `society@`). Inline errors and a summary appear and typed values are kept |
 | Location permission denied | Turn on **Location permission denied**, then **Society → Edit Profile → Use my location**. Shows **Open Settings** (explains what would happen on a phone) and **Place Pin Manually** (tap the map or type coordinates) |

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
+import '../models/app_language.dart';
 import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -25,9 +26,10 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final firstName = store.user?.displayName.split(' ').first ?? '';
+    final copy = _HomeCopy(store.selectedLanguage);
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_greeting(store.now)}, $firstName'),
+        title: Text('${copy.greeting(store.now)}, $firstName'),
         actions: [
           const _NotificationsButton(),
           IconButton(
@@ -50,12 +52,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  static String _greeting(DateTime now) {
-    if (now.hour < 12) return 'Good morning';
-    if (now.hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
 }
 
 class _HomeContent extends StatelessWidget {
@@ -64,6 +60,14 @@ class _HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (store.emptyRecords) {
+      return const StateMessage(
+        icon: Icons.holiday_village_outlined,
+        title: 'No society information yet',
+        message: 'Your assigned society will appear here after the District Centre completes the setup.',
+      );
+    }
+    final copy = _HomeCopy(store.selectedLanguage);
     final society = store.society;
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -78,7 +82,9 @@ class _HomeContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        society.nameEn,
+                        store.selectedLanguage == AppLanguage.tamil
+                            ? 'களுவாஞ்சிக்குடி சர்வோதய சங்கம்'
+                            : society.nameEn,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (society.nameLocal != null)
@@ -117,7 +123,7 @@ class _HomeContent extends StatelessWidget {
         const _CurrentSubmissionCard(),
         const SizedBox(height: 12),
         SectionCard(
-          title: 'Needs your attention',
+          title: copy.needsAttention,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           children: [
             _AttentionTile(
@@ -150,7 +156,7 @@ class _HomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SectionCard(
-          title: 'Quick actions',
+          title: copy.quickActions,
           children: [
             GridView.count(
               crossAxisCount: 2,
@@ -162,12 +168,12 @@ class _HomeContent extends StatelessWidget {
               children: [
                 _QuickAction(
                   icon: Icons.badge_outlined,
-                  label: 'View Society Profile',
+                  label: copy.viewProfile,
                   onTap: () => store.selectTab(HomeShell.societyTab),
                 ),
                 _QuickAction(
                   icon: Icons.groups_outlined,
-                  label: 'Update Committee',
+                  label: copy.updateCouncil,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const CouncilScreen(),
@@ -176,7 +182,7 @@ class _HomeContent extends StatelessWidget {
                 ),
                 _QuickAction(
                   icon: Icons.insights_outlined,
-                  label: 'Report Activity',
+                  label: copy.reportActivity,
                   onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -187,7 +193,7 @@ class _HomeContent extends StatelessWidget {
                 ),
                 _QuickAction(
                   icon: Icons.upload_file_outlined,
-                  label: 'Upload Document',
+                  label: copy.uploadDocument,
                   onTap: () => store.selectTab(HomeShell.documentsTab),
                 ),
               ],
@@ -256,6 +262,15 @@ class _CompletenessCard extends StatelessWidget {
           '${demoCompletedSections.length} sections complete · Missing: ${demoMissingSections.join(', ')}',
           style: const TextStyle(color: AppColors.muted, fontSize: 13),
         ),
+        if (percent < 100) ...[
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () =>
+                DemoScope.read(context).selectTab(HomeShell.societyTab),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Complete profile'),
+          ),
+        ],
       ],
     );
   }
@@ -465,4 +480,54 @@ class _QuickAction extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeCopy {
+  const _HomeCopy(this.language);
+
+  final AppLanguage language;
+
+  String greeting(DateTime now) {
+    if (language == AppLanguage.tamil) return 'முகப்பு';
+    if (language == AppLanguage.sinhala) return 'ආයුබෝවන්';
+    if (now.hour < 12) return 'Good morning';
+    if (now.hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String get needsAttention => switch (language) {
+    AppLanguage.tamil => 'உங்கள் கவனம் தேவை',
+    AppLanguage.sinhala => 'ඔබගේ අවධානය අවශ්‍යයි',
+    AppLanguage.english => 'Needs your attention',
+  };
+
+  String get quickActions => switch (language) {
+    AppLanguage.tamil => 'விரைவு செயல்கள்',
+    AppLanguage.sinhala => 'ඉක්මන් ක්‍රියා',
+    AppLanguage.english => 'Quick actions',
+  };
+
+  String get viewProfile => switch (language) {
+    AppLanguage.tamil => 'சங்க விவரம்',
+    AppLanguage.sinhala => 'සමිති පැතිකඩ',
+    AppLanguage.english => 'View Society Profile',
+  };
+
+  String get updateCouncil => switch (language) {
+    AppLanguage.tamil => 'சபையை புதுப்பிக்க',
+    AppLanguage.sinhala => 'සභාව යාවත්කාලීන කරන්න',
+    AppLanguage.english => 'Update Council',
+  };
+
+  String get reportActivity => switch (language) {
+    AppLanguage.tamil => 'செயற்பாட்டைப் பதிவு செய்',
+    AppLanguage.sinhala => 'ක්‍රියාකාරකම වාර්තා කරන්න',
+    AppLanguage.english => 'Report Activity',
+  };
+
+  String get uploadDocument => switch (language) {
+    AppLanguage.tamil => 'ஆவணத்தை பதிவேற்று',
+    AppLanguage.sinhala => 'ලේඛනය උඩුගත කරන්න',
+    AppLanguage.english => 'Upload Document',
+  };
 }
