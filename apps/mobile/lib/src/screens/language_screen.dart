@@ -26,10 +26,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: BrandMark(compact: true),
-              ),
+              const Align(alignment: Alignment.centerLeft, child: BrandMark()),
               const Spacer(),
               Text(
                 'Choose your language',
