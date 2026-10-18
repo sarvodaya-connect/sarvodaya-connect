@@ -23,35 +23,35 @@ type SocietyFixture = [
   districtId: string,
   status: SocietyStatus,
   verificationStatus: VerificationStatus,
-  profileCompleteness: number,
   updatedAt: string,
 ];
 
 const societyFixtures: SocietyFixture[] = [
-  ["society-pahala-kosgama", "SSS-KG-001", "Pahala Kosgama Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "VERIFIED", 86, "2026-11-12T12:30:00.000Z"],
-  ["society-kuliyapitiya", "SSS-KG-014", "Kuliyapitiya Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "VERIFIED", 92, "2026-11-10T09:20:00.000Z"],
-  ["society-wellawa", "SSS-KG-028", "Wellawa Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "PENDING", 78, "2026-11-09T14:05:00.000Z"],
-  ["society-maho", "SSS-KG-033", "Maho Sarvodaya Shramadana Society", "district-kurunegala", "UNDER_REVIEW", "PENDING", 71, "2026-11-08T08:45:00.000Z"],
-  ["society-rambukkana", "SSS-KE-021", "Rambukkana Sarvodaya Shramadana Society", "district-kegalle", "ACTIVE", "VERIFIED", 88, "2026-11-07T10:30:00.000Z"],
-  ["society-galewela", "SSS-MT-008", "Galewela Sarvodaya Shramadana Society", "district-matale", "ACTIVE", "UNVERIFIED", 64, "2026-11-06T11:15:00.000Z"],
-  ["society-kundasale", "SSS-KD-042", "Kundasale Sarvodaya Shramadana Society", "district-kandy", "INACTIVE", "UNVERIFIED", 57, "2026-10-29T06:10:00.000Z"],
+  ["society-pahala-kosgama", "SSS-KG-001", "Pahala Kosgama Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "VERIFIED", "2026-11-12T12:30:00.000Z"],
+  ["society-kuliyapitiya", "SSS-KG-014", "Kuliyapitiya Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "VERIFIED", "2026-11-10T09:20:00.000Z"],
+  ["society-wellawa", "SSS-KG-028", "Wellawa Sarvodaya Shramadana Society", "district-kurunegala", "ACTIVE", "PENDING", "2026-11-09T14:05:00.000Z"],
+  ["society-maho", "SSS-KG-033", "Maho Sarvodaya Shramadana Society", "district-kurunegala", "UNDER_REVIEW", "PENDING", "2026-11-08T08:45:00.000Z"],
+  ["society-rambukkana", "SSS-KE-021", "Rambukkana Sarvodaya Shramadana Society", "district-kegalle", "ACTIVE", "VERIFIED", "2026-11-07T10:30:00.000Z"],
+  ["society-galewela", "SSS-MT-008", "Galewela Sarvodaya Shramadana Society", "district-matale", "ACTIVE", "UNVERIFIED", "2026-11-06T11:15:00.000Z"],
+  ["society-kundasale", "SSS-KD-042", "Kundasale Sarvodaya Shramadana Society", "district-kandy", "INACTIVE", "UNVERIFIED", "2026-10-29T06:10:00.000Z"],
 ];
 
-export const societies: SocietySummary[] = societyFixtures.map(
-  ([id, societyCode, nameEn, districtId, status, verificationStatus, profileCompleteness, updatedAt]) => ({
-  id,
-  societyCode,
-  nameEn,
-  district: {
-    id: districtById[districtId]!.id,
-    code: districtById[districtId]!.code,
-    nameEn: districtById[districtId]!.nameEn,
-  },
-  status,
-  verificationStatus,
-  profileCompleteness,
-  updatedAt,
-}));
+const societySummaries: SocietySummary[] = societyFixtures.map(
+  ([id, societyCode, nameEn, districtId, status, verificationStatus, updatedAt]) => ({
+    id,
+    societyCode,
+    nameEn,
+    district: {
+      id: districtById[districtId]!.id,
+      code: districtById[districtId]!.code,
+      nameEn: districtById[districtId]!.nameEn,
+    },
+    status,
+    verificationStatus,
+    profileCompleteness: 0,
+    updatedAt,
+  }),
+);
 
 function buildDetails(summary: SocietySummary): SocietyDetails {
   const isFeatured = summary.id === "society-pahala-kosgama";
@@ -94,7 +94,44 @@ function buildDetails(summary: SocietySummary): SocietyDetails {
   };
 }
 
-export const societyDetails = societies.map(buildDetails);
+export function getProfileCompleteness(society: SocietyDetails) {
+  return Math.round(((8 - getMissingProfileInformation(society).length) / 8) * 100);
+}
+
+export function getMissingProfileInformation(society: SocietyDetails) {
+  const primaryContact = society.contacts.find((contact) => contact.isPrimary);
+  const missing: string[] = [];
+  if (!society.establishedOn) missing.push("Date established");
+  if (!society.address.addressLine) missing.push("Street address");
+  if (!society.address.village) missing.push("Village or town");
+  if (!society.address.gnDivision) missing.push("GN Division");
+  if (!society.address.dsDivision) missing.push("DS Division");
+  if (!primaryContact?.fullName) missing.push("Primary contact name");
+  if (!primaryContact?.phone) missing.push("Primary contact telephone");
+  if (!society.location || !Number.isFinite(society.location.latitude) || !Number.isFinite(society.location.longitude)) {
+    missing.push("GPS location");
+  }
+  return missing;
+}
+
+export const societyDetails: SocietyDetails[] = societySummaries.map((summary) => {
+  const society = buildDetails(summary);
+  return { ...society, profileCompleteness: getProfileCompleteness(society) };
+});
+
+export const societies: SocietySummary[] = societyDetails.map(
+  ({ id, societyCode, nameEn, nameLocal, district, status, verificationStatus, profileCompleteness, updatedAt }) => ({
+    id,
+    societyCode,
+    nameEn,
+    nameLocal,
+    district,
+    status,
+    verificationStatus,
+    profileCompleteness,
+    updatedAt,
+  }),
+);
 
 export function getSociety(id: string) {
   return societyDetails.find((society) => society.id === id);

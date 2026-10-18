@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { societies } from "./demo-registry";
+import { societyDetails } from "./demo-registry";
 import { DEMO_LOADING_DELAY_MS, loadDemoList, loadSocietyRegistry, parseDemoScenario } from "./demo-scenarios";
 
 describe("parseDemoScenario", () => {
@@ -20,7 +20,7 @@ describe("loadSocietyRegistry", () => {
   });
 
   it("returns the demonstration registry by default", async () => {
-    await expect(loadSocietyRegistry(null)).resolves.toMatchObject({ societies });
+    await expect(loadSocietyRegistry(null)).resolves.toMatchObject({ societies: societyDetails });
   });
 
   it("returns no societies for the empty scenario", async () => {
@@ -45,7 +45,7 @@ describe("loadSocietyRegistry", () => {
     expect(settled).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
-    await expect(request).resolves.toMatchObject({ societies });
+    await expect(request).resolves.toMatchObject({ societies: societyDetails });
   });
 });
 

@@ -12,6 +12,7 @@ import {
 } from "@/lib/access";
 
 import { Brand } from "./brand";
+import { GlobalSearchForm } from "./global-search-form";
 import { Icon, type IconName } from "./icon";
 import { useNotifications } from "./notifications-context";
 
@@ -29,6 +30,7 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
   return [
     { href: "/dashboard", icon: "home", label: "Overview" },
     { href: "/societies", icon: "society", label: "Societies" },
+    { href: "/search", icon: "search", label: "Global search" },
     { href: "/districts/kurunegala", icon: "district", label: "District view" },
     { href: "/reviews", icon: "review", label: "Review queue" },
     ...(canViewCompliance(viewer)
@@ -117,6 +119,9 @@ export function DashboardShell({
           <div className="hidden text-sm text-[#66756b] lg:block">
             Sarvodaya Shramadana Societies
           </div>
+          <div className="hidden flex-1 justify-center px-6 md:flex">
+            <GlobalSearchForm />
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <ViewerSwitcher viewer={viewer} />
             <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">
@@ -147,7 +152,7 @@ export function DashboardShell({
             {navigation.map((item) => (
               <Link
                 className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${
-                  pathname.startsWith(item.href)
+                  (pathname === item.href || pathname.startsWith(`${item.href}/`))
                     ? "bg-white text-[#123d29]"
                     : "text-white/80"
                 }`}
