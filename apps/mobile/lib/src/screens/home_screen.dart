@@ -16,6 +16,7 @@ import 'audit_screen.dart';
 import 'changes_requested_screen.dart';
 import 'council_screen.dart';
 import 'notifications_screen.dart';
+import 'membership_screen.dart';
 import 'submission_detail_screen.dart';
 
 /// M05 · Society Officer home.
@@ -195,6 +196,15 @@ class _HomeContent extends StatelessWidget {
                   icon: Icons.upload_file_outlined,
                   label: copy.uploadDocument,
                   onTap: () => store.selectTab(HomeShell.documentsTab),
+                ),
+                _QuickAction(
+                  icon: Icons.people_alt_outlined,
+                  label: 'Membership',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MembershipScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),

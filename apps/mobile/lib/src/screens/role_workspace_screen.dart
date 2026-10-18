@@ -5,6 +5,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
 import '../widgets/state_views.dart';
+import 'my_societies_screen.dart';
 
 enum RoleWorkspace { societies, reviews, reports, alerts }
 
@@ -38,6 +39,9 @@ class RoleWorkspaceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (workspace == RoleWorkspace.societies) {
+      return const MySocietiesScreen();
+    }
     final store = DemoScope.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(_title)),

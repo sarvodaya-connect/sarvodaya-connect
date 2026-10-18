@@ -10,8 +10,12 @@ describe("GlobalSearchResults", () => {
   it("links society and related-record matches to the owning profile", () => {
     render(<GlobalSearchResults query="registration-certificate.pdf" results={searchRegistry(societyDetails, "registration-certificate.pdf")} />);
 
-    expect(screen.getByText("Document")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /registration-certificate\.pdf/ })).toHaveAttribute("href", "/societies/society-pahala-kosgama");
+    expect(screen.getAllByText("Document").length).toBeGreaterThan(0);
+    expect(
+      screen
+        .getAllByRole("link", { name: /registration-certificate\.pdf/ })
+        .some((link) => link.getAttribute("href") === "/societies/society-pahala-kosgama"),
+    ).toBe(true);
   });
 
   it("shows a useful no-result state for a query without matches", () => {

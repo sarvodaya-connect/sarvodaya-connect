@@ -13,7 +13,7 @@ describe("searchRegistry", () => {
     expect(searchRegistry(societyDetails, "Nimal Perera").some((result) => result.kind === "Contact")).toBe(true);
     expect(searchRegistry(societyDetails, "Treasurer").some((result) => result.kind === "Committee")).toBe(true);
     expect(searchRegistry(societyDetails, "registration-certificate.pdf").some((result) => result.kind === "Document")).toBe(true);
-    expect(searchRegistry(societyDetails, "committee update recorded").some((result) => result.kind === "History")).toBe(true);
+    expect(searchRegistry(societyDetails, "Treasurer updated from K. Perera").some((result) => result.kind === "History")).toBe(true);
   });
 
   it("returns no records for an empty or unmatched query", () => {

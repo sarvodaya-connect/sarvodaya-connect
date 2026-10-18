@@ -2,24 +2,36 @@ import type { SVGProps } from "react";
 
 export type IconName =
   | "alert"
+  | "bell"
   | "building"
+  | "check"
   | "chevron"
   | "clipboard"
+  | "clock"
   | "close"
   | "district"
   | "document"
   | "home"
   | "inbox"
+  | "lock"
   | "logout"
   | "refresh"
   | "review"
   | "search"
-  | "society";
+  | "shield"
+  | "society"
+  | "undo";
 
 type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
 
 const paths: Record<IconName, React.ReactNode> = {
   alert: <><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></>,
+  bell: <><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></>,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  clock: <><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>,
+  lock: <><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></>,
+  shield: <><path d="M12 3 5 6v5.5c0 4.4 3 7.9 7 9.5 4-1.6 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/></>,
+  undo: <><path d="M9 5 4 10l5 5"/><path d="M4 10h10a5 5 0 0 1 0 10h-3"/></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   inbox: <><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6H3v-6z"/></>,
   refresh: <><path d="M20 11a8 8 0 0 0-14.7-3.5L4 9"/><path d="M4 4v5h5M4 13a8 8 0 0 0 14.7 3.5L20 15"/><path d="M20 20v-5h-5"/></>,

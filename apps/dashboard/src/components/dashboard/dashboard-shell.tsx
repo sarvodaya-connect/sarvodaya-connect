@@ -3,19 +3,56 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { switchDemoViewer } from "@/app/(dashboard)/actions";
+import {
+  canViewCompliance,
+  canViewDocumentLibrary,
+  type DemoViewer,
+  demoViewers,
+} from "@/lib/access";
+
 import { Brand } from "./brand";
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon, type IconName } from "./icon";
+import { useNotifications } from "./notifications-context";
 
-const navigation: { href: string; icon: IconName; label: string }[] = [
-  { href: "/societies", icon: "society", label: "Societies" },
-  { href: "/search", icon: "search", label: "Global search" },
-  { href: "/districts/kurunegala", icon: "district", label: "District view" },
-  { href: "/reviews", icon: "review", label: "Review queue" },
-];
+type NavigationItem = { href: string; icon: IconName; label: string };
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+/** Primary navigation. Pages the viewer's role cannot open are left out. */
+export function navigationFor(viewer: DemoViewer): NavigationItem[] {
+  if (viewer.role === "SYSTEM_ADMIN") {
+    // Technical settings only: no society registry, district or review pages.
+    return [
+      { href: "/admin", icon: "building", label: "Platform access" },
+      { href: "/notifications", icon: "bell", label: "Notifications" },
+    ];
+  }
+  return [
+    { href: "/dashboard", icon: "home", label: "Overview" },
+    { href: "/societies", icon: "society", label: "Societies" },
+    { href: "/search", icon: "search", label: "Global search" },
+    { href: "/districts/kurunegala", icon: "district", label: "District view" },
+    { href: "/reviews", icon: "review", label: "Review queue" },
+    ...(canViewCompliance(viewer)
+      ? [{ href: "/compliance", icon: "shield", label: "Audits & compliance" } satisfies NavigationItem]
+      : []),
+    ...(canViewDocumentLibrary(viewer)
+      ? [{ href: "/documents", icon: "document", label: "Documents" } satisfies NavigationItem]
+      : []),
+    { href: "/notifications", icon: "bell", label: "Notifications" },
+  ];
+}
+
+export function DashboardShell({
+  children,
+  viewer,
+}: {
+  children: React.ReactNode;
+  viewer: DemoViewer;
+}) {
   const pathname = usePathname();
+  const { unreadCount } = useNotifications();
+  const navigation = navigationFor(viewer);
 
   return (
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
@@ -24,13 +61,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <Brand inverse />
         </div>
         <p className="px-6 pt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8db39a]">
-          Administration
+          Workspace
         </p>
         <nav className="mt-3 space-y-1 px-3" aria-label="Primary navigation">
           {navigation.map((item) => {
-            const active = item.href === "/search" ? pathname === item.href : pathname.startsWith(item.href);
+            const hrefPath = item.href.split("?")[0];
+            const active = pathname === hrefPath || (hrefPath !== "/dashboard" && pathname.startsWith(`${hrefPath}/`));
             return (
               <Link
+                aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
                   active
                     ? "bg-[#e6f0e7] text-[#123d29] shadow-sm"
@@ -41,9 +80,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-[18px]" name={item.icon} />
                 {item.label}
-                {item.href === "/reviews" && (
+                {item.label === "Review queue" && (
                   <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
                     2
+                  </span>
+                )}
+                {item.href === "/notifications" && unreadCount > 0 && (
+                  <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
+                    {unreadCount}
+                    <span className="sr-only"> unread</span>
                   </span>
                 )}
               </Link>
@@ -53,12 +98,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto border-t border-white/10 p-4">
           <div className="flex items-center gap-3 rounded-lg bg-white/6 p-3">
             <span className="grid size-9 place-items-center rounded-full bg-[#dce9de] text-xs font-bold text-[#123d29]">
-              KF
+              {viewer.initials}
             </span>
             <span className="min-w-0 flex-1">
-              <strong className="block truncate text-xs">K. Fernando</strong>
+              <strong className="block truncate text-xs">{viewer.displayName}</strong>
               <span className="block truncate text-[10px] text-[#a8c7b1]">
-                HQ Administrator
+                {viewer.roleLabel} · {viewer.scopeLabel}
               </span>
             </span>
             <Link aria-label="Sign out" href="/">
@@ -69,7 +114,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex h-[74px] items-center justify-between border-b border-[#dfe5dc] bg-white/95 px-5 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-[74px] flex-wrap items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-4 py-3 backdrop-blur md:px-8">
           <div className="lg:hidden"><Brand compact /></div>
           <div className="hidden text-sm text-[#66756b] lg:block">
             Sarvodaya Shramadana Societies
@@ -77,12 +122,28 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="hidden flex-1 justify-center px-6 md:flex">
             <GlobalSearchForm />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <ViewerSwitcher viewer={viewer} />
             <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">
               Demonstration Data
             </span>
+            <Link
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+              className="relative grid size-9 place-items-center rounded-full border border-[#dfe5dc] bg-white text-[#26362c] transition hover:bg-[#f4f8f3] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+              href="/notifications"
+            >
+              <Icon className="size-[18px]" name="bell" />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-bold leading-[18px] text-white"
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
             <span className="hidden size-9 place-items-center rounded-full bg-[#e6f0e7] text-xs font-bold text-[#174a32] sm:grid">
-              KF
+              {viewer.initials}
             </span>
           </div>
         </header>
@@ -91,7 +152,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {navigation.map((item) => (
               <Link
                 className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${
-                  (item.href === "/search" ? pathname === item.href : pathname.startsWith(item.href))
+                  (pathname === item.href || pathname.startsWith(`${item.href}/`))
                     ? "bg-white text-[#123d29]"
                     : "text-white/80"
                 }`}
@@ -106,5 +167,37 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="px-5 py-7 md:px-8 md:py-9 xl:px-10">{children}</main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Demonstration control: choose which fictional staff member is viewing the
+ * dashboard, to show the role-based visibility rules. Replaced by sign-in later.
+ */
+function ViewerSwitcher({ viewer }: { viewer: DemoViewer }) {
+  return (
+    <form action={switchDemoViewer} className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-[11px] font-semibold text-[#66756b]">
+        Viewing as
+        <select
+          className="max-w-[230px] rounded-lg border border-[#d8dfd8] bg-[#fbfcfa] px-2.5 py-1.5 text-xs font-medium text-[#26362c] outline-none focus:border-[#39815a] focus:ring-3 focus:ring-[#e1eee3]"
+          defaultValue={viewer.id}
+          key={viewer.id}
+          name="viewer"
+          onChange={(event) => event.currentTarget.form?.requestSubmit()}
+        >
+          {demoViewers.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.roleLabel} · {option.displayName}
+            </option>
+          ))}
+        </select>
+      </label>
+      <noscript>
+        <button className="rounded-lg border border-[#ccd6ce] px-2.5 py-1.5 text-xs font-semibold" type="submit">
+          Switch
+        </button>
+      </noscript>
+    </form>
   );
 }

@@ -26,10 +26,13 @@ body {
   margin: 0;
 }
 
-button,
-input,
-select {
-  font: inherit;
+/* In the base layer so Tailwind text utilities on form controls still apply. */
+@layer base {
+  button,
+  input,
+  select {
+    font: inherit;
+  }
 }
 
 ::selection {
