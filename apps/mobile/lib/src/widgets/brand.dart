@@ -16,6 +16,7 @@ class BrandMark extends StatelessWidget {
           // Remove only the unused vertical whitespace in the square source
           // image while keeping every part of the approved logo visible.
           heightFactor: 0.44,
+          widthFactor: 1,
           alignment: Alignment.center,
           child: Image.asset(
             'assets/branding/sarvodaya_connect_logo.jpg',
