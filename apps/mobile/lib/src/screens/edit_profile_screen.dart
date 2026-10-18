@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/profile_draft.dart';
 import '../models/society.dart';
+import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
@@ -205,6 +206,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    if (store.activeRole != UserRole.societyOfficer) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Society profile')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: StateMessage(
+              icon: Icons.lock_outline,
+              title: 'Read-only access',
+              message: 'Your role can view society information but cannot edit these details.',
+            ),
+          ),
+        ),
+      );
+    }
     final approved = store.approvedProfile;
     final conflict = _baseVersion != store.recordVersion;
 

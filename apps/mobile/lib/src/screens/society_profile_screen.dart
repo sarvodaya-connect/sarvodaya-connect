@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../models/society.dart';
+import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/council_widgets.dart';
@@ -14,29 +16,105 @@ import '../widgets/status_chip.dart';
 import 'council_screen.dart';
 import 'edit_profile_screen.dart';
 import 'profile_review_screen.dart';
+import 'village_profile_screen.dart';
 
-/// M06 · Society profile (approved registry record, read-only).
-class SocietyProfileScreen extends StatelessWidget {
+/// M06 · Society profile, with the annual M06b village profile tab.
+class SocietyProfileScreen extends StatefulWidget {
   const SocietyProfileScreen({super.key});
+
+  @override
+  State<SocietyProfileScreen> createState() => _SocietyProfileScreenState();
+}
+
+class _SocietyProfileScreenState extends State<SocietyProfileScreen> {
+  var _selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Society profile')),
+      appBar: AppBar(title: const Text('Society')),
       body: Column(
         children: [
+          _ProfileTabs(
+            selectedIndex: _selectedTab,
+            onSelected: (index) => setState(() => _selectedTab = index),
+          ),
           if (store.offline) const OfflineBanner(),
           Expanded(
             child: DemoLoader(
               loadingLabel: 'Loading the society profile',
-              builder: (context) => const _ProfileContent(),
+              builder: (context) => IndexedStack(
+                index: _selectedTab,
+                children: const [_ProfileContent(), VillageProfileTab()],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ProfileTabs extends StatelessWidget {
+  const _ProfileTabs({required this.selectedIndex, required this.onSelected});
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      _ProfileTab(
+        label: 'Profile',
+        selected: selectedIndex == 0,
+        onTap: () => onSelected(0),
+      ),
+      _ProfileTab(
+        label: 'Village',
+        selected: selectedIndex == 1,
+        onTap: () => onSelected(1),
+      ),
+    ],
+  );
+}
+
+class _ProfileTab extends StatelessWidget {
+  const _ProfileTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? AppColors.forest : AppColors.line,
+              width: selected ? 2 : 1,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.forest : AppColors.muted,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _ProfileContent extends StatelessWidget {
@@ -49,6 +127,7 @@ class _ProfileContent extends StatelessWidget {
     final approved = store.approvedProfile;
     final draft = store.profileDraft;
     final pending = store.pendingProfileSubmission;
+    final canEdit = store.activeRole == UserRole.societyOfficer;
     final draftChanged = draft == null
         ? const <String>{}
         : draft.values.changedFieldsComparedTo(approved).toSet();
@@ -112,23 +191,26 @@ class _ProfileContent extends StatelessWidget {
             icon: Icons.edit_note,
             title: 'You have draft profile changes',
             message: 'Draft values are marked “Draft”. Only you can see them; the approved values have not changed.',
-            action: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ProfileReviewScreen(),
-                  ),
-                ),
-                style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                child: const Text('Review draft'),
-              ),
-            ),
+            action: canEdit
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ProfileReviewScreen(),
+                        ),
+                      ),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                      child: const Text('Review draft'),
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(height: 12),
         ],
         SectionCard(
-          title: 'Registration',
+          title: 'Basic information',
+          trailing: StatusChip(_societyStatus(society.status)),
           children: [
             InfoRow(label: 'Name', value: society.nameEn),
             InfoRow(label: 'Local name', value: society.nameLocal),
@@ -187,21 +269,40 @@ class _ProfileContent extends StatelessWidget {
         const SizedBox(height: 12),
         SectionCard(
           title: 'Address and contact',
-          trailing: TextButton.icon(
-            onPressed: pending == null ? openEdit : null,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Edit Profile'),
-          ),
+          trailing: canEdit
+              ? TextButton.icon(
+                  onPressed: pending == null ? openEdit : null,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit Profile'),
+                )
+              : null,
           children: [
             ...field(ProfileField.address, orNull(approved.addressLine)),
             ...field(ProfileField.village, orNull(approved.village)),
             ...field(ProfileField.phone, orNull(approved.phone)),
             ...field(ProfileField.email, orNull(approved.email)),
-            InfoRow(
-              label: 'Primary contact',
-              value:
-                  '${society.primaryContact?.fullName} (${society.primaryContact?.position})',
-            ),
+            for (final contact in society.contacts)
+              if (contact.fullName != null || contact.email != null)
+                InfoRow(
+                  label: contact.isPrimary
+                      ? 'Primary contact'
+                      : (contact.label ?? 'Contact'),
+                  value: [
+                    if (contact.fullName != null) contact.fullName!,
+                    if (contact.position != null) '(${contact.position})',
+                  ].join(' · '),
+                ),
+            for (final contact in society.contacts) ...[
+              if (contact.phone != null && contact.phone != approved.phone)
+                InfoRow(
+                  label: contact.label == null
+                      ? 'Contact phone'
+                      : '${contact.label} number',
+                  value: contact.phone,
+                ),
+              if (contact.email != null)
+                InfoRow(label: 'Contact email', value: contact.email),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -249,16 +350,46 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 4),
-            FilledButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const CouncilScreen()),
+            if (canEdit)
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CouncilScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Update Committee'),
               ),
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Update Committee'),
-            ),
           ],
         ),
       ],
     );
   }
 }
+
+StatusStyle _societyStatus(SocietyStatus status) => switch (status) {
+  SocietyStatus.active => const StatusStyle(
+    'Active',
+    Icons.check_circle_outline,
+    Color(0xFF25643F),
+    Color(0xFFE5F3E8),
+  ),
+  SocietyStatus.inactive => const StatusStyle(
+    'Inactive',
+    Icons.pause_circle_outline,
+    Color(0xFF55605A),
+    Color(0xFFEEF0EC),
+  ),
+  SocietyStatus.underReview => const StatusStyle(
+    'Under review',
+    Icons.hourglass_top,
+    Color(0xFF7A5A00),
+    Color(0xFFFFF2CC),
+  ),
+  SocietyStatus.suspended => const StatusStyle(
+    'Suspended',
+    Icons.block_outlined,
+    Color(0xFFA8312A),
+    Color(0xFFFBE9E7),
+  ),
+};
