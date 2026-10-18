@@ -11,8 +11,10 @@ import '../widgets/demo_options_sheet.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
+import 'audit_screen.dart';
 import 'changes_requested_screen.dart';
 import 'council_screen.dart';
+import 'notifications_screen.dart';
 import 'submission_detail_screen.dart';
 
 /// M05 · Society Officer home.
@@ -27,6 +29,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('${_greeting(store.now)}, $firstName'),
         actions: [
+          const _NotificationsButton(),
           IconButton(
             tooltip: 'Demo options',
             icon: const Icon(Icons.tune),
@@ -134,18 +137,14 @@ class _HomeContent extends StatelessWidget {
             ),
             _AttentionTile(
               icon: Icons.verified_outlined,
-              title: 'Audit FY 2025/26',
-              subtitle: 'Report not uploaded',
-              chip: const StatusChip(
-                StatusStyle(
-                  'Overdue',
-                  Icons.warning_amber,
-                  Color(0xFFA8312A),
-                  Color(0xFFFBE9E7),
-                ),
-                compact: true,
+              title: 'Audit ${store.currentAudit.financialYear}',
+              subtitle: store.currentAudit.reportUploaded
+                  ? 'Report uploaded'
+                  : 'Report not uploaded',
+              chip: StatusChip(store.currentAudit.status.style, compact: true),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const AuditScreen()),
               ),
-              onTap: () => store.selectTab(HomeShell.documentsTab),
             ),
           ],
         ),
@@ -196,6 +195,33 @@ class _HomeContent extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Opens M16 Notifications. The badge shows how many are unread.
+class _NotificationsButton extends StatelessWidget {
+  const _NotificationsButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = DemoScope.of(context).unreadNotificationCount;
+    return Semantics(
+      value: unread == 0 ? null : '$unread unread',
+      child: IconButton(
+        tooltip: 'Notifications',
+        icon: Badge(
+          isLabelVisible: unread > 0,
+          label: Text('$unread'),
+          backgroundColor: AppColors.leaf,
+          child: Icon(
+            unread > 0 ? Icons.notifications : Icons.notifications_outlined,
+          ),
+        ),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+        ),
+      ),
     );
   }
 }

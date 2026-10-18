@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/audit.dart';
 import '../models/document.dart';
 import '../models/submission.dart';
 
@@ -67,6 +68,49 @@ extension DocumentStatusStyle on DocumentStatus {
     DocumentStatus.submitted => SubmissionStatus.underReview.style,
     DocumentStatus.approved => SubmissionStatus.approved.style,
     DocumentStatus.rejected => SubmissionStatus.rejected.style,
+  };
+}
+
+extension AuditItemStatusStyle on AuditItemStatus {
+  StatusStyle get style => switch (this) {
+    AuditItemStatus.complete => const StatusStyle(
+      'Complete',
+      Icons.check_circle_outline,
+      Color(0xFF25643F),
+      Color(0xFFE5F3E8),
+    ),
+    AuditItemStatus.inProgress => const StatusStyle(
+      'In progress',
+      Icons.hourglass_top,
+      Color(0xFF7A5A00),
+      Color(0xFFFFF2CC),
+    ),
+    AuditItemStatus.notStarted => const StatusStyle(
+      'Not started',
+      Icons.radio_button_unchecked,
+      Color(0xFF55605A),
+      Color(0xFFEEF0EC),
+    ),
+    AuditItemStatus.overdue => const StatusStyle(
+      'Overdue',
+      Icons.warning_amber,
+      Color(0xFFA8312A),
+      Color(0xFFFBE9E7),
+    ),
+  };
+}
+
+extension AuditStatusStyle on AuditStatus {
+  StatusStyle get style => switch (this) {
+    AuditStatus.due => const StatusStyle(
+      'Due soon',
+      Icons.schedule,
+      Color(0xFF7A5A00),
+      Color(0xFFFFF2CC),
+    ),
+    AuditStatus.overdue => AuditItemStatus.overdue.style,
+    AuditStatus.underReview => SubmissionStatus.underReview.style,
+    AuditStatus.approved => SubmissionStatus.approved.style,
   };
 }
 

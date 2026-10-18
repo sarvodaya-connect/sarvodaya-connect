@@ -2,8 +2,10 @@
 // No real people, phone numbers, accounts or society records are used:
 // phone numbers use the agreed +94 00 000 000x placeholders and emails use example.invalid.
 
+import '../models/audit.dart';
 import '../models/committee.dart';
 import '../models/document.dart';
+import '../models/notification.dart';
 import '../models/society.dart';
 import '../models/submission.dart';
 import '../models/user.dart';
@@ -347,6 +349,132 @@ const demoFiles = [
     contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     sizeBytes: 220000,
     description: 'Word document · type not accepted',
+  ),
+  DemoFile(
+    name: 'Audit report FY 2025-26 (signed).pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 2100000,
+    description: 'PDF · 6 pages · signed by the auditor',
+  ),
+];
+
+// ----- Annual audit (M12) -----
+
+/// FY 2025/26 ends on 31 March 2026; the signed report is due by 30 September.
+final demoAuditYearEnd = DateTime(2026, 3, 31);
+final demoAuditDueOn = DateTime(2026, 9, 30);
+
+/// Required steps for FY 2025/26 that are already complete. The report steps
+/// are worked out from the document library (see DemoStore.currentAudit).
+final demoAuditCompletedSteps = <AuditChecklistItem>[
+  AuditChecklistItem(
+    id: 'audit-2026-accounts',
+    title: 'Accounts closed for the year',
+    description: 'Cash book and bank book balanced on 31 Mar 2026',
+    status: AuditItemStatus.complete,
+    completedOn: DateTime(2026, 4, 5),
+  ),
+  AuditChecklistItem(
+    id: 'audit-2026-auditor',
+    title: 'Auditor appointed',
+    description: 'Approved at the committee meeting',
+    status: AuditItemStatus.complete,
+    completedOn: DateTime(2026, 4, 12),
+  ),
+  AuditChecklistItem(
+    id: 'audit-2026-records',
+    title: 'Records given to the auditor',
+    description: 'Cash book, receipts, bank statements and asset register',
+    status: AuditItemStatus.complete,
+    completedOn: DateTime(2026, 6, 18),
+  ),
+];
+
+/// Last year's audit, already approved by the District Centre.
+final demoPreviousAudit = AnnualAudit(
+  id: 'audit-fy-2024-25',
+  financialYear: 'FY 2024/25',
+  dueOn: DateTime(2025, 9, 30),
+  status: AuditStatus.approved,
+  reportDocumentId: 'doc-audit-2024',
+  reviewedBy: demoReviewerName,
+  reviewedOn: DateTime(2025, 10, 6),
+  reviewerComment: 'Clear and complete. Keep receipts with the cash book.',
+  items: [
+    for (final (id, title) in [
+      ('accounts', 'Accounts closed for the year'),
+      ('auditor', 'Auditor appointed'),
+      ('records', 'Records given to the auditor'),
+      ('signed', 'Audit report signed by the auditor'),
+      ('uploaded', 'Audit report uploaded'),
+      ('district', 'Checked by the District Centre'),
+    ])
+      AuditChecklistItem(
+        id: 'audit-2025-$id',
+        title: title,
+        description: 'Completed',
+        status: AuditItemStatus.complete,
+      ),
+  ],
+);
+
+// ----- Notifications (M16) -----
+
+/// Fictional notifications. The newest ones are dated relative to [now] so
+/// the "Today" group is never empty during a demonstration.
+List<AppNotification> demoNotifications(DateTime now) => [
+  AppNotification(
+    id: 'note-registrar-request',
+    kind: NotificationKind.request,
+    title: 'HQ asked for the 4 Registrar documents',
+    message: 'Upload the audit report, AGM minutes, office-bearer list and signed members list for FY 2025/26.',
+    receivedAt: now.subtract(const Duration(minutes: 45)),
+    target: NotificationTarget.documents,
+  ),
+  AppNotification(
+    id: 'note-audit-overdue',
+    kind: NotificationKind.reminder,
+    title: 'Audit report FY 2025/26 is overdue',
+    message:
+        'It was due on 30 Sep 2026. Upload it as soon as the auditor signs it.',
+    receivedAt: now.subtract(const Duration(hours: 2)),
+    target: NotificationTarget.audit,
+  ),
+  AppNotification(
+    id: 'note-review-tank',
+    kind: NotificationKind.review,
+    title: 'Tank cleaning shramadana is under review',
+    message: '$demoReviewerName started reviewing your activity report.',
+    receivedAt: now.subtract(const Duration(hours: 3)),
+    target: NotificationTarget.submission,
+    targetId: 'sub-activity-tank',
+  ),
+  AppNotification(
+    id: 'note-district-meeting',
+    kind: NotificationKind.notice,
+    title: 'District society meeting on 25 Oct 2026',
+    message:
+        '$demoReviewerOffice, 10:00. Bring a copy of your latest AGM minutes.',
+    receivedAt: now.subtract(const Duration(days: 3)),
+  ),
+  AppNotification(
+    id: 'note-location-verified',
+    kind: NotificationKind.approved,
+    title: 'Society location verified',
+    message: '$demoReviewerName checked the society GPS location.',
+    receivedAt: DateTime(2026, 10, 2, 9, 30),
+    read: true,
+    target: NotificationTarget.societyProfile,
+  ),
+  AppNotification(
+    id: 'note-membership-q2',
+    kind: NotificationKind.approved,
+    title: 'Membership Apr–Jun approved',
+    message: 'Counts match the register. Thank you.',
+    receivedAt: DateTime(2026, 7, 2, 14, 10),
+    read: true,
+    target: NotificationTarget.submission,
+    targetId: 'sub-membership-q2',
   ),
 ];
 

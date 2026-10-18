@@ -54,3 +54,25 @@ class SocietyDocument {
   /// Signed members list: only the District Manager and HQ can open it.
   final bool restrictedToReviewers;
 }
+
+/// A chosen file that did not reach the library. Kept on the phone so the
+/// officer can retry it or remove it.
+class FailedUpload {
+  const FailedUpload({
+    required this.id,
+    required this.documentType,
+    required this.fileName,
+    required this.contentType,
+    required this.sizeBytes,
+    required this.reason,
+    required this.failedAt,
+  });
+
+  final String id;
+  final DocumentType documentType;
+  final String fileName;
+  final String contentType;
+  final int sizeBytes;
+  final String reason;
+  final DateTime failedAt;
+}
