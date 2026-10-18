@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Brand } from "./brand";
+import { GlobalSearchForm } from "./global-search-form";
 import { Icon, type IconName } from "./icon";
 
 const navigation: { href: string; icon: IconName; label: string }[] = [
   { href: "/societies", icon: "society", label: "Societies" },
+  { href: "/search", icon: "search", label: "Global search" },
   { href: "/districts/kurunegala", icon: "district", label: "District view" },
   { href: "/reviews", icon: "review", label: "Review queue" },
 ];
@@ -26,7 +28,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </p>
         <nav className="mt-3 space-y-1 px-3" aria-label="Primary navigation">
           {navigation.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = item.href === "/search" ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link
                 className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
@@ -72,6 +74,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="hidden text-sm text-[#66756b] lg:block">
             Sarvodaya Shramadana Societies
           </div>
+          <div className="hidden flex-1 justify-center px-6 md:flex">
+            <GlobalSearchForm />
+          </div>
           <div className="flex items-center gap-3">
             <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">
               Demonstration Data
@@ -86,7 +91,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {navigation.map((item) => (
               <Link
                 className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${
-                  pathname.startsWith(item.href)
+                  (item.href === "/search" ? pathname === item.href : pathname.startsWith(item.href))
                     ? "bg-white text-[#123d29]"
                     : "text-white/80"
                 }`}

@@ -1,6 +1,6 @@
-import type { DistrictSummary, SocietySummary } from "@sarvodaya-connect/api-contracts";
+import type { DistrictSummary, SocietyDetails } from "@sarvodaya-connect/api-contracts";
 
-import { districts, societies } from "./demo-registry";
+import { districts, societyDetails } from "./demo-registry";
 
 /**
  * Demonstration scenarios for the society registry.
@@ -27,11 +27,11 @@ function wait(milliseconds: number) {
 
 export async function loadSocietyRegistry(
   scenario: DemoScenario | null,
-): Promise<{ districts: DistrictSummary[]; societies: SocietySummary[] }> {
+): Promise<{ districts: DistrictSummary[]; societies: SocietyDetails[] }> {
   if (scenario === "loading") await wait(DEMO_LOADING_DELAY_MS);
   if (scenario === "error") {
     throw new Error("Demonstration scenario: the society registry could not be loaded.");
   }
   if (scenario === "empty") return { districts, societies: [] };
-  return { districts, societies };
+  return { districts, societies: societyDetails };
 }

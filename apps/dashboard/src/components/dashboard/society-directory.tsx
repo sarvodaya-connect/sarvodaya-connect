@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
-import type { DistrictSummary, SocietySummary } from "@sarvodaya-connect/api-contracts";
+import type { DistrictSummary, SocietyDetails } from "@sarvodaya-connect/api-contracts";
 
 import { type ActiveFilter, EmptyState, NoResultsState } from "./data-states";
 import { Icon } from "./icon";
@@ -13,6 +13,7 @@ const statusOptions = [
   { value: "ACTIVE", label: "Active" },
   { value: "UNDER_REVIEW", label: "Under review" },
   { value: "INACTIVE", label: "Inactive" },
+  { value: "SUSPENDED", label: "Suspended" },
 ] as const;
 
 export function SocietyDirectory({
@@ -20,9 +21,10 @@ export function SocietyDirectory({
   societies,
 }: {
   districts: DistrictSummary[];
-  societies: SocietySummary[];
+  societies: SocietyDetails[];
 }) {
   const [districtId, setDistrictId] = useState("all");
+  const [division, setDivision] = useState("all");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const searchInput = useRef<HTMLInputElement>(null);
@@ -35,10 +37,15 @@ export function SocietyDirectory({
         society.nameEn.toLowerCase().includes(normalizedQuery) ||
         society.societyCode.toLowerCase().includes(normalizedQuery);
       const matchesDistrict = districtId === "all" || society.district.id === districtId;
+      const matchesDivision = division === "all" || society.address.dsDivision === division;
       const matchesStatus = status === "all" || society.status === status;
-      return matchesQuery && matchesDistrict && matchesStatus;
+      return matchesQuery && matchesDistrict && matchesDivision && matchesStatus;
     });
-  }, [districtId, query, societies, status]);
+  }, [districtId, division, query, societies, status]);
+
+  const divisions = Array.from(
+    new Set(societies.map((society) => society.address.dsDivision).filter((value): value is string => Boolean(value))),
+  ).sort();
 
   const activeFilters: ActiveFilter[] = [];
   if (query.trim()) activeFilters.push({ id: "query", label: "Search", value: `“${query.trim()}”` });
@@ -46,6 +53,7 @@ export function SocietyDirectory({
     const district = districts.find((item) => item.id === districtId);
     activeFilters.push({ id: "district", label: "District", value: district?.nameEn ?? districtId });
   }
+  if (division !== "all") activeFilters.push({ id: "division", label: "Division", value: division });
   if (status !== "all") {
     const option = statusOptions.find((item) => item.value === status);
     activeFilters.push({ id: "status", label: "Status", value: option?.label ?? status });
@@ -54,12 +62,14 @@ export function SocietyDirectory({
   function removeFilter(id: string) {
     if (id === "query") setQuery("");
     if (id === "district") setDistrictId("all");
+    if (id === "division") setDivision("all");
     if (id === "status") setStatus("all");
   }
 
   function clearAllFilters() {
     setQuery("");
     setDistrictId("all");
+    setDivision("all");
     setStatus("all");
     searchInput.current?.focus();
   }
@@ -78,7 +88,7 @@ export function SocietyDirectory({
 
   return (
     <section className="mt-6 overflow-hidden rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
-      <div className="grid gap-3 border-b border-[#e4e8e2] p-4 md:grid-cols-[minmax(240px,1fr)_180px_170px]">
+      <div className="grid gap-3 border-b border-[#e4e8e2] p-4 md:grid-cols-[minmax(220px,1fr)_160px_160px_160px]">
         <label className="relative block">
           <span className="sr-only">Search societies</span>
           <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#78857d]" name="search" />
@@ -90,6 +100,17 @@ export function SocietyDirectory({
             type="search"
             value={query}
           />
+        </label>
+        <label>
+          <span className="sr-only">Filter by division</span>
+          <select
+            className="w-full rounded-lg border border-[#d8dfd8] bg-[#fbfcfa] px-3 py-2.5 text-sm text-[#3e4b43] outline-none focus:border-[#39815a] focus:ring-3 focus:ring-[#e1eee3]"
+            onChange={(event) => setDivision(event.target.value)}
+            value={division}
+          >
+            <option value="all">All divisions</option>
+            {divisions.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
         </label>
         <label>
           <span className="sr-only">Filter by district</span>
