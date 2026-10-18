@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Village-green palette shared with the dashboard (Screen Catalogue v2).
-/// Sarvodaya Orange is reserved for the splash screen, which is outside SC-26.
+/// Village-green palette shared with the dashboard (Screen Catalogue v3).
 class AppColors {
   const AppColors._();
 

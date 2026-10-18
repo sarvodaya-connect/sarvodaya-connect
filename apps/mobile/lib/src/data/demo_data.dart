@@ -1,4 +1,4 @@
-// Fictional demonstration data for the AGM demo, taken from Screen Catalogue v2.
+// Fictional demonstration data based on Screen Catalogue v3.
 // No real people, phone numbers, accounts or society records are used:
 // phone numbers use the agreed +94 00 000 000x placeholders and emails use example.invalid.
 
@@ -11,7 +11,7 @@ import '../models/user.dart';
 class DemoAccount {
   const DemoAccount._();
 
-  /// Fictional demonstration account. Not a real credential: production sign-in will use WSO2.
+  /// Fictional account. Production sign-in will use Amazon Cognito.
   static const username = 'nimali.officer@example.invalid';
   static const password = 'demo-only';
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'screens/documents_screen.dart';
+import 'screens/first_time_setup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/language_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/society_profile_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/tracker_screen.dart';
 import 'state/demo_store.dart';
 import 'theme/app_theme.dart';
@@ -62,7 +65,11 @@ class _Root extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    return store.user == null ? const SignInScreen() : const HomeShell();
+    if (store.showSplash) return const SplashScreen();
+    if (!store.languageChosen) return const LanguageScreen();
+    if (store.user == null) return const SignInScreen();
+    if (store.needsFirstTimeSetup) return const FirstTimeSetupScreen();
+    return const HomeShell();
   }
 }
 

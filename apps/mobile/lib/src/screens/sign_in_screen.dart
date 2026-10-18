@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/auth_service.dart';
 import '../data/demo_data.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -7,7 +8,7 @@ import '../validation/validators.dart';
 import '../widgets/brand.dart';
 import '../widgets/state_views.dart';
 
-/// M03 · Demo sign-in. Production sign-in will use WSO2 Identity Server (out of scope for SC-26).
+/// M03 - sign-in through an injected authentication service.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -49,6 +50,12 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
       setState(
         () => _error = 'You need internet to sign in the first time. Connect and try again.',
+      );
+    } on AuthServiceException {
+      if (!mounted) return;
+      setState(
+        () => _error =
+            'Authentication is temporarily unavailable. Please try again.',
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -99,6 +106,13 @@ class _SignInScreenState extends State<SignInScreen> {
                           title: 'Could not sign in',
                           message: _error,
                           tone: NoticeTone.error,
+                          action: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _busy ? null : _submit,
+                              child: const Text('Try again'),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -154,7 +168,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Forgot your password or signed in to the wrong society? Contact your District Centre.',
+                        'Forgot your password or assigned to the wrong society? Contact your District Centre.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: AppColors.muted, fontSize: 13),
                       ),
@@ -163,8 +177,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         icon: Icons.info_outline,
                         title: 'Demonstration sign-in',
                         message:
-                            'This demo uses a fictional account. The live app will sign in through '
-                            'the Sarvodaya identity service (WSO2 Identity Server).',
+                            'This build uses a fictional account. Production authentication will '
+                            'be connected securely through Amazon Cognito.',
                         action: Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(

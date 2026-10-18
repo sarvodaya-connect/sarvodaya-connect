@@ -9,7 +9,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
-    expect(find.textContaining('WSO2 Identity Server'), findsOneWidget);
+    expect(find.textContaining('Amazon Cognito'), findsOneWidget);
   });
 
   testWidgets('requires both credentials', (tester) async {
@@ -60,5 +60,19 @@ void main() {
     await signInWithDemoAccount(tester);
 
     expect(find.textContaining('You need internet to sign in'), findsOneWidget);
+  });
+
+  testWidgets('temporary authentication failure offers a retry', (
+    tester,
+  ) async {
+    final store = testStore()..setDemoOptions(failLoads: true);
+    await pumpApp(tester, store: store);
+    await signInWithDemoAccount(tester);
+
+    expect(
+      find.textContaining('Authentication is temporarily unavailable'),
+      findsOneWidget,
+    );
+    expect(find.text('Try again'), findsOneWidget);
   });
 }
