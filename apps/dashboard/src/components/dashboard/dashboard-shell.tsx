@@ -30,6 +30,7 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
   return [
     { href: "/dashboard", icon: "home", label: "Overview" },
     { href: "/societies", icon: "society", label: "Societies" },
+    { href: "/membership", icon: "clipboard", label: "Membership" },
     { href: "/search", icon: "search", label: "Global search" },
     { href: "/districts/kurunegala", icon: "district", label: "District view" },
     { href: "/reviews", icon: "review", label: "Review queue" },

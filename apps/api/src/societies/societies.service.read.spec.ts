@@ -39,6 +39,8 @@ function detailRecord(overrides: Record<string, unknown> = {}) {
         isPrimary: true,
       },
     ],
+    councilMembers: [],
+    memberships: [],
     createdAt: new Date('2025-12-01T00:00:00.000Z'),
     ...overrides,
   };

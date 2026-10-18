@@ -48,6 +48,8 @@ const detailRecord = {
       isPrimary: true,
     },
   ],
+  councilMembers: [],
+  memberships: [],
   createdAt: new Date('2025-12-01T00:00:00.000Z'),
 };
 
@@ -57,6 +59,10 @@ describe('Societies endpoints (e2e)', () => {
   const repository = {
     list: vi.fn(),
     findById: vi.fn(),
+    updateProfile: vi.fn(),
+    replaceCouncil: vi.fn(),
+    replaceMembership: vi.fn(),
+    membershipForPrincipal: vi.fn(),
   };
 
   beforeAll(async () => {
@@ -229,6 +235,64 @@ describe('Societies endpoints (e2e)', () => {
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
       expect(repository.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('profile update authorization and validation', () => {
+    it('rejects an update from an officer assigned to another society', async () => {
+      repository.findById.mockResolvedValue(detailRecord);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/societies/${SOCIETY_ID}/profile`)
+        .set('X-Demo-User', 'demo-officer-lotus')
+        .send({ village: 'Updated fictional village' })
+        .expect(403);
+
+      expect(repository.updateProfile).not.toHaveBeenCalled();
+    });
+
+    it('validates GPS coordinate bounds before writing', async () => {
+      repository.findById.mockResolvedValue(detailRecord);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/societies/${SOCIETY_ID}/profile`)
+        .set('X-Demo-User', 'demo-hq-admin')
+        .send({ latitude: 100, longitude: 80 })
+        .expect(400);
+
+      expect(repository.updateProfile).not.toHaveBeenCalled();
+    });
+
+    it('accepts valid latitude and longitude and returns the updated profile', async () => {
+      repository.findById.mockResolvedValue(detailRecord);
+      repository.updateProfile.mockResolvedValue(detailRecord);
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/societies/${SOCIETY_ID}/profile`)
+        .set('X-Demo-User', 'demo-hq-admin')
+        .send({ latitude: 7.3, longitude: 80.6 })
+        .expect(200);
+
+      expect(repository.updateProfile).toHaveBeenCalledWith(SOCIETY_ID, {
+        latitude: 7.3,
+        longitude: 80.6,
+      });
+    });
+
+    it('requires latitude and longitude together', async () => {
+      repository.findById.mockResolvedValue({
+        ...detailRecord,
+        latitude: null,
+        longitude: null,
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/societies/${SOCIETY_ID}/profile`)
+        .set('X-Demo-User', 'demo-hq-admin')
+        .send({ latitude: 7.3 })
+        .expect(400);
+
+      expect(repository.updateProfile).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,8 +1,4 @@
-import type {
-  IsoDate,
-  IsoDateTime,
-  PaginationQuery,
-} from "./common.js";
+import type { IsoDate, IsoDateTime, PaginationQuery } from "./common.js";
 
 export const SOCIETY_STATUSES = [
   "ACTIVE",
@@ -59,6 +55,89 @@ export interface CommitteeMember {
   appointedOn?: IsoDate;
   endedOn?: IsoDate;
   isActive: boolean;
+  seatNumber?: number;
+  seatType?: MembershipCategory;
+  age?: number;
+  isPrimaryContact?: boolean;
+}
+
+export const MEMBERSHIP_CATEGORIES = [
+  "CHILDREN",
+  "YOUTH",
+  "MOTHERS",
+  "ORDINARY",
+  "ELDERS_COUNCIL",
+] as const;
+
+export type MembershipCategory = (typeof MEMBERSHIP_CATEGORIES)[number];
+
+export interface MembershipCategoryCount {
+  category: MembershipCategory;
+  female: number;
+  male: number;
+  total: number;
+}
+
+export interface SocietyMembershipSummary {
+  societyId: string;
+  societyCode: string;
+  societyName: string;
+  districtName: string;
+  year: number;
+  categories: MembershipCategoryCount[];
+  femaleTotal: number;
+  maleTotal: number;
+  overallTotal: number;
+}
+
+export interface MembershipDashboardSummary {
+  year: number;
+  societies: SocietyMembershipSummary[];
+  categories: MembershipCategoryCount[];
+  femaleTotal: number;
+  maleTotal: number;
+  overallTotal: number;
+}
+
+export interface SocietyProfileUpdate {
+  nameEn?: string;
+  nameLocal?: string;
+  dsDivision?: string;
+  gnDivision?: string;
+  village?: string;
+  addressLine?: string;
+  latitude?: number;
+  longitude?: number;
+  establishedOn?: IsoDate;
+  primaryContact?: {
+    fullName: string;
+    phone: string;
+    position?: string;
+    email?: string;
+  };
+}
+
+export interface SocietyCouncilUpdate {
+  members: Array<{
+    seatNumber: number;
+    fullName: string;
+    position: string;
+    seatType: MembershipCategory;
+    phone?: string;
+    email?: string;
+    age?: number;
+    appointedOn?: IsoDate;
+    endedOn?: IsoDate;
+    isActive: boolean;
+    isPrimaryContact: boolean;
+  }>;
+}
+
+export interface SocietyMembershipUpdate {
+  year: number;
+  categories: Array<
+    Pick<MembershipCategoryCount, "category" | "female" | "male">
+  >;
 }
 
 export const DOCUMENT_STATUSES = [
@@ -108,6 +187,10 @@ export interface SocietyDetails extends SocietySummary {
   location?: GeoLocation;
   contacts: SocietyContact[];
   committee: CommitteeMember[];
+  membership?: Omit<
+    SocietyMembershipSummary,
+    "societyId" | "societyCode" | "societyName" | "districtName"
+  >;
   documents: SocietyDocument[];
   history: SocietyHistoryEntry[];
   createdAt: IsoDateTime;

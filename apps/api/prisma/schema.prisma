@@ -18,6 +18,16 @@ enum SocietyStatus {
   @@map("society_status")
 }
 
+enum MembershipCategory {
+  CHILDREN
+  YOUTH
+  MOTHERS
+  ORDINARY
+  ELDERS_COUNCIL
+
+  @@map("membership_category")
+}
+
 model District {
   id        String    @id @default(uuid()) @db.Uuid
   code      String    @unique @db.VarChar(10)
@@ -30,25 +40,27 @@ model District {
 }
 
 model Society {
-  id            String           @id @default(uuid()) @db.Uuid
-  societyCode   String           @unique @map("society_code") @db.VarChar(20)
-  nameEn        String           @map("name_en") @db.VarChar(150)
-  nameLocal     String?          @map("name_local") @db.VarChar(150)
-  districtId    String           @map("district_id") @db.Uuid
-  district      District         @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  dsDivision    String?          @map("ds_division") @db.VarChar(100)
-  gnDivision    String?          @map("gn_division") @db.VarChar(100)
-  village       String?          @db.VarChar(100)
-  addressLine   String?          @map("address_line") @db.VarChar(255)
-  latitude      Float?
-  longitude     Float?
-  establishedOn DateTime?        @map("established_on") @db.Date
-  status        SocietyStatus    @default(UNDER_REVIEW)
-  contacts      SocietyContact[]
-  documents     SocietyDocument[]
-  notifications Notification[]
-  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id             String                   @id @default(uuid()) @db.Uuid
+  societyCode    String                   @unique @map("society_code") @db.VarChar(20)
+  nameEn         String                   @map("name_en") @db.VarChar(150)
+  nameLocal      String?                  @map("name_local") @db.VarChar(150)
+  districtId     String                   @map("district_id") @db.Uuid
+  district       District                 @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  dsDivision     String?                  @map("ds_division") @db.VarChar(100)
+  gnDivision     String?                  @map("gn_division") @db.VarChar(100)
+  village        String?                  @db.VarChar(100)
+  addressLine    String?                  @map("address_line") @db.VarChar(255)
+  latitude       Float?
+  longitude      Float?
+  establishedOn  DateTime?                @map("established_on") @db.Date
+  status         SocietyStatus            @default(UNDER_REVIEW)
+  contacts       SocietyContact[]
+  councilMembers SocietyCouncilMember[]
+  memberships    SocietyMembershipCount[]
+  documents      SocietyDocument[]
+  notifications  Notification[]
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId])
   @@index([status])
@@ -61,6 +73,8 @@ model SocietyContact {
   societyId String   @map("society_id") @db.Uuid
   society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
   label     String?  @db.VarChar(100)
+  fullName  String?  @map("full_name") @db.VarChar(150)
+  position  String?  @db.VarChar(100)
   phone     String?  @db.VarChar(30)
   email     String?  @db.VarChar(254)
   isPrimary Boolean  @default(false) @map("is_primary")
@@ -69,6 +83,45 @@ model SocietyContact {
 
   @@index([societyId])
   @@map("society_contacts")
+}
+
+model SocietyCouncilMember {
+  id               String             @id @default(uuid()) @db.Uuid
+  societyId        String             @map("society_id") @db.Uuid
+  society          Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  seatNumber       Int                @map("seat_number")
+  fullName         String             @map("full_name") @db.VarChar(150)
+  position         String             @db.VarChar(100)
+  seatType         MembershipCategory @map("seat_type")
+  phone            String?            @db.VarChar(30)
+  email            String?            @db.VarChar(254)
+  age              Int?
+  appointedOn      DateTime?          @map("appointed_on") @db.Date
+  endedOn          DateTime?          @map("ended_on") @db.Date
+  isActive         Boolean            @default(true) @map("is_active")
+  isPrimaryContact Boolean            @default(false) @map("is_primary_contact")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, seatNumber])
+  @@index([societyId, isActive])
+  @@map("society_council_members")
+}
+
+model SocietyMembershipCount {
+  id        String             @id @default(uuid()) @db.Uuid
+  societyId String             @map("society_id") @db.Uuid
+  society   Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  year      Int
+  category  MembershipCategory
+  female    Int                @default(0)
+  male      Int                @default(0)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, year, category])
+  @@index([year, societyId])
+  @@map("society_membership_counts")
 }
 
 // SC-49: document metadata. Files live in document storage (local disk in
