@@ -36,6 +36,55 @@ void main() {
     });
   });
 
+  group('profile contact details', () {
+    test('accepts a blank optional email and a valid fictional address', () {
+      expect(Validators.optionalEmail(''), isNull);
+      expect(Validators.optionalEmail('society@example.invalid'), isNull);
+      expect(Validators.addressLine('No. 12, Temple Road'), isNull);
+      expect(Validators.villageName('Pahala Kosgama'), isNull);
+    });
+
+    test('returns useful messages for malformed profile values', () {
+      expect(
+        Validators.optionalEmail('society@'),
+        'Enter an email address like name@example.invalid.',
+      );
+      expect(
+        Validators.addressLine('Road'),
+        'Enter the full address, for example No. 12, Temple Road.',
+      );
+      expect(
+        Validators.villageName('Village @ 1'),
+        'Use letters, numbers, spaces, commas, full stops or hyphens only.',
+      );
+    });
+  });
+
+  group('profile location', () {
+    test('accepts coordinates inside Sri Lanka', () {
+      expect(Validators.latitude('7.4672'), isNull);
+      expect(Validators.longitude('80.0412'), isNull);
+      expect(Validators.gpsLocation(const Object()), isNull);
+    });
+
+    test('rejects missing, non-numeric and out-of-range coordinates', () {
+      expect(Validators.latitude(''), 'Enter the latitude.');
+      expect(
+        Validators.longitude('east'),
+        'Enter the longitude as a number, for example 80.0412.',
+      );
+      expect(
+        Validators.latitude('12.5'),
+        'This latitude is outside Sri Lanka (5.8–10.0).',
+      );
+      expect(
+        Validators.longitude('70'),
+        'This longitude is outside Sri Lanka (79.4–82.0).',
+      );
+      expect(Validators.gpsLocation(null), "Add the society's GPS location.");
+    });
+  });
+
   group('ageForSeat', () {
     test('requires an age in range for Youth and Child seats', () {
       expect(

@@ -6,8 +6,13 @@ import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 /// Fixed demo clock so dates in tests do not depend on the day they run.
 final demoNow = DateTime(2026, 10, 13, 10, 15);
 
-DemoStore testStore() =>
-    DemoStore(loadDelay: Duration.zero, clock: () => demoNow);
+DemoStore testStore() => DemoStore(
+  loadDelay: Duration.zero,
+  clock: () => demoNow,
+  showSplash: false,
+  languageChosen: true,
+  firstTimeSetupComplete: true,
+);
 
 /// Pumps the app on a tall phone-width screen so long screens need less scrolling.
 Future<DemoStore> pumpApp(WidgetTester tester, {DemoStore? store}) async {
