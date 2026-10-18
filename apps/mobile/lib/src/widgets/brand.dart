@@ -13,11 +13,11 @@ class BrandMark extends StatelessWidget {
       image: true,
       child: Image.asset(
         'assets/branding/sarvodaya_connect_logo.jpg',
-        height: compact ? 80 : 100,
+        height: compact ? 110 : 135,
         width: compact ? 200 : 250,
         // The approved source image is square with generous white space around
-        // the horizontal wordmark. Covering this wide frame removes that empty
-        // space without modifying or distorting the client-provided logo.
+        // the horizontal wordmark. This frame removes the outer whitespace but
+        // is tall enough to retain the complete orbit and "connect" lettering.
         fit: BoxFit.cover,
         alignment: Alignment.center,
       ),
