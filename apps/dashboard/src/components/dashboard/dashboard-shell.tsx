@@ -1,43 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+
+import { switchDemoViewer } from "@/app/(dashboard)/actions";
+import {
+  canViewCompliance,
+  canViewDocumentLibrary,
+  type DemoViewer,
+  demoViewers,
+} from "@/lib/access";
 
 import { Brand } from "./brand";
 import { Icon, type IconName } from "./icon";
+import { useNotifications } from "./notifications-context";
 
-type PreviewRole = "national" | "district" | "platform";
+type NavigationItem = { href: string; icon: IconName; label: string };
 
-const roleDetails: Record<PreviewRole, { label: string; initials: string; title: string }> = {
-  national: { label: "National overview", initials: "HQ", title: "National Administrator" },
-  district: { label: "District manager", initials: "DM", title: "District Manager · Kurunegala" },
-  platform: { label: "Platform administrator", initials: "PA", title: "Platform Administrator" },
-};
-
-function parsePreviewRole(value: string | null): PreviewRole {
-  return value === "district" || value === "platform" ? value : "national";
+/** Primary navigation. Pages the viewer's role cannot open are left out. */
+export function navigationFor(viewer: DemoViewer): NavigationItem[] {
+  if (viewer.role === "SYSTEM_ADMIN") {
+    // Technical settings only: no society registry, district or review pages.
+    return [
+      { href: "/admin", icon: "building", label: "Platform access" },
+      { href: "/notifications", icon: "bell", label: "Notifications" },
+    ];
+  }
+  return [
+    { href: "/dashboard", icon: "home", label: "Overview" },
+    { href: "/societies", icon: "society", label: "Societies" },
+    { href: "/districts/kurunegala", icon: "district", label: "District view" },
+    { href: "/reviews", icon: "review", label: "Review queue" },
+    ...(canViewCompliance(viewer)
+      ? [{ href: "/compliance", icon: "shield", label: "Audits & compliance" } satisfies NavigationItem]
+      : []),
+    ...(canViewDocumentLibrary(viewer)
+      ? [{ href: "/documents", icon: "document", label: "Documents" } satisfies NavigationItem]
+      : []),
+    { href: "/notifications", icon: "bell", label: "Notifications" },
+  ];
 }
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  viewer,
+}: {
+  children: React.ReactNode;
+  viewer: DemoViewer;
+}) {
   const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const role = parsePreviewRole(searchParams.get("previewRole"));
-  const currentRole = roleDetails[role];
-  const dashboardHref = role === "platform" ? "/admin?previewRole=platform" : `/dashboard?previewRole=${role}`;
-  const navigationItems: { href: string; icon: IconName; label: string; roles: PreviewRole[] }[] = [
-    { href: dashboardHref, icon: "home", label: "Overview", roles: ["national", "district", "platform"] },
-    { href: `/societies?previewRole=${role}`, icon: "society", label: "Societies", roles: ["national", "district"] },
-    { href: `/districts/kurunegala?previewRole=${role}`, icon: "district", label: "District view", roles: ["national", "district"] },
-    { href: `/reviews?previewRole=${role}`, icon: "review", label: "Review queue", roles: ["national", "district"] },
-    { href: "/admin?previewRole=platform", icon: "building", label: "Platform access", roles: ["platform"] },
-  ];
-  const navigation = navigationItems.filter((item) => item.roles.includes(role));
-
-  function changeRole(value: string) {
-    const nextRole = parsePreviewRole(value);
-    router.replace(nextRole === "platform" ? "/admin?previewRole=platform" : `/dashboard?previewRole=${nextRole}`);
-  }
+  const { unreadCount } = useNotifications();
+  const navigation = navigationFor(viewer);
 
   return (
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
@@ -54,6 +67,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             const active = pathname === hrefPath || (hrefPath !== "/dashboard" && pathname.startsWith(`${hrefPath}/`));
             return (
               <Link
+                aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
                   active
                     ? "bg-[#e6f0e7] text-[#123d29] shadow-sm"
@@ -69,6 +83,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     2
                   </span>
                 )}
+                {item.href === "/notifications" && unreadCount > 0 && (
+                  <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
+                    {unreadCount}
+                    <span className="sr-only"> unread</span>
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -76,11 +96,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto border-t border-white/10 p-4">
           <div className="flex items-center gap-3 rounded-lg bg-white/6 p-3">
             <span className="grid size-9 place-items-center rounded-full bg-[#dce9de] text-xs font-bold text-[#123d29]">
-              {currentRole.initials}
+              {viewer.initials}
             </span>
             <span className="min-w-0 flex-1">
-              <strong className="block truncate text-xs">Demo account</strong>
-              <span className="block truncate text-[10px] text-[#a8c7b1]">{currentRole.title}</span>
+              <strong className="block truncate text-xs">{viewer.displayName}</strong>
+              <span className="block truncate text-[10px] text-[#a8c7b1]">
+                {viewer.roleLabel} · {viewer.scopeLabel}
+              </span>
             </span>
             <Link aria-label="Sign out" href="/">
               <Icon className="size-4 text-[#a8c7b1]" name="logout" />
@@ -90,28 +112,33 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-[74px] items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-4 py-3 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-[74px] flex-wrap items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-4 py-3 backdrop-blur md:px-8">
           <div className="lg:hidden"><Brand compact /></div>
           <div className="hidden text-sm text-[#66756b] lg:block">
             Sarvodaya Shramadana Societies
           </div>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <label className="sr-only" htmlFor="preview-role">Preview dashboard role</label>
-            <select
-              className="max-w-[170px] rounded-lg border border-[#ccd6ce] bg-white px-2.5 py-2 text-[11px] font-semibold text-[#304038] outline-none focus-visible:ring-2 focus-visible:ring-[#26744b] sm:max-w-none sm:px-3 sm:text-xs"
-              id="preview-role"
-              onChange={(event) => changeRole(event.target.value)}
-              value={role}
-            >
-              <option value="national">National view</option>
-              <option value="district">District view</option>
-              <option value="platform">Platform admin</option>
-            </select>
-            <span className="hidden rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08] sm:inline-flex">
+          <div className="flex flex-wrap items-center gap-3">
+            <ViewerSwitcher viewer={viewer} />
+            <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">
               Demonstration Data
             </span>
-            <span aria-label={currentRole.title} className="grid size-9 shrink-0 place-items-center rounded-full bg-[#e6f0e7] text-xs font-bold text-[#174a32]">
-              {currentRole.initials}
+            <Link
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+              className="relative grid size-9 place-items-center rounded-full border border-[#dfe5dc] bg-white text-[#26362c] transition hover:bg-[#f4f8f3] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+              href="/notifications"
+            >
+              <Icon className="size-[18px]" name="bell" />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-bold leading-[18px] text-white"
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+            <span className="hidden size-9 place-items-center rounded-full bg-[#e6f0e7] text-xs font-bold text-[#174a32] sm:grid">
+              {viewer.initials}
             </span>
           </div>
         </header>
@@ -135,5 +162,37 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="px-5 py-7 md:px-8 md:py-9 xl:px-10">{children}</main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Demonstration control: choose which fictional staff member is viewing the
+ * dashboard, to show the role-based visibility rules. Replaced by sign-in later.
+ */
+function ViewerSwitcher({ viewer }: { viewer: DemoViewer }) {
+  return (
+    <form action={switchDemoViewer} className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-[11px] font-semibold text-[#66756b]">
+        Viewing as
+        <select
+          className="max-w-[230px] rounded-lg border border-[#d8dfd8] bg-[#fbfcfa] px-2.5 py-1.5 text-xs font-medium text-[#26362c] outline-none focus:border-[#39815a] focus:ring-3 focus:ring-[#e1eee3]"
+          defaultValue={viewer.id}
+          key={viewer.id}
+          name="viewer"
+          onChange={(event) => event.currentTarget.form?.requestSubmit()}
+        >
+          {demoViewers.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.roleLabel} · {option.displayName}
+            </option>
+          ))}
+        </select>
+      </label>
+      <noscript>
+        <button className="rounded-lg border border-[#ccd6ce] px-2.5 py-1.5 text-xs font-semibold" type="submit">
+          Switch
+        </button>
+      </noscript>
+    </form>
   );
 }

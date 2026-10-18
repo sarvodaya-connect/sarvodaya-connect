@@ -181,7 +181,7 @@ export function PlatformAdminOverview() {
           </ul>
         </Panel>
       </div>
-      <p className="mt-5 text-[11px] text-[#818c84]">This role preview demonstrates layout only; URL-selected roles do not grant or enforce real permissions.</p>
+      <p className="mt-5 text-[11px] text-[#818c84]">This role preview uses fictional demonstration users; the “Viewing as” selector does not grant or enforce real permissions.</p>
     </>
   );
 }

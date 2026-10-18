@@ -35,3 +35,16 @@ export async function loadSocietyRegistry(
   if (scenario === "empty") return { districts, societies: [] };
   return { districts, societies };
 }
+
+/**
+ * Applies a demonstration scenario to any list of fixtures: waits for
+ * `loading`, fails for `error` and returns no records for `empty`.
+ */
+export async function loadDemoList<T>(scenario: DemoScenario | null, items: T[]): Promise<T[]> {
+  if (scenario === "loading") await wait(DEMO_LOADING_DELAY_MS);
+  if (scenario === "error") {
+    throw new Error("Demonstration scenario: this information could not be loaded.");
+  }
+  if (scenario === "empty") return [];
+  return items;
+}

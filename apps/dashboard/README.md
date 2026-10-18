@@ -79,7 +79,7 @@ The dashboard currently includes:
 - A responsive Sarvodaya Connect dashboard shell with the approved logo
 - National and district overview screens with fictional summary metrics
 - A platform access overview for administrator-facing account and role summaries
-- A demonstration role selector that updates the visible overview and navigation
+- A demonstration “Viewing as” selector that updates the visible overview, navigation and records
 - Environment-based API URL configuration
 - Loading, error, empty and no-search-results states
 - An access-denied state for areas unavailable to the selected demonstration role
@@ -90,16 +90,16 @@ The dashboard currently includes:
 
 ## Dashboard role previews
 
-Open these URLs to preview each dashboard home:
+Use **Viewing as** in the header to choose a fictional staff member. The overview and navigation follow that viewer's role:
 
-| URL | Screen |
-| --- | --- |
-| `/dashboard?previewRole=national` | National overview (D01) |
-| `/dashboard?previewRole=district` | Kurunegala District overview (D16) |
-| `/admin?previewRole=platform` | Platform access administration (D21) |
-| `/admin` | Access-denied state for the default national preview role |
+| Viewer | `/dashboard` | `/admin` |
+| --- | --- | --- |
+| HQ Administrator | National overview (D01) | Access-denied state |
+| District Manager | Kurunegala District overview (D16) | Access-denied state |
+| Programme Coordinator | Kurunegala District overview (D16) | Access-denied state |
+| System Administrator | Redirects to `/admin` | Platform access administration (D21) |
 
-The role selector is for demonstrating layouts only. It does not authenticate a user or enforce real permissions. Production role and record access must come from the identity provider and be enforced by the API.
+The role selector is for demonstration only. It does not authenticate a user, and production role and record access must come from the identity provider and be enforced by the API.
 
 Business features and final user-interface designs will be implemented through separate Jira work items.
 
@@ -123,6 +123,29 @@ The dashboard currently uses fictional fixtures, so these states can be demonstr
 | `/societies?demo=error` | Error state with retry |
 
 To see the no-search-results state, search the Societies page for a name that does not exist. The demonstration scenarios live in `src/lib/demo-scenarios.ts` and will be removed when the registry is loaded from the API.
+
+The same `?demo=loading`, `?demo=empty` and `?demo=error` parameters work on `/compliance`, `/documents` and `/notifications`.
+
+## Compliance, documents and notifications (SC-48)
+
+| Page | Catalogue | What it shows |
+| --- | --- | --- |
+| `/compliance` | D11 Audits & compliance | The four annual Registrar documents (audit report, AGM minutes, office-bearer list and signed members list) for every society in scope. Each document is **Completed** (approved), **Pending** (under review or returned) or **Missing** (not submitted; overdue after 30 Sep 2026). Status cards, the Registrar strip, search and the district, document type and status filters narrow the list. **Send reminder** is recorded on the page only. |
+| `/documents` | D12 Documents library | Every society document the viewer may see, with search across names, societies and the text read from scanned files, category list, district, society and status filters, and a preview panel. Downloads are switched off for the demonstration files. |
+| `/notifications` | D19 Notification centre | Approvals, returns, audit reminders, document requests, emergency, stale-data and system notifications for the viewer's role, with category filters, unread markers and **Mark all read**. The bell in the header and the navigation show the unread count. |
+
+### Provisional role-based visibility
+
+Use **Viewing as** in the header to switch between fictional staff members. The choice is stored in a cookie, and the rules in `src/lib/access.ts` are applied on the server, so restricted records are never sent to the browser.
+
+| Viewer | Compliance | Documents | Notifications |
+| --- | --- | --- | --- |
+| HQ Administrator | All districts | All documents, including signed members lists | National, emergency and system |
+| District Manager (Kurunegala) | Own district | Own district, including signed members lists | Own district |
+| Programme Coordinator (Phase 2) | No permission | Activity and registration documents of assigned societies only; no audit, Registrar, finance or members-list files | Assigned societies |
+| System Administrator | No permission | No permission | System only |
+
+These rules follow the provisional permissions for the MVP and will be enforced by the API when real sign-in is connected. Read state for notifications is kept in the browser until the notification service exists.
 
 ## Before opening a pull request
 
