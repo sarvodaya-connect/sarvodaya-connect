@@ -11,6 +11,8 @@ import '../widgets/demo_loader.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
+import '../services/document_upload_service.dart';
+import 'audit_screen.dart';
 import 'review_submit_screen.dart';
 
 /// Allowed demo formats and size from the SC-25 upload rules.
@@ -32,17 +34,20 @@ String? validateUpload({required String contentType, required int sizeBytes}) {
   return null;
 }
 
-/// M13 · Documents. Also used inside the Council update flow ([inFlow]).
+/// M13 · Documents: the four Registrar documents, then the society's document
+/// library. Also used inside the Council update flow ([inFlow]).
 class DocumentsScreen extends StatelessWidget {
-  const DocumentsScreen({super.key, this.inFlow = false});
+  const DocumentsScreen({super.key, this.inFlow = false, this.initialFilter});
 
   final bool inFlow;
+
+  /// Opens the library showing only this document type.
+  final DocumentType? initialFilter;
 
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final hasDraft =
-        store.draft != null && store.councilSubmission?.isLocked != true;
+    final hasDraft = store.uploadsAttachToCouncilDraft;
     return Scaffold(
       appBar: AppBar(title: Text(inFlow ? 'Supporting document' : 'Documents')),
       body: Column(
@@ -51,8 +56,11 @@ class DocumentsScreen extends StatelessWidget {
           Expanded(
             child: DemoLoader(
               loadingLabel: 'Loading documents',
-              builder: (context) =>
-                  _DocumentsContent(inFlow: inFlow, hasDraft: hasDraft),
+              builder: (context) => _DocumentsContent(
+                inFlow: inFlow,
+                hasDraft: hasDraft,
+                initialFilter: initialFilter,
+              ),
             ),
           ),
         ],
@@ -89,23 +97,37 @@ class DocumentsScreen extends StatelessWidget {
   }
 }
 
-class _DocumentsContent extends StatelessWidget {
-  const _DocumentsContent({required this.inFlow, required this.hasDraft});
+class _DocumentsContent extends StatefulWidget {
+  const _DocumentsContent({
+    required this.inFlow,
+    required this.hasDraft,
+    this.initialFilter,
+  });
 
   final bool inFlow;
   final bool hasDraft;
+  final DocumentType? initialFilter;
+
+  @override
+  State<_DocumentsContent> createState() => _DocumentsContentState();
+}
+
+class _DocumentsContentState extends State<_DocumentsContent> {
+  /// Null shows every document type.
+  late DocumentType? _filter = widget.initialFilter;
 
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final documents = store.documents;
+    final documents = store.libraryDocuments;
+    final failedUploads = store.failedUploads;
+    final visible = _filter == null
+        ? documents
+        : documents.where((d) => d.documentType == _filter).toList();
 
-    SocietyDocument? latest(DocumentType type) {
-      final matches =
-          documents.where((document) => document.documentType == type).toList()
-            ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
-      return matches.firstOrNull;
-    }
+    SocietyDocument? latest(DocumentType type) => documents
+        .where((document) => document.documentType == type)
+        .firstOrNull;
 
     final registrarRows = [
       (DocumentType.auditReport, 'Overdue · due 30 Sep 2026', true),
@@ -123,7 +145,7 @@ class _DocumentsContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (hasDraft) ...[
+        if (widget.hasDraft) ...[
           NoticeBanner(
             icon: Icons.attach_file,
             title: 'Supporting document for your Council update',
@@ -133,52 +155,187 @@ class _DocumentsContent extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
+        if (!widget.inFlow) ...[
+          _TypeFilter(
+            selected: _filter,
+            onSelected: (type) => setState(() => _filter = type),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (failedUploads.isNotEmpty) ...[
+          SectionCard(
+            title: 'Not uploaded',
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            children: [
+              for (final upload in failedUploads)
+                _FailedUploadRow(upload: upload),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_filter == null) ...[
+          SectionCard(
+            title: 'Registrar documents · FY 2025/26',
+            trailing: Text(
+              '$approvedCount of 4 approved',
+              style: const TextStyle(color: AppColors.muted),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            children: [
+              for (final (index, row) in registrarRows.indexed)
+                _RegistrarRow(
+                  number: index + 1,
+                  type: row.$1,
+                  document: latest(row.$1)?.uploadedAt.year == 2026
+                      ? latest(row.$1)
+                      : null,
+                  dueLabel: row.$2,
+                  overdue: row.$3,
+                ),
+              if (!widget.inFlow) ...[
+                const Divider(),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.fact_check_outlined,
+                    color: AppColors.leaf,
+                  ),
+                  title: const Text(
+                    'Annual audit checklist',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${store.currentAudit.financialYear} · '
+                    '${store.currentAudit.completedCount} of '
+                    '${store.currentAudit.items.length} steps complete',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AuditScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         SectionCard(
-          title: 'Registrar documents · FY 2025/26',
+          title: _filter == null ? 'All documents' : _filter!.label,
           trailing: Text(
-            '$approvedCount of 4 approved',
+            '${visible.length}',
+            semanticsLabel:
+                '${visible.length} ${visible.length == 1 ? 'document' : 'documents'}',
             style: const TextStyle(color: AppColors.muted),
           ),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           children: [
-            for (final (index, row) in registrarRows.indexed)
-              _RegistrarRow(
-                number: index + 1,
-                type: row.$1,
-                document: latest(row.$1)?.uploadedAt.year == 2026
-                    ? latest(row.$1)
-                    : null,
-                dueLabel: row.$2,
-                overdue: row.$3,
+            if (visible.isEmpty)
+              _EmptyLibrary(
+                filter: _filter,
+                onShowAll: () => setState(() => _filter = null),
               ),
+            for (final document in visible) _DocumentRow(document: document),
           ],
         ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'All documents',
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          children: [
-            if (documents.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'No documents yet.',
-                  style: TextStyle(color: AppColors.muted),
-                ),
-              ),
-            for (final document in documents.reversed)
-              _DocumentRow(document: document),
-          ],
-        ),
-        if (!inFlow) ...[
+        if (!widget.inFlow) ...[
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => showUploadSheet(context),
+            onPressed: () => showUploadSheet(
+              context,
+              initialType: _filter ?? DocumentType.agmMinutes,
+            ),
             icon: const Icon(Icons.upload_file),
             label: const Text('Upload document'),
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Filter chips by document type (Screen Catalogue v3, M13).
+class _TypeFilter extends StatelessWidget {
+  const _TypeFilter({required this.selected, required this.onSelected});
+
+  final DocumentType? selected;
+  final ValueChanged<DocumentType?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = <(DocumentType?, String)>[
+      (null, 'All'),
+      for (final type in DocumentType.values)
+        (type, type == DocumentType.other ? 'Other' : type.label),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (type, label) in options)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(label),
+                selected: selected == type,
+                showCheckmark: false,
+                labelStyle: TextStyle(
+                  color: selected == type ? Colors.white : null,
+                ),
+                onSelected: (_) => onSelected(type),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyLibrary extends StatelessWidget {
+  const _EmptyLibrary({required this.filter, required this.onShowAll});
+
+  final DocumentType? filter;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: AppColors.mint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.folder_open_outlined,
+              color: AppColors.leaf,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            filter == null
+                ? 'No documents yet'
+                : 'No ${filter!.label.toLowerCase()} yet',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            filter == null
+                ? 'Files you upload appear here with their status. Only your society and the District Centre can see them.'
+                : 'Upload one, or show every document type.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          if (filter != null)
+            TextButton(onPressed: onShowAll, child: const Text('Show all')),
+        ],
+      ),
     );
   }
 }
@@ -249,6 +406,7 @@ class _RegistrarRow extends StatelessWidget {
   }
 }
 
+/// A library document with its type, status, uploader and upload date.
 class _DocumentRow extends StatelessWidget {
   const _DocumentRow({required this.document});
 
@@ -270,10 +428,13 @@ class _DocumentRow extends StatelessWidget {
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        '${document.documentType.label} · ${formatDate(document.uploadedAt)} · ${formatFileSize(document.sizeBytes)}'
-        '${document.submissionReference == null ? '' : ' · ${document.submissionReference}'}',
-        style: const TextStyle(fontSize: 12),
+        '${document.documentType.label} · ${formatFileSize(document.sizeBytes)}'
+        '${document.submissionReference == null ? '' : ' · ${document.submissionReference}'}'
+        '${document.restrictedToReviewers ? ' · DM & HQ only' : ''}\n'
+        'Uploaded by ${document.uploadedBy} · ${formatDate(document.uploadedAt)}',
+        style: const TextStyle(fontSize: 12, height: 1.35),
       ),
+      isThreeLine: true,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -287,6 +448,76 @@ class _DocumentRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// A file that did not reach the library, with Retry and Remove.
+class _FailedUploadRow extends StatelessWidget {
+  const _FailedUploadRow({required this.upload});
+
+  final FailedUpload upload;
+
+  Future<void> _retry(BuildContext context) async {
+    final store = DemoScope.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final document = await store.retryFailedUpload(upload.id);
+      messenger.showSnackBar(
+        SnackBar(content: Text('${document.fileName} uploaded.')),
+      );
+    } on DocumentUploadException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Upload failed again. ${error.message}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final retrying = DemoScope.of(context).isRetrying(upload.id);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.error_outline, color: AppColors.danger),
+      title: Text(
+        upload.fileName,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        retrying
+            ? 'Uploading again…'
+            : 'Upload failed · ${upload.documentType.label}\n${upload.reason}',
+        style: TextStyle(
+          fontSize: 12,
+          height: 1.35,
+          color: retrying ? AppColors.muted : AppColors.danger,
+        ),
+      ),
+      isThreeLine: !retrying,
+      trailing: retrying
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(
+                  onPressed: () => _retry(context),
+                  child: Text(
+                    'Retry',
+                    semanticsLabel: 'Retry upload of ${upload.fileName}',
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remove ${upload.fileName}',
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () =>
+                      DemoScope.read(context).removeFailedUpload(upload.id),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -324,6 +555,10 @@ class _UploadSheetState extends State<_UploadSheet> {
   Timer? _timer;
   bool _offlineError = false;
 
+  /// Set when the upload service could not finish; the chosen type and file
+  /// are kept so the officer can retry.
+  String? _uploadFailure;
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -343,6 +578,7 @@ class _UploadSheetState extends State<_UploadSheet> {
     });
     if (_typeError != null || _fileError != null) return;
     _offlineError = false;
+    _uploadFailure = null;
     if (store.offline) {
       _offlineError = true;
       setState(
@@ -351,7 +587,7 @@ class _UploadSheetState extends State<_UploadSheet> {
       return;
     }
     if (store.loadDelay == Duration.zero) {
-      _finish();
+      unawaited(_finish());
       return;
     }
     setState(() => _progress = 0);
@@ -362,7 +598,7 @@ class _UploadSheetState extends State<_UploadSheet> {
       setState(() => _progress = (_progress! + 0.1).clamp(0, 1));
       if (_progress! >= 1) {
         timer.cancel();
-        _finish();
+        unawaited(_finish());
       }
     });
   }
@@ -372,19 +608,41 @@ class _UploadSheetState extends State<_UploadSheet> {
     setState(() => _progress = null);
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     final store = DemoScope.read(context);
-    final document = store.addDraftDocument(
-      type: _type!,
-      fileName: _file!.name,
-      contentType: _file!.contentType,
-      sizeBytes: _file!.sizeBytes,
-    );
     final messenger = ScaffoldMessenger.of(context);
-    Navigator.of(context).pop();
-    messenger.showSnackBar(
-      SnackBar(content: Text('${document.fileName} added as a Draft.')),
-    );
+    final navigator = Navigator.of(context);
+    final attachToDraft = store.uploadsAttachToCouncilDraft;
+    try {
+      final document = await store.uploadDocument(
+        type: _type!,
+        fileName: _file!.name,
+        contentType: _file!.contentType,
+        sizeBytes: _file!.sizeBytes,
+      );
+      if (!mounted) return;
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            attachToDraft
+                ? '${document.fileName} added as a Draft.'
+                : '${document.fileName} uploaded. The District Centre will review it.',
+          ),
+        ),
+      );
+    } on DocumentUploadException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _progress = null;
+        if (error.offline) {
+          _offlineError = true;
+          _fileError = '${error.message} Try again when you are connected.';
+        } else {
+          _uploadFailure = error.message;
+        }
+      });
+    }
   }
 
   @override
@@ -441,6 +699,7 @@ class _UploadSheetState extends State<_UploadSheet> {
                   setState(() {
                     _file = value;
                     _fileError = null;
+                    _uploadFailure = null;
                   });
                 },
                 child: Column(
@@ -470,6 +729,16 @@ class _UploadSheetState extends State<_UploadSheet> {
                   message: '$_fileError Your other answers are safe.',
                 ),
               ],
+              if (_uploadFailure != null) ...[
+                const SizedBox(height: 4),
+                NoticeBanner(
+                  icon: Icons.cloud_off_outlined,
+                  tone: NoticeTone.error,
+                  title: 'Upload failed',
+                  message:
+                      '$_uploadFailure ${_file!.name} was not saved. Your choices are kept, so you can retry now or later from Documents.',
+                ),
+              ],
               if (uploading) ...[
                 const SizedBox(height: 12),
                 Text('Uploading ${_file!.name}…'),
@@ -490,7 +759,13 @@ class _UploadSheetState extends State<_UploadSheet> {
               else
                 FilledButton(
                   onPressed: _start,
-                  child: Text(_offlineError ? 'Try again' : 'Upload'),
+                  child: Text(
+                    _uploadFailure != null
+                        ? 'Retry upload'
+                        : _offlineError
+                        ? 'Try again'
+                        : 'Upload',
+                  ),
                 ),
             ],
           ),

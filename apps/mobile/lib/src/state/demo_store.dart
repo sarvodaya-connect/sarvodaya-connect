@@ -5,12 +5,16 @@ import '../auth/demo_auth_service.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/app_language.dart';
+import '../models/audit.dart';
 import '../models/committee.dart';
 import '../models/document.dart';
+import '../models/notification.dart';
 import '../models/profile_draft.dart';
 import '../models/society.dart';
 import '../models/submission.dart';
 import '../models/user.dart';
+import '../services/demo_document_upload_service.dart';
+import '../services/document_upload_service.dart';
 import '../validation/validators.dart';
 
 /// Thrown when the demo is in offline mode and an action needs the network.
@@ -50,16 +54,25 @@ class DemoStore extends ChangeNotifier {
     this.loadDelay = const Duration(milliseconds: 700),
     DateTime Function()? clock,
     AuthService? authService,
+    DocumentUploadService? uploadService,
     this.showSplash = true,
     this.languageChosen = false,
     this.firstTimeSetupComplete = false,
   }) : _clock = clock ?? DateTime.now {
     _authService = authService ?? DemoAuthService(isOnline: () => !offline);
+    _uploadService =
+        uploadService ??
+        DemoDocumentUploadService(
+          isOnline: () => !offline,
+          shouldFail: _consumeUploadFailure,
+          clock: _clock,
+        );
   }
 
   final Duration loadDelay;
   final DateTime Function() _clock;
   late final AuthService _authService;
+  late final DocumentUploadService _uploadService;
 
   DateTime get now => _clock();
 
@@ -71,6 +84,20 @@ class DemoStore extends ChangeNotifier {
   /// Demo: the phone has refused location access, so "Use my location" shows
   /// the permission-denied state. No real permission is ever requested.
   bool locationPermissionDenied = false;
+
+  /// Demo: a society with no records yet, so the document library, audit and
+  /// notification screens show their empty states.
+  bool emptyRecords = false;
+
+  /// Demo: the next document upload stops part-way, so the failed-upload and
+  /// retry states can be shown. It switches itself off after one failure.
+  bool failNextUpload = false;
+
+  bool _consumeUploadFailure() {
+    if (!failNextUpload) return false;
+    failNextUpload = false;
+    return true;
+  }
 
   // M01-M04 first-run and authentication state.
   bool showSplash;
@@ -236,12 +263,16 @@ class DemoStore extends ChangeNotifier {
     bool? failLoads,
     bool? emptyTracker,
     bool? locationPermissionDenied,
+    bool? emptyRecords,
+    bool? failNextUpload,
   }) {
     this.offline = offline ?? this.offline;
     this.failLoads = failLoads ?? this.failLoads;
     this.emptyTracker = emptyTracker ?? this.emptyTracker;
     this.locationPermissionDenied =
         locationPermissionDenied ?? this.locationPermissionDenied;
+    this.emptyRecords = emptyRecords ?? this.emptyRecords;
+    this.failNextUpload = failNextUpload ?? this.failNextUpload;
     optionsVersion++;
     notifyListeners();
   }
@@ -288,6 +319,280 @@ class DemoStore extends ChangeNotifier {
           document.id == id && document.status == DocumentStatus.draft,
     );
     notifyListeners();
+  }
+
+  // ----- Document library and uploads (SC-47, M13) -----
+
+  static final _seededDocumentIds = {
+    for (final document in demoDocuments) document.id,
+  };
+
+  /// Documents shown in the library, newest first. With the "no records yet"
+  /// demo option, only files uploaded during this session are shown.
+  List<SocietyDocument> get libraryDocuments {
+    final visible = emptyRecords
+        ? _documents.where((d) => !_seededDocumentIds.contains(d.id))
+        : _documents;
+    return visible.toList()
+      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+  }
+
+  /// True while uploads are attached to the officer's unsent Council update.
+  bool get uploadsAttachToCouncilDraft =>
+      _draft != null && councilSubmission?.isLocked != true;
+
+  final List<FailedUpload> _failedUploads = [];
+
+  /// Files that did not reach the library, kept so they can be retried.
+  List<FailedUpload> get failedUploads => List.unmodifiable(_failedUploads);
+
+  final Set<String> _retryingUploads = {};
+  bool isRetrying(String failedUploadId) =>
+      _retryingUploads.contains(failedUploadId);
+
+  int _nextFailedUploadId = 1;
+
+  /// Sends a chosen file through the [DocumentUploadService] and records it in
+  /// the library. While a Council update is being prepared the file is attached
+  /// to it as a Draft; otherwise it waits for the District Centre's review.
+  ///
+  /// Throws [DocumentUploadException] when the upload fails. The file is then
+  /// kept in [failedUploads] so the officer can retry it.
+  Future<SocietyDocument> uploadDocument({
+    required DocumentType type,
+    required String fileName,
+    required String contentType,
+    required int sizeBytes,
+  }) async {
+    final DocumentUploadReceipt receipt;
+    try {
+      receipt = await _uploadService.upload(
+        DocumentUploadRequest(
+          societyId: society.id,
+          documentType: type,
+          fileName: fileName,
+          contentType: contentType,
+          sizeBytes: sizeBytes,
+        ),
+      );
+    } on DocumentUploadException catch (error) {
+      _recordFailedUpload(
+        type: type,
+        fileName: fileName,
+        contentType: contentType,
+        sizeBytes: sizeBytes,
+        reason: error.message,
+      );
+      rethrow;
+    }
+    _failedUploads.removeWhere(
+      (failed) => failed.fileName == fileName && failed.documentType == type,
+    );
+    final document = SocietyDocument(
+      id: receipt.documentId,
+      societyId: society.id,
+      documentType: type,
+      fileName: fileName,
+      contentType: contentType,
+      sizeBytes: sizeBytes,
+      status: uploadsAttachToCouncilDraft
+          ? DocumentStatus.draft
+          : DocumentStatus.submitted,
+      uploadedBy: _user?.displayName ?? demoOfficer.displayName,
+      uploadedAt: receipt.receivedAt,
+    );
+    _documents.add(document);
+    notifyListeners();
+    return document;
+  }
+
+  /// Tries a failed upload again from the library.
+  Future<SocietyDocument> retryFailedUpload(String id) async {
+    final failed = _failedUploads.firstWhere((upload) => upload.id == id);
+    _retryingUploads.add(id);
+    notifyListeners();
+    try {
+      await Future<void>.delayed(loadDelay);
+      return await uploadDocument(
+        type: failed.documentType,
+        fileName: failed.fileName,
+        contentType: failed.contentType,
+        sizeBytes: failed.sizeBytes,
+      );
+    } finally {
+      _retryingUploads.remove(id);
+      notifyListeners();
+    }
+  }
+
+  void removeFailedUpload(String id) {
+    _failedUploads.removeWhere((upload) => upload.id == id);
+    notifyListeners();
+  }
+
+  void _recordFailedUpload({
+    required DocumentType type,
+    required String fileName,
+    required String contentType,
+    required int sizeBytes,
+    required String reason,
+  }) {
+    final index = _failedUploads.indexWhere(
+      (failed) => failed.fileName == fileName && failed.documentType == type,
+    );
+    final upload = FailedUpload(
+      id: index < 0
+          ? 'upload-failed-${_nextFailedUploadId++}'
+          : _failedUploads[index].id,
+      documentType: type,
+      fileName: fileName,
+      contentType: contentType,
+      sizeBytes: sizeBytes,
+      reason: reason,
+      failedAt: now,
+    );
+    if (index < 0) {
+      _failedUploads.add(upload);
+    } else {
+      _failedUploads[index] = upload;
+    }
+    notifyListeners();
+  }
+
+  // ----- Annual audit (SC-47, M12) -----
+
+  /// The latest audit report uploaded for the current financial year.
+  SocietyDocument? get currentAuditReport {
+    final reports =
+        _documents
+            .where(
+              (document) =>
+                  document.documentType == DocumentType.auditReport &&
+                  document.uploadedAt.isAfter(demoAuditYearEnd),
+            )
+            .toList()
+          ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+    return reports.firstOrNull;
+  }
+
+  /// FY 2025/26 audit. The report steps follow the document library, so
+  /// uploading the audit report completes them.
+  AnnualAudit get currentAudit {
+    final report = currentAuditReport;
+    final today = DateTime(now.year, now.month, now.day);
+    final pastDue = today.isAfter(demoAuditDueOn);
+    final reviewStatus = switch (report?.status) {
+      null || DocumentStatus.draft => AuditItemStatus.notStarted,
+      DocumentStatus.submitted => AuditItemStatus.inProgress,
+      DocumentStatus.approved => AuditItemStatus.complete,
+      DocumentStatus.rejected => AuditItemStatus.overdue,
+    };
+    return AnnualAudit(
+      id: 'audit-fy-2025-26',
+      financialYear: 'FY 2025/26',
+      dueOn: demoAuditDueOn,
+      reportDocumentId: report?.id,
+      status: switch (report?.status) {
+        DocumentStatus.approved => AuditStatus.approved,
+        DocumentStatus.submitted => AuditStatus.underReview,
+        _ => pastDue ? AuditStatus.overdue : AuditStatus.due,
+      },
+      items: [
+        ...demoAuditCompletedSteps,
+        AuditChecklistItem(
+          id: 'audit-2026-signed',
+          title: 'Audit report signed by the auditor',
+          description: report == null
+              ? 'Waiting for the auditor to sign the report'
+              : 'Signed copy received',
+          status: report == null
+              ? AuditItemStatus.inProgress
+              : AuditItemStatus.complete,
+          completedOn: report?.uploadedAt,
+        ),
+        AuditChecklistItem(
+          id: 'audit-2026-uploaded',
+          title: 'Audit report uploaded',
+          description: report == null
+              ? 'Due ${formatDate(demoAuditDueOn)}'
+              : report.fileName,
+          status: report != null
+              ? AuditItemStatus.complete
+              : pastDue
+              ? AuditItemStatus.overdue
+              : AuditItemStatus.notStarted,
+          completedOn: report?.uploadedAt,
+          dueOn: demoAuditDueOn,
+        ),
+        AuditChecklistItem(
+          id: 'audit-2026-district',
+          title: 'Checked by the District Centre',
+          description: switch (reviewStatus) {
+            AuditItemStatus.complete => 'Approved by $demoReviewerOffice',
+            AuditItemStatus.inProgress => 'With $demoReviewerOffice for review',
+            AuditItemStatus.overdue => 'Returned. Upload a corrected report',
+            AuditItemStatus.notStarted =>
+              report == null
+                  ? 'Starts after the report is uploaded'
+                  : 'Sent with your Council update',
+          },
+          status: reviewStatus,
+        ),
+      ],
+    );
+  }
+
+  /// Audits for the audit screen, newest first.
+  List<AnnualAudit> get audits =>
+      emptyRecords ? const [] : [currentAudit, demoPreviousAudit];
+
+  // ----- Notifications (SC-47, M16) -----
+
+  late final List<AppNotification> _notifications = demoNotifications(now);
+
+  /// Notifications, newest first.
+  List<AppNotification> get notifications {
+    if (emptyRecords) return const [];
+    return _notifications.toList()
+      ..sort((a, b) => b.receivedAt.compareTo(a.receivedAt));
+  }
+
+  int get unreadNotificationCount =>
+      notifications.where((notification) => !notification.read).length;
+
+  void markNotificationRead(String id) {
+    final index = _notifications.indexWhere((n) => n.id == id);
+    if (index < 0 || _notifications[index].read) return;
+    _notifications[index] = _notifications[index].markedRead();
+    notifyListeners();
+  }
+
+  void markAllNotificationsRead() {
+    for (var i = 0; i < _notifications.length; i++) {
+      _notifications[i] = _notifications[i].markedRead();
+    }
+    notifyListeners();
+  }
+
+  void _notify({
+    required NotificationKind kind,
+    required String title,
+    required String message,
+    String? submissionId,
+  }) {
+    _notifications.add(
+      AppNotification(
+        id: 'note-${_notifications.length + 1}',
+        kind: kind,
+        title: title,
+        message: message,
+        receivedAt: now,
+        target: submissionId == null
+            ? NotificationTarget.none
+            : NotificationTarget.submission,
+        targetId: submissionId,
+      ),
+    );
   }
 
   /// The changes the District Manager will see for the current draft.
@@ -615,6 +920,13 @@ class DemoStore extends ChangeNotifier {
   /// Returns the start-date field, as in the AGM demo script.
   void demoRequestChanges(String id) {
     const comment = 'Start date must match the AGM minutes (28 Sep 2026).';
+    _notify(
+      kind: NotificationKind.returned,
+      title:
+          '${submissionById(id)?.title ?? 'Update'} returned · 1 field to fix',
+      message: '$demoReviewerName: $comment',
+      submissionId: id,
+    );
     _update(id, (submission) {
       // The demo script returns the start date; fall back to the first change.
       final field =
@@ -663,6 +975,12 @@ class DemoStore extends ChangeNotifier {
     const comment = 'Council update approved. Thank you.';
     final submission = submissionById(id);
     if (submission == null) return;
+    _notify(
+      kind: NotificationKind.approved,
+      title: '${submission.title} approved',
+      message: '$demoReviewerName: $comment',
+      submissionId: id,
+    );
     _update(
       id,
       (submission) => submission.copyWith(

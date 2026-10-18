@@ -36,7 +36,12 @@ class _DemoLoaderState extends State<DemoLoader> {
     }
   }
 
-  void _retry() => setState(() => _future = DemoScope.read(context).load());
+  void _retry() {
+    // A block body, so setState does not receive the Future as a return value.
+    setState(() {
+      _future = DemoScope.read(context).load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

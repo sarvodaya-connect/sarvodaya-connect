@@ -28,7 +28,7 @@ Future<void> showDemoOptions(BuildContext context) {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
-                  'For demonstrations only. These options show how the app behaves offline, when loading fails, without location permission or when the record changes.',
+                  'For demonstrations only. These options show how the app behaves offline, when loading or uploading fails, with no records, without location permission or when the record changes.',
                   style: TextStyle(color: AppColors.muted),
                 ),
               ),
@@ -51,6 +51,23 @@ Future<void> showDemoOptions(BuildContext context) {
                 subtitle: const Text('The tracker shows its empty state'),
                 value: store.emptyTracker,
                 onChanged: (value) => store.setDemoOptions(emptyTracker: value),
+              ),
+              SwitchListTile(
+                title: const Text('New society with no records'),
+                subtitle: const Text(
+                  'Documents, Audit and Notifications show their empty states',
+                ),
+                value: store.emptyRecords,
+                onChanged: (value) => store.setDemoOptions(emptyRecords: value),
+              ),
+              SwitchListTile(
+                title: const Text('Next upload fails'),
+                subtitle: const Text(
+                  'The next document upload stops part-way so Retry can be shown',
+                ),
+                value: store.failNextUpload,
+                onChanged: (value) =>
+                    store.setDemoOptions(failNextUpload: value),
               ),
               SwitchListTile(
                 title: const Text('Location permission denied'),
