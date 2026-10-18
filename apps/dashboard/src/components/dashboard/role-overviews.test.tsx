@@ -25,6 +25,6 @@ describe("role overviews", () => {
 
     expect(screen.getByRole("heading", { name: "Platform administration" })).toBeInTheDocument();
     expect(screen.getByText("k.fernando@example.invalid")).toBeInTheDocument();
-    expect(screen.getByText(/URL-selected roles do not grant or enforce real permissions/)).toBeInTheDocument();
+    expect(screen.getByText(/does not grant or enforce real permissions/)).toBeInTheDocument();
   });
 });

@@ -55,13 +55,16 @@ export function TableSkeleton({
   );
 }
 
-function StateIcon({ name, tone = "neutral" }: { name: IconName; tone?: "neutral" | "error" }) {
+function StateIcon({ name, tone = "neutral" }: { name: IconName; tone?: "neutral" | "error" | "warning" }) {
+  const toneClass = {
+    error: "bg-[#fbe9e4] text-[#a8402c]",
+    neutral: "bg-[#e6f0e7] text-[#26744b]",
+    warning: "bg-[#fff5d9] text-[#7a5a00]",
+  }[tone];
   return (
     <span
       aria-hidden="true"
-      className={`grid size-12 place-items-center rounded-full ${
-        tone === "error" ? "bg-[#fbe9e4] text-[#a8402c]" : "bg-[#e6f0e7] text-[#26744b]"
-      }`}
+      className={`grid size-12 place-items-center rounded-full ${toneClass}`}
     >
       <Icon className="size-6" name={name} />
     </span>
@@ -126,6 +129,29 @@ export function ErrorState({
         </button>
         {secondaryAction}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Shown when the signed-in role is not allowed to see a page or a record
+ * (Screen Catalogue v3, D21 "No permission").
+ */
+export function NoPermissionState({
+  action,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-14 text-center">
+      <StateIcon name="lock" tone="warning" />
+      <h2 className="mt-4 text-base font-semibold text-[#223329]">{title}</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
+      {action && <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div>}
     </div>
   );
 }
