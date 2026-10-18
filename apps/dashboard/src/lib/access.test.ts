@@ -84,5 +84,7 @@ describe("provisional role-based visibility", () => {
     expect(labels(coordinator)).toContain("Documents");
     expect(labels(systemAdmin)).not.toContain("Documents");
     expect(labels(systemAdmin)).toContain("Notifications");
+    expect(labels(hq)[0]).toBe("Overview");
+    expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);
   });
 });

@@ -10,7 +10,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const body = exception instanceof HttpException ? exception.getResponse() : null;
     const messages = typeof body === 'object' && body !== null && 'message' in body ? (body as { message: unknown }).message : null;
     const isValidation = status === 400;
-    const code = isValidation ? 'VALIDATION_ERROR' : status === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR';
+    // Error codes from API_ERROR_CODES in packages/api-contracts.
+    const code = isValidation
+      ? 'VALIDATION_ERROR'
+      : status === 401
+        ? 'UNAUTHENTICATED'
+        : status === 403
+          ? 'FORBIDDEN'
+          : status === 404
+            ? 'NOT_FOUND'
+            : status === 409
+              ? 'CONFLICT'
+              : 'INTERNAL_ERROR';
     const message = Array.isArray(messages) ? 'Request validation failed' : typeof messages === 'string' ? messages : status === 500 ? 'Internal server error' : 'Request failed';
     const details = Array.isArray(messages) ? messages.map((m: unknown) => ({ field: typeof m === 'string' ? m.split(' ')[0] : 'request', messages: [String(m)] })) : undefined;
     const header = request.headers['x-request-id'];

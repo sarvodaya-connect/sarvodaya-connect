@@ -19,7 +19,15 @@ type NavigationItem = { href: string; icon: IconName; label: string };
 
 /** Primary navigation. Pages the viewer's role cannot open are left out. */
 export function navigationFor(viewer: DemoViewer): NavigationItem[] {
+  if (viewer.role === "SYSTEM_ADMIN") {
+    // Technical settings only: no society registry, district or review pages.
+    return [
+      { href: "/admin", icon: "building", label: "Platform access" },
+      { href: "/notifications", icon: "bell", label: "Notifications" },
+    ];
+  }
   return [
+    { href: "/dashboard", icon: "home", label: "Overview" },
     { href: "/societies", icon: "society", label: "Societies" },
     { href: "/districts/kurunegala", icon: "district", label: "District view" },
     { href: "/reviews", icon: "review", label: "Review queue" },
@@ -51,11 +59,12 @@ export function DashboardShell({
           <Brand inverse />
         </div>
         <p className="px-6 pt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8db39a]">
-          Administration
+          Workspace
         </p>
         <nav className="mt-3 space-y-1 px-3" aria-label="Primary navigation">
           {navigation.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const hrefPath = item.href.split("?")[0];
+            const active = pathname === hrefPath || (hrefPath !== "/dashboard" && pathname.startsWith(`${hrefPath}/`));
             return (
               <Link
                 aria-current={active ? "page" : undefined}
@@ -69,7 +78,7 @@ export function DashboardShell({
               >
                 <Icon className="size-[18px]" name={item.icon} />
                 {item.label}
-                {item.href === "/reviews" && (
+                {item.label === "Review queue" && (
                   <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
                     2
                   </span>
@@ -103,7 +112,7 @@ export function DashboardShell({
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-[74px] flex-wrap items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-5 py-3 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-[74px] flex-wrap items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-4 py-3 backdrop-blur md:px-8">
           <div className="lg:hidden"><Brand compact /></div>
           <div className="hidden text-sm text-[#66756b] lg:block">
             Sarvodaya Shramadana Societies

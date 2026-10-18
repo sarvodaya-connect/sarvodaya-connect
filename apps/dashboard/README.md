@@ -76,13 +76,30 @@ npm run start
 
 The dashboard currently includes:
 
-- A Sarvodaya Connect placeholder page
+- A responsive Sarvodaya Connect dashboard shell with the approved logo
+- National and district overview screens with fictional summary metrics
+- A platform access overview for administrator-facing account and role summaries
+- A demonstration “Viewing as” selector that updates the visible overview, navigation and records
 - Environment-based API URL configuration
 - Loading, error, empty and no-search-results states
+- An access-denied state for areas unavailable to the selected demonstration role
 - A custom not-found page
 - Component tests with Vitest and React Testing Library
 - TypeScript and ESLint configuration
 - Tailwind CSS styling
+
+## Dashboard role previews
+
+Use **Viewing as** in the header to choose a fictional staff member. The overview and navigation follow that viewer's role:
+
+| Viewer | `/dashboard` | `/admin` |
+| --- | --- | --- |
+| HQ Administrator | National overview (D01) | Access-denied state |
+| District Manager | Kurunegala District overview (D16) | Access-denied state |
+| Programme Coordinator | Kurunegala District overview (D16) | Access-denied state |
+| System Administrator | Redirects to `/admin` | Platform access administration (D21) |
+
+The role selector is for demonstration only. It does not authenticate a user, and production role and record access must come from the identity provider and be enforced by the API.
 
 Business features and final user-interface designs will be implemented through separate Jira work items.
 

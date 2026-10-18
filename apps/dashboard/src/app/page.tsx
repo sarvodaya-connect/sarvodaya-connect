@@ -57,15 +57,15 @@ export default function Home() {
             </label>
             <Link
               className="flex w-full items-center justify-center rounded-lg bg-[#1f6b43] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#174f34] focus:outline-none focus:ring-3 focus:ring-[#bbd7c0]"
-              href="/societies"
+              href="/dashboard"
             >
               Sign in
             </Link>
             <div className="flex items-start gap-3 rounded-lg bg-[#f1f6f0] p-3 text-xs leading-5 text-[#53645a]">
               <span aria-hidden="true" className="mt-0.5 text-base">◈</span>
               <p>
-                Authentication is managed by WSO2 Identity Server. This
-                prototype uses fictional demonstration credentials.
+                Production sign-in will use Amazon Cognito. This preview uses
+                fictional demonstration credentials and role summaries.
               </p>
             </div>
           </div>

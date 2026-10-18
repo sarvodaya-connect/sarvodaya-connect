@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type BrandProps = {
   compact?: boolean;
   inverse?: boolean;
@@ -6,12 +8,15 @@ type BrandProps = {
 export function Brand({ compact = false, inverse = false }: BrandProps) {
   return (
     <div className="flex items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#f6c744] bg-[#f5df53] shadow-sm"
-      >
-        <span className="absolute bottom-0 h-4 w-full bg-[#d94b35]" />
-        <span className="relative text-lg font-black text-[#123d29]">S</span>
+      <span className="relative block h-11 w-[116px] shrink-0 overflow-hidden rounded-md bg-white">
+        <Image
+          alt="Sarvodaya Connect"
+          className="object-cover"
+          fill
+          priority
+          sizes="116px"
+          src="/brand/sarvodaya-connect-logo.jpg"
+        />
       </span>
       {!compact && (
         <span className="leading-tight">

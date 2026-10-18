@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { Icon, type IconName } from "./icon";
 
@@ -151,6 +152,25 @@ export function NoPermissionState({
       <h2 className="mt-4 text-base font-semibold text-[#223329]">{title}</h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
       {action && <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div>}
+    </div>
+  );
+}
+
+/** Explains that the current demonstration role cannot open a workspace area. */
+export function AccessDeniedState({
+  description = "Your current demonstration role does not include access to this area.",
+  role,
+}: {
+  description?: string;
+  role: string;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-14 text-center" role="status">
+      <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-[#fff4d6] text-xl font-semibold text-[#806718]">!</span>
+      <h1 className="mt-4 text-base font-semibold text-[#223329]">You do not have access to this area</h1>
+      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
+      <p className="mt-3 text-xs text-[#7b877f]">Current preview role: <strong className="font-semibold">{role}</strong></p>
+      <Link className={`${secondaryButtonClass} mt-6`} href="/dashboard">Return to overview</Link>
     </div>
   );
 }
