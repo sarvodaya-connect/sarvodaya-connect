@@ -128,15 +128,31 @@ SC-29 seed complete: 3 fictional districts, 6 fictional societies, 4 fictional c
 
 The seed is repeatable: running it again does not create duplicate records.
 
-**Step 4: Confirm the records exist** (from `infrastructure/docker`)
+**Step 4: Confirm the records exist**
 
 ```bash
+cd ../../infrastructure/docker
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) FROM societies;"'
 ```
 
-The count should be `6`. To check that Prisma and the migrations are in sync, run `npx prisma migrate status` from `apps/api`; it should report `Database schema is up to date!`.
+The count should be `6`. Then check that Prisma and the migrations are in sync:
 
-**Step 5: Confirm the API can read the data.** Start the API with `npm run start:dev`, then in a second terminal:
+```bash
+cd ../../apps/api
+npx prisma migrate status
+```
+
+It should report `Database schema is up to date!`.
+
+**Step 5: Confirm the API can read the data** (from `apps/api`)
+
+Start the API:
+
+```bash
+npm run start:dev
+```
+
+Then, in a second terminal opened in the repository root, request the seeded records:
 
 ```bash
 curl http://localhost:3001/api/v1/districts
