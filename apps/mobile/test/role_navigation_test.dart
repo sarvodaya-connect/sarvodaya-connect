@@ -60,7 +60,10 @@ void main() {
     store.switchDemoRole(UserRole.hqAdmin);
     await pumpApp(tester, store: store);
 
-    expect(find.text('National overview'), findsOneWidget);
+    expect(
+      find.text('Sarvodaya societies across Sri Lanka'),
+      findsOneWidget,
+    );
     expect(find.text('Registered societies'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
     expect(find.text('Reviews'), findsNothing);
