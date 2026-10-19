@@ -1,6 +1,12 @@
 # Sarvodaya Connect
 
-Sarvodaya Connect is a digital platform for managing village societies and their records. The project is being developed for Sarvodaya as a university group project by STAMPx.
+<p align="center">
+  <img src="docs/assets/brand/sarvodaya-connect-logo.jpg" alt="Sarvodaya Connect" height="104" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/assets/brand/stampx-logo.png" alt="STAMPx" height="104" />
+</p>
+
+<p align="center">A digital platform for managing village societies and their records, developed for Sarvodaya by the STAMPx university project team.</p>
 
 The repository contains three applications:
 
