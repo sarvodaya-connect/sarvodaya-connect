@@ -10,13 +10,14 @@ import {
 } from '@nestjs/common';
 
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import { DemoAuthGuard } from '../auth/demo-auth.guard.js';
+import { AuthenticationGuard } from '../auth/authentication.guard.js';
+import { RolesGuard } from '../auth/roles.guard.js';
 import type { Principal } from '../auth/principal.js';
 import { NotificationQueryDto } from './dto/notification-query.dto.js';
 import { NotificationsService } from './notifications.service.js';
 
 @Controller('notifications')
-@UseGuards(DemoAuthGuard)
+@UseGuards(AuthenticationGuard, RolesGuard)
 export class NotificationsController {
   constructor(private readonly service: NotificationsService) {}
 

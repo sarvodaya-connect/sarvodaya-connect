@@ -225,7 +225,7 @@ Documents outside a user's scope are reported as not found; a signed members lis
 
 ### Provisional sign-in
 
-Until Amazon Cognito is connected, requests choose one of the fictional users in `src/auth/demo-principals.ts` with the `X-Demo-User` header, for example:
+Until Amazon Cognito is connected, local/test requests choose one of the fictional users in `src/auth/demo-principals.ts` with the `X-Demo-User` header, for example:
 
 ```bash
 curl -H "X-Demo-User: demo-dm-north" http://localhost:3001/api/v1/documents
@@ -239,7 +239,7 @@ curl -H "X-Demo-User: demo-dm-north" http://localhost:3001/api/v1/documents
 | `demo-dm-central` | District Manager | Fictional Central District |
 | `demo-hq-admin` | HQ Administrator | All districts |
 
-Demo sign-in is refused when `NODE_ENV=production`. The document and notification code only depends on the `Principal` type, so replacing the guard does not change it.
+Demo sign-in is accepted only when `NODE_ENV` is explicitly `development` or `test`; production and unset environments fail closed. `AuthenticationGuard` delegates identity verification to the `AUTHENTICATION_PROVIDER` adapter, currently `DemoAuthenticationProvider`. A Cognito implementation can replace that provider while keeping controllers and services on the same `Principal` contract. `RolesGuard` enforces route-level roles, while services continue enforcing district/society data scope. Shared auth providers, account types, roles and permission mappings live in `packages/api-contracts/src/identity.ts`.
 
 ### Document storage
 

@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import type { AuthenticatedRequest } from './demo-auth.guard.js';
+import type { AuthenticatedRequest } from './authentication-provider.js';
 import type { Principal } from './principal.js';
 
 /** The signed-in user set by the authentication guard. */

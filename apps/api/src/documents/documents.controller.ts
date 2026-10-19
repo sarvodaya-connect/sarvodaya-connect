@@ -11,14 +11,15 @@ import {
 } from '@nestjs/common';
 
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import { DemoAuthGuard } from '../auth/demo-auth.guard.js';
+import { AuthenticationGuard } from '../auth/authentication.guard.js';
+import { RolesGuard } from '../auth/roles.guard.js';
 import type { Principal } from '../auth/principal.js';
 import { DocumentsService } from './documents.service.js';
 import { CreateDocumentDto } from './dto/create-document.dto.js';
 import { DocumentQueryDto } from './dto/document-query.dto.js';
 
 @Controller('documents')
-@UseGuards(DemoAuthGuard)
+@UseGuards(AuthenticationGuard, RolesGuard)
 export class DocumentsController {
   constructor(private readonly service: DocumentsService) {}
 
