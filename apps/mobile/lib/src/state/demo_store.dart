@@ -1,3 +1,6 @@
+import '../models/activity_draft.dart';
+import '../validation/activity_validators.dart';
+
 import 'package:flutter/widgets.dart';
 
 import '../auth/auth_service.dart';
@@ -290,6 +293,50 @@ class DemoStore extends ChangeNotifier {
     this.failNextUpload = failNextUpload ?? this.failNextUpload;
     optionsVersion++;
     notifyListeners();
+  }
+
+  /// SC-54: record a validated fictional activity in the existing tracker.
+  /// No remote API is called in the current demo-only Flutter application.
+  String submitActivityReport(ActivityDraft draft) {
+    if (_user == null || activeRole != UserRole.societyOfficer) {
+      throw StateError('Only a Society Officer can submit an activity.');
+    }
+    if (offline) {
+      throw StateError('You are offline. Your draft has been preserved.');
+    }
+    if (ActivityValidators.all(draft, today: now).isNotEmpty) {
+      throw StateError('Correct the activity fields before submission.');
+    }
+    final instant = now;
+    final reference =
+        'SUB-${instant.year}-${(_nextReference++).toString().padLeft(4, '0')}';
+    _submissions.add(
+      SocietySubmission(
+        id: 'sub-activity-${instant.microsecondsSinceEpoch}-$reference',
+        reference: reference,
+        societyId: society.id,
+        type: SubmissionType.activityReport,
+        title: draft.title.trim(),
+        submittedBy: _user!.displayName,
+        status: SubmissionStatus.submitted,
+        submittedAt: instant,
+        updatedAt: instant,
+        timeline: [
+          TimelineEvent(
+            status: SubmissionStatus.draft,
+            title: 'Draft started',
+            at: instant,
+          ),
+          TimelineEvent(
+            status: SubmissionStatus.submitted,
+            title: 'Submitted to District Manager',
+            at: instant,
+          ),
+        ],
+      ),
+    );
+    notifyListeners();
+    return reference;
   }
 
   void saveDraft(CouncilReplacementDraft draft) {
