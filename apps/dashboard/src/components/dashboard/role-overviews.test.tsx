@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 import { DistrictOverview, NationalOverview, PlatformAdminOverview } from "./role-overviews";
 
 describe("role overviews", () => {
-  it("shows national registry indicators and district drill-down", () => {
+  it("shows the catalogue national dashboard sections and indicators", () => {
     render(<NationalOverview />);
 
-    expect(screen.getByRole("heading", { name: "National overview" })).toBeInTheDocument();
-    expect(screen.getByText("1,214")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open district view/ })).toHaveAttribute("href", "/districts/kurunegala");
+    expect(screen.getByRole("heading", { name: "Latest Shramadana Societies status" })).toBeInTheDocument();
+    expect(screen.getByText("5,340")).toBeInTheDocument();
+    expect(screen.getByText("98,640")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Dashboard sections" })).toHaveTextContent("3–4 · Audit & AGM");
+    expect(screen.getByRole("heading", { name: "Total wealth of all SSSs" })).toBeInTheDocument();
   });
 
   it("shows district-scoped society and review information", () => {

@@ -9,6 +9,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
 import '../widgets/demo_options_sheet.dart';
+import '../widgets/landscape_header.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
@@ -29,19 +30,19 @@ class HomeScreen extends StatelessWidget {
     final firstName = store.user?.displayName.split(' ').first ?? '';
     final copy = _HomeCopy(store.selectedLanguage);
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${copy.greeting(store.now)}, $firstName'),
-        actions: [
-          const _NotificationsButton(),
-          IconButton(
-            tooltip: 'Demo options',
-            icon: const Icon(Icons.tune),
-            onPressed: () => showDemoOptions(context),
-          ),
-        ],
-      ),
       body: Column(
         children: [
+          LandscapeHeader(
+            title: '${copy.greeting(store.now)}, $firstName',
+            actions: [
+              const _NotificationsButton(),
+              IconButton(
+                tooltip: 'Demo options',
+                icon: const Icon(Icons.tune),
+                onPressed: () => showDemoOptions(context),
+              ),
+            ],
+          ),
           if (store.offline) const OfflineBanner(),
           Expanded(
             child: DemoLoader(
@@ -70,6 +71,7 @@ class _HomeContent extends StatelessWidget {
     }
     final copy = _HomeCopy(store.selectedLanguage);
     final society = store.society;
+    final completeness = society.profileCompleteness;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -116,19 +118,54 @@ class _HomeContent extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Profile completeness',
+                    style: TextStyle(color: AppColors.muted, fontSize: 12),
+                  ),
+                ),
+                Text(
+                  '$completeness%',
+                  style: const TextStyle(
+                    color: AppColors.forest,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => store.selectTab(HomeShell.societyTab),
+                  child: const Text('Complete profile'),
+                ),
+              ],
+            ),
+            Semantics(
+              label: 'Profile $completeness percent complete',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: completeness / 100,
+                  minHeight: 6,
+                  backgroundColor: AppColors.mint,
+                  color: AppColors.leaf,
+                ),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        const _CompletenessCard(),
-        const SizedBox(height: 12),
-        const _CurrentSubmissionCard(),
         const SizedBox(height: 12),
         SectionCard(
           title: copy.needsAttention,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           children: [
+            const _CurrentSubmissionCard(),
+            const Divider(height: 1),
             _AttentionTile(
               icon: Icons.description_outlined,
+              iconColor: const Color(0xFF356C99),
+              iconBackground: const Color(0xFFE8F2FA),
               title: 'AGM minutes requested',
               subtitle: 'From HQ · due 14 Oct 2026',
               chip: const StatusChip(
@@ -144,6 +181,8 @@ class _HomeContent extends StatelessWidget {
             ),
             _AttentionTile(
               icon: Icons.verified_outlined,
+              iconColor: const Color(0xFFB83439),
+              iconBackground: const Color(0xFFFDECEC),
               title: 'Audit ${store.currentAudit.financialYear}',
               subtitle: store.currentAudit.reportUploaded
                   ? 'Report uploaded'
@@ -165,7 +204,7 @@ class _HomeContent extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 2.4,
+              childAspectRatio: 1.65,
               children: [
                 _QuickAction(
                   icon: Icons.badge_outlined,
@@ -242,51 +281,7 @@ class _NotificationsButton extends StatelessWidget {
   }
 }
 
-class _CompletenessCard extends StatelessWidget {
-  const _CompletenessCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final percent = DemoScope.of(context).society.profileCompleteness;
-    return SectionCard(
-      title: 'Profile completeness',
-      trailing: Text(
-        '$percent%',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      children: [
-        Semantics(
-          label: 'Profile $percent percent complete',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: percent / 100,
-              minHeight: 8,
-              backgroundColor: AppColors.mint,
-              color: AppColors.leaf,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '${demoCompletedSections.length} sections complete · Missing: ${demoMissingSections.join(', ')}',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
-        ),
-        if (percent < 100) ...[
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () =>
-                DemoScope.read(context).selectTab(HomeShell.societyTab),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Complete profile'),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Current-submission card with one variant per status (SC-25 M02).
+/// Catalogue-style attention row that preserves the current submission actions.
 class _CurrentSubmissionCard extends StatelessWidget {
   const _CurrentSubmissionCard();
 
@@ -307,88 +302,47 @@ class _CurrentSubmissionCard extends StatelessWidget {
     if (submission == null ||
         (submission.status == SubmissionStatus.approved && draft != null)) {
       if (draft == null) {
-        return SectionCard(
-          title: 'Current submission',
-          children: [
-            const Text(
-              'No active submission. Changes you make are saved as a draft until you send them.',
-              style: TextStyle(color: AppColors.muted),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: openCouncil,
-              child: const Text('Update Committee'),
-            ),
-          ],
+        return _AttentionTile(
+          icon: Icons.groups_outlined,
+          title: 'Update your council',
+          subtitle: 'Keep your society committee details current',
+          chip: const Icon(Icons.chevron_right, color: AppColors.muted),
+          onTap: openCouncil,
         );
       }
-      return SectionCard(
-        title: 'Current submission',
-        highlight: true,
-        trailing: StatusChip.submission(SubmissionStatus.draft, compact: true),
-        children: [
-          Text(
-            'Council update · ${draft.fullName} replaces ${store.memberById(draft.memberId)?.fullName ?? 'a member'}',
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Not sent yet. Only you can see this draft.',
-            style: TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: openCouncil,
-            child: const Text('Continue draft'),
-          ),
-        ],
+      return _AttentionTile(
+        icon: Icons.groups_outlined,
+        title: 'Council update draft',
+        subtitle:
+            '${draft.fullName} replaces ${store.memberById(draft.memberId)?.fullName ?? 'a member'} · Not sent yet',
+        chip: StatusChip.submission(SubmissionStatus.draft, compact: true),
+        onTap: openCouncil,
       );
     }
 
     final review = submission.latestReview;
-    return SectionCard(
-      title: 'Current submission',
-      trailing: StatusChip.submission(submission.status, compact: true),
-      children: [
-        Text(
-          '${submission.title} · ${submission.reference}',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _summary(submission),
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 13,
-            height: 1.35,
-          ),
-        ),
-        if (submission.status == SubmissionStatus.changesRequested &&
-            review?.comment != null) ...[
-          const SizedBox(height: 10),
-          NoticeBanner(
-            icon: Icons.undo,
-            tone: NoticeTone.warning,
-            title: '${review!.reviewerDisplayName} returned 1 field',
-            message: '“${review.comment}”',
-          ),
-        ],
-        const SizedBox(height: 12),
-        if (submission.status == SubmissionStatus.changesRequested)
-          FilledButton(
-            onPressed: () => Navigator.of(context).push(
+    final returned = submission.status == SubmissionStatus.changesRequested;
+    return _AttentionTile(
+      icon: returned
+          ? Icons.keyboard_return_rounded
+          : Icons.description_outlined,
+      iconColor: returned ? const Color(0xFFD9852B) : null,
+      iconBackground: returned ? const Color(0xFFFFF1DC) : null,
+      title: returned ? 'Council update returned' : submission.title,
+      subtitle: returned
+          ? 'Fix 1 field · ${review?.comment ?? 'District comment'}'
+          : _summary(submission),
+      chip: returned
+          ? const Icon(Icons.chevron_right, color: AppColors.muted)
+          : StatusChip.submission(submission.status, compact: true),
+      onTap: returned
+          ? () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) =>
                     ChangesRequestedScreen(submissionId: submission.id),
               ),
-            ),
-            child: const Text('Open returned submission'),
-          )
-        else
-          OutlinedButton(
-            onPressed: () => openDetail(submission),
-            child: const Text('Track submission'),
-          ),
-      ],
+            )
+          : () => openDetail(submission),
     );
   }
 
@@ -416,6 +370,8 @@ class _AttentionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.chip,
+    this.iconColor,
+    this.iconBackground,
     this.onTap,
   });
 
@@ -423,6 +379,8 @@ class _AttentionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget chip;
+  final Color? iconColor;
+  final Color? iconBackground;
   final VoidCallback? onTap;
 
   @override
@@ -434,10 +392,10 @@ class _AttentionTile extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: AppColors.mintSoft,
+          color: iconBackground ?? AppColors.mintSoft,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: AppColors.leaf, size: 20),
+        child: Icon(icon, color: iconColor ?? AppColors.leaf, size: 20),
       ),
       title: Text(
         title,

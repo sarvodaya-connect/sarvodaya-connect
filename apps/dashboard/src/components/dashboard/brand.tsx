@@ -3,18 +3,19 @@ import Image from "next/image";
 type BrandProps = {
   compact?: boolean;
   inverse?: boolean;
+  masthead?: boolean;
 };
 
-export function Brand({ compact = false, inverse = false }: BrandProps) {
+export function Brand({ compact = false, inverse = false, masthead = false }: BrandProps) {
   return (
     <div className="flex items-center gap-3">
-      <span className="relative block h-11 w-[116px] shrink-0 overflow-hidden rounded-md bg-white">
+      <span className={`relative block shrink-0 overflow-hidden rounded-md bg-white ${masthead ? "h-14 w-[148px] md:h-[68px] md:w-[178px]" : "h-11 w-[116px]"}`}>
         <Image
           alt="Sarvodaya Connect"
           className="object-cover"
           fill
           priority
-          sizes="116px"
+          sizes={masthead ? "178px" : "116px"}
           src="/brand/sarvodaya-connect-logo.jpg"
         />
       </span>

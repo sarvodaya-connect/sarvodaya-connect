@@ -6,6 +6,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
 import '../widgets/demo_options_sheet.dart';
+import '../widgets/landscape_header.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 
@@ -20,18 +21,23 @@ class RoleHomeScreen extends StatelessWidget {
     final store = DemoScope.of(context);
     final district = role == UserRole.districtManager;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(district ? 'Kurunegala District' : 'National overview'),
-        actions: [
-          IconButton(
-            tooltip: 'Demo options',
-            icon: const Icon(Icons.tune),
-            onPressed: () => showDemoOptions(context),
-          ),
-        ],
-      ),
       body: Column(
         children: [
+          LandscapeHeader(
+            title: district
+                ? 'Good ${_partOfDay(store.now)}, ${store.user?.displayName ?? 'Manager'}'
+                : 'Welcome, ${store.user?.displayName ?? 'Administrator'}',
+            subtitle: district
+                ? 'Kurunegala District · Your societies and reviews at a glance'
+                : 'Sarvodaya societies across Sri Lanka',
+            actions: [
+              IconButton(
+                tooltip: 'Demo options',
+                icon: const Icon(Icons.tune),
+                onPressed: () => showDemoOptions(context),
+              ),
+            ],
+          ),
           if (store.offline)
             const OfflineBanner(message: 'Offline · showing saved information'),
           Expanded(
@@ -74,16 +80,6 @@ class _DistrictHomeContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'Good ${_partOfDay(store.now)}, ${store.user?.displayName ?? 'Manager'}',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Your societies and reviews at a glance',
-          style: TextStyle(color: AppColors.muted),
-        ),
-        const SizedBox(height: 16),
         const _MetricGrid(
           metrics: [
             _Metric('42', 'Active societies', Icons.holiday_village_outlined),
@@ -141,16 +137,6 @@ class _NationalHomeContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'Welcome, ${store.user?.displayName ?? 'Administrator'}',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Sarvodaya societies across Sri Lanka',
-          style: TextStyle(color: AppColors.muted),
-        ),
-        const SizedBox(height: 16),
         const _MetricGrid(
           metrics: [
             _Metric('5,340', 'Registered societies', Icons.groups_outlined),

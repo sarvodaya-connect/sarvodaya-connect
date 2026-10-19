@@ -54,6 +54,19 @@ export function DashboardShell({
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
   const navigation = navigationFor(viewer);
+  const heading = pathname.startsWith("/admin")
+    ? "Platform administration"
+    : pathname.startsWith("/societies")
+      ? "Societies"
+      : pathname.startsWith("/membership")
+        ? "Membership"
+        : pathname.startsWith("/districts")
+          ? "District view"
+          : pathname.startsWith("/reviews")
+            ? "Review queue"
+            : viewer.role === "DISTRICT_MANAGER"
+              ? "District Dashboard"
+              : "National Dashboard";
 
   return (
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
@@ -115,37 +128,44 @@ export function DashboardShell({
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-[74px] flex-wrap items-center justify-between gap-3 border-b border-[#dfe5dc] bg-white/95 px-4 py-3 backdrop-blur md:px-8">
-          <div className="lg:hidden"><Brand compact /></div>
-          <div className="hidden text-sm text-[#66756b] lg:block">
-            Sarvodaya Shramadana Societies
-          </div>
-          <div className="hidden flex-1 justify-center px-6 md:flex">
-            <GlobalSearchForm />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <ViewerSwitcher viewer={viewer} />
-            <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">
-              Demonstration Data
-            </span>
-            <Link
-              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-              className="relative grid size-9 place-items-center rounded-full border border-[#dfe5dc] bg-white text-[#26362c] transition hover:bg-[#f4f8f3] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
-              href="/notifications"
-            >
-              <Icon className="size-[18px]" name="bell" />
-              {unreadCount > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-bold leading-[18px] text-white"
+        <header className="relative isolate z-20 overflow-hidden border-b border-[#dfe5dc] bg-[#fcfcf8] px-4 py-4 md:px-8">
+          <svg aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 190">
+            <path d="M470 153 660 66l128 56 102-44 126 58 184-55v109H470Z" fill="#d9e8d2" />
+            <path d="M360 190c170-72 352-76 520-53 125 17 217-1 320-43v96Z" fill="#a9ce9d" />
+            <path d="M720 190c125-59 276-54 480-75v75Z" fill="#80b56f" />
+            <g fill="#286a43"><circle cx="1030" cy="137" r="23" /><circle cx="1082" cy="111" r="34" /><circle cx="1129" cy="145" r="25" /><circle cx="1180" cy="110" r="42" /></g>
+            <g fill="#174a32"><circle cx="1074" cy="151" r="24" /><circle cx="1161" cy="153" r="29" /></g>
+          </svg>
+          <div className="relative z-10 flex min-h-[136px] flex-col justify-between gap-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3 md:gap-5">
+                <Brand compact masthead />
+                <span aria-hidden="true" className="hidden h-14 border-l border-[#d1d8ce] sm:block" />
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold tracking-[-0.025em] text-[#173b2a] sm:text-2xl md:text-[28px]">{heading}</h1>
+                  <p className="mt-1 text-[11px] text-[#526057] sm:text-xs">Shramadana Societies Across Sri Lanka</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="hidden w-[min(36vw,420px)] md:block"><GlobalSearchForm /></div>
+                <Link
+                  aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+                  className="relative grid size-10 place-items-center rounded-full border border-white/70 bg-white/90 text-[#26362c] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+                  href="/notifications"
                 >
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-            <span className="hidden size-9 place-items-center rounded-full bg-[#e6f0e7] text-xs font-bold text-[#174a32] sm:grid">
-              {viewer.initials}
-            </span>
+                  <Icon className="size-[19px]" name="bell" />
+                  {unreadCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-bold leading-[18px] text-white">{unreadCount}</span>}
+                </Link>
+                <span aria-label={viewer.displayName} className="hidden size-10 place-items-center rounded-full bg-[#e6f0e7] text-xs font-bold text-[#174a32] sm:grid">{viewer.initials}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="md:hidden min-w-0 flex-1"><GlobalSearchForm /></div>
+              <div className="flex flex-wrap items-center gap-3">
+                <ViewerSwitcher viewer={viewer} />
+                <span className="rounded-full border border-[#e5d59f] bg-[#fff9e9] px-3 py-1 text-[11px] font-semibold text-[#755a08]">Demonstration Data</span>
+              </div>
+            </div>
           </div>
         </header>
         <div className="border-b border-[#dfe5dc] bg-[#123d29] px-4 py-2 lg:hidden">
