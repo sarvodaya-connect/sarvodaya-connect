@@ -55,18 +55,20 @@ export function DashboardShell({
   const { unreadCount } = useNotifications();
   const navigation = navigationFor(viewer);
   const heading = pathname.startsWith("/admin")
-    ? "Platform administration"
-    : pathname.startsWith("/societies")
-      ? "Societies"
-      : pathname.startsWith("/membership")
-        ? "Membership"
-        : pathname.startsWith("/districts")
-          ? "District view"
-          : pathname.startsWith("/reviews")
-            ? "Review queue"
-            : viewer.role === "DISTRICT_MANAGER"
-              ? "District Dashboard"
-              : "National Dashboard";
+    ? "Administration"
+    : pathname.startsWith("/states")
+      ? "Page states"
+      : pathname.startsWith("/societies")
+        ? "Societies"
+        : pathname.startsWith("/membership")
+          ? "Membership"
+          : pathname.startsWith("/districts")
+            ? "District view"
+            : pathname.startsWith("/reviews")
+              ? "Review queue"
+              : viewer.role === "DISTRICT_MANAGER"
+                ? "District Dashboard"
+                : "National Dashboard";
 
   return (
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
