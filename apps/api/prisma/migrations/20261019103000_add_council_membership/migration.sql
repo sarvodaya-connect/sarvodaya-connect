@@ -5,7 +5,7 @@ ALTER TABLE "society_contacts"
   ADD COLUMN "position" VARCHAR(100);
 
 CREATE TABLE "society_council_members" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID NOT NULL,
   "society_id" UUID NOT NULL,
   "seat_number" INTEGER NOT NULL,
   "full_name" VARCHAR(150) NOT NULL,
@@ -30,7 +30,7 @@ CREATE UNIQUE INDEX "society_council_members_society_id_seat_number_key" ON "soc
 CREATE INDEX "society_council_members_society_id_is_active_idx" ON "society_council_members"("society_id", "is_active");
 
 CREATE TABLE "society_membership_counts" (
-  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID NOT NULL,
   "society_id" UUID NOT NULL,
   "year" INTEGER NOT NULL,
   "category" "membership_category" NOT NULL,
