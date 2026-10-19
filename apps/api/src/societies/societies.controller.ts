@@ -10,8 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import { DemoAuthGuard } from '../auth/demo-auth.guard.js';
+import { AuthenticationGuard } from '../auth/authentication.guard.js';
+import { RolesGuard } from '../auth/roles.guard.js';
 import type { Principal } from '../auth/principal.js';
+import { RequireRoles } from '../auth/require-roles.decorator.js';
 import { SocietyQueryDto } from './dto/society-query.dto.js';
 import {
   MembershipQueryDto,
@@ -31,7 +33,7 @@ export class SocietiesController {
   }
 
   @Get('membership')
-  @UseGuards(DemoAuthGuard)
+  @UseGuards(AuthenticationGuard, RolesGuard)
   membership(
     @Query() query: MembershipQueryDto,
     @CurrentPrincipal() principal: Principal,
@@ -40,7 +42,8 @@ export class SocietiesController {
   }
 
   @Patch(':id/profile')
-  @UseGuards(DemoAuthGuard)
+  @UseGuards(AuthenticationGuard, RolesGuard)
+  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
   updateProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -50,7 +53,8 @@ export class SocietiesController {
   }
 
   @Put(':id/profile')
-  @UseGuards(DemoAuthGuard)
+  @UseGuards(AuthenticationGuard, RolesGuard)
+  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
   createOrReplaceProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -60,7 +64,8 @@ export class SocietiesController {
   }
 
   @Put(':id/council')
-  @UseGuards(DemoAuthGuard)
+  @UseGuards(AuthenticationGuard, RolesGuard)
+  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
   updateCouncil(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyCouncilUpdateDto,
@@ -70,7 +75,8 @@ export class SocietiesController {
   }
 
   @Put(':id/membership')
-  @UseGuards(DemoAuthGuard)
+  @UseGuards(AuthenticationGuard, RolesGuard)
+  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
   updateMembership(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyMembershipUpdateDto,
