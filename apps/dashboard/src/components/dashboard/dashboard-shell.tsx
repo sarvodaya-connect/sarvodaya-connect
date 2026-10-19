@@ -72,7 +72,7 @@ export function DashboardShell({
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
       <aside className="hidden min-h-screen flex-col bg-[#123d29] text-white lg:sticky lg:top-0 lg:flex lg:h-screen">
         <div className="border-b border-white/10 px-6 py-6">
-          <Brand inverse />
+          <Brand sidebar />
         </div>
         <p className="px-6 pt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8db39a]">
           Workspace
@@ -138,13 +138,9 @@ export function DashboardShell({
           </svg>
           <div className="relative z-10 flex min-h-[136px] flex-col justify-between gap-4">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3 md:gap-5">
-                <Brand compact masthead />
-                <span aria-hidden="true" className="hidden h-14 border-l border-[#d1d8ce] sm:block" />
-                <div className="min-w-0">
-                  <h1 className="text-xl font-bold tracking-[-0.025em] text-[#173b2a] sm:text-2xl md:text-[28px]">{heading}</h1>
-                  <p className="mt-1 text-[11px] text-[#526057] sm:text-xs">Shramadana Societies Across Sri Lanka</p>
-                </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold tracking-[-0.025em] text-[#173b2a] sm:text-2xl md:text-[28px]">{heading}</h1>
+                <p className="mt-1 text-[11px] text-[#526057] sm:text-xs">Shramadana Societies Across Sri Lanka</p>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="hidden w-[min(36vw,420px)] md:block"><GlobalSearchForm /></div>
