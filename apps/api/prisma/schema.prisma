@@ -18,6 +18,16 @@ enum SocietyStatus {
   @@map("society_status")
 }
 
+enum MembershipCategory {
+  CHILDREN
+  YOUTH
+  MOTHERS
+  ORDINARY
+  ELDERS_COUNCIL
+
+  @@map("membership_category")
+}
+
 model District {
   id        String    @id @default(uuid()) @db.Uuid
   code      String    @unique @db.VarChar(10)
@@ -30,23 +40,27 @@ model District {
 }
 
 model Society {
-  id            String           @id @default(uuid()) @db.Uuid
-  societyCode   String           @unique @map("society_code") @db.VarChar(20)
-  nameEn        String           @map("name_en") @db.VarChar(150)
-  nameLocal     String?          @map("name_local") @db.VarChar(150)
-  districtId    String           @map("district_id") @db.Uuid
-  district      District         @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  dsDivision    String?          @map("ds_division") @db.VarChar(100)
-  gnDivision    String?          @map("gn_division") @db.VarChar(100)
-  village       String?          @db.VarChar(100)
-  addressLine   String?          @map("address_line") @db.VarChar(255)
-  latitude      Float?
-  longitude     Float?
-  establishedOn DateTime?        @map("established_on") @db.Date
-  status        SocietyStatus    @default(UNDER_REVIEW)
-  contacts      SocietyContact[]
-  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id             String                   @id @default(uuid()) @db.Uuid
+  societyCode    String                   @unique @map("society_code") @db.VarChar(20)
+  nameEn         String                   @map("name_en") @db.VarChar(150)
+  nameLocal      String?                  @map("name_local") @db.VarChar(150)
+  districtId     String                   @map("district_id") @db.Uuid
+  district       District                 @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  dsDivision     String?                  @map("ds_division") @db.VarChar(100)
+  gnDivision     String?                  @map("gn_division") @db.VarChar(100)
+  village        String?                  @db.VarChar(100)
+  addressLine    String?                  @map("address_line") @db.VarChar(255)
+  latitude       Float?
+  longitude      Float?
+  establishedOn  DateTime?                @map("established_on") @db.Date
+  status         SocietyStatus            @default(UNDER_REVIEW)
+  contacts       SocietyContact[]
+  councilMembers SocietyCouncilMember[]
+  memberships    SocietyMembershipCount[]
+  documents      SocietyDocument[]
+  notifications  Notification[]
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId])
   @@index([status])
@@ -59,6 +73,8 @@ model SocietyContact {
   societyId String   @map("society_id") @db.Uuid
   society   Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
   label     String?  @db.VarChar(100)
+  fullName  String?  @map("full_name") @db.VarChar(150)
+  position  String?  @db.VarChar(100)
   phone     String?  @db.VarChar(30)
   email     String?  @db.VarChar(254)
   isPrimary Boolean  @default(false) @map("is_primary")
@@ -67,4 +83,142 @@ model SocietyContact {
 
   @@index([societyId])
   @@map("society_contacts")
+}
+
+model SocietyCouncilMember {
+  id               String             @id @default(uuid()) @db.Uuid
+  societyId        String             @map("society_id") @db.Uuid
+  society          Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  seatNumber       Int                @map("seat_number")
+  fullName         String             @map("full_name") @db.VarChar(150)
+  position         String             @db.VarChar(100)
+  seatType         MembershipCategory @map("seat_type")
+  phone            String?            @db.VarChar(30)
+  email            String?            @db.VarChar(254)
+  age              Int?
+  appointedOn      DateTime?          @map("appointed_on") @db.Date
+  endedOn          DateTime?          @map("ended_on") @db.Date
+  isActive         Boolean            @default(true) @map("is_active")
+  isPrimaryContact Boolean            @default(false) @map("is_primary_contact")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, seatNumber])
+  @@index([societyId, isActive])
+  @@map("society_council_members")
+}
+
+model SocietyMembershipCount {
+  id        String             @id @default(uuid()) @db.Uuid
+  societyId String             @map("society_id") @db.Uuid
+  society   Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  year      Int
+  category  MembershipCategory
+  female    Int                @default(0)
+  male      Int                @default(0)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, year, category])
+  @@index([year, societyId])
+  @@map("society_membership_counts")
+}
+
+// SC-49: document metadata. Files live in document storage (local disk in
+// development, Amazon S3 later); only their metadata is stored here.
+// Types follow the four annual Registrar documents plus other society files.
+// To be confirmed with Sarvodaya.
+enum DocumentType {
+  AUDIT_REPORT
+  AGM_MINUTES
+  OFFICE_BEARER_LIST
+  MEMBERS_LIST
+  REGISTRATION
+  FINANCE
+  ACTIVITY_EVIDENCE
+  OTHER
+
+  @@map("document_type")
+}
+
+// Matches DOCUMENT_STATUSES in packages/api-contracts. A document stays DRAFT
+// until its file has been uploaded and confirmed.
+enum DocumentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("document_status")
+}
+
+// REVIEWERS_ONLY documents (the signed members list) can only be opened by
+// District Managers and HQ.
+enum DocumentAccessLevel {
+  STANDARD
+  REVIEWERS_ONLY
+
+  @@map("document_access_level")
+}
+
+model SocietyDocument {
+  id             String              @id @default(uuid()) @db.Uuid
+  societyId      String              @map("society_id") @db.Uuid
+  society        Society             @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  documentType   DocumentType        @map("document_type")
+  title          String              @db.VarChar(150)
+  fileName       String              @map("file_name") @db.VarChar(255)
+  contentType    String              @map("content_type") @db.VarChar(100)
+  sizeBytes      Int                 @map("size_bytes")
+  // Location in document storage. Never contains user-supplied text.
+  storageKey     String              @unique @map("storage_key") @db.VarChar(512)
+  status         DocumentStatus      @default(DRAFT)
+  accessLevel    DocumentAccessLevel @default(STANDARD) @map("access_level")
+  version        Int                 @default(1)
+  // Users are managed by the identity provider, so only their id and display name are kept.
+  uploadedById   String              @map("uploaded_by_id") @db.VarChar(64)
+  uploadedByName String              @map("uploaded_by_name") @db.VarChar(150)
+  uploadedAt     DateTime?           @map("uploaded_at") @db.Timestamptz(3)
+  notifications  Notification[]
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, documentType, title, version])
+  @@index([societyId, documentType])
+  @@index([status])
+  @@map("society_documents")
+}
+
+// SC-49: notifications for dashboard and mobile users. Categories follow the
+// notification centre (Screen Catalogue v3, D19 and M16).
+enum NotificationCategory {
+  APPROVAL
+  RETURNED
+  AUDIT
+  REQUEST
+  EMERGENCY
+  STALE_DATA
+  SYSTEM
+
+  @@map("notification_category")
+}
+
+model Notification {
+  id              String               @id @default(uuid()) @db.Uuid
+  recipientUserId String               @map("recipient_user_id") @db.VarChar(64)
+  category        NotificationCategory
+  title           String               @db.VarChar(200)
+  body            String?              @db.VarChar(1000)
+  // Relative path in the app or dashboard that shows the related item.
+  linkPath        String?              @map("link_path") @db.VarChar(255)
+  societyId       String?              @map("society_id") @db.Uuid
+  society         Society?             @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  documentId      String?              @map("document_id") @db.Uuid
+  document        SocietyDocument?     @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  readAt          DateTime?            @map("read_at") @db.Timestamptz(3)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([recipientUserId, createdAt])
+  @@index([recipientUserId, readAt])
+  @@map("notifications")
 }

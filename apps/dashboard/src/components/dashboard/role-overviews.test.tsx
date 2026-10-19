@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { DistrictOverview, NationalOverview, PlatformAdminOverview } from "./role-overviews";
 
 describe("role overviews", () => {
-  it("shows the catalogue national dashboard indicators and sections", () => {
+  it("shows the catalogue national dashboard sections and indicators", () => {
     render(<NationalOverview />);
 
     expect(screen.getByRole("heading", { name: "Latest Shramadana Societies status" })).toBeInTheDocument();
@@ -27,6 +27,6 @@ describe("role overviews", () => {
 
     expect(screen.getByRole("heading", { name: "Platform administration" })).toBeInTheDocument();
     expect(screen.getByText("k.fernando@example.invalid")).toBeInTheDocument();
-    expect(screen.getByText(/URL-selected roles do not grant or enforce real permissions/)).toBeInTheDocument();
+    expect(screen.getByText(/does not grant or enforce real permissions/)).toBeInTheDocument();
   });
 });

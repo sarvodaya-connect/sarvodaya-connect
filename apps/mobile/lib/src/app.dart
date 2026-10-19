@@ -5,6 +5,7 @@ import 'screens/first_time_setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
+import 'screens/my_societies_screen.dart';
 import 'screens/role_home_screen.dart';
 import 'screens/role_workspace_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -156,10 +157,7 @@ class HomeShell extends StatelessWidget {
     UserRole.districtManager => const _ShellConfiguration(
       pages: [
         RoleHomeScreen(role: UserRole.districtManager),
-        RoleWorkspaceScreen(
-          role: UserRole.districtManager,
-          workspace: RoleWorkspace.societies,
-        ),
+        MySocietiesScreen(),
         RoleWorkspaceScreen(
           role: UserRole.districtManager,
           workspace: RoleWorkspace.reviews,
@@ -193,10 +191,7 @@ class HomeShell extends StatelessWidget {
     UserRole.hqAdmin => const _ShellConfiguration(
       pages: [
         RoleHomeScreen(role: UserRole.hqAdmin),
-        RoleWorkspaceScreen(
-          role: UserRole.hqAdmin,
-          workspace: RoleWorkspace.societies,
-        ),
+        MySocietiesScreen(),
         RoleWorkspaceScreen(
           role: UserRole.hqAdmin,
           workspace: RoleWorkspace.reports,

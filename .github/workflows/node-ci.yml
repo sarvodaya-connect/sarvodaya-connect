@@ -65,6 +65,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Throwaway PostgreSQL for the Prisma migration and database tests.
+    # The credentials only exist inside this short-lived CI container.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sarvodaya_ci
+          POSTGRES_PASSWORD: ci_only_not_secret
+          POSTGRES_DB: sarvodaya_connect_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sarvodaya_ci -d sarvodaya_connect_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://sarvodaya_ci:ci_only_not_secret@localhost:5432/sarvodaya_connect_ci
+
     defaults:
       run:
         working-directory: apps/api
@@ -91,6 +111,18 @@ jobs:
 
       - name: Run API end-to-end tests
         run: npm run test:e2e
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Apply database migrations
+        run: npm run prisma:deploy
+
+      - name: Check migrations match the Prisma schema
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+      - name: Run database tests
+        run: npm run test:db
 
       - name: Build API
         run: npm run build

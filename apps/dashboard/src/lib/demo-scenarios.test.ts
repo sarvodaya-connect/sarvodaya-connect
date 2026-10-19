@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { societies } from "./demo-registry";
-import { DEMO_LOADING_DELAY_MS, loadSocietyRegistry, parseDemoScenario } from "./demo-scenarios";
+import { societyDetails } from "./demo-registry";
+import { DEMO_LOADING_DELAY_MS, loadDemoList, loadSocietyRegistry, parseDemoScenario } from "./demo-scenarios";
 
 describe("parseDemoScenario", () => {
   it("accepts only the supported scenarios", () => {
@@ -20,7 +20,7 @@ describe("loadSocietyRegistry", () => {
   });
 
   it("returns the demonstration registry by default", async () => {
-    await expect(loadSocietyRegistry(null)).resolves.toMatchObject({ societies });
+    await expect(loadSocietyRegistry(null)).resolves.toMatchObject({ societies: societyDetails });
   });
 
   it("returns no societies for the empty scenario", async () => {
@@ -45,6 +45,14 @@ describe("loadSocietyRegistry", () => {
     expect(settled).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
-    await expect(request).resolves.toMatchObject({ societies });
+    await expect(request).resolves.toMatchObject({ societies: societyDetails });
+  });
+});
+
+describe("loadDemoList", () => {
+  it("returns, empties or fails any fixture list for the demonstration scenarios", async () => {
+    await expect(loadDemoList(null, ["a", "b"])).resolves.toEqual(["a", "b"]);
+    await expect(loadDemoList("empty", ["a", "b"])).resolves.toEqual([]);
+    await expect(loadDemoList("error", ["a"])).rejects.toThrow("could not be loaded");
   });
 });

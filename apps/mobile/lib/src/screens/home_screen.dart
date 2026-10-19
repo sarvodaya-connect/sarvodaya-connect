@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/app_language.dart';
+import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
@@ -12,8 +14,11 @@ import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
 import 'audit_screen.dart';
+import 'changes_requested_screen.dart';
 import 'council_screen.dart';
 import 'notifications_screen.dart';
+import 'membership_screen.dart';
+import 'submission_detail_screen.dart';
 
 /// M05 · Society Officer home.
 class HomeScreen extends StatelessWidget {
@@ -155,17 +160,7 @@ class _HomeContent extends StatelessWidget {
           title: copy.needsAttention,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           children: [
-            _AttentionTile(
-              icon: Icons.keyboard_return_rounded,
-              iconColor: const Color(0xFFD9852B),
-              iconBackground: const Color(0xFFFFF1DC),
-              title: 'Council update returned',
-              subtitle: 'Fix 1 field · District comment',
-              chip: const Icon(Icons.chevron_right, color: AppColors.muted),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const CouncilScreen()),
-              ),
-            ),
+            const _CurrentSubmissionCard(),
             const Divider(height: 1),
             _AttentionTile(
               icon: Icons.description_outlined,
@@ -175,7 +170,7 @@ class _HomeContent extends StatelessWidget {
               subtitle: 'From HQ · due 14 Oct 2026',
               chip: const StatusChip(
                 StatusStyle(
-                  '5 days',
+                  'Due soon',
                   Icons.schedule,
                   Color(0xFF7A5A00),
                   Color(0xFFFFF2CC),
@@ -184,7 +179,6 @@ class _HomeContent extends StatelessWidget {
               ),
               onTap: () => store.selectTab(HomeShell.documentsTab),
             ),
-            const Divider(height: 1),
             _AttentionTile(
               icon: Icons.verified_outlined,
               iconColor: const Color(0xFFB83439),
@@ -242,6 +236,15 @@ class _HomeContent extends StatelessWidget {
                   label: copy.uploadDocument,
                   onTap: () => store.selectTab(HomeShell.documentsTab),
                 ),
+                _QuickAction(
+                  icon: Icons.people_alt_outlined,
+                  label: 'Membership',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MembershipScreen(),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -278,14 +281,97 @@ class _NotificationsButton extends StatelessWidget {
   }
 }
 
+/// Catalogue-style attention row that preserves the current submission actions.
+class _CurrentSubmissionCard extends StatelessWidget {
+  const _CurrentSubmissionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final submission = store.councilSubmission;
+    final draft = store.draft;
+
+    void openCouncil() => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const CouncilScreen()));
+    void openDetail(SocietySubmission s) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SubmissionDetailScreen(submissionId: s.id),
+      ),
+    );
+
+    if (submission == null ||
+        (submission.status == SubmissionStatus.approved && draft != null)) {
+      if (draft == null) {
+        return _AttentionTile(
+          icon: Icons.groups_outlined,
+          title: 'Update your council',
+          subtitle: 'Keep your society committee details current',
+          chip: const Icon(Icons.chevron_right, color: AppColors.muted),
+          onTap: openCouncil,
+        );
+      }
+      return _AttentionTile(
+        icon: Icons.groups_outlined,
+        title: 'Council update draft',
+        subtitle:
+            '${draft.fullName} replaces ${store.memberById(draft.memberId)?.fullName ?? 'a member'} · Not sent yet',
+        chip: StatusChip.submission(SubmissionStatus.draft, compact: true),
+        onTap: openCouncil,
+      );
+    }
+
+    final review = submission.latestReview;
+    final returned = submission.status == SubmissionStatus.changesRequested;
+    return _AttentionTile(
+      icon: returned
+          ? Icons.keyboard_return_rounded
+          : Icons.description_outlined,
+      iconColor: returned ? const Color(0xFFD9852B) : null,
+      iconBackground: returned ? const Color(0xFFFFF1DC) : null,
+      title: returned ? 'Council update returned' : submission.title,
+      subtitle: returned
+          ? 'Fix 1 field · ${review?.comment ?? 'District comment'}'
+          : _summary(submission),
+      chip: returned
+          ? const Icon(Icons.chevron_right, color: AppColors.muted)
+          : StatusChip.submission(submission.status, compact: true),
+      onTap: returned
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ChangesRequestedScreen(submissionId: submission.id),
+              ),
+            )
+          : () => openDetail(submission),
+    );
+  }
+
+  static String _summary(
+    SocietySubmission submission,
+  ) => switch (submission.status) {
+    SubmissionStatus.draft => 'Not sent yet.',
+    SubmissionStatus.submitted =>
+      'Sent ${formatDateTime(submission.submittedAt!)}. Waiting for $demoReviewerOffice to review it.',
+    SubmissionStatus.underReview =>
+      '${submission.reviewerDisplayName ?? 'The District Manager'} is reviewing it. It is locked until the review is finished.',
+    SubmissionStatus.changesRequested => 'The District Centre needs you to fix 1 field. Everything else is accepted.',
+    SubmissionStatus.resubmitted =>
+      'Correction sent. Waiting for the District Manager to check it.',
+    SubmissionStatus.approved =>
+      'Approved. The Council record has been updated. ${submission.latestReview?.comment ?? ''}',
+    SubmissionStatus.rejected =>
+      'Rejected: ${submission.latestReview?.comment ?? 'see the tracker for the reason.'}',
+  };
+}
+
 class _AttentionTile extends StatelessWidget {
   const _AttentionTile({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.chip,
-    required this.iconColor,
-    required this.iconBackground,
+    this.iconColor,
+    this.iconBackground,
     this.onTap,
   });
 
@@ -293,8 +379,8 @@ class _AttentionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget chip;
-  final Color iconColor;
-  final Color iconBackground;
+  final Color? iconColor;
+  final Color? iconBackground;
   final VoidCallback? onTap;
 
   @override
@@ -306,10 +392,10 @@ class _AttentionTile extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: iconBackground,
+          color: iconBackground ?? AppColors.mintSoft,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
+        child: Icon(icon, color: iconColor ?? AppColors.leaf, size: 20),
       ),
       title: Text(
         title,
@@ -335,42 +421,28 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: AppColors.mintSoft,
       borderRadius: BorderRadius.circular(10),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.line),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0D1A2D21),
-              blurRadius: 5,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: AppColors.leaf, size: 23),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.leaf, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
+                  maxLines: 2,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

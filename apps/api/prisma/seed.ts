@@ -1,7 +1,7 @@
 /** SC-29: Fictional development fixtures. Never use real client or operational data here. */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, SocietyStatus } from '../src/generated/prisma/client.ts';
+import { PrismaClient, SocietyStatus, MembershipCategory } from '../src/generated/prisma/client.ts';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
@@ -39,6 +39,32 @@ const contactData = [
   { id: '29000000-0000-4000-8000-000000000204', societyId: societyData[4].id, label: 'Fictional Contact', email: 'riverstone@example.com', isPrimary: true },
 ] as const;
 
+const councilTypes = [
+  ...Array<MembershipCategory>(3).fill(MembershipCategory.CHILDREN),
+  ...Array<MembershipCategory>(3).fill(MembershipCategory.YOUTH),
+  ...Array<MembershipCategory>(3).fill(MembershipCategory.MOTHERS),
+  ...Array<MembershipCategory>(9).fill(MembershipCategory.ORDINARY),
+  ...Array<MembershipCategory>(7).fill(MembershipCategory.ELDERS_COUNCIL),
+];
+const demoCouncil = councilTypes.map((seatType, index) => ({
+  id: `29000000-0000-4000-8000-${String(301 + index).padStart(12, '0')}`,
+  societyId: societyData[0].id,
+  seatNumber: index + 1,
+  fullName: `Demo Council Member ${String(index + 1).padStart(2, '0')}`,
+  position: ['President', 'Secretary', 'Treasurer'][index] ?? 'Council Member',
+  seatType,
+  age: seatType === MembershipCategory.CHILDREN ? 10 + (index % 4) : seatType === MembershipCategory.YOUTH ? 18 + (index % 7) : null,
+  isActive: true,
+  isPrimaryContact: index === 0,
+}));
+const demoMembership = [
+  { category: MembershipCategory.CHILDREN, female: 178, male: 164 },
+  { category: MembershipCategory.YOUTH, female: 246, male: 219 },
+  { category: MembershipCategory.MOTHERS, female: 526, male: 0 },
+  { category: MembershipCategory.ORDINARY, female: 1485, male: 1328 },
+  { category: MembershipCategory.ELDERS_COUNCIL, female: 82, male: 65 },
+].map((row) => ({ societyId: societyData[0].id, year: 2026, ...row }));
+
 async function main() {
   await prisma.$transaction(async (tx) => {
     for (const row of districtData) {
@@ -50,8 +76,17 @@ async function main() {
     for (const row of contactData) {
       await tx.societyContact.upsert({ where: { id: row.id }, create: row, update: row });
     }
+    await tx.societyCouncilMember.deleteMany({ where: { societyId: societyData[0].id } });
+    await tx.societyCouncilMember.createMany({ data: demoCouncil });
+    for (const row of demoMembership) {
+      await tx.societyMembershipCount.upsert({
+        where: { societyId_year_category: { societyId: row.societyId, year: row.year, category: row.category } },
+        create: row,
+        update: { female: row.female, male: row.male },
+      });
+    }
   });
-  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts.`);
+  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats and ${demoMembership.length} fictional membership categories.`);
 }
 
 try {

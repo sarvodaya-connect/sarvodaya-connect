@@ -94,7 +94,6 @@ export function NationalOverview() {
             </ul>
           </Panel>
         </section>
-
         <div className="grid gap-4">
           <section id="national-section-3">
             <Panel title="Audit compliance · Audit & AGM completion" eyebrow="3–4 · Annual registrar documents">
@@ -106,9 +105,7 @@ export function NationalOverview() {
             </Panel>
           </section>
           <section className="grid gap-4 sm:grid-cols-2" id="national-section-5">
-            <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth">
-              <strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong><p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p><div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full"><span className="w-[42%] bg-[#26744b]" /><span className="w-[25%] bg-[#80b56f]" /><span className="w-[19%] bg-[#e4b40b]" /><span className="w-[14%] bg-[#d7ded4]" /></div>
-            </Panel>
+            <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth"><strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong><p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p><div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full"><span className="w-[42%] bg-[#26744b]" /><span className="w-[25%] bg-[#80b56f]" /><span className="w-[19%] bg-[#e4b40b]" /><span className="w-[14%] bg-[#d7ded4]" /></div></Panel>
             <section id="national-section-6"><Panel title="Activity status · done vs planned (YTD)" eyebrow="6 · Activities"><div className="flex gap-2 text-[10px]"><span className="rounded-md bg-[#174a32] px-2 py-1 font-semibold text-white">10 sectors</span><span className="rounded-md bg-[#f3f5f0] px-2 py-1 text-[#526057]">Social · Economic · Governance</span></div><div className="mt-4 flex items-baseline gap-2"><strong className="text-3xl font-bold text-[#174a32]">3,460</strong><span className="text-[10px] text-[#78857d]">of 3,930 planned activities · 88%</span></div><div aria-label="88 percent of planned activities completed" className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><div className="h-full w-[88%] rounded-full bg-[#26744b]" /></div><p className="mt-3 text-[10px] text-[#78857d]">Female and male participation across all 25 districts</p></Panel></section>
           </section>
         </div>
@@ -190,7 +187,7 @@ export function PlatformAdminOverview() {
           </ul>
         </Panel>
       </div>
-      <p className="mt-5 text-[11px] text-[#818c84]">This role preview demonstrates layout only; URL-selected roles do not grant or enforce real permissions.</p>
+      <p className="mt-5 text-[11px] text-[#818c84]">This role preview uses fictional demonstration users; the “Viewing as” selector does not grant or enforce real permissions.</p>
     </>
   );
 }

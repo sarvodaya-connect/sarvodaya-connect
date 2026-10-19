@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/society.dart';
 import 'package:sarvodaya_connect_mobile/src/models/submission.dart';
+import 'package:sarvodaya_connect_mobile/src/models/user.dart';
+import 'package:sarvodaya_connect_mobile/src/screens/edit_profile_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/widgets/map_preview.dart';
 
@@ -28,6 +30,24 @@ Future<void> _saveDraft(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('read-only roles do not see enabled edit controls', (
+    tester,
+  ) async {
+    final store = testStore()..switchDemoRole(UserRole.districtManager);
+    await tester.pumpWidget(
+      DemoScope(
+        store: store,
+        child: const MaterialApp(home: EditProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Read-only access'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.text('Save draft'), findsNothing);
+    expect(find.text('Use my location'), findsNothing);
+  });
+
   testWidgets(
     'Edit Profile opens from the Society Profile with the approved values',
     (tester) async {

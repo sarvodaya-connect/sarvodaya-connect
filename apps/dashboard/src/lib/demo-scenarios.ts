@@ -1,6 +1,6 @@
-import type { DistrictSummary, SocietySummary } from "@sarvodaya-connect/api-contracts";
+import type { DistrictSummary, SocietyDetails } from "@sarvodaya-connect/api-contracts";
 
-import { districts, societies } from "./demo-registry";
+import { districts, societyDetails } from "./demo-registry";
 
 /**
  * Demonstration scenarios for the society registry.
@@ -27,11 +27,24 @@ function wait(milliseconds: number) {
 
 export async function loadSocietyRegistry(
   scenario: DemoScenario | null,
-): Promise<{ districts: DistrictSummary[]; societies: SocietySummary[] }> {
+): Promise<{ districts: DistrictSummary[]; societies: SocietyDetails[] }> {
   if (scenario === "loading") await wait(DEMO_LOADING_DELAY_MS);
   if (scenario === "error") {
     throw new Error("Demonstration scenario: the society registry could not be loaded.");
   }
   if (scenario === "empty") return { districts, societies: [] };
-  return { districts, societies };
+  return { districts, societies: societyDetails };
+}
+
+/**
+ * Applies a demonstration scenario to any list of fixtures: waits for
+ * `loading`, fails for `error` and returns no records for `empty`.
+ */
+export async function loadDemoList<T>(scenario: DemoScenario | null, items: T[]): Promise<T[]> {
+  if (scenario === "loading") await wait(DEMO_LOADING_DELAY_MS);
+  if (scenario === "error") {
+    throw new Error("Demonstration scenario: this information could not be loaded.");
+  }
+  if (scenario === "empty") return [];
+  return items;
 }

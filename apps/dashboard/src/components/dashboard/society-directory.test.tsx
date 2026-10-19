@@ -2,11 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { districts, societies } from "@/lib/demo-registry";
+import { districts, societyDetails } from "@/lib/demo-registry";
 
 import { SocietyDirectory } from "./society-directory";
 
-function renderDirectory(items = societies) {
+function renderDirectory(items = societyDetails) {
   const user = userEvent.setup();
   render(<SocietyDirectory districts={districts} societies={items} />);
   return { user };
@@ -16,12 +16,12 @@ describe("SocietyDirectory", () => {
   it("lists every society with a labelled open action when no filters are applied", () => {
     renderDirectory();
 
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societies.length);
+    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societyDetails.length);
     expect(screen.getByRole("link", { name: "Open Galewela Sarvodaya Shramadana Society" })).toHaveAttribute(
       "href",
       "/societies/society-galewela",
     );
-    expect(screen.getByText(`Showing ${societies.length} of ${societies.length} demonstration records`)).toBeInTheDocument();
+    expect(screen.getByText(`Showing ${societyDetails.length} of ${societyDetails.length} demonstration records`)).toBeInTheDocument();
   });
 
   it("gives the search and filter controls readable labels", () => {
@@ -29,6 +29,7 @@ describe("SocietyDirectory", () => {
 
     expect(screen.getByRole("searchbox", { name: "Search societies" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Filter by district" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Filter by division" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Filter by status" })).toBeInTheDocument();
   });
 
@@ -38,7 +39,17 @@ describe("SocietyDirectory", () => {
     await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "galewela");
 
     expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(1);
-    expect(screen.getByText(`Showing 1 of ${societies.length} demonstration records`)).toBeInTheDocument();
+    expect(screen.getByText(`Showing 1 of ${societyDetails.length} demonstration records`)).toBeInTheDocument();
+  });
+
+  it("filters by DS division and status together", async () => {
+    const { user } = renderDirectory();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by division" }), "Polgahawela");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "ACTIVE");
+
+    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Open Pahala Kosgama Sarvodaya Shramadana Society" })).toBeInTheDocument();
   });
 
   it("shows a no-results state that lists the active filters", async () => {
@@ -77,7 +88,7 @@ describe("SocietyDirectory", () => {
     screen.getByRole("button", { name: "Clear all filters" }).focus();
     await user.keyboard("{Enter}");
 
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societies.length);
+    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societyDetails.length);
     expect(screen.getByRole("searchbox", { name: "Search societies" })).toHaveFocus();
     expect(screen.getByRole("searchbox", { name: "Search societies" })).toHaveValue("");
   });

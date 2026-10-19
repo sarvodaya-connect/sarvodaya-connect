@@ -54,15 +54,44 @@ describe('SocietiesRepository', () => {
     ]);
   });
 
-  it('looks up a society and includes its district and contacts', async () => {
+  it('looks up society profile, council and membership records', async () => {
     findUnique.mockResolvedValue(null);
 
     await repository.findById('29000000-0000-4000-8000-000000000101');
 
     expect(findUnique).toHaveBeenCalledWith({
       where: { id: '29000000-0000-4000-8000-000000000101' },
-      include: { district: true, contacts: true },
+      include: {
+        district: true,
+        contacts: true,
+        councilMembers: { orderBy: { seatNumber: 'asc' } },
+        memberships: { orderBy: [{ year: 'desc' }, { category: 'asc' }] },
+      },
     });
+  });
+
+  it('applies principal scope in membership aggregate queries', async () => {
+    findMany.mockResolvedValue([]);
+
+    await repository.membershipForPrincipal(
+      {
+        id: 'demo-dm-north',
+        displayName: 'Demo District Manager',
+        roles: ['DISTRICT_MANAGER'],
+        districtIds: ['29000000-0000-4000-8000-000000000001'],
+        societyIds: [],
+      },
+      2026,
+    );
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          districtId: { in: ['29000000-0000-4000-8000-000000000001'] },
+          memberships: { some: { year: 2026 } },
+        }),
+      }),
+    );
   });
 
   it('does not expose database details when a query fails', async () => {

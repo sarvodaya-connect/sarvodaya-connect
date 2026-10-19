@@ -1093,6 +1093,7 @@ class DemoStore extends ChangeNotifier {
         position: outgoing.position,
         seatType: outgoing.seatType,
         phone: outgoing.phone,
+        email: outgoing.email,
         appointedOn: outgoing.appointedOn,
         endedOn: startDate,
         isActive: false,

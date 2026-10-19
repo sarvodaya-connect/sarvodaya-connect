@@ -238,6 +238,8 @@ class _CurrentCouncil extends StatelessWidget {
               if (member.age != null)
                 InfoRow(label: 'Age', value: '${member.age}'),
               InfoRow(label: 'Phone', value: member.phone),
+              if (member.email != null)
+                InfoRow(label: 'Email', value: member.email),
               InfoRow(
                 label: 'Start date',
                 value: member.appointedOn == null
