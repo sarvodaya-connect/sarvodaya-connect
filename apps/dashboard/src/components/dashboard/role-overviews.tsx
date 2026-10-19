@@ -1,28 +1,6 @@
-import Link from "next/link";
-
-import { PageHeading } from "@/components/dashboard/page-heading";
-import { StatusPill } from "@/components/dashboard/status-pill";
-
-type Metric = { label: string; value: string; note: string; tone?: "gold" | "blue" };
-
-function MetricGrid({ metrics }: { metrics: Metric[] }) {
-  return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics.map((metric) => (
-        <article className="rounded-xl border border-[#dfe5dc] bg-white p-5 shadow-sm" key={metric.label}>
-          <div className="flex items-start justify-between gap-3">
-            <span className="text-xs font-medium text-[#738078]">{metric.label}</span>
-            <span aria-hidden="true" className={`grid size-8 place-items-center rounded-lg text-sm ${metric.tone === "gold" ? "bg-[#fff4d6] text-[#946d08]" : metric.tone === "blue" ? "bg-[#e6f2f8] text-[#17628a]" : "bg-[#e6f0e7] text-[#26744b]"}`}>
-              {metric.tone === "gold" ? "!" : metric.tone === "blue" ? "↗" : "✓"}
-            </span>
-          </div>
-          <strong className="mt-3 block text-2xl font-semibold tracking-[-0.035em] text-[#174a32]">{metric.value}</strong>
-          <span className="mt-1 block text-[11px] text-[#929c95]">{metric.note}</span>
-        </article>
-      ))}
-    </div>
-  );
-}
+import { DistrictCatalogueOverview } from "@/components/dashboard/district-overview";
+import { NationalActivityBreakdown, NationalMapAndEmergency } from "@/components/dashboard/national-support";
+import { PlatformAdminScreen } from "@/components/dashboard/platform-admin";
 
 function Panel({ children, className = "", title, eyebrow }: { children: React.ReactNode; className?: string; title: string; eyebrow?: string }) {
   return (
@@ -40,8 +18,8 @@ export function NationalOverview() {
   return (
     <>
       <nav aria-label="Dashboard sections" className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {["1 · Societies", "2 · Membership", "3–4 · Audit & AGM", "5 · Wealth", "6 · Activities", "Map & emergency"].map((item, index) => (
-          <a className="shrink-0 rounded-full border border-[#e1e5dc] bg-white px-3.5 py-2 text-[11px] font-medium text-[#344239] shadow-sm hover:border-[#9dbca2]" href={`#national-section-${index + 1}`} key={item}>{item}</a>
+        {[{ label: "1 · Societies", id: 1 }, { label: "2 · Membership", id: 2 }, { label: "3–4 · Audit & AGM", id: 3 }, { label: "5 · Wealth", id: 5 }, { label: "6 · Activities", id: 6 }, { label: "Map & emergency", id: 7 }].map((item) => (
+          <a className="shrink-0 rounded-full border border-[#e1e5dc] bg-white px-3.5 py-2 text-[11px] font-medium text-[#344239] shadow-sm hover:border-[#9dbca2]" href={`#national-section-${item.id}`} key={item.label}>{item.label}</a>
         ))}
       </nav>
 
@@ -104,90 +82,34 @@ export function NationalOverview() {
               <div className="mt-4"><h3 className="text-xs font-semibold text-[#344239]">Annual documents to the Registrar · FY 2025/26</h3><ul className="mt-3 space-y-3">{[{ label: "Audit report", value: 812, percent: 75 }, { label: "AGM minutes", value: 905, percent: 84 }, { label: "Office bearers list", value: 948, percent: 88 }, { label: "Members list", value: 776, percent: 72 }, { label: "All four submitted", value: 702, percent: 65 }].map((item) => <li className="grid grid-cols-[minmax(110px,1fr)_auto_minmax(54px,0.8fr)] items-center gap-2 text-[10px]" key={item.label}><span className="text-[#526057]">{item.label}</span><strong className="text-right text-[#344239]">{item.value} · {item.percent}%</strong><span aria-label={`${item.label} ${item.percent}% complete`} className="h-2 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><span className="block h-full rounded-full bg-[#26744b]" style={{ width: `${item.percent}%` }} /></span></li>)}</ul></div>
             </Panel>
           </section>
-          <section className="grid gap-4 sm:grid-cols-2" id="national-section-5">
-            <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth"><strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong><p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p><div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full"><span className="w-[42%] bg-[#26744b]" /><span className="w-[25%] bg-[#80b56f]" /><span className="w-[19%] bg-[#e4b40b]" /><span className="w-[14%] bg-[#d7ded4]" /></div></Panel>
-            <section id="national-section-6"><Panel title="Activity status · done vs planned (YTD)" eyebrow="6 · Activities"><div className="flex gap-2 text-[10px]"><span className="rounded-md bg-[#174a32] px-2 py-1 font-semibold text-white">10 sectors</span><span className="rounded-md bg-[#f3f5f0] px-2 py-1 text-[#526057]">Social · Economic · Governance</span></div><div className="mt-4 flex items-baseline gap-2"><strong className="text-3xl font-bold text-[#174a32]">3,460</strong><span className="text-[10px] text-[#78857d]">of 3,930 planned activities · 88%</span></div><div aria-label="88 percent of planned activities completed" className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><div className="h-full w-[88%] rounded-full bg-[#26744b]" /></div><p className="mt-3 text-[10px] text-[#78857d]">Female and male participation across all 25 districts</p></Panel></section>
+<section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+            <section id="national-section-5">
+              <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth">
+                <strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong>
+                <p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p>
+                <div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full" role="img"><span className="w-[40%] bg-[#183c2b]" /><span className="w-[34%] bg-[#26744b]" /><span className="w-[14%] bg-[#8ab875]" /><span className="w-[12%] bg-[#f0c328]" /></div>
+                <ul className="mt-4 space-y-2.5 text-[10px]">{[{ label: "Loans given to members", value: "LKR 718.6M", color: "#183c2b" }, { label: "Savings & deposits", value: "LKR 612.4M", color: "#26744b" }, { label: "Fixed assets (land, buildings)", value: "LKR 262.1M", color: "#8ab875" }, { label: "SDF shares", value: "LKR 245.3M", color: "#f0c328" }].map((item) => <li className="flex items-center justify-between gap-2 text-[#526057]" key={item.label}><span className="flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: item.color }}/>{item.label}</span><strong className="text-[#344239]">{item.value}</strong></li>)}</ul>
+                <p className="mt-3 text-[10px] font-semibold text-[#39864a]">↑ 9% vs. last year</p>
+              </Panel>
+            </section>
+            <section id="national-section-6">
+              <Panel title="3,460 of 3,930 planned activities done · 88%" eyebrow="6 · Activities">
+                <NationalActivityBreakdown />
+              </Panel>
+            </section>
           </section>
         </div>
       </div>
+      <NationalMapAndEmergency />
       <p className="mt-4 text-[10px] text-[#818c84]">Demonstration figures are fictional and will be replaced by authorised API data.</p>
     </>
   );
 }
 
 export function DistrictOverview() {
-  return (
-    <>
-      <PageHeading description="Monitor society records, profile completeness and follow-ups for your assigned district." title="Kurunegala District" />
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#68756c]"><span className="rounded-full bg-[#e6f0e7] px-3 py-1 font-semibold text-[#26744b]">District Manager view</span><span>Scope: Kurunegala District</span></div>
-      <MetricGrid metrics={[
-        { label: "Societies", value: "148", note: "In this district" },
-        { label: "Active", value: "112", note: "Current status" },
-        { label: "Awaiting review", value: "18", note: "Submitted updates", tone: "gold" },
-        { label: "Follow-up needed", value: "12", note: "Incomplete profiles", tone: "blue" },
-      ]} />
-      <div className="mt-6 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Societies requiring follow-up" eyebrow="District work queue">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left">
-              <caption className="sr-only">Societies requiring follow-up in Kurunegala District</caption>
-              <thead><tr className="text-[10px] uppercase tracking-[0.1em] text-[#738078]"><th className="pb-3 font-medium">Society</th><th className="pb-3 font-medium">Completeness</th><th className="pb-3 font-medium">Status</th><th className="pb-3"><span className="sr-only">Open</span></th></tr></thead>
-              <tbody className="divide-y divide-[#edf0eb]">
-                {[{ id: "society-wellawa", name: "Wellawa Sarvodaya Shramadana Society", code: "SSS-KG-028", complete: 78, status: "PENDING" as const }, { id: "society-maho", name: "Maho Sarvodaya Shramadana Society", code: "SSS-KG-033", complete: 71, status: "PENDING" as const }, { id: "society-pahala-kosgama", name: "Pahala Kosgama Sarvodaya Shramadana Society", code: "SSS-KG-001", complete: 86, status: "VERIFIED" as const }].map((society) => (
-                  <tr key={society.id}><td className="py-3 pr-3"><Link className="block text-xs font-semibold text-[#304038] hover:text-[#26744b]" href={`/societies/${society.id}`}>{society.name}</Link><span className="mt-1 block text-[10px] text-[#929c95]">{society.code}</span></td><td className="py-3 text-xs text-[#526057]">{society.complete}%</td><td className="py-3"><StatusPill value={society.status} /></td><td className="py-3 text-right"><Link aria-label={`Open ${society.name}`} className="text-xs font-semibold text-[#26744b] hover:underline" href={`/societies/${society.id}`}>View</Link></td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Link className="mt-5 inline-flex text-xs font-semibold text-[#26744b] hover:underline" href="/societies">View all district societies <span aria-hidden="true" className="ml-1">→</span></Link>
-        </Panel>
-        <Panel title="Review workload" eyebrow="This week">
-          <div className="flex items-end justify-between gap-4"><div><strong className="text-4xl tracking-[-0.05em] text-[#174a32]">18</strong><p className="mt-1 text-xs text-[#78857d]">submissions waiting for review</p></div><span className="rounded-full bg-[#fff4d6] px-3 py-1.5 text-[11px] font-semibold text-[#806718]">Needs attention</span></div>
-          <div className="mt-5 space-y-3 text-xs">
-            {[{ label: "Committee updates", value: "11" }, { label: "Activity reports", value: "7" }].map((item) => <div className="flex justify-between rounded-lg bg-[#f7f8f5] px-3 py-2.5" key={item.label}><span className="text-[#68756c]">{item.label}</span><strong className="text-[#304038]">{item.value}</strong></div>)}
-          </div>
-          <Link className="mt-5 inline-flex text-xs font-semibold text-[#26744b] hover:underline" href="/reviews">Open review queue <span aria-hidden="true" className="ml-1">→</span></Link>
-        </Panel>
-      </div>
-      <p className="mt-5 text-[11px] text-[#818c84]">Demonstration figures are fictional. Record access must be authorised by the live identity and API services.</p>
-    </>
-  );
+  return <DistrictCatalogueOverview />;
 }
 
-const accessUsers = [
-  { name: "K. Fernando", email: "k.fernando@example.invalid", role: "National Administrator", scope: "National", status: "Active" },
-  { name: "S. Tharmalingam", email: "s.tharmalingam@example.invalid", role: "District Manager", scope: "Kurunegala", status: "Active" },
-  { name: "N. Perera", email: "n.perera@example.invalid", role: "Society Officer", scope: "Pahala Kosgama", status: "Pending" },
-];
-
 export function PlatformAdminOverview() {
-  return (
-    <>
-      <PageHeading description="Review dashboard accounts, assigned roles and access scopes. This screen uses fictional demonstration records." title="Platform administration" />
-      <MetricGrid metrics={[
-        { label: "User accounts", value: "38", note: "Across the demonstration system" },
-        { label: "Active accounts", value: "32", note: "Currently enabled" },
-        { label: "Access reviews", value: "6", note: "Require administrator follow-up", tone: "gold" },
-        { label: "Suspended", value: "2", note: "Access disabled", tone: "blue" },
-      ]} />
-      <div className="mt-6 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
-        <Panel title="Dashboard access" eyebrow="Accounts and assignments">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[740px] text-left">
-              <caption className="sr-only">Demonstration dashboard user accounts and assigned scopes</caption>
-              <thead><tr className="text-[10px] uppercase tracking-[0.1em] text-[#738078]"><th className="pb-3 font-medium">User</th><th className="pb-3 font-medium">Role</th><th className="pb-3 font-medium">Scope</th><th className="pb-3 font-medium">Status</th></tr></thead>
-              <tbody className="divide-y divide-[#edf0eb]">{accessUsers.map((user) => <tr key={user.email}><td className="py-3"><strong className="block text-xs text-[#304038]">{user.name}</strong><span className="mt-1 block text-[10px] text-[#929c95]">{user.email}</span></td><td className="py-3 text-xs text-[#526057]">{user.role}</td><td className="py-3 text-xs text-[#526057]">{user.scope}</td><td className="py-3"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${user.status === "Active" ? "bg-[#e6f0e7] text-[#26744b]" : "bg-[#fff4d6] text-[#806718]"}`}>{user.status}</span></td></tr>)}</tbody>
-            </table>
-          </div>
-          <p className="mt-5 rounded-lg bg-[#f4f8f3] px-4 py-3 text-xs leading-5 text-[#53645a]">Account creation and permission changes will be connected to the authorised identity and administration services.</p>
-        </Panel>
-        <Panel title="Role and scope overview" eyebrow="Access model">
-          <ul className="space-y-3">
-            {[{ role: "National Administrator", scope: "National registry and oversight", tone: "bg-[#e6f0e7] text-[#26744b]" }, { role: "District Manager", scope: "Assigned district records and reviews", tone: "bg-[#e6f2f8] text-[#17628a]" }, { role: "Society Officer", scope: "Assigned society profile and submissions", tone: "bg-[#fff4d6] text-[#806718]" }].map((item) => <li className="rounded-lg border border-[#edf0eb] p-3" key={item.role}><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${item.tone}`}>{item.role}</span><p className="mt-2 text-xs leading-5 text-[#68756c]">{item.scope}</p></li>)}
-          </ul>
-        </Panel>
-      </div>
-      <p className="mt-5 text-[11px] text-[#818c84]">This role preview uses fictional demonstration users; the “Viewing as” selector does not grant or enforce real permissions.</p>
-    </>
-  );
+  return <PlatformAdminScreen />;
 }

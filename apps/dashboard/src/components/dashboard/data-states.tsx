@@ -133,6 +133,29 @@ export function ErrorState({
   );
 }
 
+/** Dashboard-wide offline state (Screen Catalogue v3, D21). */
+export function OfflineState({ lastUpdated = "09 Oct 2026, 19:30" }: { lastUpdated?: string }) {
+  return (
+    <div className="flex flex-col items-center px-5 py-7 text-center" role="status">
+      <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-[#182b22] text-white"><Icon className="size-5" name="offline" /></span>
+      <h3 className="mt-3 text-sm font-semibold text-[#223329]">You&apos;re offline</h3>
+      <p className="mt-1 max-w-[240px] text-[11px] leading-4 text-[#68756c]">Showing data from {lastUpdated}. Approvals are paused until you reconnect.</p>
+    </div>
+  );
+}
+
+/** Conflict state shown when a record changed after it was opened. */
+export function ConflictState({ onReload }: { onReload: () => void }) {
+  return (
+    <div className="flex flex-col items-center px-5 py-7 text-center" role="alert">
+      <StateIcon name="conflict" tone="warning" />
+      <h3 className="mt-3 text-sm font-semibold text-[#223329]">This record was updated elsewhere</h3>
+      <p className="mt-1 max-w-[240px] text-[11px] leading-4 text-[#68756c]">Your changes have not been submitted. Reload the latest version before continuing.</p>
+      <button className={`${secondaryButtonClass} mt-4 px-3 py-2 text-xs`} onClick={onReload} type="button">Reload record</button>
+    </div>
+  );
+}
+
 /**
  * Shown when the signed-in role is not allowed to see a page or a record
  * (Screen Catalogue v3, D21 "No permission").

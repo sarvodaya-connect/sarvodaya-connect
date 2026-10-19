@@ -11,6 +11,8 @@ export type IconName =
   | "close"
   | "district"
   | "document"
+  | "offline"
+  | "conflict"
   | "home"
   | "inbox"
   | "lock"
@@ -26,6 +28,7 @@ type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
 
 const paths: Record<IconName, React.ReactNode> = {
   alert: <><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></>,
+  conflict: <><path d="M20 11a8 8 0 0 0-14.7-3.5L4 9"/><path d="M4 4v5h5M4 13a8 8 0 0 0 14.7 3.5L20 15"/><path d="M20 20v-5h-5"/></>,
   bell: <><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></>,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   clock: <><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>,
@@ -42,6 +45,7 @@ const paths: Record<IconName, React.ReactNode> = {
   document: <><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></>,
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></>,
   logout: <><path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/></>,
+  offline: <><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/><path d="m3 3 18 18"/></>,
   review: <><path d="M4 4h16v13H8l-4 4z"/><path d="M8 9h8M8 13h5"/></>,
   search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
   society: <><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 20v-2a5.5 5.5 0 0 1 11 0v2M13 13a5.5 5.5 0 0 1 8.5 4.6V20"/></>,
