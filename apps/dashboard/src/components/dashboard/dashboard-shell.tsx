@@ -31,6 +31,7 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
     { href: "/dashboard", icon: "home", label: "Overview" },
     { href: "/societies", icon: "society", label: "Societies" },
     { href: "/membership", icon: "clipboard", label: "Membership" },
+    { href: "/activities", icon: "clipboard", label: "Activities" },
     { href: "/search", icon: "search", label: "Global search" },
     { href: "/districts/kurunegala", icon: "district", label: "District view" },
     { href: "/reviews", icon: "review", label: "Review queue" },
@@ -62,7 +63,9 @@ export function DashboardShell({
         ? "Societies"
         : pathname.startsWith("/membership")
           ? "Membership"
-          : pathname.startsWith("/districts")
+          : pathname.startsWith("/activities")
+             ? "Activities"
+             : pathname.startsWith("/districts")
             ? "District view"
             : pathname.startsWith("/reviews")
               ? "Review queue"
@@ -119,7 +122,7 @@ export function DashboardShell({
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-xs">{viewer.displayName}</strong>
               <span className="block truncate text-[10px] text-[#a8c7b1]">
-                {viewer.roleLabel} · {viewer.scopeLabel}
+                {viewer.roleLabel} Â· {viewer.scopeLabel}
               </span>
             </span>
             <Link aria-label="Sign out" href="/">
@@ -207,7 +210,7 @@ function ViewerSwitcher({ viewer }: { viewer: DemoViewer }) {
         >
           {demoViewers.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.roleLabel} · {option.displayName}
+              {option.roleLabel} Â· {option.displayName}
             </option>
           ))}
         </select>
