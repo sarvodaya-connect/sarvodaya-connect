@@ -79,10 +79,12 @@ describe("provisional role-based visibility", () => {
   it("leaves pages a role cannot open out of the navigation", () => {
     const labels = (viewer: ReturnType<typeof getViewer>) => navigationFor(viewer).map((item) => item.label);
     expect(labels(hq)).toEqual(expect.arrayContaining(["Audits & compliance", "Documents", "Notifications"]));
+    expect(labels(hq)).toContain("Membership");
     expect(labels(districtManager)).toEqual(expect.arrayContaining(["Audits & compliance", "Documents"]));
     expect(labels(coordinator)).not.toContain("Audits & compliance");
     expect(labels(coordinator)).toContain("Documents");
     expect(labels(systemAdmin)).not.toContain("Documents");
+    expect(labels(systemAdmin)).not.toContain("Membership");
     expect(labels(systemAdmin)).toContain("Notifications");
     expect(labels(hq)[0]).toBe("Overview");
     expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);

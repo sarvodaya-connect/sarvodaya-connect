@@ -123,7 +123,7 @@ npm run prisma:seed
 The seed should finish with:
 
 ```text
-SC-29 seed complete: 3 fictional districts, 6 fictional societies, 4 fictional contacts.
+SC-29 seed complete: 3 fictional districts, 6 fictional societies, 4 fictional contacts, 25 fictional council seats and 5 fictional membership categories.
 ```
 
 The seed is repeatable: running it again does not create duplicate records.
@@ -260,7 +260,20 @@ Business logic only uses the `DocumentStorage` interface in `src/storage/documen
 
 ### Database tests
 
-`npm run test:db` checks that document and notification metadata persists correctly in PostgreSQL: versions, timestamps, scope filtering in SQL, the database constraints and the full upload flow through the API. It needs `DATABASE_URL` pointing at a local PostgreSQL with the migrations applied (`npm run prisma:deploy`), and only removes the records it creates. CI runs it against a throwaway PostgreSQL 17 service, after checking that the migrations match `schema.prisma`.
+`npm run test:db` checks that document, notification, society profile, council and membership data persists correctly in PostgreSQL, including role-scoped API reads and update rejection. It needs `DATABASE_URL` pointing at a local PostgreSQL with the migrations applied (`npm run prisma:deploy`), and only removes the records it creates. CI runs it against a throwaway PostgreSQL 17 service, after checking that the migrations match `schema.prisma`.
+
+## Society registry, council and membership (SC-53)
+
+The existing society registry endpoints continue to serve the dashboard and mobile profile reads. `SocietyDetails` now includes persisted council members and the latest available membership snapshot. Council records use 25 numbered seats, with 3 Children, 3 Youth, 3 Mothers, 9 Ordinary and 7 Elders Council positions. Membership snapshots store female and male counts for each of the five categories.
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/v1/societies/membership?year=2026` | Membership summary, category and gender totals for societies in the signed-in user's scope |
+| `PATCH` or `PUT /api/v1/societies/:id/profile` | Create or update permitted society name, address, GPS, establishment date and primary contact fields |
+| `PUT /api/v1/societies/:id/council` | Replace the society's validated 25-seat council snapshot |
+| `PUT /api/v1/societies/:id/membership` | Replace one year's five-category membership snapshot |
+
+These operations use the existing society routes and demo identity guard. HQ Administrators can update any society; Society Officers can update only their assigned society. District Managers can read aggregates for their districts but cannot edit profiles. The API validates GPS bounds and paired coordinates, council seat distribution and membership category counts before writing. PostgreSQL constraints enforce unique seat numbers, unique annual category rows, valid years and nonnegative counts. The `SC-29` local seed retains its existing fictional societies and contacts and adds a fictional 25-member council and 2026 membership snapshot for Example Sunrise Society.
 
 ## API conventions
 
