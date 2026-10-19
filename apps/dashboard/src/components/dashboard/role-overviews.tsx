@@ -36,75 +36,84 @@ function Panel({ children, className = "", title, eyebrow }: { children: React.R
   );
 }
 
-const districtRows = [
-  { name: "Kurunegala", code: "KG", societies: 148, attention: 12, completeness: 82 },
-  { name: "Kandy", code: "KD", societies: 132, attention: 9, completeness: 79 },
-  { name: "Kegalle", code: "KE", societies: 126, attention: 7, completeness: 86 },
-  { name: "Matale", code: "MT", societies: 84, attention: 5, completeness: 74 },
-];
-
 export function NationalOverview() {
   return (
     <>
-      <PageHeading description="A national view of village societies, verification progress and items that need follow-up." title="National overview" />
-      <MetricGrid metrics={[
-        { label: "Societies in registry", value: "1,214", note: "Across 25 districts" },
-        { label: "Verified profiles", value: "894", note: "74% of records" },
-        { label: "Awaiting review", value: "148", note: "Across all districts", tone: "gold" },
-        { label: "Registered members", value: "452,680", note: "Fictional demonstration total", tone: "blue" },
-      ]} />
-      <div className="mt-6 grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <Panel title="District profile completeness" eyebrow="National registry">
-          <div className="space-y-5">
-            {districtRows.map((district) => (
-              <div key={district.code}>
-                <div className="mb-2 flex items-center justify-between gap-4 text-xs">
-                  <Link className="font-semibold text-[#304038] hover:text-[#26744b]" href={`/districts/${district.name.toLowerCase()}`}>{district.name}</Link>
-                  <span className="text-[#78857d]">{district.completeness}% <span className="text-[#a0a8a2]">· {district.societies} societies</span></span>
-                </div>
-                <div aria-label={`${district.name} profile completeness ${district.completeness}%`} className="h-2 overflow-hidden rounded-full bg-[#edf1ec]" role="img">
-                  <div className="h-full rounded-full bg-[#38875a]" style={{ width: `${district.completeness}%` }} />
-                </div>
+      <nav aria-label="Dashboard sections" className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {["1 · Societies", "2 · Membership", "3–4 · Audit & AGM", "5 · Wealth", "6 · Activities", "Map & emergency"].map((item, index) => (
+          <a className="shrink-0 rounded-full border border-[#e1e5dc] bg-white px-3.5 py-2 text-[11px] font-medium text-[#344239] shadow-sm hover:border-[#9dbca2]" href={`#national-section-${index + 1}`} key={item}>{item}</a>
+        ))}
+      </nav>
+
+      <section id="national-section-1">
+        <Panel title="Latest Shramadana Societies status" eyebrow="1 · National registry">
+          <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+            <div>
+              <div className="flex flex-wrap items-end gap-x-7 gap-y-2">
+                <div><p className="text-xs text-[#78857d]">Registered societies</p><strong className="mt-1 block text-4xl font-bold tracking-tight text-[#17211b]">5,340</strong></div>
+                <span aria-hidden="true" className="pb-2 text-3xl text-[#38875a]">→</span>
+                <div><p className="text-xs text-[#78857d]">Currently active</p><strong className="mt-1 block text-4xl font-bold tracking-tight text-[#26744b]">1,076</strong></div>
               </div>
-            ))}
-          </div>
-          <Link className="mt-6 inline-flex text-xs font-semibold text-[#26744b] hover:underline" href="/districts/kurunegala">Open district view <span aria-hidden="true" className="ml-1">→</span></Link>
-        </Panel>
-        <Panel title="Items needing attention" eyebrow="Follow-up">
-          <ul className="divide-y divide-[#edf0eb]">
-            {districtRows.slice(0, 3).map((district) => (
-              <li className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" key={district.code}>
-                <div><p className="text-xs font-semibold text-[#304038]">{district.name} District</p><p className="mt-1 text-[11px] text-[#78857d]">Incomplete or unverified records</p></div>
-                <span className="rounded-full bg-[#fff4d6] px-2.5 py-1 text-[11px] font-semibold text-[#806718]">{district.attention} records</span>
-              </li>
-            ))}
-          </ul>
-          <Link className="mt-6 inline-flex text-xs font-semibold text-[#26744b] hover:underline" href="/reviews">Go to review queue <span aria-hidden="true" className="ml-1">→</span></Link>
-        </Panel>
-      </div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <Panel title="Registry status" eyebrow="Fictional summary">
-          <div className="grid grid-cols-3 gap-3">
-            {[{ label: "Active", value: "972", color: "bg-[#18804b]" }, { label: "Under review", value: "148", color: "bg-[#e4b40b]" }, { label: "Inactive", value: "94", color: "bg-[#d95145]" }].map((item) => (
-              <div className="rounded-lg bg-[#f7f8f5] p-3" key={item.label}>
-                <span className={`mr-2 inline-block size-2 rounded-full ${item.color}`} />
-                <span className="text-[11px] text-[#68756c]">{item.label}</span>
-                <strong className="mt-2 block text-lg text-[#24372d]">{item.value}</strong>
+              <p className="mt-3 text-[11px] text-[#78857d]">20% of registered societies are active · 4,264 registered but not active</p>
+              <div aria-label="20 percent of registered societies are active" className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><div className="h-full w-[20%] bg-[#26744b]" /></div>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[{ value: "50", label: "Active & to be registered" }, { value: "32", label: "Arth Dharma villages" }, { value: "331", label: "Model villages" }, { value: "1,179", label: "Share invested · People's Investment" }].map((item) => (
+                  <div className="min-h-[92px] rounded-lg border border-[#e7eae3] bg-[#fdfdfa] p-3" key={item.label}><strong className="block text-2xl font-bold text-[#23362b]">{item.value}</strong><span className="mt-1 block text-[10px] leading-4 text-[#78857d]">{item.label}</span></div>
+                ))}
               </div>
-            ))}
+            </div>
+            <div className="border-t border-[#edf0eb] pt-4 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+              <h3 className="text-sm font-semibold text-[#28382f]">Classification of active societies</h3>
+              <div className="mt-4 flex items-center gap-5">
+                <div aria-label="Society classification: A 144, B 172, C 760" className="flex w-28 shrink-0 flex-col items-center gap-0.5" role="img">
+                  <div className="grid h-14 w-20 place-items-center bg-[#268c43] text-sm font-bold text-white" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }}>A</div>
+                  <div className="grid h-14 w-28 place-items-center bg-[#f0c328] text-sm font-bold text-[#263329]" style={{ clipPath: "polygon(25% 0, 75% 0, 100% 100%, 0 100%)" }}>B</div>
+                  <div className="grid h-14 w-36 place-items-center bg-[#e88b2d] text-sm font-bold text-[#263329]" style={{ clipPath: "polygon(17% 0, 83% 0, 100% 100%, 0 100%)" }}>C</div>
+                </div>
+                <ul className="min-w-0 space-y-3 text-[11px]">
+                  {[{ key: "A", value: "144", label: "Strong", note: "Economically and institutionally stronger", color: "bg-[#268c43]" }, { key: "B", value: "172", label: "Developing", note: "Medium-level societies", color: "bg-[#f0c328]" }, { key: "C", value: "760", label: "Needs strengthening", note: "Require strengthening support", color: "bg-[#e88b2d]" }].map((item) => (
+                    <li className="flex gap-2" key={item.key}><span className={`mt-1 size-2.5 shrink-0 rounded-full ${item.color}`} /><div><p className="font-semibold text-[#344239]">{item.value} &nbsp;{item.key} · {item.label}</p><p className="mt-0.5 leading-4 text-[#78857d]">{item.note}</p></div></li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         </Panel>
-        <Panel title="Recent activity" eyebrow="Latest updates">
-          <ol className="space-y-4">
-            {[
-              ["Society profile submitted", "Pahala Kosgama SSS · 12 minutes ago"],
-              ["District verification completed", "Kegalle District · 48 minutes ago"],
-              ["New society record reviewed", "Galewela SSS · 2 hours ago"],
-            ].map(([title, detail]) => <li className="flex gap-3" key={title}><span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-[#38875a]" /><div><p className="text-xs font-semibold text-[#304038]">{title}</p><p className="mt-1 text-[11px] text-[#78857d]">{detail}</p></div></li>)}
-          </ol>
-        </Panel>
+      </section>
+
+      <div className="mt-4 grid gap-4 2xl:grid-cols-[1.15fr_1fr]">
+        <section id="national-section-2">
+          <Panel title="Total membership · male and female" eyebrow="2 · Membership">
+            <div className="flex flex-wrap items-end justify-between gap-3"><div><strong className="text-4xl font-bold tracking-tight text-[#17211b]">98,640</strong><p className="mt-1 text-[11px] text-[#78857d]">Members in 1,076 active societies</p></div><div className="flex gap-4 text-[11px]"><span className="text-[#8b3889]">● Female&nbsp; <strong>56,214 · 57%</strong></span><span className="text-[#28669a]">● Male&nbsp; <strong>42,426 · 43%</strong></span></div></div>
+            <div aria-label="Female members 57 percent, male members 43 percent" className="mt-4 flex h-3 overflow-hidden rounded-full" role="img"><div className="w-[57%] bg-[#93458f]" /><div className="w-[43%] bg-[#28669a]" /></div>
+            <div className="mt-5 grid grid-cols-[1fr_auto] gap-x-5 text-[10px] font-semibold uppercase tracking-wide text-[#78857d]"><span>Membership category · female / male</span><span>Total</span></div>
+            <ul className="mt-2 divide-y divide-[#edf0eb]">
+              {[{ label: "Child members", age: "7–14 yrs", female: 7900, male: 6220, total: "14,120" }, { label: "Youth members", age: "15–25 yrs", female: 10100, male: 8250, total: "18,350" }, { label: "Ordinary members", age: "over 25", female: 33800, male: 25140, total: "58,940" }, { label: "Life members", age: "", female: 3200, male: 2670, total: "5,870" }, { label: "Invited members", age: "honorary", female: 1214, male: 146, total: "1,360" }].map((item) => (
+                <li className="grid grid-cols-[minmax(105px,1fr)_minmax(88px,1.1fr)_auto] items-center gap-3 py-2.5 text-[11px]" key={item.label}><span className="min-w-0"><strong className="block text-[#344239]">{item.label}</strong>{item.age && <span className="text-[10px] text-[#929c95]">{item.age}</span>}</span><span aria-label={`${item.label} female and male distribution`} className="flex h-2 overflow-hidden rounded-full bg-[#28669a]" role="img"><span className="bg-[#93458f]" style={{ width: `${Math.round(item.female / (item.female + item.male) * 100)}%` }} /></span><strong className="text-right text-[#526057]">{item.total}</strong></li>
+              ))}
+            </ul>
+          </Panel>
+        </section>
+
+        <div className="grid gap-4">
+          <section id="national-section-3">
+            <Panel title="Audit compliance · Audit & AGM completion" eyebrow="3–4 · Annual registrar documents">
+              <div className="flex flex-wrap items-center gap-5 border-b border-[#edf0eb] pb-4">
+                <div aria-label="75 percent audit compliance" className="grid size-[92px] shrink-0 place-items-center rounded-full" role="img" style={{ background: "conic-gradient(#26744b 0 75%, #e9ede5 75% 100%)" }}><span className="grid size-[68px] place-items-center rounded-full bg-white text-lg font-bold text-[#344239]">75%</span></div>
+                <div className="min-w-[150px] flex-1"><p className="text-[11px] leading-5 text-[#526057]"><strong className="text-[#344239]">812 of 1,076</strong> active societies have an audit report for FY 2025/26, certified by an auditor registered under the Companies Act.</p><p className="mt-1 text-[11px] font-semibold text-[#b33b36]">264 not yet approved, 128 of them overdue</p></div>
+              </div>
+              <div className="mt-4"><h3 className="text-xs font-semibold text-[#344239]">Annual documents to the Registrar · FY 2025/26</h3><ul className="mt-3 space-y-3">{[{ label: "Audit report", value: 812, percent: 75 }, { label: "AGM minutes", value: 905, percent: 84 }, { label: "Office bearers list", value: 948, percent: 88 }, { label: "Members list", value: 776, percent: 72 }, { label: "All four submitted", value: 702, percent: 65 }].map((item) => <li className="grid grid-cols-[minmax(110px,1fr)_auto_minmax(54px,0.8fr)] items-center gap-2 text-[10px]" key={item.label}><span className="text-[#526057]">{item.label}</span><strong className="text-right text-[#344239]">{item.value} · {item.percent}%</strong><span aria-label={`${item.label} ${item.percent}% complete`} className="h-2 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><span className="block h-full rounded-full bg-[#26744b]" style={{ width: `${item.percent}%` }} /></span></li>)}</ul></div>
+            </Panel>
+          </section>
+          <section className="grid gap-4 sm:grid-cols-2" id="national-section-5">
+            <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth">
+              <strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong><p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p><div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full"><span className="w-[42%] bg-[#26744b]" /><span className="w-[25%] bg-[#80b56f]" /><span className="w-[19%] bg-[#e4b40b]" /><span className="w-[14%] bg-[#d7ded4]" /></div>
+            </Panel>
+            <section id="national-section-6"><Panel title="Activity status · done vs planned (YTD)" eyebrow="6 · Activities"><div className="flex gap-2 text-[10px]"><span className="rounded-md bg-[#174a32] px-2 py-1 font-semibold text-white">10 sectors</span><span className="rounded-md bg-[#f3f5f0] px-2 py-1 text-[#526057]">Social · Economic · Governance</span></div><div className="mt-4 flex items-baseline gap-2"><strong className="text-3xl font-bold text-[#174a32]">3,460</strong><span className="text-[10px] text-[#78857d]">of 3,930 planned activities · 88%</span></div><div aria-label="88 percent of planned activities completed" className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><div className="h-full w-[88%] rounded-full bg-[#26744b]" /></div><p className="mt-3 text-[10px] text-[#78857d]">Female and male participation across all 25 districts</p></Panel></section>
+          </section>
+        </div>
       </div>
-      <p className="mt-5 text-[11px] text-[#818c84]">Demonstration figures are fictional and will be replaced by authorised API data.</p>
+      <p className="mt-4 text-[10px] text-[#818c84]">Demonstration figures are fictional and will be replaced by authorised API data.</p>
     </>
   );
 }

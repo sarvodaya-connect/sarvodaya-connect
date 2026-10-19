@@ -15,6 +15,7 @@ void main() {
       expect(find.text('Profile completeness'), findsOneWidget);
       expect(find.text('Complete profile'), findsOneWidget);
       expect(find.text('Home'), findsOneWidget);
+      expect(find.bySemanticsLabel('Sarvodaya Connect'), findsOneWidget);
       expect(find.text('Society'), findsOneWidget);
       expect(find.text('Submit'), findsOneWidget);
       expect(find.text('Requests'), findsOneWidget);
@@ -41,7 +42,7 @@ void main() {
     store.switchDemoRole(UserRole.districtManager);
     await pumpApp(tester, store: store);
 
-    expect(find.text('Kurunegala District'), findsOneWidget);
+    expect(find.textContaining('Kurunegala District'), findsOneWidget);
     expect(find.text('Pending reviews'), findsOneWidget);
     expect(find.text('Reviews'), findsOneWidget);
     expect(find.text('Submit'), findsNothing);
