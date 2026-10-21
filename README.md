@@ -69,52 +69,100 @@ flowchart LR
     API --> Files
 ```
 
-### Proposed cloud direction — pending review
+### Proposed cloud architecture — AWS Singapore
 
-The following is a proposed target based on the team's cloud architecture draft. It is not deployed or approved yet; AWS services, network boundaries, security controls, regional setup and costs must be reviewed with Sarvodaya IT and the project supervisor before implementation.
+This is the team's proposed target architecture for review with Sarvodaya IT and the project supervisor. It is not deployed. The diagram describes the planned components, environment separation and data flows; production setup remains subject to approval and security review.
 
 ```mermaid
-flowchart LR
-    Mobile[Flutter mobile app] -->|sign in| Auth[Amazon Cognito]
-    Browser[Web browser] -->|sign in| Auth
-    Auth -. "issues tokens" .-> Mobile
-    Auth -. "issues tokens" .-> Browser
-    Mobile -->|API requests| Edge[Cloudflare DNS, TLS and WAF]
-    Browser -->|web and API requests| Edge
-    subgraph AWS[AWS Singapore region — proposed]
-        WebHost[AWS Amplify dashboard hosting]
-        ALB[Application Load Balancer]
-        API[ECS Fargate NestJS API]
-        DB[(Aurora PostgreSQL)]
-        Secrets[AWS Secrets Manager]
-        Storage[Private Amazon S3 documents]
-        CDN[CloudFront protected downloads]
-        KMS[AWS KMS encryption keys]
-        Observability[CloudWatch logs and alarms]
-        Audit[CloudTrail account activity]
+flowchart TB
+    subgraph Users[1. Users and client applications]
+        Society[Society members] --> Mobile[Flutter mobile app<br/>iOS and Android]
+        Staff[Sarvodaya staff] --> Browser[Web browser<br/>Next.js administration dashboard]
     end
-    Edge --> WebHost
-    Edge --> ALB
+
+    subgraph Entry[2. Edge delivery and identity]
+        Cognito[Amazon Cognito<br/>OIDC and user groups]
+        Cloudflare[Cloudflare<br/>DNS, TLS and WAF]
+        Amplify[AWS Amplify Hosting<br/>Next.js dashboard]
+    end
+    Mobile -->|Sign-in| Cognito
+    Browser -->|Sign-in| Cognito
+    Mobile -->|HTTPS API requests| Cloudflare
+    Browser -->|Dashboard HTTPS| Cloudflare
+    Cloudflare -->|Dashboard origin| Amplify
+
+    subgraph AWS[3. AWS account — Singapore region, ap-southeast-1]
+        subgraph Prod[Production — live user data]
+            ALB[Application Load Balancer<br/>public subnets, Multi-AZ]
+            ECR[Amazon ECR<br/>API container images]
+            API[Amazon ECS on Fargate<br/>NestJS API in private app subnets]
+            DB[(Amazon Aurora PostgreSQL<br/>private isolated subnets, Multi-AZ<br/>30-day point-in-time recovery)]
+            S3[(Amazon S3<br/>private production documents)]
+            OAC[CloudFront Origin Access Control]
+            CDN[Amazon CloudFront<br/>protected document downloads]
+        end
+
+        subgraph Staging[Staging — test-only fictional data]
+            StageIngress[Staging ingress]
+            StageAPI[Small staging API<br/>separate service and secrets]
+            StageS3[(Separate staging<br/>document storage)]
+            StageDB[(Separate staging database<br/>fictional data)]
+            StageIngress --> StageAPI
+            StageAPI --> StageS3
+            StageAPI --> StageDB
+        end
+
+        subgraph Ops[4. Security, monitoring and operations]
+            CloudTrail[AWS CloudTrail<br/>account activity audit]
+            CloudWatch[Amazon CloudWatch<br/>logs, metrics and alarms]
+            SES[Amazon SES<br/>email notifications]
+            KMS[AWS KMS<br/>encryption keys]
+            Secrets[AWS Secrets Manager<br/>runtime secrets]
+            CloudTrail --> CloudWatch
+            API --> CloudWatch
+            API --> SES
+            KMS -. encrypts .-> DB
+            KMS -. encrypts .-> S3
+            KMS -. encrypts .-> Secrets
+            Secrets --> API
+        end
+    end
+
+    Cloudflare -->|API origin over HTTPS| ALB
     ALB --> API
-    API --> DB
-    API --> Secrets
-    API -. "issues short-lived upload URLs" .-> Mobile
-    Mobile -->|direct upload| Storage
-    Storage -->|origin access control| CDN
-    Mobile -->|authorised download| CDN
-    Browser -->|authorised download| CDN
-    DB -. encrypted with .-> KMS
-    Storage -. encrypted with .-> KMS
-    Secrets -. encrypted with .-> KMS
-    API --> Observability
-    Audit -. observes .-> API
-    Audit -. observes .-> DB
-    Audit -. observes .-> Storage
-    Mobile -. "optional map tiles" .-> Map[External map provider]
-    Browser -. "optional map tiles" .-> Map
+    ECR -->|Deploy approved image| API
+    API -->|Prisma over TLS| DB
+    API -->|Short-lived upload URL| Mobile
+    Mobile -->|Direct upload with short-lived URL| S3
+    S3 -->|Origin access control| OAC
+    OAC --> CDN
+    Mobile -->|Protected download| CDN
+    Browser -->|Protected download| CDN
+    Cognito -. JWT issuer and claims .-> API
+    Cognito -. restricted staging access .-> StageAPI
+
+    subgraph Delivery[5. Source control and delivery]
+        GitHub[GitHub repository]
+        Actions[GitHub Actions<br/>CI, tests and OIDC]
+        Approval[Approved production deployment]
+        Promote[Promote approved changes]
+        GitHub --> Actions
+        Actions -->|Deploy frontend| Amplify
+        Actions -->|Build and push API image| ECR
+        Actions -->|Approved deployment| Approval
+        Approval -->|Deploy approved image| API
+        Actions -->|Promote approved changes| Promote
+        Promote -->|Update staging| StageAPI
+    end
+
+    Sentry[Sentry<br/>external error monitoring]
+    MapTiler[MapTiler<br/>external map tiles]
+    API -. error monitoring .-> Sentry
+    Mobile -. external map tiles .-> MapTiler
+    Browser -. external map tiles .-> MapTiler
 ```
 
-The API, dashboard and storage services would require separate staging and production configuration. The exact release and backup approach remains to be confirmed. Map tiles are optional and only needed for interactive map features; they do not contain the society registry data.
+Production and staging are separate environments: staging uses fictional test data, its own API configuration, secrets, database and document storage; production holds live data. Access to staging is restricted. The API runs privately behind the load balancer, the production database is isolated, and document uploads use short-lived URLs with protected downloads through CloudFront. GitHub Actions uses OIDC for deployment rather than long-lived AWS access keys. MapTiler and Sentry are external services; map tiles are only needed for interactive map features.
 
 ## 3. Core modules, personas and user roles
 
