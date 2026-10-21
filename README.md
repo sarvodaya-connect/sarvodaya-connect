@@ -22,7 +22,8 @@
 10. [Demo access and data](#10-demo-access-and-data)
 11. [Deployment status](#11-deployment-status)
 12. [Security and privacy](#12-security-and-privacy)
-13. [Team and contributing](#13-team-and-contributing)
+13. [Role-based permissions](#13-role-based-permissions)
+14. [Team and contributing](#14-team-and-contributing)
 
 ---
 
@@ -547,6 +548,28 @@ The API, dashboard and mobile app are currently used for local development and d
 
 Additional production decisions still needed include a confirmed privacy notice and consent approach, data retention and deletion rules, audit logging for sensitive/admin actions, and review of any external data sharing. The current project does not model consent records or a general-purpose audit log. Do not use real member or society personal information in local demos.
 
-## 13. Team and contributing
+## 13. Role-based permissions
+
+The table below records the current intended access boundaries for the three operational roles, plus the separate system-administration persona. These rules are provisional and need confirmation from Sarvodaya before production use. “Read” and “write” are also data-scoped: a role must not gain access to records outside its assigned society or district just because it has the general capability.
+
+| Role | Data scope and read access | Create / update | Review / approve | Platform administration |
+| --- | --- | --- | --- | --- |
+| Society Officer | Their assigned society, its membership summaries, standard documents and notifications. Cannot open the restricted signed members list. | Update their assigned society profile, council and membership counts; upload and submit documents for that society. | No reviewer permission. | No. |
+| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot update society profile, council or membership through the current API. | The shared permission contract includes `SUBMISSION_REVIEW`, but review/approval API actions are not yet implemented. | No. |
+| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Intended to review across districts; review/approval API actions are not yet implemented. | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
+| System Administrator | No society-record access is defined. | No operational data changes are defined. | No. | A technical-administration persona is described, but `SYSTEM_ADMIN` is not currently an API role and its exact permissions are not implemented. |
+
+### Enforcement status
+
+- The API has shared role capabilities for `SOCIETY_OFFICER`, `DISTRICT_MANAGER` and `HQ_ADMIN`, with record scope supplied by assigned society and district IDs. Document access rules are enforced in the API, including the signed-members-list restriction.
+- Society Officers and HQ Administrators are allowed by the current API routes to update society profiles, council and membership; District Managers are not. Document upload is allowed for societies within a user's accessible scope.
+- The `SUBMISSION_REVIEW` capability exists in the shared contract, but there is not yet an API endpoint that performs a review or approval. Do not treat a displayed demo action as a real approval.
+- Authentication still uses fictional development/test identities. Some registry read routes are not yet guarded by authentication, and dashboard role switching is a demonstration feature. This matrix is therefore a documented target and partial implementation—not a claim that all production access controls are complete.
+
+See the [API guide](apps/api/README.md#access-rules-provisional) for current document-scoping behavior and the [dashboard guide](apps/dashboard/README.md#provisional-role-based-visibility) for demonstration visibility. Confirm the final role names, scopes, restricted data and approval authority with Sarvodaya before connecting production identity or real data.
+
+---
+
+## 14. Team and contributing
 
 Sarvodaya Connect is developed by **Group CS-10** as a STAMPx university project for Sarvodaya. Work is tracked in Jira. Create a feature branch for the assigned work item, run the checks for the affected app, and open a pull request for review before merging. See [CONTRIBUTING.md](CONTRIBUTING.md) for the team workflow.
