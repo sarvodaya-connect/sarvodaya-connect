@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ComplianceOverview } from "@/components/dashboard/compliance-overview";
 import { NoPermissionState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { canSeeSociety, canViewCompliance } from "@/lib/access";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import {
@@ -67,10 +68,20 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
   return (
     <>
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        {heading}
-        <div className="rounded-xl border border-[#dce5db] bg-white px-5 py-3 shadow-sm">
-          <span className="text-xs text-[#77837b]">Showing</span>
-          <strong className="ml-2 text-sm text-[#174a32]">{viewer.scopeLabel}</strong>
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            {heading}
+            <ChangedInV2Badge />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <select className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft">
+            <option>FY {COMPLIANCE_YEAR}</option>
+          </select>
+          <div className="rounded-card border border-line bg-surface px-4 py-2">
+            <span className="text-[11px] text-muted">Showing</span>
+            <strong className="ml-2 text-[13px] text-ink">{viewer.scopeLabel}</strong>
+          </div>
         </div>
       </div>
       <ComplianceOverview districts={districtsInScope} initialFilters={initialFilters} records={records} />

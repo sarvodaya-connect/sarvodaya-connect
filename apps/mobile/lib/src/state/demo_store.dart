@@ -1,4 +1,5 @@
 import '../models/activity_draft.dart';
+import '../models/activity_report_data.dart';
 import '../validation/activity_validators.dart';
 
 import 'package:flutter/widgets.dart';
@@ -317,6 +318,7 @@ class DemoStore extends ChangeNotifier {
         societyId: society.id,
         type: SubmissionType.activityReport,
         title: draft.title.trim(),
+        activityReport: ActivityReportData.fromDraft(draft),
         submittedBy: _user!.displayName,
         status: SubmissionStatus.submitted,
         submittedAt: instant,

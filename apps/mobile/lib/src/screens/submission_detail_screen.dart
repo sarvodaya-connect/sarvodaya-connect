@@ -123,6 +123,37 @@ class SubmissionDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+          if (submission.activityReport case final report?) ...[
+            SectionCard(
+              title: 'Activity report details',
+              children: [
+                InfoRow(label: 'Activity name', value: report.title),
+                InfoRow(label: 'Date', value: report.date),
+                InfoRow(label: 'Location', value: report.location),
+                InfoRow(label: 'GPS coordinates', value: report.gpsLocation),
+                InfoRow(label: 'Activity type', value: report.activityType),
+                InfoRow(label: 'Description', value: report.description),
+                InfoRow(label: 'Sector', value: report.sector),
+                InfoRow(label: 'Dimension', value: report.dimension),
+                InfoRow(
+                  label: 'Female participants',
+                  value: report.femaleParticipants,
+                ),
+                InfoRow(
+                  label: 'Male participants',
+                  value: report.maleParticipants,
+                ),
+                InfoRow(label: 'Outcomes', value: report.outcomes),
+                InfoRow(
+                  label: 'Supporting information',
+                  value: report.supportingInformation.isEmpty
+                      ? 'None'
+                      : report.supportingInformation,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           if (submission.changes.isNotEmpty) ...[
             SectionCard(
               title: 'Changes',

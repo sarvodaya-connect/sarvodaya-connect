@@ -3,6 +3,7 @@ import Link from "next/link";
 import { NoPermissionState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { DocumentLibrary } from "@/components/dashboard/document-library";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { canSeeSociety, canViewCompliance, canViewDocument, canViewDocumentLibrary } from "@/lib/access";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { complianceRecords } from "@/lib/demo-compliance";
@@ -64,7 +65,20 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
 
   return (
     <>
-      {heading}
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            {heading}
+            <ChangedInV2Badge />
+          </div>
+        </div>
+        <button
+          className="rounded-button bg-brand-action px-4 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed"
+          type="button"
+        >
+          Upload document
+        </button>
+      </div>
       <DocumentLibrary
         districts={districtsInScope}
         documents={documents}

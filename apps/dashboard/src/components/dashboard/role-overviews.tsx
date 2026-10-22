@@ -1,15 +1,23 @@
 import { DistrictCatalogueOverview } from "@/components/dashboard/district-overview";
 import { NationalActivityBreakdown, NationalMapAndEmergency } from "@/components/dashboard/national-support";
 import { PlatformAdminScreen } from "@/components/dashboard/platform-admin";
+import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 
-function Panel({ children, className = "", title, eyebrow }: { children: React.ReactNode; className?: string; title: string; eyebrow?: string }) {
+/**
+ * Panel chrome used across the National Overview — matches Screen Catalogue
+ * v3 D02 card style: white surface, 1px #DFE5DC border, 14px radius, flat.
+ */
+function Panel({ action, children, className = "", title, eyebrow }: { action?: React.ReactNode; children: React.ReactNode; className?: string; title: string; eyebrow?: string }) {
   return (
-    <section className={`rounded-xl border border-[#dfe5dc] bg-white shadow-sm ${className}`}>
-      <div className="border-b border-[#edf0eb] px-5 py-4">
-        {eyebrow && <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#26744b]">{eyebrow}</p>}
-        <h2 className={`${eyebrow ? "mt-1" : ""} text-sm font-semibold text-[#28382f]`}>{title}</h2>
+    <section className={`rounded-card border border-line bg-surface ${className}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft px-5 py-4 md:px-6">
+        <div className="min-w-0">
+          {eyebrow && <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-leaf">{eyebrow}</p>}
+          <h2 className={`${eyebrow ? "mt-1" : ""} text-sm font-semibold text-ink md:text-base`}>{title}</h2>
+        </div>
+        {action && <div className="flex items-center gap-2">{action}</div>}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="px-5 py-5 md:px-6">{children}</div>
     </section>
   );
 }
@@ -17,14 +25,8 @@ function Panel({ children, className = "", title, eyebrow }: { children: React.R
 export function NationalOverview() {
   return (
     <>
-      <nav aria-label="Dashboard sections" className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {[{ label: "1 · Societies", id: 1 }, { label: "2 · Membership", id: 2 }, { label: "3–4 · Audit & AGM", id: 3 }, { label: "5 · Wealth", id: 5 }, { label: "6 · Activities", id: 6 }, { label: "Map & emergency", id: 7 }].map((item) => (
-          <a className="shrink-0 rounded-full border border-[#e1e5dc] bg-white px-3.5 py-2 text-[11px] font-medium text-[#344239] shadow-sm hover:border-[#9dbca2]" href={`#national-section-${item.id}`} key={item.label}>{item.label}</a>
-        ))}
-      </nav>
-
       <section id="national-section-1">
-        <Panel title="Latest Shramadana Societies status" eyebrow="1 · National registry">
+        <Panel action={<ChangedInV2Badge />} title="Latest Shramadana Societies status" eyebrow="1 · National registry">
           <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
             <div>
               <div className="flex flex-wrap items-end gap-x-7 gap-y-2">
