@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../state/demo_store.dart';
-import '../theme/app_theme.dart';
 
-/// M01 - branded launch screen on the Sarvodaya Orange background
-/// (Screen Catalogue v3, "Changed in v2").
+/// M01 - branded launch screen.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -34,49 +32,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.orangeSplash,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 36),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Semantics(
-                  label: 'Sarvodaya Connect',
-                  image: true,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Container(
-                      color: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
-                        vertical: 24,
-                      ),
-                      child: Image.asset(
-                        'assets/branding/sarvodaya_connect_logo.jpg',
-                        width: 220,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                const Text(
-                  'Village societies, connected.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                const Text(
-                  'Sarvodaya Shramadana Movement · v1.0',
-                  style: TextStyle(color: Color(0xCCFFFFFF), fontSize: 11),
-                ),
-              ],
+            child: Semantics(
+              label: 'Sarvodaya Connect',
+              image: true,
+              child: Image.asset(
+                'assets/branding/sarvodaya_connect_logo.jpg',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),
