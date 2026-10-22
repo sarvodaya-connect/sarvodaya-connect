@@ -21,8 +21,6 @@ class AppColors {
   static const dangerSoft = Color(0xFFFBE9E7);
   static const warning = Color(0xFF7A5A00);
   static const warningSoft = Color(0xFFFFF4D6);
-  // Catalogue M01 splash backdrop (Sarvodaya Orange).
-  static const orangeSplash = Color(0xFFF26B1F);
   // Catalogue "Changed in v2" annotation.
   static const orangeChanged = Color(0xFFD96A2C);
   static const orangeChangedSoft = Color(0xFFFDECE0);

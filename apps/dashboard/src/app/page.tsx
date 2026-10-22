@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import Image from "next/image";
+
 import { Brand } from "@/components/dashboard/brand";
 import { Icon } from "@/components/dashboard/icon";
 
@@ -13,19 +15,26 @@ import { signInAs } from "./(dashboard)/actions";
  */
 export default function Home() {
   return (
-    <main className="grid min-h-screen bg-surface lg:grid-cols-[47%_53%]">
-      <section className="relative hidden min-h-screen overflow-hidden bg-brand-forest px-12 py-10 text-white lg:flex lg:flex-col">
-        <Brand compact inverse />
-        <div className="my-auto max-w-md pr-8">
-          <h1 className="text-[30px] font-bold leading-[1.2] tracking-[-0.02em] text-white">
+    <main className="grid min-h-screen bg-surface lg:grid-cols-2">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[#1a5c39] px-16 pb-16 pt-16 text-white lg:flex lg:flex-col">
+        <Image
+          alt="Sarvodaya Connect"
+          className="h-auto w-[220px]"
+          height={450}
+          priority
+          src="/brand/sarvodaya-connect-logo-white.png"
+          width={1180}
+        />
+        <div className="my-auto max-w-[480px]">
+          <h1 className="text-[30px] font-bold leading-[1.3] text-white">
             One verified record for every village society.
           </h1>
-          <p className="mt-4 text-[14px] leading-6 text-[#e3eee5]">
+          <p className="mt-4 text-[15px] leading-[1.6] text-white/90">
             For District Centres, Coordinators and Headquarters staff of the
             Sarvodaya Shramadana Movement.
           </p>
         </div>
-        <p className="text-xs text-[#8db39a]">
+        <p className="text-[12px] text-white/85">
           Sarvodaya Shramadana Movement · Moratuwa, Sri Lanka
         </p>
       </section>
@@ -35,11 +44,11 @@ export default function Home() {
           <Brand compact />
         </div>
 
-        <div className="mx-auto my-auto w-full max-w-[380px] pt-6">
+        <div className="mx-auto my-auto w-full max-w-[400px] pt-6">
           <div className="mb-6 flex justify-end">
             <LanguagePicker />
           </div>
-          <h2 className="text-[22px] font-bold tracking-[-0.02em] text-ink">
+          <h2 className="text-[24px] font-semibold text-ink">
             Sign in
           </h2>
           <p className="mt-1.5 text-[13px] leading-5 text-ink-soft">
@@ -110,11 +119,11 @@ function RolePickerButton({ label, viewerId }: RoleOption) {
     <form action={signInAs}>
       <input name="viewer" type="hidden" value={viewerId} />
       <button
-        className="group flex w-full items-center justify-between rounded-button border border-line bg-surface px-3.5 py-2.5 text-[13px] font-medium text-ink transition hover:border-brand-leaf hover:bg-brand-mint-soft hover:text-brand-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+        className="group flex w-full items-center justify-between rounded-button border border-line bg-surface px-4 py-3 text-[14px] font-medium text-ink transition hover:border-brand-leaf hover:bg-brand-mint-soft hover:text-brand-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
         type="submit"
       >
         <span>{label}</span>
-        <span aria-hidden="true" className="text-muted transition group-hover:text-brand-leaf">
+        <span aria-hidden="true" className="text-[11px] text-muted transition group-hover:text-brand-leaf">
           →
         </span>
       </button>
