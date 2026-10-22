@@ -1,5 +1,6 @@
 import { NotificationCentre } from "@/components/dashboard/notification-centre";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { loadDemoList, parseDemoScenario } from "@/lib/demo-scenarios";
 
 export default async function NotificationsPage({ searchParams }: PageProps<"/notifications">) {
@@ -10,10 +11,13 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/no
 
   return (
     <>
-      <PageHeading
-        description="Approvals, returns, reminders and alerts for your role, newest first."
-        title="Notifications"
-      />
+      <div className="flex items-center gap-3">
+        <PageHeading
+          description="Approvals, returns, reminders and alerts for your role, newest first."
+          title="Notifications"
+        />
+        <ChangedInV2Badge />
+      </div>
       <NotificationCentre showEmpty={shown.length === 0} />
     </>
   );

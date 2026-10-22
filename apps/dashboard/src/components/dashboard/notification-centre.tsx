@@ -38,21 +38,29 @@ export function NotificationCentre({ showEmpty = false }: { showEmpty?: boolean 
   return (
     <section className="mt-6 max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-xs text-[#68756c]" role="status">
+        <p aria-live="polite" className="text-[12px] text-muted" role="status">
           {unread === 0 ? "All caught up" : `${unread} unread`} · history kept for 12 months
         </p>
-        <button
-          className={`${secondaryButtonClass} px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50`}
-          disabled={unread === 0}
-          onClick={markAllRead}
-          type="button"
-        >
-          Mark all read
-        </button>
+        <div className="flex gap-2">
+          <button
+            className={`${secondaryButtonClass} px-3 py-2 text-[12px] disabled:cursor-not-allowed disabled:opacity-50`}
+            disabled={unread === 0}
+            onClick={markAllRead}
+            type="button"
+          >
+            Mark all read
+          </button>
+          <button
+            className={`${secondaryButtonClass} px-3 py-2 text-[12px]`}
+            type="button"
+          >
+            Notification settings
+          </button>
+        </div>
       </div>
 
       {notifications.length === 0 ? (
-        <div className="mt-4 overflow-hidden rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
+        <div className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
           <EmptyState
             description="Approvals, returned submissions, reminders and alerts for your role will appear here."
             icon="bell"
@@ -67,10 +75,10 @@ export function NotificationCentre({ showEmpty = false }: { showEmpty?: boolean 
               return (
                 <button
                   aria-pressed={active}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd] ${
+                  className={`rounded-pill border px-3 py-1.5 text-[12px] font-semibold transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd] ${
                     active
-                      ? "border-[#123d29] bg-[#123d29] text-white"
-                      : "border-[#d8dfd8] bg-white text-[#3e4b43] hover:bg-[#f4f8f3]"
+                      ? "border-brand-forest bg-brand-forest text-white"
+                      : "border-line bg-surface text-ink-soft hover:border-brand-leaf hover:text-brand-leaf"
                   }`}
                   key={item.value}
                   onClick={() => setCategory(item.value)}
@@ -83,7 +91,7 @@ export function NotificationCentre({ showEmpty = false }: { showEmpty?: boolean 
           </div>
 
           {visible.length === 0 ? (
-            <div className="mt-4 overflow-hidden rounded-xl border border-[#dfe5dc] bg-white">
+            <div className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
               <EmptyState
                 action={
                   <button className={secondaryButtonClass} onClick={() => setCategory("all")} type="button">
@@ -98,7 +106,7 @@ export function NotificationCentre({ showEmpty = false }: { showEmpty?: boolean 
           ) : (
             <ul
               aria-label="Notifications"
-              className="mt-4 divide-y divide-[#edf0eb] overflow-hidden rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]"
+              className="mt-4 divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface"
             >
               {visible.map((notification) => (
                 <NotificationItem key={notification.id} notification={notification} onRead={markRead} />
@@ -142,8 +150,8 @@ function NotificationItem({
       )}
     </>
   );
-  const className = `flex w-full items-start gap-3 px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#26744b] ${
-    unread ? "border-l-[3px] border-[#26744b] bg-[#f4f8f3] hover:bg-[#edf5ee]" : "border-l-[3px] border-transparent hover:bg-[#f8faf6]"
+  const className = `flex w-full items-start gap-3 px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-leaf ${
+    unread ? "border-l-[3px] border-brand-leaf bg-brand-mint-soft hover:bg-brand-mint" : "border-l-[3px] border-transparent hover:bg-brand-mint-soft"
   }`;
 
   return (
