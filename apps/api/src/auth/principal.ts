@@ -2,6 +2,7 @@
 export const USER_ROLES = [
   'SOCIETY_OFFICER',
   'DISTRICT_MANAGER',
+  'PROGRAMME_COORDINATOR',
   'HQ_ADMIN',
 ] as const;
 

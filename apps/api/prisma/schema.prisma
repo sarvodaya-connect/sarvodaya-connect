@@ -29,38 +29,42 @@ enum MembershipCategory {
 }
 
 model District {
-  id        String    @id @default(uuid()) @db.Uuid
-  code      String    @unique @db.VarChar(10)
-  nameEn    String    @unique @map("name_en") @db.VarChar(100)
-  societies Society[]
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                 String              @id @default(uuid()) @db.Uuid
+  code               String              @unique @db.VarChar(10)
+  nameEn             String              @unique @map("name_en") @db.VarChar(100)
+  societies          Society[]
+  emergencyIncidents EmergencyIncident[]
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("districts")
 }
 
 model Society {
-  id             String                   @id @default(uuid()) @db.Uuid
-  societyCode    String                   @unique @map("society_code") @db.VarChar(20)
-  nameEn         String                   @map("name_en") @db.VarChar(150)
-  nameLocal      String?                  @map("name_local") @db.VarChar(150)
-  districtId     String                   @map("district_id") @db.Uuid
-  district       District                 @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  dsDivision     String?                  @map("ds_division") @db.VarChar(100)
-  gnDivision     String?                  @map("gn_division") @db.VarChar(100)
-  village        String?                  @db.VarChar(100)
-  addressLine    String?                  @map("address_line") @db.VarChar(255)
-  latitude       Float?
-  longitude      Float?
-  establishedOn  DateTime?                @map("established_on") @db.Date
-  status         SocietyStatus            @default(UNDER_REVIEW)
-  contacts       SocietyContact[]
-  councilMembers SocietyCouncilMember[]
-  memberships    SocietyMembershipCount[]
-  documents      SocietyDocument[]
-  notifications  Notification[]
-  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                   String                     @id @default(uuid()) @db.Uuid
+  societyCode          String                     @unique @map("society_code") @db.VarChar(20)
+  nameEn               String                     @map("name_en") @db.VarChar(150)
+  nameLocal            String?                    @map("name_local") @db.VarChar(150)
+  districtId           String                     @map("district_id") @db.Uuid
+  district             District                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  dsDivision           String?                    @map("ds_division") @db.VarChar(100)
+  gnDivision           String?                    @map("gn_division") @db.VarChar(100)
+  village              String?                    @db.VarChar(100)
+  addressLine          String?                    @map("address_line") @db.VarChar(255)
+  latitude             Float?
+  longitude            Float?
+  establishedOn        DateTime?                  @map("established_on") @db.Date
+  status               SocietyStatus              @default(UNDER_REVIEW)
+  contacts             SocietyContact[]
+  councilMembers       SocietyCouncilMember[]
+  memberships          SocietyMembershipCount[]
+  documents            SocietyDocument[]
+  notifications        Notification[]
+  emergencyAssessments EmergencyAssessment[]
+  emergencyActions     EmergencyResponseAction[]
+  emergencyReports     EmergencySituationReport[]
+  createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId])
   @@index([status])
@@ -203,6 +207,51 @@ enum NotificationCategory {
   @@map("notification_category")
 }
 
+enum EmergencyIncidentType {
+  FLOOD
+  LANDSLIDE
+  CYCLONE
+  DROUGHT
+  FIRE
+  PUBLIC_HEALTH
+  OTHER
+
+  @@map("emergency_incident_type")
+}
+
+enum EmergencySeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+
+  @@map("emergency_severity")
+}
+
+enum EmergencyIncidentStatus {
+  ACTIVE
+  CONTAINED
+  CLOSED
+
+  @@map("emergency_incident_status")
+}
+
+enum EmergencyRecordStatus {
+  DRAFT
+  SUBMITTED
+
+  @@map("emergency_record_status")
+}
+
+enum EmergencyActionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("emergency_action_status")
+}
+
 model Notification {
   id              String               @id @default(uuid()) @db.Uuid
   recipientUserId String               @map("recipient_user_id") @db.VarChar(64)
@@ -221,4 +270,97 @@ model Notification {
   @@index([recipientUserId, createdAt])
   @@index([recipientUserId, readAt])
   @@map("notifications")
+}
+
+// Emergency-response data uses fictional/demo content until approved for live use.
+model EmergencyIncident {
+  id          String                     @id @default(uuid()) @db.Uuid
+  districtId  String                     @map("district_id") @db.Uuid
+  district    District                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  title       String                     @db.VarChar(160)
+  type        EmergencyIncidentType
+  severity    EmergencySeverity
+  status      EmergencyIncidentStatus    @default(ACTIVE)
+  description String                     @db.VarChar(4000)
+  location    String                     @db.VarChar(200)
+  latitude    Float?
+  longitude   Float?
+  createdById String                     @map("created_by_id") @db.VarChar(64)
+  activatedAt DateTime                   @default(now()) @map("activated_at") @db.Timestamptz(3)
+  closedAt    DateTime?                  @map("closed_at") @db.Timestamptz(3)
+  assessments EmergencyAssessment[]
+  actions     EmergencyResponseAction[]
+  reports     EmergencySituationReport[]
+  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([districtId, status, activatedAt])
+  @@map("emergency_incidents")
+}
+
+model EmergencyAssessment {
+  id                  String                @id @default(uuid()) @db.Uuid
+  incidentId          String                @map("incident_id") @db.Uuid
+  incident            EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  societyId           String                @map("society_id") @db.Uuid
+  society             Society               @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  clientMutationId    String                @map("client_mutation_id") @db.Uuid
+  revision            Int                   @default(1)
+  status              EmergencyRecordStatus @default(DRAFT)
+  observedAt          DateTime              @map("observed_at") @db.Timestamptz(3)
+  peopleAffected      Int                   @default(0) @map("people_affected")
+  householdsAffected  Int                   @default(0) @map("households_affected")
+  displacedPeople     Int                   @default(0) @map("displaced_people")
+  infrastructureNotes String                @default("") @map("infrastructure_notes") @db.VarChar(2000)
+  urgentNeeds         String                @default("") @map("urgent_needs") @db.VarChar(2000)
+  notes               String                @default("") @db.VarChar(4000)
+  latitude            Float?
+  longitude           Float?
+  createdById         String                @map("created_by_id") @db.VarChar(64)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([createdById, clientMutationId])
+  @@index([incidentId, societyId, status])
+  @@map("emergency_assessments")
+}
+
+model EmergencyResponseAction {
+  id               String                @id @default(uuid()) @db.Uuid
+  incidentId       String                @map("incident_id") @db.Uuid
+  incident         EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  societyId        String?               @map("society_id") @db.Uuid
+  society          Society?              @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  clientMutationId String                @map("client_mutation_id") @db.Uuid
+  title            String                @db.VarChar(160)
+  description      String                @default("") @db.VarChar(2000)
+  status           EmergencyActionStatus @default(PLANNED)
+  dueAt            DateTime?             @map("due_at") @db.Timestamptz(3)
+  createdById      String                @map("created_by_id") @db.VarChar(64)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([createdById, clientMutationId])
+  @@index([incidentId, status, dueAt])
+  @@map("emergency_response_actions")
+}
+
+model EmergencySituationReport {
+  id               String                @id @default(uuid()) @db.Uuid
+  incidentId       String                @map("incident_id") @db.Uuid
+  incident         EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  societyId        String?               @map("society_id") @db.Uuid
+  society          Society?              @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  clientMutationId String                @map("client_mutation_id") @db.Uuid
+  revision         Int                   @default(1)
+  status           EmergencyRecordStatus @default(DRAFT)
+  summary          String                @db.VarChar(4000)
+  needs            String                @default("") @db.VarChar(2000)
+  createdById      String                @map("created_by_id") @db.VarChar(64)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([createdById, clientMutationId], map: "emergency_situation_reports_created_by_id_client_mutation_i_key")
+  @@index([incidentId, status, createdAt])
+  @@map("emergency_situation_reports")
 }

@@ -6,6 +6,11 @@ import {
   ACCOUNT_TYPES,
   AUTH_PROVIDERS,
   ACTIVITY_REPORT_STATUSES,
+  EMERGENCY_ACTION_STATUSES,
+  EMERGENCY_INCIDENT_STATUSES,
+  EMERGENCY_INCIDENT_TYPES,
+  EMERGENCY_RECORD_STATUSES,
+  EMERGENCY_SEVERITIES,
   API_ERROR_CODES,
   CORRECTION_STATUSES,
   DOCUMENT_STATUSES,
@@ -20,10 +25,11 @@ import {
   hasPermission,
 } from "../dist/index.js";
 
-test("roles expose the three provisional access levels", () => {
+test("roles expose the provisional access levels", () => {
   assert.deepEqual(USER_ROLES, [
     "SOCIETY_OFFICER",
     "DISTRICT_MANAGER",
+    "PROGRAMME_COORDINATOR",
     "HQ_ADMIN",
   ]);
 });
@@ -37,6 +43,9 @@ test("auth providers and account types are explicit and unique", () => {
 test("role permissions grant expected capabilities without cross-role escalation", () => {
   assert.ok(hasPermission(["SOCIETY_OFFICER"], "SOCIETY_UPDATE"));
   assert.ok(hasPermission(["DISTRICT_MANAGER"], "SUBMISSION_REVIEW"));
+  assert.ok(hasPermission(["SOCIETY_OFFICER"], "EMERGENCY_ASSESS"));
+  assert.ok(hasPermission(["PROGRAMME_COORDINATOR"], "EMERGENCY_COORDINATE"));
+  assert.ok(hasPermission(["HQ_ADMIN"], "EMERGENCY_ACTIVATE"));
   assert.ok(hasPermission(["HQ_ADMIN"], "PLATFORM_ADMIN"));
   assert.equal(hasPermission(["SOCIETY_OFFICER"], "PLATFORM_ADMIN"), false);
   assert.deepEqual(Object.keys(ROLE_PERMISSIONS), USER_ROLES);
@@ -56,6 +65,11 @@ test("all public enum collections contain unique values", () => {
     API_ERROR_CODES,
     CORRECTION_STATUSES,
     DOCUMENT_STATUSES,
+    EMERGENCY_ACTION_STATUSES,
+    EMERGENCY_INCIDENT_STATUSES,
+    EMERGENCY_INCIDENT_TYPES,
+    EMERGENCY_RECORD_STATUSES,
+    EMERGENCY_SEVERITIES,
     MEMBERSHIP_CATEGORIES,
     PERMISSIONS,
     REVIEW_DECISIONS,

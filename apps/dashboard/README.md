@@ -34,12 +34,14 @@ npm ci
 Create a file named `.env.local` inside `apps/dashboard`:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+API_BASE_URL=http://localhost:3001/api/v1
 ```
 
 The `.env.local` file is ignored by Git and must not contain passwords, access tokens, or other secrets.
 
 Variables beginning with `NEXT_PUBLIC_` are visible in the browser and must only contain public configuration.
+
+The emergency-response screens call the local API from server-side code using `API_BASE_URL`; keep this URL server-only. Set it to your local API origin and version prefix when running dashboard workflows.
 
 ## Development
 
@@ -80,6 +82,7 @@ The dashboard currently includes:
 - National and district overview screens with fictional summary metrics
 - A platform access overview for administrator-facing account and role summaries
 - A demonstration “Viewing as” selector that updates the visible overview, navigation and records
+- Emergency-response screens connected to the local NestJS API for incident activation, scoped assessments, response actions and situation reports
 - Environment-based API URL configuration
 - Loading, error, empty and no-search-results states
 - An access-denied state for areas unavailable to the selected demonstration role

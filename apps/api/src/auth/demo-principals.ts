@@ -41,6 +41,13 @@ export const DEMO_PRINCIPALS: readonly Principal[] = [
     districtIds: [],
     societyIds: [],
   },
+  {
+    id: 'demo-programme-coordinator',
+    displayName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
+    roles: ['PROGRAMME_COORDINATOR'],
+    districtIds: [],
+    societyIds: ['29000000-0000-4000-8000-000000000101'],
+  },
 ];
 
 export function findDemoPrincipal(id: string): Principal | undefined {

@@ -41,7 +41,7 @@ Sarvodaya Connect is intended to give village societies and authorised Sarvodaya
 
 ### Current status
 
-The project is under active development. The API has a local PostgreSQL setup, Prisma schema and fictional seed data. The mobile app and dashboard include role-based workflows and demonstration data; not every screen is connected to the API yet. Demo sign-in and role switching are for development only. Production identity, cloud deployment and production data are not configured in this repository.
+The project is under active development. The API has a local PostgreSQL setup, Prisma schema and fictional seed data. Most mobile and dashboard views still use demonstration data; emergency-response workflows are connected to the API and PostgreSQL on mobile (M22–M25) and dashboard (D14a/D14/D14c/D14d). Demo sign-in and role switching are for development only. Production identity, cloud deployment and production data are not configured in this repository.
 
 Documents use local storage during development by default. The API also contains an Amazon S3 storage adapter for a future configured environment. Do not use real Sarvodaya data or credentials in the local demo.
 
@@ -49,7 +49,7 @@ Documents use local storage during development by default. The API also contains
 
 ### Current development setup
 
-The local development stack has a Flutter mobile client, a Next.js dashboard, a NestJS REST API and PostgreSQL. The clients are still being connected feature by feature; many views continue to use fictional demonstration data.
+The local development stack has a Flutter mobile client, a Next.js dashboard, a NestJS REST API and PostgreSQL. The clients are still being connected feature by feature; most views continue to use fictional demonstration data.
 
 ```mermaid
 flowchart LR
@@ -279,6 +279,55 @@ erDiagram
         timestamptz updated_at
     }
 
+    EMERGENCY_INCIDENT {
+        uuid id PK
+        uuid district_id FK
+        enum type
+        enum severity
+        enum status
+        varchar title
+        varchar location
+        timestamptz activated_at
+        varchar created_by_id
+    }
+
+    EMERGENCY_ASSESSMENT {
+        uuid id PK
+        uuid incident_id FK
+        uuid society_id FK
+        uuid client_mutation_id
+        int revision
+        enum status
+        int people_affected
+        int households_affected
+        int displaced_people
+        varchar urgent_needs
+        varchar created_by_id
+    }
+
+    EMERGENCY_RESPONSE_ACTION {
+        uuid id PK
+        uuid incident_id FK
+        uuid society_id FK
+        uuid client_mutation_id
+        varchar title
+        enum status
+        timestamptz due_at
+        varchar created_by_id
+    }
+
+    EMERGENCY_SITUATION_REPORT {
+        uuid id PK
+        uuid incident_id FK
+        uuid society_id FK
+        uuid client_mutation_id
+        int revision
+        enum status
+        varchar summary
+        varchar needs
+        varchar created_by_id
+    }
+
     SOCIETY_DOCUMENT {
         uuid id PK
         uuid society_id FK
@@ -312,6 +361,13 @@ erDiagram
     }
 
     DISTRICT ||--o{ SOCIETY : contains
+    DISTRICT ||--o{ EMERGENCY_INCIDENT : covers
+    EMERGENCY_INCIDENT ||--o{ EMERGENCY_ASSESSMENT : collects
+    SOCIETY ||--o{ EMERGENCY_ASSESSMENT : submits
+    EMERGENCY_INCIDENT ||--o{ EMERGENCY_RESPONSE_ACTION : coordinates
+    SOCIETY o|--o{ EMERGENCY_RESPONSE_ACTION : scopes
+    EMERGENCY_INCIDENT ||--o{ EMERGENCY_SITUATION_REPORT : receives
+    SOCIETY o|--o{ EMERGENCY_SITUATION_REPORT : submits
     SOCIETY ||--o{ SOCIETY_CONTACT : has
     SOCIETY ||--o{ SOCIETY_COUNCIL_MEMBER : has
     SOCIETY ||--o{ SOCIETY_MEMBERSHIP_COUNT : records
@@ -338,6 +394,7 @@ erDiagram
 | `society_membership_counts` | Unique (`society_id`, `year`, `category`); index on (`year`, `society_id`) | One annual count per society/category and reporting by year |
 | `society_documents` | Unique `storage_key`; unique (`society_id`, `document_type`, `title`, `version`); indexes on (`society_id`, `document_type`) and `status` | Locate stored files and retrieve/filter document records |
 | `notifications` | Indexes on (`recipient_user_id`, `created_at`) and (`recipient_user_id`, `read_at`) | Load a recipient's notification feed and unread items |
+| Emergency assessment, action and situation report tables | Unique creator/client-mutation IDs and incident/status/time indexes | Support retry-safe mobile sync and scoped emergency workflows |
 
 These constraints and indexes are defined by Prisma and its migrations. Update this diagram when the schema changes; do not treat it as a substitute for migrations or the Prisma schema.
 
@@ -375,6 +432,8 @@ sequenceDiagram
 ```
 
 Representative API areas include health checks, districts, society profiles, council and membership data, documents, and notifications. See the [API guide](apps/api/README.md) for current endpoints, request examples, and provisional access rules.
+
+Emergency response uses `GET /api/v1/emergencies/incidents`, `GET /api/v1/emergencies/incidents/:id`, `POST /api/v1/emergencies/incidents`, `POST /api/v1/emergencies/assessments/sync`, `POST /api/v1/emergencies/actions`, `POST /api/v1/emergencies/situation-reports/sync`, and incident/action status `PATCH` routes. Offline assessment retries retain a stable `clientMutationId`; revision conflicts return `409` and leave the queued assessment on the device. The mobile queue persists fictional demo assessments across app restarts. Do not enter real incident or personal information in this local demo; encrypting queued device data and connecting Cognito are production prerequisites.
 
 | Area | Representative routes | Purpose |
 | --- | --- | --- |
