@@ -1,5 +1,6 @@
 // Mirrors the submission workflow from packages/api-contracts/src/workflow.ts.
 
+import 'activity_report_data.dart';
 import 'document.dart';
 
 enum SubmissionStatus {
@@ -128,6 +129,7 @@ class SocietySubmission {
     required this.updatedAt,
     this.reviewStartedAt,
     this.reviewerDisplayName,
+    this.activityReport,
   });
 
   final String id;
@@ -146,6 +148,9 @@ class SocietySubmission {
   final DateTime updatedAt;
   final DateTime? reviewStartedAt;
   final String? reviewerDisplayName;
+
+  /// Immutable snapshot of submitted M09 details; null for other types.
+  final ActivityReportData? activityReport;
 
   /// A submission waiting for or in review cannot be edited by the officer.
   bool get isLocked =>
@@ -184,6 +189,7 @@ class SocietySubmission {
       updatedAt: updatedAt ?? this.updatedAt,
       reviewStartedAt: reviewStartedAt ?? this.reviewStartedAt,
       reviewerDisplayName: reviewerDisplayName ?? this.reviewerDisplayName,
+      activityReport: activityReport,
     );
   }
 }
