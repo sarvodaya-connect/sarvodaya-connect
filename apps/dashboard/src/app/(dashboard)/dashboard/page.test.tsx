@@ -9,7 +9,6 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/current-viewer", () => ({ getCurrentViewer }));
 
 import DashboardHome from "./page";
-import { CoordinatorOverview } from "@/components/dashboard/coordinator-overview";
 import { DistrictOverview, NationalOverview } from "@/components/dashboard/role-overviews";
 import { getViewer } from "@/lib/access";
 
@@ -42,11 +41,10 @@ describe("dashboard role home routing", () => {
     expect(redirect).toHaveBeenCalledWith("/admin");
   });
 
-  it("shows the coordinator overview to programme coordinators", async () => {
+  it("keeps programme coordinators in their assigned-societies scope", async () => {
     getCurrentViewer.mockResolvedValue(getViewer("programme-coordinator"));
 
-    const page = await DashboardHome();
-
-    expect(page.type).toBe(CoordinatorOverview);
+    await expect(DashboardHome()).rejects.toThrow("REDIRECT:/societies");
+    expect(redirect).toHaveBeenCalledWith("/societies");
   });
 });
