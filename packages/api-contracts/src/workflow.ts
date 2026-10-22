@@ -87,3 +87,23 @@ export interface ActivityReport {
 
 /** Only approved activity reports may contribute to HQ dashboard totals. */
 export type ReportableActivity = ActivityReport & { status: "APPROVED" };
+
+export const ACTIVITY_DIMENSIONS = ["SOCIAL", "ECONOMIC", "GOVERNANCE"] as const;
+export type ActivityDimension = (typeof ACTIVITY_DIMENSIONS)[number];
+export interface ActivityInput {
+  societyId: string; title: string; description: string; activityDate: IsoDate; location: string;
+  latitude?: number; longitude?: number; sector: string; dimension: ActivityDimension; sdgs?: number[];
+  femaleParticipants: number; maleParticipants: number; otherParticipants?: number; outcomes?: string;
+}
+export interface ActivityQuery {
+  page?: number; pageSize?: number; societyId?: string; districtId?: string; sector?: string;
+  dimension?: ActivityDimension; status?: ActivityReportStatus; from?: IsoDate; to?: IsoDate;
+}
+export interface ActivityResult extends ActivityReport {
+  districtId: string; societyName: string; districtName: string; location: string;
+  locationCoordinates?: { latitude: number; longitude: number };
+  classification: { sector: string; dimension: ActivityDimension; sdgs: number[] };
+  participants: { female: number; male: number; other: number; total: number }; outcomes?: string;
+}
+export interface ActivityReportPage { data: ActivityResult[]; meta: { page: number; pageSize: number; totalItems: number; totalPages: number } }
+export interface ActivitySummary { activityCount: number; participantCount: number; bySector: { sector: string; activities: number; participants: number }[] }

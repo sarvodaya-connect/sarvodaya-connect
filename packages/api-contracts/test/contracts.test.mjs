@@ -6,6 +6,7 @@ import {
   ACCOUNT_TYPES,
   AUTH_PROVIDERS,
   ACTIVITY_REPORT_STATUSES,
+  ACTIVITY_DIMENSIONS,
   API_ERROR_CODES,
   CORRECTION_STATUSES,
   DOCUMENT_STATUSES,
@@ -32,6 +33,11 @@ test("auth providers and account types are explicit and unique", () => {
   assert.deepEqual(AUTH_PROVIDERS, ["DEMO", "COGNITO"]);
   assert.deepEqual(ACCOUNT_TYPES, ["PERSON", "SERVICE"]);
   assert.equal(new Set(PERMISSIONS).size, PERMISSIONS.length);
+});
+
+test("activity dimensions are explicit and unique", () => {
+  assert.deepEqual(ACTIVITY_DIMENSIONS, ["SOCIAL", "ECONOMIC", "GOVERNANCE"]);
+  assert.equal(new Set(ACTIVITY_DIMENSIONS).size, ACTIVITY_DIMENSIONS.length);
 });
 
 test("role permissions grant expected capabilities without cross-role escalation", () => {

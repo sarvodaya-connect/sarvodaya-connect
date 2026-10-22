@@ -28,6 +28,26 @@ enum MembershipCategory {
   @@map("membership_category")
 }
 
+enum ActivityReportStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  RESUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("activity_report_status")
+}
+
+enum ActivityDimension {
+  SOCIAL
+  ECONOMIC
+  GOVERNANCE
+
+  @@map("activity_dimension")
+}
+
 model District {
   id        String    @id @default(uuid()) @db.Uuid
   code      String    @unique @db.VarChar(10)
@@ -59,6 +79,7 @@ model Society {
   memberships    SocietyMembershipCount[]
   documents      SocietyDocument[]
   notifications  Notification[]
+  activities     ActivityReport[]
   createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -66,6 +87,48 @@ model Society {
   @@index([status])
   @@index([nameEn])
   @@map("societies")
+}
+
+model ActivityClassification {
+  id         String            @id @default(uuid()) @db.Uuid
+  sector     String            @db.VarChar(80)
+  dimension  ActivityDimension
+  activities ActivityReport[]
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([sector, dimension])
+  @@map("activity_classifications")
+}
+
+model ActivityReport {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  societyId          String                 @map("society_id") @db.Uuid
+  society            Society                @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  classificationId   String                 @map("classification_id") @db.Uuid
+  classification     ActivityClassification @relation(fields: [classificationId], references: [id], onDelete: Restrict)
+  sdgs               Int[]                  @default([])
+  title              String                 @db.VarChar(160)
+  description        String                 @db.VarChar(4000)
+  activityDate       DateTime               @map("activity_date") @db.Date
+  location           String                 @db.VarChar(255)
+  latitude           Float?
+  longitude          Float?
+  femaleParticipants Int                    @default(0) @map("female_participants")
+  maleParticipants   Int                    @default(0) @map("male_participants")
+  otherParticipants  Int                    @default(0) @map("other_participants")
+  outcomes           String?                @db.VarChar(4000)
+  status             ActivityReportStatus   @default(DRAFT)
+  submittedById      String                 @map("submitted_by_id") @db.VarChar(64)
+  submittedAt        DateTime?              @map("submitted_at") @db.Timestamptz(3)
+  approvedAt         DateTime?              @map("approved_at") @db.Timestamptz(3)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([societyId, activityDate])
+  @@index([status, activityDate])
+  @@index([classificationId, activityDate])
+  @@map("activity_reports")
 }
 
 model SocietyContact {
