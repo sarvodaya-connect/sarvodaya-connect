@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
 import 'notifications_screen.dart';
+import 'emergency_response_screen.dart';
 
 /// M17 - account, language, offline queue, help and sign-out.
 class MoreScreen extends StatelessWidget {
@@ -91,6 +92,15 @@ class MoreScreen extends StatelessWidget {
               detail: 'Nothing is waiting on this phone',
             ),
           const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.health_and_safety_outlined, color: AppColors.leaf),
+            title: const Text('Emergency response'),
+            subtitle: const Text('Incidents, rapid assessments and situation reports'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const EmergencyResponseScreen()),
+            ),
+          ),
           _MenuRow(
             icon: Icons.translate,
             title: 'Language',

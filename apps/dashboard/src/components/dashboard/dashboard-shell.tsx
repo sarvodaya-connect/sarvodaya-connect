@@ -37,6 +37,7 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
     { href: "/societies", icon: "society", label: "Societies" },
     { href: "/reviews", icon: "review", label: "Review Queue" },
     { href: "/activities", icon: "clipboard", label: "Activities" },
+    { href: "/emergencies", icon: "alert", label: "Emergency response" },
     { href: "/membership", icon: "clipboard", label: "Membership" },
     ...(canViewCompliance(viewer)
       ? [{ href: "/compliance", icon: "shield", label: "Audits" } satisfies NavigationItem]
@@ -61,6 +62,8 @@ function headingFor(pathname: string, viewer: DemoViewer): { title: string; subt
           ? "Membership"
           : pathname.startsWith("/activities")
             ? "Activities"
+            : pathname.startsWith("/emergencies")
+              ? "Emergency response"
           : pathname.startsWith("/districts")
             ? "District View"
             : pathname.startsWith("/reviews")
