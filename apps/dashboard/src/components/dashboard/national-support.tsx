@@ -16,7 +16,14 @@ const locationDots: [number, number, string][] = [
 ];
 
 function Card({ children, title }: { children: React.ReactNode; title: string }) {
-  return <section className="rounded-xl border border-[#dfe5dc] bg-white p-4 shadow-sm sm:p-5"><h2 className="text-sm font-semibold text-[#28382f]">{title}</h2><div className="mt-4">{children}</div></section>;
+  return (
+    <section className="rounded-card border border-line bg-surface">
+      <header className="border-b border-line-soft px-5 py-4 md:px-6">
+        <h2 className="text-sm font-semibold text-ink md:text-[15px]">{title}</h2>
+      </header>
+      <div className="px-5 py-5 md:px-6">{children}</div>
+    </section>
+  );
 }
 
 export function NationalActivityBreakdown() {
