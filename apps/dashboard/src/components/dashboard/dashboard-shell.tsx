@@ -122,7 +122,7 @@ export function DashboardShell({
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-xs">{viewer.displayName}</strong>
               <span className="block truncate text-[10px] text-[#a8c7b1]">
-                {viewer.roleLabel} Â· {viewer.scopeLabel}
+                {viewer.roleLabel} · {viewer.scopeLabel}
               </span>
             </span>
             <Link aria-label="Sign out" href="/">
@@ -210,7 +210,7 @@ function ViewerSwitcher({ viewer }: { viewer: DemoViewer }) {
         >
           {demoViewers.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.roleLabel} Â· {option.displayName}
+              {option.roleLabel} · {option.displayName}
             </option>
           ))}
         </select>

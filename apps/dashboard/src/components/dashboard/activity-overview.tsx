@@ -1,13 +1,15 @@
 'use client';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ACTIVITIES, DISTRICTS, EMPTY_FILTERS, SECTORS, filterActivities, formatLkr, societyOptions, summarizeActivities, type ActivityFilters, type ActivityRecord, type SectorId } from '@/lib/activity-demo';
+import { EMPTY_FILTERS, SECTORS, filterActivities, formatLkr, summarizeActivities, type ActivityFilters, type ActivityRecord, type SectorId } from '@/lib/activity-demo';
 
 type LoadState = 'ready' | 'loading' | 'error';
-export function ActivityOverview({ initialSector, records = ACTIVITIES, loadState = 'ready' }: { initialSector?: SectorId; records?: readonly ActivityRecord[]; loadState?: LoadState }) {
+export function ActivityOverview({ initialSector, records, loadState = 'ready' }: { initialSector?: SectorId; records: readonly ActivityRecord[]; loadState?: LoadState }) {
   const [filters, setFilters] = useState<ActivityFilters>({ ...EMPTY_FILTERS, sector: initialSector ?? 'all' });
   const update = (key: keyof ActivityFilters, value: string) => setFilters(f => ({ ...f, [key]: value, ...(key === 'district' ? { society: 'all' } : {}) }));
-  const filtered = useMemo(() => filterActivities(records, filters), [records, filters]);
+  const filtered = useMemo(() => filterActivities(records, { ...filters, sector: initialSector ?? filters.sector }), [records, filters, initialSector]);
+  const districts = [...new Set(records.map(a => a.district))].sort();
+  const societies = [...new Set(records.filter(a => filters.district === 'all' || a.district === filters.district).map(a => a.society))].sort();
   const stats = useMemo(() => summarizeActivities(filtered), [filtered]);
   const selectClass = 'mt-1.5 w-full rounded-lg border border-[#cfdbce] bg-white px-3 py-2.5 text-sm text-[#243b2c] focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#cde5d2]';
   if (loadState === 'loading') return <section role="status" aria-live="polite" className="rounded-xl border bg-white p-8">Loading activities…</section>;
@@ -16,9 +18,9 @@ export function ActivityOverview({ initialSector, records = ACTIVITIES, loadStat
     <div className="rounded-2xl border border-[#dfe5dc] bg-white p-5 shadow-sm md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold text-[#123d29]">Filter activities</h2><button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, sector: initialSector ?? 'all' })} className="rounded-lg border border-[#cfdbce] px-3 py-2 text-xs font-semibold hover:bg-[#f1f7f1]">Reset filters</button></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <label className="text-xs font-medium text-[#53645a]">District<select aria-label="District" className={selectClass} value={filters.district} onChange={e => update('district', e.target.value)}><option value="all">All districts</option>{DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}</select></label>
-        <label className="text-xs font-medium text-[#53645a]">Society<select aria-label="Society" className={selectClass} value={filters.society} onChange={e => update('society', e.target.value)}><option value="all">All societies</option>{societyOptions(filters.district).map(s => <option key={s} value={s}>{s}</option>)}</select></label>
-        <label className="text-xs font-medium text-[#53645a]">Sector<select aria-label="Sector" className={selectClass} value={filters.sector} onChange={e => update('sector', e.target.value)}><option value="all">All sectors</option>{SECTORS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label className="text-xs font-medium text-[#53645a]">District<select aria-label="District" className={selectClass} value={filters.district} onChange={e => update('district', e.target.value)}><option value="all">All districts</option>{districts.map(d => <option key={d} value={d}>{d}</option>)}</select></label>
+        <label className="text-xs font-medium text-[#53645a]">Society<select aria-label="Society" className={selectClass} value={filters.society} onChange={e => update('society', e.target.value)}><option value="all">All societies</option>{societies.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+        <label className="text-xs font-medium text-[#53645a]">Sector<select disabled={!!initialSector} aria-label="Sector" className={selectClass} value={filters.sector} onChange={e => update('sector', e.target.value)}>{!initialSector && <option value="all">All sectors</option>}{SECTORS.filter(s => !initialSector || s.id === initialSector).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label className="text-xs font-medium text-[#53645a]">Status<select aria-label="Status" className={selectClass} value={filters.status} onChange={e => update('status', e.target.value)}><option value="all">All statuses</option>{['APPROVED','SUBMITTED','PLANNED','CHANGES_REQUESTED'].map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}</select></label>
         <label className="text-xs font-medium text-[#53645a]">From date<input aria-label="From date" type="date" className={selectClass} value={filters.from} onChange={e => update('from', e.target.value)} /></label>
         <label className="text-xs font-medium text-[#53645a]">To date<input aria-label="To date" type="date" className={selectClass} value={filters.to} onChange={e => update('to', e.target.value)} /></label>
