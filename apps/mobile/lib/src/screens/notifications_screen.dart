@@ -72,17 +72,14 @@ class _NotificationsContent extends StatelessWidget {
     final unread = store.unreadNotificationCount;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.zero,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          child: Semantics(
-            liveRegion: true,
-            child: Text(
-              unread == 0 ? 'All caught up' : '$unread unread',
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
-            ),
-          ),
+        // Spoken count only; the catalogue shows no visible counter.
+        Semantics(
+          container: true,
+          liveRegion: true,
+          label: unread == 0 ? 'All caught up' : '$unread unread',
+          child: const SizedBox(width: double.infinity, height: 1),
         ),
         if (today.isNotEmpty) ...[
           const _GroupHeader('Today'),
@@ -106,8 +103,11 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Semantics(
         header: true,
         child: Text(
@@ -115,7 +115,7 @@ class _GroupHeader extends StatelessWidget {
           semanticsLabel: label,
           style: const TextStyle(
             color: AppColors.muted,
-            fontSize: 12,
+            fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
           ),
@@ -154,27 +154,21 @@ class _NotificationTile extends StatelessWidget {
         child: InkWell(
           onTap: () => openNotification(context, notification),
           child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: unread ? AppColors.leaf : Colors.transparent,
-                  width: 3,
-                ),
-                bottom: const BorderSide(color: AppColors.line),
-              ),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
-            padding: const EdgeInsets.fromLTRB(13, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: background,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 18, color: foreground),
+                  child: Icon(icon, size: 16, color: foreground),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -184,27 +178,19 @@ class _NotificationTile extends StatelessWidget {
                       Text(
                         notification.title,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
+                          height: 1.3,
                           fontWeight: unread
                               ? FontWeight.w700
                               : FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        notification.message,
-                        style: const TextStyle(
-                          color: AppColors.inkSoft,
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         when,
                         style: const TextStyle(
                           color: AppColors.muted,
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -214,19 +200,14 @@ class _NotificationTile extends StatelessWidget {
                 if (unread)
                   Container(
                     key: ValueKey('unread-${notification.id}'),
-                    margin: const EdgeInsets.only(top: 6),
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: AppColors.leaf,
+                    margin: const EdgeInsets.only(top: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0B03A),
                       shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF8C6D12)),
                     ),
-                  )
-                else if (notification.opensItem)
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 20,
-                    color: AppColors.muted,
                   ),
               ],
             ),

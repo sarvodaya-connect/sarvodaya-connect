@@ -102,29 +102,21 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
 
       <section className="mt-5 overflow-hidden rounded-card border border-line bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4">
-          <nav aria-label="Review filter" className="flex flex-wrap gap-2">
+          <nav aria-label="Review filter" className="flex flex-wrap gap-5 self-end">
             {tabs.map((item) => (
               <button
                 aria-pressed={tab === item.id}
-                className={`inline-flex items-center gap-2 rounded-pill px-3 py-1.5 text-[12px] font-semibold transition ${
+                className={`-mb-[17px] border-b-2 pb-3 text-[12px] transition ${
                   tab === item.id
-                    ? "bg-brand-forest text-white"
-                    : "border border-line bg-surface text-ink-soft hover:border-brand-leaf hover:text-brand-leaf"
+                    ? "border-brand-forest font-semibold text-ink"
+                    : "border-transparent text-ink-soft hover:text-brand-forest"
                 }`}
                 key={item.id}
                 onClick={() => setTab(item.id)}
                 type="button"
               >
                 {item.label}
-                {typeof item.count === "number" && (
-                  <span
-                    className={`rounded-full px-1.5 text-[10px] font-bold ${
-                      tab === item.id ? "bg-white/15 text-white" : "bg-brand-mint text-brand-forest"
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
+                {typeof item.count === "number" && ` (${item.count})`}
               </button>
             ))}
           </nav>
@@ -132,7 +124,7 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
             <span className="sr-only">Search submissions</span>
             <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" name="search" />
             <input
-              className="w-full rounded-input border border-line bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+              className="w-full rounded-button border border-line bg-surface py-1.5 pl-9 pr-3 text-[12px] outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search society or submission reference"
               ref={searchInput}
@@ -153,10 +145,11 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left">
               <caption className="sr-only">Submissions awaiting review</caption>
-              <thead className="bg-surface-muted text-[11px] uppercase tracking-[0.08em] text-muted">
+              <thead className="bg-surface-muted text-[12px] font-medium text-ink-soft">
                 <tr>
                   <th className="px-5 py-3" scope="col">Type</th>
                   <th className="px-5 py-3" scope="col">Society</th>
+                  <th className="px-5 py-3" scope="col">Sent by</th>
                   <th className="px-5 py-3" scope="col">Waiting</th>
                   <th className="px-5 py-3" scope="col">Target</th>
                   <th className="px-5 py-3 text-right" scope="col"><span className="sr-only">Action</span></th>
@@ -167,17 +160,23 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
                   const target = targetMeta[targetStatus(item.submittedAt)];
                   return (
                     <tr className="transition hover:bg-brand-mint-soft" key={item.id}>
-                      <td className="px-5 py-3 text-[13px] font-semibold text-ink">{item.type}</td>
-                      <td className="px-5 py-3">
-                        <p className="text-[13px] font-semibold text-ink">{item.societyName}</p>
-                        <p className="text-[11px] text-muted">{item.societyCode} · {item.reference}</p>
+                      <td className="px-5 py-2.5 text-[12.5px] text-ink">{item.type}</td>
+                      <td className="px-5 py-2.5">
+                        <Link
+                          className="text-[12.5px] text-[#2d5c88] underline underline-offset-2"
+                          href={`/societies/${item.societyId}`}
+                          title={`${item.societyCode} · ${item.reference}`}
+                        >
+                          {item.societyName.replace("Sarvodaya Shramadana Society", "SSS")}
+                        </Link>
                       </td>
+                      <td className="px-5 py-2.5 text-[12.5px] text-ink-soft">{item.submittedBy ?? "—"}</td>
                       <td className="px-5 py-3 text-[12px] text-ink-soft">{item.waitingLabel}</td>
                       <td className="px-5 py-3"><Pill tone={target.tone}>{target.label}</Pill></td>
                       <td className="px-5 py-3 text-right">
                         <Link
                           aria-label={`Review ${item.reference} from ${item.societyName}`}
-                          className="inline-flex items-center gap-1 rounded-button bg-brand-action px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]"
+                          className="inline-flex items-center gap-1 rounded-button bg-brand-action px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]"
                           href={`/societies/${item.societyId}`}
                         >
                           Review
@@ -200,9 +199,9 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
 
 function Kpi({ label, tone = "neutral", value }: { label: string; tone?: "neutral" | "warning"; value: string }) {
   return (
-    <article className="rounded-tile border border-line bg-surface px-5 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</p>
-      <strong className={`mt-2 block text-[28px] font-bold tracking-[-0.02em] md:text-[32px] ${tone === "warning" ? "text-danger-text" : "text-ink"}`}>
+    <article className="rounded-tile border border-line bg-surface px-4 py-3.5">
+      <p className="text-[11px] text-muted">{label}</p>
+      <strong className={`mt-1.5 block text-[24px] font-bold tracking-[-0.02em] ${tone === "warning" ? "text-danger-text" : "text-ink"}`}>
         {value}
       </strong>
     </article>

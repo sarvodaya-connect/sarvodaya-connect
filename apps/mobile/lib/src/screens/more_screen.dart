@@ -30,65 +30,89 @@ class MoreScreen extends StatelessWidget {
       body: ListView(
         children: [
           if (store.offline)
-            const OfflineBanner(
-              message: 'Offline · changes will send when online',
-            ),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: CircleAvatar(
-              backgroundColor: AppColors.mint,
-              foregroundColor: AppColors.forest,
-              child: Text(_initials(user.displayName)),
-            ),
-            title: Text(
-              user.displayName,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              user.primaryRole == UserRole.societyOfficer
-                  ? '${user.primaryRole.label} · ${store.society.nameEn}'
-                  : user.primaryRole.label,
+            const OfflineBanner(message: 'Offline · last synced 2 hours ago'),
+          Material(
+            color: AppColors.surface,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: CircleAvatar(
+                backgroundColor: AppColors.mint,
+                foregroundColor: AppColors.forest,
+                child: Text(
+                  _initials(user.displayName),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              title: Text(
+                user.primaryRole == UserRole.societyOfficer
+                    ? _shortName(user.displayName)
+                    : user.displayName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              subtitle: Text(
+                user.primaryRole == UserRole.societyOfficer
+                    ? 'Secretary · ${store.society.nameEn}'
+                    : user.primaryRole.label,
+                style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+              ),
             ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.sync_outlined),
-            title: Text('Waiting to send (${store.offline ? 3 : 0})'),
-            subtitle: Text(
-              store.offline
-                  ? 'Saved safely on this phone and sent when online'
-                  : 'Everything has been sent',
+          _QueueHeader(count: store.offline ? 3 : 0),
+          if (store.offline) ...const [
+            _QueueRow(
+              icon: Icons.show_chart,
+              title: 'Tank cleaning activity',
+              detail: 'Saved 09 Oct, 14:20 · 4 photos',
             ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showWaitingItems(context, store.offline),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.translate),
-            title: const Text('Language'),
-            subtitle: Text(store.selectedLanguage.englishLabel),
-            trailing: const Icon(Icons.chevron_right),
+            _QueueRow(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Payment LKR 12,500.00',
+              detail: 'Saved 09 Oct, 13:02 · receipt',
+            ),
+            _QueueRow(
+              icon: Icons.error_outline,
+              title: 'Audit report PDF',
+              detail: 'File too large (14 MB). Replace it.',
+              failed: true,
+            ),
+          ] else
+            const _QueueRow(
+              icon: Icons.cloud_done_outlined,
+              title: 'Everything has been sent',
+              detail: 'Nothing is waiting on this phone',
+            ),
+          const SizedBox(height: 16),
+          _MenuRow(
+            icon: Icons.translate,
+            title: 'Language',
+            trailing: store.selectedLanguage.englishLabel,
             onTap: () => _chooseLanguage(context),
           ),
           if (user.primaryRole == UserRole.societyOfficer)
-            ListTile(
-              leading: const Icon(Icons.notifications_outlined),
-              title: const Text('Notifications'),
-              subtitle: Text('${store.unreadNotificationCount} unread'),
-              trailing: const Icon(Icons.chevron_right),
+            _MenuRow(
+              icon: Icons.notifications_none,
+              title: 'Notifications',
+              trailing: store.unreadNotificationCount == 0
+                  ? null
+                  : '${store.unreadNotificationCount} unread',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const NotificationsScreen(),
                 ),
               ),
             ),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Help'),
-            trailing: const Icon(Icons.chevron_right),
+          _MenuRow(
+            icon: Icons.help_outline,
+            title: 'Help',
             onTap: () => showDialog<void>(
               context: context,
               builder: (context) => AlertDialog(
@@ -105,18 +129,20 @@ class MoreScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text(
-              'Sign out',
-              style: TextStyle(color: AppColors.danger),
-            ),
+          _MenuRow(
+            icon: Icons.logout,
+            title: 'Sign out',
+            danger: true,
             onTap: store.signOut,
           ),
         ],
       ),
     );
+  }
+
+  static String _shortName(String name) {
+    final parts = name.split(' ');
+    return parts.length < 2 ? name : '${parts.first[0]}. ${parts.last}';
   }
 
   static String _initials(String name) => name
@@ -125,53 +151,6 @@ class MoreScreen extends StatelessWidget {
       .take(2)
       .map((part) => part[0].toUpperCase())
       .join();
-
-  static void _showWaitingItems(BuildContext context, bool offline) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: offline
-              ? const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Waiting to send',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    ListTile(
-                      leading: Icon(Icons.insights_outlined),
-                      title: Text('Tank cleaning activity'),
-                      subtitle: Text('Saved on this phone'),
-                    ),
-                    ListTile(
-                      leading: Icon(Icons.description_outlined),
-                      title: Text('Audit report PDF'),
-                      subtitle: Text('Will retry when online'),
-                    ),
-                    ListTile(
-                      leading: Icon(Icons.edit_note_outlined),
-                      title: Text('Profile correction'),
-                      subtitle: Text('Saved on this phone'),
-                    ),
-                  ],
-                )
-              : const StateMessage(
-                  icon: Icons.cloud_done_outlined,
-                  title: 'Everything is up to date',
-                  message: 'There are no items waiting to send.',
-                  tone: StateTone.success,
-                ),
-        ),
-      ),
-    );
-  }
 
   static void _chooseLanguage(BuildContext context) {
     final store = DemoScope.read(context);
@@ -200,6 +179,144 @@ class MoreScreen extends StatelessWidget {
                   value: language,
                   title: Text(language.nativeLabel),
                   subtitle: Text(language.englishLabel),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueHeader extends StatelessWidget {
+  const _QueueHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: AppColors.background,
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Waiting to send ($count)',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const Icon(Icons.sync, size: 14, color: Color(0xFFB4650F)),
+        const SizedBox(width: 4),
+        const Text(
+          'Sends when online',
+          style: TextStyle(fontSize: 11, color: AppColors.muted),
+        ),
+      ],
+    ),
+  );
+}
+
+class _QueueRow extends StatelessWidget {
+  const _QueueRow({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.failed = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: failed ? AppColors.dangerSoft : AppColors.surface,
+      border: const Border(bottom: BorderSide(color: AppColors.line)),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+    child: Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: failed ? AppColors.danger : AppColors.inkSoft,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                detail,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: failed ? AppColors.danger : AppColors.muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.trailing,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? trailing;
+  final VoidCallback onTap;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? AppColors.danger : AppColors.ink;
+    return Material(
+      color: AppColors.surface,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: danger ? color : AppColors.inkSoft),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: 13.5, color: color),
+                ),
+              ),
+              if (trailing != null)
+                Text(
+                  trailing!,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
                 ),
             ],
           ),

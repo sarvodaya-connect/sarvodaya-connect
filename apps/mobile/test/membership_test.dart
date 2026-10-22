@@ -16,9 +16,9 @@ void main() {
       0,
       (sum, category) => sum + category.total,
     );
-    expect(demoMembership.femaleTotal, 2517);
-    expect(demoMembership.maleTotal, 1776);
-    expect(demoMembership.overallTotal, 4293);
+    expect(demoMembership.femaleTotal, 232);
+    expect(demoMembership.maleTotal, 180);
+    expect(demoMembership.overallTotal, 412);
     expect(demoMembership.overallTotal, categoryTotal);
   });
 
@@ -37,20 +37,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    for (final category in [
-      'Children',
-      'Youth',
-      'Mothers',
-      'Ordinary',
-      'Elders Council',
-    ]) {
+    for (final category in ['Child', 'Youth', 'Ordinary', 'Life', 'Invited']) {
       expect(find.text(category), findsOneWidget);
     }
     expect(find.text('Female'), findsOneWidget);
     expect(find.text('Male'), findsOneWidget);
-    expect(find.text('2,517'), findsOneWidget);
-    expect(find.text('1,776'), findsOneWidget);
-    expect(find.text('4,293'), findsOneWidget);
+    expect(find.text('412'), findsOneWidget);
+    expect(find.text('+14 since Apr–Jun'), findsOneWidget);
+
+    // Counts can be adjusted with the steppers; the total follows.
+    await tester.tap(find.byTooltip('Increase Child female'));
+    await tester.pump();
+    expect(find.text('31'), findsOneWidget);
+    expect(find.text('413'), findsOneWidget);
   });
 
   testWidgets('M08 has an empty state for societies with no records', (

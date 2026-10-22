@@ -4,12 +4,10 @@ import '../app.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/document.dart';
-import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
-import '../widgets/status_chip.dart';
 import 'replace_member_screen.dart';
 import 'submission_result_screen.dart';
 
@@ -117,12 +115,49 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                NoticeBanner(
-                  icon: Icons.info_outline,
-                  title:
-                      'The District Centre will review ${changes.length} changed fields',
-                  message:
-                      'After approval: ${store.seatsFilled.values.fold(0, (a, b) => a + b)} of ${store.totalSeats} Council seats filled.',
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE4EEF8),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFB8CDE3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Color(0xFF2D5C88),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text:
+                                    'District will review ${changes.length == 1 ? 'this change' : 'these ${changes.length} changes'}. After approval: ',
+                              ),
+                              TextSpan(
+                                text:
+                                    '${store.seatsFilled.values.fold(0, (a, b) => a + b)} of ${store.totalSeats}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const TextSpan(text: ' Council seats filled.'),
+                            ],
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 if (_sendError != null) ...[
                   const SizedBox(height: 12),
@@ -141,14 +176,20 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                SectionCard(
+                _HeaderCard(
                   title: '${outgoing?.position ?? 'Member'} replaced',
-                  highlight: true,
                   trailing: TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) =>
                             ReplaceMemberScreen(memberId: draft.memberId),
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF2D5C88),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                     child: const Text('Edit'),
@@ -163,17 +204,26 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                SectionCard(
-                  title: 'Supporting documents',
-                  children: [
-                    for (final document in documents)
-                      Row(
+                for (final document in documents) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
                         children: [
-                          const Icon(
-                            Icons.picture_as_pdf_outlined,
-                            color: AppColors.leaf,
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.description_outlined,
+                              size: 18,
+                              color: AppColors.inkSoft,
+                            ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,38 +232,31 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                                   document.fileName,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 Text(
                                   '${document.documentType.label} · ${formatFileSize(document.sizeBytes)}',
                                   style: const TextStyle(
                                     color: AppColors.muted,
-                                    fontSize: 12,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          StatusChip.submission(
-                            SubmissionStatus.draft,
-                            compact: true,
-                          ),
                         ],
                       ),
-                    if (documents.isEmpty)
-                      const InfoRow(label: 'AGM minutes', value: null),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const SectionCard(
-                  title: 'Everything else',
-                  children: [
-                    _NoChangeRow('Society profile and address'),
-                    _NoChangeRow('GPS location'),
-                    _NoChangeRow('Other Council seats'),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (documents.isEmpty) ...[
+                  const SectionCard(
+                    children: [InfoRow(label: 'AGM minutes', value: null)],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Card(
                   child: CheckboxListTile(
                     value: _agreed,
@@ -224,6 +267,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                     controlAffinity: ListTileControlAffinity.leading,
                     title: const Text(
                       'These changes were agreed at the AGM on 28 Sep 2026',
+                      style: TextStyle(fontSize: 13),
                     ),
                     subtitle: _showAgreeError
                         ? const Text(
@@ -241,7 +285,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
       bottomNavigationBar: BottomActionBar(
         secondary: OutlinedButton(
           onPressed: _sending ? null : _saveDraft,
-          child: const Text('Save draft'),
+          child: const Text('Save as draft'),
         ),
         primary: FilledButton.icon(
           onPressed: _sending ? null : _submit,
@@ -254,29 +298,57 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                     color: Colors.white,
                   ),
                 )
-              : const Icon(Icons.send),
-          label: const Text('Submit to District'),
+              : const Icon(Icons.send_outlined, size: 18),
+          label: const Text('Send to District'),
         ),
       ),
     );
   }
 }
 
-class _NoChangeRow extends StatelessWidget {
-  const _NoChangeRow(this.label);
+/// White card with a title row and hairline, as in the catalogue M07.
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({
+    required this.title,
+    required this.children,
+    this.trailing,
+  });
 
-  final String label;
+  final String title;
+  final Widget? trailing;
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          const Text('No change', style: TextStyle(color: AppColors.muted)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ],
+    ),
+  );
 }

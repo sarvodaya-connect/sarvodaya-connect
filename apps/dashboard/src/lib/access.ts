@@ -112,6 +112,11 @@ export function canViewDocumentLibrary(viewer: DemoViewer): boolean {
   return viewer.role !== "SYSTEM_ADMIN";
 }
 
+/** D15/D20 Reports: available to society-data roles, but not System Admin. */
+export function canViewReports(viewer: DemoViewer): boolean {
+  return viewer.role !== "SYSTEM_ADMIN";
+}
+
 export type DocumentCategory = "REGISTRAR" | "FINANCE" | "GENERAL";
 
 export type ProtectedDocument = ScopedRecord & {

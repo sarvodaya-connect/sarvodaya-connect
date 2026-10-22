@@ -7,6 +7,7 @@ import {
   canViewCompliance,
   canViewDocument,
   canViewDocumentLibrary,
+  canViewReports,
   getViewer,
 } from "./access";
 import { complianceRecords } from "./demo-compliance";
@@ -78,15 +79,29 @@ describe("provisional role-based visibility", () => {
 
   it("leaves pages a role cannot open out of the navigation", () => {
     const labels = (viewer: ReturnType<typeof getViewer>) => navigationFor(viewer).map((item) => item.label);
-    expect(labels(hq)).toEqual(expect.arrayContaining(["Audits & compliance", "Documents", "Notifications"]));
+    expect(labels(hq)).toEqual(expect.arrayContaining(["Audits", "Documents", "Notifications"]));
     expect(labels(hq)).toContain("Membership");
-    expect(labels(districtManager)).toEqual(expect.arrayContaining(["Audits & compliance", "Documents"]));
-    expect(labels(coordinator)).not.toContain("Audits & compliance");
+    expect(labels(hq).filter((label) => label === "Reports")).toHaveLength(1);
+    expect(labels(districtManager)).toEqual(expect.arrayContaining(["Audits", "Documents"]));
+    expect(labels(districtManager)).toContain("Reports");
+    expect(labels(districtManager)[0]).toBe("District Home");
+    expect(labels(coordinator)).not.toContain("Audits");
     expect(labels(coordinator)).toContain("Documents");
+    expect(labels(coordinator)).toContain("Reports");
     expect(labels(systemAdmin)).not.toContain("Documents");
     expect(labels(systemAdmin)).not.toContain("Membership");
+    expect(labels(systemAdmin)).not.toContain("Reports");
     expect(labels(systemAdmin)).toContain("Notifications");
-    expect(labels(hq)[0]).toBe("Overview");
+    expect(labels(hq)[0]).toBe("National Overview");
     expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);
+  });
+
+  it("keeps report navigation and page access aligned", () => {
+    for (const viewer of [hq, districtManager, coordinator]) {
+      expect(canViewReports(viewer)).toBe(true);
+      expect(navigationFor(viewer).filter((item) => item.href === "/reports")).toHaveLength(1);
+    }
+    expect(canViewReports(systemAdmin)).toBe(false);
+    expect(navigationFor(systemAdmin).some((item) => item.href === "/reports")).toBe(false);
   });
 });

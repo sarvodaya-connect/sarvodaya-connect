@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { Pill } from "@/components/dashboard/ui/pill";
 
 const activities = [
@@ -34,29 +33,54 @@ const activityLog = [
   { label: "Returned activity report (missing photos)", meta: "Wariyapola SSS · R. Fernando · 10 Oct 2026" },
 ];
 
+/**
+ * Catalogue D02b block: numbered uppercase section title, then a large
+ * headline figure ("98 active of 106 societies") with the rest of the body.
+ */
 function Block({ action, children, eyebrow, title }: { action?: React.ReactNode; children: React.ReactNode; eyebrow: string; title: string }) {
+  const [number, ...rest] = eyebrow.split(" · ");
+  const section = rest.join(" · ");
+  // When the title is itself the section name (no figure), show it as the heading.
+  const headingIsTitle = /^[A-Z][a-z]/.test(title) && !/^\d/.test(title) && !title.startsWith("LKR");
+  // Currency figures stay whole ("LKR 168.2M"); otherwise the first word is the figure.
+  const [figure, ...words] = title.startsWith("LKR ") ? [title] : title.split(" ");
   return (
     <section className="rounded-card border border-line bg-surface">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft px-5 py-4 md:px-6">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-leaf">{eyebrow}</p>
-          <h2 className="mt-1 text-sm font-semibold text-ink md:text-[15px]">{title}</h2>
-        </div>
-        {action && <div>{action}</div>}
+      <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 md:px-6">
+        <h2 className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.08em] text-brand-forest">
+          <span aria-hidden="true" className="grid size-5 place-items-center rounded-full bg-brand-forest text-[10px] text-white">{number}</span>
+          {headingIsTitle ? title : section}
+        </h2>
+        {action ? <div>{action}</div> : headingIsTitle && <span className="text-[11px] text-muted">{section}</span>}
       </header>
-      <div className="px-5 py-5 md:px-6">{children}</div>
+      <div className="px-5 pb-5 pt-3 md:px-6">
+        {!headingIsTitle && (
+          <p className="mb-3 flex flex-wrap items-baseline gap-x-2 text-[12px] text-muted">
+            <strong className="text-[24px] font-bold tracking-[-0.02em] text-ink">{figure}</strong>
+            {words.join(" ")}
+          </p>
+        )}
+        {children}
+      </div>
     </section>
   );
 }
 
-function Metric({ label, note, value, warning = false }: { label: string; note: string; value: string; warning?: boolean }) {
+function Metric({ label, note, pill = false, value, warning = false }: { label: string; note: string; pill?: boolean; value: string; warning?: boolean }) {
   return (
-    <article className="rounded-tile border border-line bg-surface px-5 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
-      <strong className={`mt-2 block text-[28px] font-bold tracking-[-0.02em] md:text-[32px] ${warning ? "text-danger-text" : "text-ink"}`}>
+    <article className="rounded-tile border border-line bg-surface px-4 py-3.5">
+      <p className="text-[11px] text-muted">{label}</p>
+      <strong className={`mt-1.5 block text-[24px] font-bold tracking-[-0.02em] ${warning ? "text-danger-text" : "text-ink"}`}>
         {value}
       </strong>
-      <p className="mt-1 text-[11px] leading-4 text-muted">{note}</p>
+      {pill ? (
+        <span className="mt-1 inline-flex items-center gap-1 rounded-pill bg-danger-bg px-2 py-0.5 text-[10px] font-semibold text-danger-text">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-danger-text" />
+          {note}
+        </span>
+      ) : (
+        <p className="mt-1 text-[11px] leading-4 text-muted">{note}</p>
+      )}
     </article>
   );
 }
@@ -67,8 +91,7 @@ export function DistrictCatalogueOverview() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold tracking-[-0.015em] text-ink md:text-2xl">Good morning, R. Fernando</h2>
-            <ChangedInV2Badge />
+            <h2 className="text-xl font-bold tracking-[-0.015em] text-ink md:text-[22px]">Good morning, R. Fernando</h2>
           </div>
           <p className="mt-1 text-[12px] text-muted">District Manager · Kurunegala · Friday 09 Oct 2026</p>
         </div>
@@ -94,11 +117,12 @@ export function DistrictCatalogueOverview() {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Societies in district" value="106" note="98 active · A 14 · B 18 · C 66" />
-        <Metric label="Waiting for review" value="14" note="2 past target" warning />
-        <Metric label="Compliance" value="88%" note="National average 75%" />
-        <Metric label="District wealth" value="LKR 168.2M" note="SSS totals · 31 Mar 2026" />
+        <Metric label="Waiting for my review" value="14" note="2 past target" pill />
+        <Metric label="Not updated (90+ days)" value="12" note="Profile or membership stale" warning />
+        <Metric label="Data verified" value="88%" note="National average 75%" />
+        <Metric label="Audits overdue" value="9" note="FY 2025/26" />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">

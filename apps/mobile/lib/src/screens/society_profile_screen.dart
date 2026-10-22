@@ -16,6 +16,7 @@ import '../widgets/status_chip.dart';
 import 'council_screen.dart';
 import 'edit_profile_screen.dart';
 import 'profile_review_screen.dart';
+import 'membership_screen.dart';
 import 'village_profile_screen.dart';
 
 /// M06 · Society profile, with the annual M06b village profile tab.
@@ -27,94 +28,131 @@ class SocietyProfileScreen extends StatefulWidget {
 }
 
 class _SocietyProfileScreenState extends State<SocietyProfileScreen> {
-  var _selectedTab = 0;
+  static const _tabs = ['Profile', 'Village', 'Council', 'Members', 'Finance'];
 
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Society')),
-      body: Column(
-        children: [
-          _ProfileTabs(
-            selectedIndex: _selectedTab,
-            onSelected: (index) => setState(() => _selectedTab = index),
+    return DefaultTabController(
+      length: _tabs.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Society'),
+          actions: [
+            IconButton(
+              tooltip: 'Record history',
+              icon: const Icon(Icons.history),
+              onPressed: () => _showHistory(context),
+            ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelColor: AppColors.forest,
+            unselectedLabelColor: AppColors.inkSoft,
+            indicatorColor: AppColors.leaf,
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: AppColors.line,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            tabs: [for (final tab in _tabs) Tab(text: tab, height: 40)],
           ),
-          if (store.offline) const OfflineBanner(),
-          Expanded(
-            child: DemoLoader(
-              loadingLabel: 'Loading the society profile',
-              builder: (context) => IndexedStack(
-                index: _selectedTab,
-                children: const [_ProfileContent(), VillageProfileTab()],
+        ),
+        body: Column(
+          children: [
+            if (store.offline) const OfflineBanner(),
+            Expanded(
+              child: DemoLoader(
+                loadingLabel: 'Loading the society profile',
+                builder: (context) => const TabBarView(
+                  children: [
+                    _ProfileContent(),
+                    VillageProfileTab(),
+                    _CouncilTab(),
+                    MembershipContent(),
+                    StateMessage(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Finance comes in a later phase',
+                      message: 'Contributions, payments and SDF shares will be shown here.',
+                    ),
+                  ],
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void _showHistory(BuildContext context) {
+    final society = DemoScope.read(context).society;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Record history',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              InfoRow(
+                label: 'Last verified',
+                value: society.lastVerifiedOn == null
+                    ? null
+                    : '${formatDate(society.lastVerifiedOn!)} by ${society.lastVerifiedBy}',
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ProfileTabs extends StatelessWidget {
-  const _ProfileTabs({required this.selectedIndex, required this.onSelected});
-
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+/// Council tab: seats and office bearers, with the way into M07b.
+class _CouncilTab extends StatelessWidget {
+  const _CouncilTab();
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      _ProfileTab(
-        label: 'Profile',
-        selected: selectedIndex == 0,
-        onTap: () => onSelected(0),
-      ),
-      _ProfileTab(
-        label: 'Village',
-        selected: selectedIndex == 1,
-        onTap: () => onSelected(1),
-      ),
-    ],
-  );
-}
-
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: InkWell(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.forest : AppColors.line,
-              width: selected ? 2 : 1,
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final canEdit = store.activeRole == UserRole.societyOfficer;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SectionCard(
+          children: [
+            SeatSummary(filled: store.seatsFilled, total: store.totalSeats),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const _OfficeBearersCard(),
+        const SizedBox(height: 12),
+        if (canEdit)
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const CouncilScreen()),
             ),
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Update Committee'),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.forest : AppColors.muted,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ),
-    ),
-  );
+      ],
+    );
+  }
 }
 
 class _ProfileContent extends StatelessWidget {
@@ -144,224 +182,293 @@ class _ProfileContent extends StatelessWidget {
     void openEdit() => Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const EditProfileScreen()));
+    final requestUpdate = canEdit
+        ? _RequestUpdate(onPressed: pending == null ? openEdit : null)
+        : null;
+    final dense = Theme.of(context).copyWith(
+      textTheme: Theme.of(context).textTheme.copyWith(
+        bodySmall: const TextStyle(color: AppColors.muted, fontSize: 11),
+      ),
+    );
+
+    return Theme(
+      data: dense,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (pending != null) ...[
+            NoticeBanner(
+              icon: Icons.lock_outline,
+              tone: NoticeTone.warning,
+              title: 'Profile update waiting for the District Centre',
+              message:
+                  '${pending.reference} is being reviewed. You can edit the profile again after it has been reviewed.',
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (draft != null && store.profileDraftOutdated) ...[
+            ConflictNotice(
+              updatedBy: store.recordUpdatedBy ?? 'The District Centre',
+              updatedAt: store.recordUpdatedAt ?? store.now,
+              onReload: () {
+                store.reloadProfileDraft();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Record reloaded. Your draft changes are kept.',
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+          ] else if (draft != null) ...[
+            NoticeBanner(
+              icon: Icons.edit_note,
+              title: 'You have draft profile changes',
+              message: 'Draft values are marked “Draft”. Only you can see them; the approved values have not changed.',
+              action: canEdit
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ProfileReviewScreen(),
+                          ),
+                        ),
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        child: const Text('Review draft'),
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 12),
+          ],
+          _ProfileCard(
+            title: 'Basic information',
+            trailing: requestUpdate,
+            children: [
+              InfoRow(label: 'Name', value: society.nameEn),
+              InfoRow(label: 'Local name', value: society.nameLocal),
+              Row(
+                children: [
+                  Expanded(
+                    child: InfoRow(
+                      label: 'Society ID',
+                      value: society.societyCode,
+                    ),
+                  ),
+                  Expanded(
+                    child: InfoRow(
+                      label: 'Founded',
+                      value: society.establishedOn?.year.toString(),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: InfoRow(
+                      label: 'Registration number',
+                      value: society.registrationNumber,
+                    ),
+                  ),
+                  Expanded(
+                    child: InfoRow(
+                      label: 'District',
+                      value: society.district.nameEn,
+                    ),
+                  ),
+                ],
+              ),
+              InfoRow(
+                label: 'Status',
+                value: _societyStatus(society.status).label,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _ProfileCard(
+            title: 'Location',
+            trailing: requestUpdate,
+            children: [
+              MapPreview(location: society.location, height: 120),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: InfoRow(
+                      label: 'DS Division',
+                      value: society.address.dsDivision,
+                    ),
+                  ),
+                  Expanded(
+                    child: InfoRow(
+                      label: 'GN Division',
+                      value: society.address.gnDivision,
+                    ),
+                  ),
+                ],
+              ),
+              ...field(ProfileField.location, society.location?.label),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const _OfficeBearersCard(),
+          const SizedBox(height: 12),
+          _ProfileCard(
+            title: 'Address and contact',
+            trailing: requestUpdate,
+            children: [
+              ...field(ProfileField.address, orNull(approved.addressLine)),
+              ...field(ProfileField.village, orNull(approved.village)),
+              ...field(ProfileField.phone, orNull(approved.phone)),
+              ...field(ProfileField.email, orNull(approved.email)),
+              for (final contact in society.contacts)
+                if (contact.fullName != null || contact.email != null)
+                  InfoRow(
+                    label: contact.isPrimary
+                        ? 'Primary contact'
+                        : (contact.label ?? 'Contact'),
+                    value: [
+                      if (contact.fullName != null) contact.fullName!,
+                      if (contact.position != null) '(${contact.position})',
+                    ].join(' · '),
+                  ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Card with a title row, a hairline under it, and an optional action.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({
+    required this.title,
+    required this.children,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget? trailing;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RequestUpdate extends StatelessWidget {
+  const _RequestUpdate({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(
+      foregroundColor: const Color(0xFF2D5C88),
+      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      minimumSize: const Size(44, 40),
+    ),
+    icon: const Icon(Icons.edit_outlined, size: 15),
+    label: const Text('Request update'),
+  );
+}
+
+class _OfficeBearersCard extends StatelessWidget {
+  const _OfficeBearersCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
     final officeBearers = store.council
         .where((member) => member.isOfficeBearer)
         .toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return _ProfileCard(
+      title: 'Office bearers',
+      trailing: TextButton(
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const CouncilScreen())),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF2D5C88),
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        child: const Text('View all'),
+      ),
       children: [
-        NoticeBanner(
-          icon: Icons.verified_outlined,
-          tone: NoticeTone.success,
-          title: 'Approved record · Verified',
-          message:
-              'Last verified ${formatDate(society.lastVerifiedOn!)} by ${society.lastVerifiedBy}. '
-              'Changes you make are drafts until the District Centre approves them.',
-        ),
-        const SizedBox(height: 12),
-        if (pending != null) ...[
-          NoticeBanner(
-            icon: Icons.lock_outline,
-            tone: NoticeTone.warning,
-            title: 'Profile update waiting for the District Centre',
-            message:
-                '${pending.reference} is being reviewed. You can edit the profile again after it has been reviewed.',
+        if (store.councilSubmission != null &&
+            store.councilSubmission!.isLocked) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: StatusChip.submission(
+              store.councilSubmission!.status,
+              compact: true,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
         ],
-        if (draft != null && store.profileDraftOutdated) ...[
-          ConflictNotice(
-            updatedBy: store.recordUpdatedBy ?? 'The District Centre',
-            updatedAt: store.recordUpdatedAt ?? store.now,
-            onReload: () {
-              store.reloadProfileDraft();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Record reloaded. Your draft changes are kept.',
+        for (final member in officeBearers)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                MemberAvatar(member, size: 32),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    member.fullName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
-              );
-            },
+                Text(
+                  member.position,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-        ] else if (draft != null) ...[
-          NoticeBanner(
-            icon: Icons.edit_note,
-            title: 'You have draft profile changes',
-            message: 'Draft values are marked “Draft”. Only you can see them; the approved values have not changed.',
-            action: canEdit
-                ? Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const ProfileReviewScreen(),
-                        ),
-                      ),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                      child: const Text('Review draft'),
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(height: 12),
-        ],
-        SectionCard(
-          title: 'Basic information',
-          trailing: StatusChip(_societyStatus(society.status)),
-          children: [
-            InfoRow(label: 'Name', value: society.nameEn),
-            InfoRow(label: 'Local name', value: society.nameLocal),
-            Row(
-              children: [
-                Expanded(
-                  child: InfoRow(
-                    label: 'Society ID',
-                    value: society.societyCode,
-                  ),
-                ),
-                Expanded(
-                  child: InfoRow(
-                    label: 'Registration number',
-                    value: society.registrationNumber,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: InfoRow(
-                    label: 'Established',
-                    value: society.establishedOn == null
-                        ? null
-                        : formatDate(society.establishedOn!),
-                  ),
-                ),
-                Expanded(
-                  child: InfoRow(
-                    label: 'District',
-                    value: society.district.nameEn,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: InfoRow(
-                    label: 'DS Division',
-                    value: society.address.dsDivision,
-                  ),
-                ),
-                Expanded(
-                  child: InfoRow(
-                    label: 'GN Division',
-                    value: society.address.gnDivision,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Address and contact',
-          trailing: canEdit
-              ? TextButton.icon(
-                  onPressed: pending == null ? openEdit : null,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Edit Profile'),
-                )
-              : null,
-          children: [
-            ...field(ProfileField.address, orNull(approved.addressLine)),
-            ...field(ProfileField.village, orNull(approved.village)),
-            ...field(ProfileField.phone, orNull(approved.phone)),
-            ...field(ProfileField.email, orNull(approved.email)),
-            for (final contact in society.contacts)
-              if (contact.fullName != null || contact.email != null)
-                InfoRow(
-                  label: contact.isPrimary
-                      ? 'Primary contact'
-                      : (contact.label ?? 'Contact'),
-                  value: [
-                    if (contact.fullName != null) contact.fullName!,
-                    if (contact.position != null) '(${contact.position})',
-                  ].join(' · '),
-                ),
-            for (final contact in society.contacts) ...[
-              if (contact.phone != null && contact.phone != approved.phone)
-                InfoRow(
-                  label: contact.label == null
-                      ? 'Contact phone'
-                      : '${contact.label} number',
-                  value: contact.phone,
-                ),
-              if (contact.email != null)
-                InfoRow(label: 'Contact email', value: contact.email),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Location',
-          children: [
-            MapPreview(location: society.location),
-            const SizedBox(height: 12),
-            ...field(ProfileField.location, society.location?.label),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Executive Council',
-          trailing:
-              store.councilSubmission != null &&
-                  store.councilSubmission!.isLocked
-              ? StatusChip.submission(
-                  store.councilSubmission!.status,
-                  compact: true,
-                )
-              : null,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          children: [
-            SeatSummary(filled: store.seatsFilled, total: store.totalSeats),
-            const SizedBox(height: 12),
-            for (final member in officeBearers)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    MemberAvatar(member, size: 32),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        member.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Text(
-                      member.position,
-                      style: const TextStyle(color: AppColors.muted),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 4),
-            if (canEdit)
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CouncilScreen(),
-                  ),
-                ),
-                icon: const Icon(Icons.groups_outlined),
-                label: const Text('Update Committee'),
-              ),
-          ],
-        ),
       ],
     );
   }

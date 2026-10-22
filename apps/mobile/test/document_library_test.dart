@@ -36,14 +36,17 @@ void main() {
       expect(
         find.descendant(
           of: officeBearers,
-          matching: find.textContaining(
-            'Office-bearer list · 420 KB\nUploaded by N. Wijesinghe · 20 Mar 2026',
+          matching: find.bySemanticsLabel(
+            RegExp('uploaded by N. Wijesinghe on 20 Mar 2026, status Approved'),
           ),
         ),
         findsOneWidget,
       );
       expect(
-        find.descendant(of: officeBearers, matching: find.text('Approved')),
+        find.descendant(
+          of: officeBearers,
+          matching: find.textContaining('20 Mar 2026 · Approved'),
+        ),
         findsOneWidget,
       );
       expect(
@@ -95,14 +98,17 @@ void main() {
     expect(
       find.descendant(
         of: _row(_agmFile),
-        matching: find.textContaining(
-          'Uploaded by Nimali Wijesinghe · 13 Oct 2026',
+        matching: find.bySemanticsLabel(
+          RegExp('uploaded by Nimali Wijesinghe on 13 Oct 2026'),
         ),
       ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: _row(_agmFile), matching: find.text('Under Review')),
+      find.descendant(
+        of: _row(_agmFile),
+        matching: find.textContaining('13 Oct 2026 · Under Review'),
+      ),
       findsOneWidget,
     );
   });
@@ -208,7 +214,7 @@ void main() {
     await _openDocuments(tester);
 
     expect(find.text('No documents yet'), findsOneWidget);
-    expect(find.text('0 of 4 approved'), findsOneWidget);
+    expect(find.text('0 of 4\napproved'), findsOneWidget);
     for (final type in [
       'Audit report',
       'AGM minutes',

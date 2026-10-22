@@ -9,6 +9,8 @@ import 'test_helpers.dart';
 Future<void> _openAudit(WidgetTester tester) async {
   await signInWithDemoAccount(tester);
   await tapVisible(tester, find.text('Audit FY 2025/26'));
+  // The checklist is folded under "Required steps", as in the catalogue.
+  await tapVisible(tester, find.text('Required steps'));
 }
 
 /// The status chip shown on one checklist row.
@@ -79,6 +81,9 @@ void main() {
 
     expect(store.currentAudit.status, AuditStatus.underReview);
     expect(find.text('5 of 6 complete'), findsOneWidget);
+    if (find.text('Audit report uploaded').evaluate().isEmpty) {
+      await tapVisible(tester, find.text('Required steps'));
+    }
     expect(find.text('Audit report received'), findsOneWidget);
     expect(find.textContaining('days late'), findsNothing);
     expect(_rowStatus('Audit report uploaded', 'Complete'), findsOne);

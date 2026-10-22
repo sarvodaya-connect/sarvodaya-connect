@@ -1,5 +1,5 @@
 import type { MembershipDashboardSummary } from "@sarvodaya-connect/api-contracts";
-import { ChangedInV2Badge } from "./ui/changed-in-v2-badge";
+import { Icon } from "./icon";
 import { PageHeading } from "./page-heading";
 
 const categoryLabels: Record<string, string> = {
@@ -61,9 +61,10 @@ export function MembershipDashboard({
         <div>
           <div className="flex items-center gap-3">
             <PageHeading title="Membership" />
-            <ChangedInV2Badge />
           </div>
-          <p className="mt-2 text-sm text-muted">Aggregated counts — no personal data</p>
+          <p className="mt-0.5 text-[12px] text-muted">
+            Reporting period Jul–Sep {summary.year} · {summary.societies.length} societies reported
+          </p>
         </div>
         <button
           className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
@@ -83,78 +84,75 @@ export function MembershipDashboard({
       ) : (
         <>
           <section aria-label="Membership totals" className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Total members" value={numberFormat.format(summary.overallTotal)} note="↑ 6% vs last year" />
-            <Kpi label="Female" value={numberFormat.format(summary.femaleTotal)} note={`${femalePct}% of members`} />
-            <Kpi label="Male" value={numberFormat.format(summary.maleTotal)} note={`${malePct}% of members`} />
+            <Kpi icon label="Total members" value={numberFormat.format(summary.overallTotal)} note="↑ 6% vs. last year" noteTone="up" />
+            <Kpi label="Female" value={numberFormat.format(summary.femaleTotal)} note={`${femalePct}% of members`} valueClass="text-[#93458f]" />
+            <Kpi label="Male" value={numberFormat.format(summary.maleTotal)} note={`${malePct}% of members`} valueClass="text-[#28669a]" />
             <Kpi label="New this year" value={numberFormat.format(newThisYear)} note="Joined since Jan 2026" />
           </section>
 
           <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
-            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft px-5 py-4 md:px-6">
-              <div>
-                <h2 className="text-sm font-semibold text-ink md:text-[15px]">
-                  Breakdown by membership category
-                </h2>
-                <p className="mt-1 text-[12px] text-muted">
-                  Female and male totals across {summary.societies.length} societies
-                </p>
+            <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 md:px-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-[13px] font-bold text-ink">Breakdown by membership category</h2>
+                <span className="flex items-center gap-2 text-[10px] text-muted">
+                  <span className="flex items-center gap-1"><span aria-hidden="true" className="size-2 bg-[#93458f]" />Female</span>
+                  <span className="flex items-center gap-1"><span aria-hidden="true" className="size-2 bg-[#28669a]" />Male</span>
+                </span>
               </div>
-              <div className="flex rounded-pill border border-line bg-surface p-0.5 text-[11px] font-semibold">
-                <span className="rounded-pill bg-brand-forest px-3 py-1 text-white">Category</span>
-                <span className="rounded-pill px-3 py-1 text-muted">Age</span>
-                <span className="rounded-pill px-3 py-1 text-muted">Female / Male</span>
+              <div className="flex overflow-hidden rounded-button border border-line bg-surface text-[11px]">
+                <span className="bg-brand-forest px-2.5 py-1 font-semibold text-white">Category</span>
+                <span className="px-2.5 py-1 text-ink-soft">Age</span>
+                <span className="px-2.5 py-1 text-ink-soft">Female / male</span>
               </div>
             </header>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-left">
+            <div className="overflow-x-auto pb-3 pt-2">
+              <table className="w-full min-w-[560px] border-collapse text-left">
                 <caption className="sr-only">Membership totals by category for {summary.year}</caption>
-                <thead className="bg-surface-muted text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <thead className="sr-only">
                   <tr>
-                    <th className="px-5 py-3" scope="col">Category</th>
-                    <th className="px-3 py-3" scope="col"><span className="sr-only">Breakdown</span></th>
-                    <th className="px-3 py-3 text-right" scope="col">Female</th>
-                    <th className="px-3 py-3 text-right" scope="col">Male</th>
-                    <th className="px-5 py-3 text-right" scope="col">Total</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Breakdown</th>
+                    <th scope="col">Female</th>
+                    <th scope="col">Male</th>
+                    <th scope="col">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-line-soft">
+                <tbody>
                   {summary.categories.map((category) => {
                     const widthPct = maxCategoryTotal > 0 ? (category.total / maxCategoryTotal) * 100 : 0;
                     const femalePctCat = category.total > 0 ? (category.female / category.total) * 100 : 0;
                     return (
                       <tr key={category.category}>
                         <th
-                          className="w-[180px] px-5 py-3 text-[13px] font-semibold text-ink"
+                          className="w-[180px] px-5 py-1.5 text-[11.5px] font-normal text-ink-soft"
                           scope="row"
                         >
                           {categoryLabels[category.category]}
                         </th>
-                        <td className="px-3 py-3">
-                          <div className="flex h-3 overflow-hidden rounded-full bg-[#edf0e8]" style={{ width: `${widthPct}%`, minWidth: category.total > 0 ? "4px" : "0" }}>
-                            <span className="block bg-[#93458f]" style={{ width: `${femalePctCat}%` }} />
-                            <span className="block flex-1 bg-[#28669a]" />
+                        <td className="px-3 py-1.5">
+                          <div className="h-2.5 overflow-hidden rounded-full bg-[#edf0e8]">
+                            <div className="flex h-full" style={{ width: `${widthPct}%`, minWidth: category.total > 0 ? "4px" : "0" }}>
+                              <span className="block bg-[#93458f]" style={{ width: `${femalePctCat}%` }} />
+                              <span className="block flex-1 bg-[#28669a]" />
+                            </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-right text-[12px] text-ink-soft">
-                          {numberFormat.format(category.female)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-[12px] text-ink-soft">
-                          {numberFormat.format(category.male)}
-                        </td>
-                        <td className="px-5 py-3 text-right text-[13px] font-semibold text-ink">
+                        <td className="sr-only">{numberFormat.format(category.female)}</td>
+                        <td className="sr-only">{numberFormat.format(category.male)}</td>
+                        <td className="px-5 py-1.5 text-right text-[12px] font-semibold text-ink">
                           {numberFormat.format(category.total)}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-                <tfoot className="border-t border-line-soft bg-surface-muted">
+                <tfoot className="sr-only">
                   <tr>
-                    <th className="px-5 py-3 text-[13px] font-semibold text-ink" scope="row">Total</th>
-                    <td className="px-3 py-3" aria-hidden="true" />
-                    <td className="px-3 py-3 text-right text-[13px] font-semibold text-ink">{numberFormat.format(summary.femaleTotal)}</td>
-                    <td className="px-3 py-3 text-right text-[13px] font-semibold text-ink">{numberFormat.format(summary.maleTotal)}</td>
-                    <td className="px-5 py-3 text-right text-[14px] font-bold text-brand-forest">{numberFormat.format(summary.overallTotal)}</td>
+                    <th scope="row">Total</th>
+                    <td />
+                    <td>{numberFormat.format(summary.femaleTotal)}</td>
+                    <td>{numberFormat.format(summary.maleTotal)}</td>
+                    <td>{numberFormat.format(summary.overallTotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -162,13 +160,13 @@ export function MembershipDashboard({
           </section>
 
           <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
-            <header className="border-b border-line-soft px-5 py-4 md:px-6">
-              <h2 className="text-sm font-semibold text-ink md:text-[15px]">By district (alphabetical)</h2>
+            <header className="border-b border-line-soft px-5 py-3.5 md:px-6">
+              <h2 className="text-[13px] font-bold text-ink">By district (alphabetical)</h2>
             </header>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-left">
                 <caption className="sr-only">Membership aggregated per district</caption>
-                <thead className="bg-surface-muted text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <thead className="bg-surface-muted text-[11.5px] font-medium text-ink-soft">
                   <tr>
                     <th className="px-5 py-3" scope="col">District</th>
                     <th className="px-5 py-3 text-right" scope="col">Members</th>
@@ -181,14 +179,14 @@ export function MembershipDashboard({
                   {districts.map((district) => (
                     <tr className="transition hover:bg-brand-mint-soft" key={district.districtName}>
                       <th
-                        className="px-5 py-3 text-[13px] font-semibold text-ink"
+                        className="px-5 py-2.5 text-[12.5px] font-normal text-ink"
                         scope="row"
                       >
                         {district.districtName}
                       </th>
-                      <td className="px-5 py-3 text-right text-[13px] text-ink">{numberFormat.format(district.members)}</td>
-                      <td className="px-5 py-3 text-right text-[13px] text-ink-soft">{numberFormat.format(district.female)}</td>
-                      <td className="px-5 py-3 text-right text-[13px] text-ink-soft">{numberFormat.format(district.male)}</td>
+                      <td className="px-5 py-2.5 text-right text-[12.5px] text-ink">{numberFormat.format(district.members)}</td>
+                      <td className="px-5 py-2.5 text-right text-[12.5px] text-ink-soft">{numberFormat.format(district.female)}</td>
+                      <td className="px-5 py-2.5 text-right text-[12.5px] text-ink-soft">{numberFormat.format(district.male)}</td>
                       <td className={`px-5 py-3 text-right text-[12px] font-semibold ${district.change >= 0 ? "text-success-text" : "text-danger-text"}`}>
                         {district.change >= 0 ? "+" : ""}{district.change}%
                       </td>
@@ -204,14 +202,33 @@ export function MembershipDashboard({
   );
 }
 
-function Kpi({ label, note, value }: { label: string; note?: string; value: string }) {
+function Kpi({
+  icon = false,
+  label,
+  note,
+  noteTone,
+  value,
+  valueClass = "text-ink",
+}: {
+  icon?: boolean;
+  label: string;
+  note?: string;
+  noteTone?: "up";
+  value: string;
+  valueClass?: string;
+}) {
   return (
-    <article className="rounded-tile border border-line bg-surface px-5 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</p>
-      <strong className="mt-2 block text-[28px] font-bold tracking-[-0.02em] text-ink md:text-[32px]">
-        {value}
-      </strong>
-      {note && <p className="mt-1 text-[11px] text-muted">{note}</p>}
+    <article className="flex items-center gap-3 rounded-tile border border-line bg-surface px-4 py-3.5">
+      {icon && (
+        <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-mint text-brand-forest">
+          <Icon className="size-4" name="society" />
+        </span>
+      )}
+      <div>
+        <p className="text-[11px] text-muted">{label}</p>
+        <strong className={`mt-0.5 block text-[24px] font-bold tracking-[-0.02em] ${valueClass}`}>{value}</strong>
+        {note && <p className={`mt-0.5 text-[11px] ${noteTone === "up" ? "font-semibold text-success-text" : "text-muted"}`}>{note}</p>}
+      </div>
     </article>
   );
 }

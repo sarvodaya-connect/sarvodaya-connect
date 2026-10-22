@@ -11,7 +11,7 @@ import 'test_helpers.dart';
 
 Finder _field(String label) => find.widgetWithText(TextFormField, label);
 
-/// Signs in, opens the Society tab and taps Edit Profile.
+/// Signs in, opens the Society tab and taps Request update.
 Future<DemoStore> _openEditProfile(
   WidgetTester tester, {
   DemoStore? store,
@@ -20,7 +20,7 @@ Future<DemoStore> _openEditProfile(
   await signInWithDemoAccount(tester);
   await tester.tap(find.text('Society'));
   await tester.pumpAndSettle();
-  await tapVisible(tester, find.text('Edit Profile'));
+  await tapVisible(tester, find.text('Request update').first);
   return demoStore;
 }
 
@@ -49,7 +49,7 @@ void main() {
   });
 
   testWidgets(
-    'Edit Profile opens from the Society Profile with the approved values',
+    'Request update opens profile edit with the approved values',
     (tester) async {
       await _openEditProfile(tester);
 
@@ -323,6 +323,8 @@ void main() {
       final store = await pumpApp(tester);
       await signInWithDemoAccount(tester);
 
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Demo options'));
       await tester.pumpAndSettle();
       await tapVisible(tester, find.text('Location permission denied'));

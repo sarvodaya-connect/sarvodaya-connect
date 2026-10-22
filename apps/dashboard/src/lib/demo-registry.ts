@@ -147,9 +147,10 @@ export type ReviewQueueItem = {
   submittedAt: string;
   status: SubmissionStatus;
   waitingLabel: string;
+  submittedBy?: string;
 };
 
 export const reviewQueue: ReviewQueueItem[] = [
-  { id: "review-1", reference: "SUB-2026-0142", societyId: "society-pahala-kosgama", societyName: "Pahala Kosgama Sarvodaya Shramadana Society", societyCode: "SSS-KG-001", type: "Committee update", submittedAt: "12 Nov 2026, 10:15 a.m.", status: "SUBMITTED", waitingLabel: "42 min" },
-  { id: "review-2", reference: "SUB-2026-0141", societyId: "society-pahala-kosgama", societyName: "Pahala Kosgama Sarvodaya Shramadana Society", societyCode: "SSS-KG-001", type: "Activity report", submittedAt: "12 Nov 2026, 9:48 a.m.", status: "SUBMITTED", waitingLabel: "1 hr 9 min" },
+  { id: "review-1", reference: "SUB-2026-0142", societyId: "society-pahala-kosgama", societyName: "Pahala Kosgama Sarvodaya Shramadana Society", societyCode: "SSS-KG-001", type: "Committee update", submittedAt: "12 Nov 2026, 10:15 a.m.", status: "SUBMITTED", waitingLabel: "42 min", submittedBy: "N. Wijesinghe" },
+  { id: "review-2", reference: "SUB-2026-0141", societyId: "society-pahala-kosgama", societyName: "Pahala Kosgama Sarvodaya Shramadana Society", societyCode: "SSS-KG-001", type: "Activity report", submittedAt: "12 Nov 2026, 9:48 a.m.", status: "SUBMITTED", waitingLabel: "1 hr 9 min", submittedBy: "N. Wijesinghe" },
 ];

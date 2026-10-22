@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import Image from "next/image";
+
 import { Brand } from "@/components/dashboard/brand";
 import { Icon } from "@/components/dashboard/icon";
 
@@ -13,36 +15,43 @@ import { signInAs } from "./(dashboard)/actions";
  */
 export default function Home() {
   return (
-    <main className="grid min-h-screen bg-canvas lg:grid-cols-[44%_56%]">
-      <section className="relative hidden min-h-screen overflow-hidden bg-brand-forest px-12 py-10 text-white lg:flex lg:flex-col">
-        <Brand compact inverse />
-        <div className="my-auto max-w-md pr-8">
-          <h1 className="text-[40px] font-bold leading-[1.1] tracking-[-0.03em] text-white">
+    <main className="grid min-h-screen bg-surface lg:grid-cols-2">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[#1a5c39] px-16 pb-16 pt-16 text-white lg:flex lg:flex-col">
+        <Image
+          alt="Sarvodaya Connect"
+          className="h-auto w-[220px]"
+          height={450}
+          priority
+          src="/brand/sarvodaya-connect-logo-white.png"
+          width={1180}
+        />
+        <div className="my-auto max-w-[480px]">
+          <h1 className="text-[30px] font-bold leading-[1.3] text-white">
             One verified record for every village society.
           </h1>
-          <p className="mt-5 text-[15px] leading-7 text-[#c9ddcd]">
+          <p className="mt-4 text-[15px] leading-[1.6] text-white/90">
             For District Centres, Coordinators and Headquarters staff of the
             Sarvodaya Shramadana Movement.
           </p>
         </div>
-        <p className="text-xs text-[#8db39a]">
+        <p className="text-[12px] text-white/85">
           Sarvodaya Shramadana Movement · Moratuwa, Sri Lanka
         </p>
       </section>
 
       <section className="relative flex min-h-screen flex-col px-6 py-8 md:px-12 md:py-10">
-        <div className="flex items-start justify-between gap-4">
-          <div className="lg:hidden">
-            <Brand compact />
-          </div>
-          <LanguagePicker />
+        <div className="lg:hidden">
+          <Brand compact />
         </div>
 
-        <div className="mx-auto my-auto w-full max-w-[420px] pt-6">
-          <h2 className="text-[26px] font-bold tracking-[-0.025em] text-ink">
+        <div className="mx-auto my-auto w-full max-w-[400px] pt-6">
+          <div className="mb-6 flex justify-end">
+            <LanguagePicker />
+          </div>
+          <h2 className="text-[24px] font-semibold text-ink">
             Sign in
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted">
+          <p className="mt-1.5 text-[13px] leading-5 text-ink-soft">
             Use your Sarvodaya account. You will be asked for your verification code.
           </p>
 
@@ -54,30 +63,33 @@ export default function Home() {
             Sign in with Sarvodaya account
           </button>
 
-          <div className="mt-7 flex items-center gap-3">
-            <span className="h-px flex-1 bg-line" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <div className="mt-7 border-t border-line pt-4">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
               Prototype · Continue as
             </span>
-            <span className="h-px flex-1 bg-line" />
           </div>
 
-          <div className="mt-5 space-y-2.5">
+          <div className="mt-2.5 space-y-2">
             {rolePickerOptions.map((option) => (
               <RolePickerButton key={option.label} {...option} />
             ))}
           </div>
 
-          <div className="mt-6 flex items-start gap-2.5 rounded-button border border-[#c8d9ea] bg-info-bg px-3.5 py-3 text-[12px] leading-5 text-info-text">
-            <Icon className="mt-0.5 size-4 shrink-0" name="shield" />
+          <div className="mt-6 flex items-start gap-2.5 rounded-button border border-[#2d5c88] bg-info-bg px-3.5 py-3 text-[12px] leading-5 text-ink">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-[#2d5c88] text-[10px] font-bold text-[#2d5c88]"
+            >
+              i
+            </span>
             <p>Two-step verification is required for all dashboard users.</p>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] text-ink-soft">
-            <Link className="underline-offset-4 hover:underline" href="#">
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[#2d5c88]">
+            <Link className="underline underline-offset-2" href="#">
               Trouble signing in?
             </Link>
-            <Link className="underline-offset-4 hover:underline" href="#">
+            <Link className="underline underline-offset-2" href="#">
               Privacy notice
             </Link>
           </div>
@@ -107,11 +119,11 @@ function RolePickerButton({ label, viewerId }: RoleOption) {
     <form action={signInAs}>
       <input name="viewer" type="hidden" value={viewerId} />
       <button
-        className="group flex w-full items-center justify-between rounded-button border border-line bg-surface px-4 py-3 text-sm font-semibold text-ink transition hover:border-brand-leaf hover:bg-brand-mint-soft hover:text-brand-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+        className="group flex w-full items-center justify-between rounded-button border border-line bg-surface px-4 py-3 text-[14px] font-medium text-ink transition hover:border-brand-leaf hover:bg-brand-mint-soft hover:text-brand-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
         type="submit"
       >
         <span>{label}</span>
-        <span aria-hidden="true" className="text-muted transition group-hover:text-brand-leaf">
+        <span aria-hidden="true" className="text-[11px] text-muted transition group-hover:text-brand-leaf">
           →
         </span>
       </button>
@@ -129,15 +141,15 @@ function LanguagePicker() {
   return (
     <div
       aria-label="Interface language"
-      className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface p-1"
+      className="inline-flex items-center overflow-hidden rounded-button border border-line bg-surface"
       role="group"
     >
       {languages.map((lang) => (
         <button
           aria-pressed={lang.code === "en"}
-          className={`rounded-pill px-3 py-1 text-xs font-semibold transition ${
+          className={`border-l border-line px-3 py-1.5 text-xs transition first:border-l-0 ${
             lang.code === "en"
-              ? "bg-brand-forest text-white"
+              ? "bg-brand-mint font-semibold text-brand-forest"
               : "text-ink-soft hover:text-brand-forest"
           }`}
           key={lang.code}

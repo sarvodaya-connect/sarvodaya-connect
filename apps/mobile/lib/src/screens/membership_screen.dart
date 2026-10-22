@@ -15,6 +15,9 @@ class MembershipScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    void done(String message) =>
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
     return Scaffold(
       appBar: AppBar(title: const Text('Membership')),
       body: Column(
@@ -30,174 +33,365 @@ class MembershipScreen extends StatelessWidget {
                       title: 'Membership not available',
                       message: 'No approved member counts have been added yet.',
                     )
-                  : const _MembershipContent(summary: demoMembership),
+                  : const MembershipContent(editable: true),
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: store.emptyRecords
+          ? null
+          : BottomActionBar(
+              secondary: OutlinedButton(
+                onPressed: () => done('Membership counts saved as a draft.'),
+                child: const Text('Save draft'),
+              ),
+              primary: FilledButton(
+                onPressed: () => done(
+                  'Membership counts sent to the District Centre (demonstration).',
+                ),
+                child: const Text('Send to District'),
+              ),
+            ),
+    );
+  }
+}
+
+/// M08 body: reporting period, total with the female/male split, then
+/// counts for the five categories. Also shown on the Society "Members" tab.
+class MembershipContent extends StatefulWidget {
+  const MembershipContent({
+    super.key,
+    this.summary = demoMembership,
+    this.editable = false,
+  });
+
+  final MembershipSummary summary;
+
+  /// Shows − / + steppers; the Society tab shows the counts only.
+  final bool editable;
+
+  @override
+  State<MembershipContent> createState() => _MembershipContentState();
+}
+
+class _MembershipContentState extends State<MembershipContent> {
+  static const _periods = ['Apr–Jun 2026', 'Jul–Sep 2026'];
+
+  late String _period = widget.summary.period;
+  late final List<(int, int)> _counts = [
+    for (final c in widget.summary.categories) (c.female, c.male),
+  ];
+  late int _families = widget.summary.familiesWithMember;
+
+  int get _female => _counts.fold(0, (sum, c) => sum + c.$1);
+  int get _male => _counts.fold(0, (sum, c) => sum + c.$2);
+
+  void _set(int index, {int? female, int? male}) => setState(() {
+    final (f, m) = _counts[index];
+    _counts[index] = (
+      (female ?? f).clamp(0, 99999),
+      (male ?? m).clamp(0, 99999),
+    );
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = widget.summary;
+    final total = _female + _male;
+    final familyShare = summary.villageFamilies == 0
+        ? 0
+        : (_families * 100 / summary.villageFamilies).round();
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Reporting period',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: _period,
+          isDense: true,
+          items: [
+            for (final period in _periods)
+              DropdownMenuItem(value: period, child: Text(period)),
+          ],
+          onChanged: (value) => setState(() => _period = value ?? _period),
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
+          padding: const EdgeInsets.all(14),
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total members',
+                        style: TextStyle(color: AppColors.muted, fontSize: 11),
+                      ),
+                      Text(
+                        _formatCount(total),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '+${summary.changeSincePrevious} since ${summary.previousPeriod}',
+                  style: const TextStyle(
+                    color: AppColors.leaf,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Semantics(
+              label:
+                  'Female ${_formatCount(_female)}, male ${_formatCount(_male)}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 6,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: _female,
+                        child: Container(color: _femaleColor),
+                      ),
+                      Expanded(
+                        flex: _male,
+                        child: Container(color: _maleColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 2,
+              children: [
+                const _Dot(_femaleColor),
+                Text('Female ${_formatCount(_female)}', style: _legendStyle),
+                const SizedBox(width: 6),
+                const _Dot(_maleColor),
+                Text('Male ${_formatCount(_male)}', style: _legendStyle),
+                const SizedBox(width: 6),
+                Text(
+                  '$_families of ${summary.villageFamilies} village families ($familyShare%)',
+                  style: _legendStyle,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              Container(
+                color: AppColors.background,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: const Row(
+                  children: [
+                    Expanded(child: Text('Members', style: _headerStyle)),
+                    _CountColumn(child: Text('Female', style: _headerStyle)),
+                    SizedBox(width: 6),
+                    _CountColumn(child: Text('Male', style: _headerStyle)),
+                  ],
+                ),
+              ),
+              for (final (i, category) in summary.categories.indexed) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category.category,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (category.note != null)
+                              Text(
+                                category.note!,
+                                style: const TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      _CountColumn(
+                        child: _Stepper(
+                          label: '${category.category} female',
+                          value: _counts[i].$1,
+                          editable: widget.editable,
+                          onChanged: (v) => _set(i, female: v),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      _CountColumn(
+                        child: _Stepper(
+                          label: '${category.category} male',
+                          value: _counts[i].$2,
+                          editable: widget.editable,
+                          onChanged: (v) => _set(i, male: v),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Families with a member',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                _CountColumn(
+                  child: _Stepper(
+                    label: 'Families with a member',
+                    value: _families,
+                    editable: widget.editable,
+                    onChanged: (v) =>
+                        setState(() => _families = v.clamp(0, 99999)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CountColumn extends StatelessWidget {
+  const _CountColumn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(width: 104, child: Center(child: child));
+}
+
+/// "− 30 +" counter. Shows the number only when not editable.
+class _Stepper extends StatelessWidget {
+  const _Stepper({
+    required this.label,
+    required this.value,
+    required this.editable,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final bool editable;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final number = Text(
+      _formatCount(value),
+      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+    );
+    if (!editable) return number;
+    Widget button(IconData icon, String tip, int delta) => SizedBox(
+      width: 30,
+      height: 32,
+      child: IconButton(
+        tooltip: '$tip $label',
+        padding: EdgeInsets.zero,
+        iconSize: 16,
+        onPressed: () => onChanged(value + delta),
+        icon: Icon(icon),
+      ),
+    );
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(Icons.remove, 'Decrease', -1),
+          Container(
+            width: 40,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              border: Border.symmetric(
+                vertical: BorderSide(color: AppColors.line),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: number,
+          ),
+          button(Icons.add, 'Increase', 1),
         ],
       ),
     );
   }
 }
 
-class _MembershipContent extends StatelessWidget {
-  const _MembershipContent({required this.summary});
+class _Dot extends StatelessWidget {
+  const _Dot(this.color);
 
-  final MembershipSummary summary;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      SectionCard(
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.verified_outlined, color: AppColors.leaf),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Membership ${summary.year} · Approved',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Approved member counts by category, separated by female and male totals.',
-            style: TextStyle(color: AppColors.inkSoft, height: 1.4),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      SectionCard(
-        title: 'Members by category',
-        children: [
-          const _MembershipHeader(),
-          const Divider(height: 18),
-          for (final category in summary.categories)
-            _CategoryRow(category: category),
-          const Divider(height: 24),
-          _TotalRow(
-            label: 'Female total',
-            value: _formatCount(summary.femaleTotal),
-          ),
-          const SizedBox(height: 8),
-          _TotalRow(
-            label: 'Male total',
-            value: _formatCount(summary.maleTotal),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      SectionCard(
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Overall membership',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              Text(
-                _formatCount(summary.overallTotal),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.forest,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      const Center(
-        child: Text(
-          'Fictional information for demonstration only',
-          style: TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-      ),
-    ],
+  Widget build(BuildContext context) => Container(
+    width: 7,
+    height: 7,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
 
-class _MembershipHeader extends StatelessWidget {
-  const _MembershipHeader();
+const _legendStyle = TextStyle(color: AppColors.inkSoft, fontSize: 11);
 
-  @override
-  Widget build(BuildContext context) => const Row(
-    children: [
-      Expanded(child: Text('Category', style: _headerStyle)),
-      SizedBox(
-        width: 64,
-        child: Text('Female', textAlign: TextAlign.end, style: _headerStyle),
-      ),
-      SizedBox(
-        width: 64,
-        child: Text('Male', textAlign: TextAlign.end, style: _headerStyle),
-      ),
-      SizedBox(
-        width: 58,
-        child: Text('Total', textAlign: TextAlign.end, style: _headerStyle),
-      ),
-    ],
-  );
-}
-
-class _CategoryRow extends StatelessWidget {
-  const _CategoryRow({required this.category});
-
-  final MembershipCategoryCounts category;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 9),
-    child: Row(
-      children: [
-        Expanded(child: Text(category.category)),
-        SizedBox(
-          width: 64,
-          child: Text(_formatCount(category.female), textAlign: TextAlign.end),
-        ),
-        SizedBox(
-          width: 64,
-          child: Text(_formatCount(category.male), textAlign: TextAlign.end),
-        ),
-        SizedBox(
-          width: 58,
-          child: Text(
-            _formatCount(category.total),
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _TotalRow extends StatelessWidget {
-  const _TotalRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Text(label, style: const TextStyle(color: AppColors.inkSoft)),
-      ),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-    ],
-  );
-}
+const _femaleColor = Color(0xFF7B3F8C);
+const _maleColor = Color(0xFF2D5C88);
 
 const _headerStyle = TextStyle(
   color: AppColors.muted,
-  fontWeight: FontWeight.w700,
-  fontSize: 12,
+  fontWeight: FontWeight.w600,
+  fontSize: 11,
 );
 
 String _formatCount(int value) => value.toString().replaceAllMapped(

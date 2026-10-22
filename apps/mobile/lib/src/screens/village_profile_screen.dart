@@ -65,141 +65,172 @@ class _VillageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final village = demoVillageProfile;
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        SectionCard(
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.verified_outlined,
-                  color: AppColors.leaf,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Village profile 2026 · Approved',
-                    style: Theme.of(context).textTheme.titleSmall,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.mint,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.leaf.withValues(alpha: 0.5),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Reviewed once a year by the District Centre and HQ to plan programmes and write project proposals.',
-              style: TextStyle(color: AppColors.inkSoft, height: 1.4),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'People · ${village.name}',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _VillageMetric(
-                    label: 'Households',
-                    value: _number(village.households),
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.check, color: AppColors.leaf, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Village profile 2026 · Approved',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                              color: AppColors.forest,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Update once a year. District and HQ use it to plan programmes and write project proposals.',
+                            style: TextStyle(
+                              color: AppColors.forest,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _VillageMetric(
-                    label: 'Population',
-                    value: _number(village.population),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              _TitledCard(
+                title: 'People · ${village.name}',
+                child: Column(
+                  children: [
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _VillageMetric(
+                            value: _number(village.households),
+                            label: 'Households',
+                          ),
+                          const VerticalDivider(width: 1),
+                          _VillageMetric(
+                            value: _number(village.population),
+                            label: 'Population',
+                          ),
+                          const VerticalDivider(width: 1),
+                          _VillageMetric(
+                            value:
+                                '${village.femaleShare}% · ${village.maleShare}%',
+                            label: 'Female · male',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _VillageMetric(
+                            value: _number(village.womenHeadedHouseholds),
+                            label: 'Women-headed',
+                          ),
+                          const VerticalDivider(width: 1),
+                          _VillageMetric(
+                            value: _number(village.residentsWithDisabilities),
+                            label: 'Disabilities',
+                          ),
+                          const VerticalDivider(width: 1),
+                          _VillageMetric(
+                            value: _number(village.eldersOverSixty),
+                            label: 'Elders 60+',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _VillageMetric(
-                    label: 'Women-headed',
-                    value: _number(village.womenHeadedHouseholds),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              _TitledCard(
+                title: 'Key stats',
+                child: Column(
+                  children: [
+                    for (final (i, statistic)
+                        in village.keyStatistics.indexed) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _StatisticRow(
+                        label: statistic.label,
+                        value: statistic.value,
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _VillageMetric(
-                    label: 'Disabilities',
-                    value: _number(village.residentsWithDisabilities),
-                  ),
+              ),
+              const SizedBox(height: 12),
+              SectionCard(
+                title: 'Main income · households',
+                trailing: const Text(
+                  'Share',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _VillageMetric(
-              label: 'Elders 60+',
-              value: _number(village.eldersOverSixty),
-              fullWidth: true,
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _GenderShare(
-                    label: 'Female',
-                    percent: village.femaleShare,
-                    color: AppColors.leaf,
-                  ),
+                children: [
+                  for (final livelihood in village.livelihoods)
+                    _LivelihoodRow(
+                      name: livelihood.name,
+                      percent: livelihood.percent,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SectionCard(
+                title: 'Priority issues',
+                children: [
+                  for (
+                    var index = 0;
+                    index < village.priorityIssues.length;
+                    index++
+                  )
+                    _PriorityIssue(
+                      index: index + 1,
+                      text: village.priorityIssues[index],
+                      isLast: index == village.priorityIssues.length - 1,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Center(
+                child: Text(
+                  'Fictional information for demonstration only',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _GenderShare(
-                    label: 'Male',
-                    percent: village.maleShare,
-                    color: AppColors.actionPressed,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Key statistics',
-          children: [
-            for (final statistic in village.keyStatistics)
-              _StatisticRow(label: statistic.label, value: statistic.value),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Main income · households',
-          trailing: const Text(
-            'Share',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ],
           ),
-          children: [
-            for (final livelihood in village.livelihoods)
-              _LivelihoodRow(
-                name: livelihood.name,
-                percent: livelihood.percent,
-              ),
-          ],
         ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Priority issues',
-          children: [
-            for (var index = 0; index < village.priorityIssues.length; index++)
-              _PriorityIssue(
-                index: index + 1,
-                text: village.priorityIssues[index],
-                isLast: index == village.priorityIssues.length - 1,
+        BottomActionBar(
+          primary: FilledButton(
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'The 2027 village profile update opens in January 2027.',
+                ),
               ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Center(
-          child: Text(
-            'Fictional information for demonstration only',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+            child: const Text('Start 2027 update'),
           ),
         ),
       ],
@@ -207,68 +238,61 @@ class _VillageContent extends StatelessWidget {
   }
 }
 
-class _VillageMetric extends StatelessWidget {
-  const _VillageMetric({
-    required this.label,
-    required this.value,
-    this.fullWidth = false,
-  });
+/// Card with a title row and hairline, its body flush to the edges.
+class _TitledCard extends StatelessWidget {
+  const _TitledCard({required this.title, required this.child});
 
-  final String label;
-  final String value;
-  final bool fullWidth;
+  final String title;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: fullWidth ? double.infinity : null,
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: AppColors.mintSoft,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: AppColors.line),
-    ),
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          child: Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+          ),
         ),
+        const Divider(height: 1),
+        child,
       ],
     ),
   );
 }
 
-class _GenderShare extends StatelessWidget {
-  const _GenderShare({
-    required this.label,
-    required this.percent,
-    required this.color,
-  });
+class _VillageMetric extends StatelessWidget {
+  const _VillageMetric({required this.label, required this.value});
 
   final String label;
-  final int percent;
-  final Color color;
+  final String value;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text('$label · $percent%', style: Theme.of(context).textTheme.bodySmall),
-      const SizedBox(height: 5),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: LinearProgressIndicator(
-          value: percent / 100,
-          minHeight: 8,
-          color: color,
-          backgroundColor: AppColors.line,
-        ),
+  Widget build(BuildContext context) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          ),
+        ],
       ),
-    ],
+    ),
   );
 }
 
@@ -280,16 +304,16 @@ class _StatisticRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
     child: Row(
       children: [
-        Expanded(child: Text(label)),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
         const SizedBox(width: 12),
         Flexible(
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ),
       ],
