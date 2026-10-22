@@ -8,7 +8,6 @@ import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
-import '../widgets/demo_options_sheet.dart';
 import '../widgets/landscape_header.dart';
 import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
@@ -34,14 +33,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           LandscapeHeader(
             title: '${copy.greeting(store.now)}, $firstName',
-            actions: [
-              const _NotificationsButton(),
-              IconButton(
-                tooltip: 'Demo options',
-                icon: const Icon(Icons.tune),
-                onPressed: () => showDemoOptions(context),
-              ),
-            ],
+            actions: const [_NotificationsButton()],
           ),
           if (store.offline) const OfflineBanner(),
           Expanded(
@@ -73,95 +65,114 @@ class _HomeContent extends StatelessWidget {
     final society = store.society;
     final completeness = society.profileCompleteness;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(bottom: 16),
       children: [
-        SectionCard(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        store.selectedLanguage == AppLanguage.tamil
-                            ? 'களுவாஞ்சிக்குடி சர்வோதய சங்கம்'
-                            : society.nameEn,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      if (society.nameLocal != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: SectionCard(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          society.nameLocal!,
-                          style: const TextStyle(color: AppColors.inkSoft),
+                          store.selectedLanguage == AppLanguage.tamil
+                              ? 'களுவாஞ்சிக்குடி சர்வோதய சங்கம்'
+                              : society.nameEn,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${society.societyCode} · ${society.district.nameEn}'
-                        '${society.lastVerifiedOn == null ? '' : ' · Verified ${formatDate(society.lastVerifiedOn!)}'}',
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 13,
-                        ),
+                        if (society.nameLocal != null)
+                          Text(
+                            society.nameLocal!,
+                            style: const TextStyle(
+                              color: AppColors.inkSoft,
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const StatusChip(
+                    StatusStyle(
+                      'Active',
+                      Icons.check_circle_outline,
+                      Color(0xFF25643F),
+                      Color(0xFFE5F3E8),
+                    ),
+                    compact: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 14,
+                runSpacing: 2,
+                children: [
+                  _MetaText(society.societyCode),
+                  _MetaText(society.district.nameEn),
+                  if (society.lastVerifiedOn != null)
+                    _MetaText(
+                      'Verified ${formatDate(society.lastVerifiedOn!)}',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Profile completeness',
+                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                    ),
+                  ),
+                  Text(
+                    '$completeness%',
+                    style: const TextStyle(
+                      color: AppColors.forest,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => store.selectTab(HomeShell.societyTab),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.only(left: 10),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
+                    ),
+                    child: const Text('Complete profile'),
                   ),
-                ),
-                const StatusChip(
-                  StatusStyle(
-                    'Active',
-                    Icons.check_circle_outline,
-                    Color(0xFF25643F),
-                    Color(0xFFE5F3E8),
+                ],
+              ),
+              Semantics(
+                label: 'Profile $completeness percent complete',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: completeness / 100,
+                    minHeight: 6,
+                    backgroundColor: AppColors.mint,
+                    color: AppColors.leaf,
                   ),
-                  compact: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Profile completeness',
-                    style: TextStyle(color: AppColors.muted, fontSize: 12),
-                  ),
-                ),
-                Text(
-                  '$completeness%',
-                  style: const TextStyle(
-                    color: AppColors.forest,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => store.selectTab(HomeShell.societyTab),
-                  child: const Text('Complete profile'),
-                ),
-              ],
-            ),
-            Semantics(
-              label: 'Profile $completeness percent complete',
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: completeness / 100,
-                  minHeight: 6,
-                  backgroundColor: AppColors.mint,
-                  color: AppColors.leaf,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: copy.needsAttention,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        _SectionLabel(copy.needsAttention),
+        _WhiteBlock(
           children: [
             const _CurrentSubmissionCard(),
-            const Divider(height: 1),
             _AttentionTile(
               icon: Icons.description_outlined,
               iconColor: const Color(0xFF356C99),
@@ -170,7 +181,7 @@ class _HomeContent extends StatelessWidget {
               subtitle: 'From HQ · due 14 Oct 2026',
               chip: const StatusChip(
                 StatusStyle(
-                  'Due soon',
+                  '5 days',
                   Icons.schedule,
                   Color(0xFF7A5A00),
                   Color(0xFFFFF2CC),
@@ -180,7 +191,7 @@ class _HomeContent extends StatelessWidget {
               onTap: () => store.selectTab(HomeShell.documentsTab),
             ),
             _AttentionTile(
-              icon: Icons.verified_outlined,
+              icon: Icons.verified_user_outlined,
               iconColor: const Color(0xFFB83439),
               iconBackground: const Color(0xFFFDECEC),
               title: 'Audit ${store.currentAudit.financialYear}',
@@ -194,64 +205,138 @@ class _HomeContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: copy.quickActions,
-          children: [
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.65,
-              children: [
-                _QuickAction(
-                  icon: Icons.badge_outlined,
-                  label: copy.viewProfile,
-                  onTap: () => store.selectTab(HomeShell.societyTab),
-                ),
-                _QuickAction(
-                  icon: Icons.groups_outlined,
-                  label: copy.updateCouncil,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const CouncilScreen(),
+        _SectionLabel(copy.quickActions),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _TwoColumnGrid(
+            children: [
+              _QuickAction(
+                icon: Icons.show_chart,
+                label: copy.reportActivity,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Activity reporting is built in a separate task.',
                     ),
                   ),
                 ),
-                _QuickAction(
-                  icon: Icons.insights_outlined,
-                  label: copy.reportActivity,
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Activity reporting is built in a separate task.',
-                      ),
-                    ),
+              ),
+              _QuickAction(
+                icon: Icons.groups_outlined,
+                label: copy.updateCouncil,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CouncilScreen(),
                   ),
                 ),
-                _QuickAction(
-                  icon: Icons.upload_file_outlined,
-                  label: copy.uploadDocument,
-                  onTap: () => store.selectTab(HomeShell.documentsTab),
-                ),
-                _QuickAction(
-                  icon: Icons.people_alt_outlined,
-                  label: 'Membership',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const MembershipScreen(),
-                    ),
+              ),
+              _QuickAction(
+                icon: Icons.file_upload_outlined,
+                label: copy.uploadDocument,
+                onTap: () => store.selectTab(HomeShell.documentsTab),
+              ),
+              _QuickAction(
+                icon: Icons.people_alt_outlined,
+                label: copy.membership,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MembershipScreen(),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              _QuickAction(
+                icon: Icons.badge_outlined,
+                label: copy.viewProfile,
+                onTap: () => store.selectTab(HomeShell.societyTab),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
+}
+
+/// Two equal columns whose rows grow with their text (no fixed aspect ratio).
+class _TwoColumnGrid extends StatelessWidget {
+  const _TwoColumnGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var i = 0; i < children.length; i += 2) ...[
+        if (i > 0) const SizedBox(height: 10),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: children[i]),
+              const SizedBox(width: 10),
+              Expanded(
+                child: i + 1 < children.length
+                    ? children[i + 1]
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
+class _MetaText extends StatelessWidget {
+  const _MetaText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(text, style: const TextStyle(color: AppColors.muted, fontSize: 12));
+}
+
+/// Bold section label on the page background, as in the catalogue home.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+    child: Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
+}
+
+/// Full-width white list with hairline dividers between rows.
+class _WhiteBlock extends StatelessWidget {
+  const _WhiteBlock({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.surface,
+    shape: const Border.symmetric(
+      horizontal: BorderSide(color: AppColors.line),
+    ),
+    child: Column(
+      children: [
+        for (final (index, child) in children.indexed) ...[
+          if (index > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+          child,
+        ],
+      ],
+    ),
+  );
 }
 
 /// Opens M16 Notifications. The badge shows how many are unread.
@@ -268,10 +353,8 @@ class _NotificationsButton extends StatelessWidget {
         icon: Badge(
           isLabelVisible: unread > 0,
           label: Text('$unread'),
-          backgroundColor: AppColors.leaf,
-          child: Icon(
-            unread > 0 ? Icons.notifications : Icons.notifications_outlined,
-          ),
+          backgroundColor: const Color(0xFFC0392B),
+          child: const Icon(Icons.notifications_outlined),
         ),
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
@@ -386,7 +469,7 @@ class _AttentionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       onTap: onTap,
       leading: Container(
         width: 36,
@@ -401,7 +484,10 @@ class _AttentionTile extends StatelessWidget {
         title,
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
       ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+      ),
       trailing: chip,
     );
   }
@@ -421,26 +507,28 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.mintSoft,
-      borderRadius: BorderRadius.circular(10),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: AppColors.leaf, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  maxLines: 2,
+              Icon(icon, color: AppColors.forest, size: 20),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
+                maxLines: 2,
               ),
             ],
           ),
@@ -478,24 +566,30 @@ class _HomeCopy {
   String get viewProfile => switch (language) {
     AppLanguage.tamil => 'சங்க விவரம்',
     AppLanguage.sinhala => 'සමිති පැතිකඩ',
-    AppLanguage.english => 'View Society Profile',
+    AppLanguage.english => 'View society profile',
   };
 
   String get updateCouncil => switch (language) {
     AppLanguage.tamil => 'சபையை புதுப்பிக்க',
     AppLanguage.sinhala => 'සභාව යාවත්කාලීන කරන්න',
-    AppLanguage.english => 'Update Council',
+    AppLanguage.english => 'Update committee',
   };
 
   String get reportActivity => switch (language) {
     AppLanguage.tamil => 'செயற்பாட்டைப் பதிவு செய்',
     AppLanguage.sinhala => 'ක්‍රියාකාරකම වාර්තා කරන්න',
-    AppLanguage.english => 'Report Activity',
+    AppLanguage.english => 'Report activity',
+  };
+
+  String get membership => switch (language) {
+    AppLanguage.tamil => 'உறுப்பினர்',
+    AppLanguage.sinhala => 'සාමාජිකත්වය',
+    AppLanguage.english => 'Membership',
   };
 
   String get uploadDocument => switch (language) {
     AppLanguage.tamil => 'ஆவணத்தை பதிவேற்று',
     AppLanguage.sinhala => 'ලේඛනය උඩුගත කරන්න',
-    AppLanguage.english => 'Upload Document',
+    AppLanguage.english => 'Upload document',
   };
 }

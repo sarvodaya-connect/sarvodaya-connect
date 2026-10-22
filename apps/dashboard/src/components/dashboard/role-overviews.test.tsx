@@ -22,8 +22,9 @@ describe("role overviews", () => {
 
     expect(screen.getByRole("heading", { name: "Good morning, R. Fernando" })).toBeInTheDocument();
     expect(screen.getByText("Societies in district")).toBeInTheDocument();
-    expect(screen.getByText("Waiting for review")).toBeInTheDocument();
-    expect(screen.getByText("Compliance")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for my review")).toBeInTheDocument();
+    expect(screen.getByText("Data verified")).toBeInTheDocument();
+    expect(screen.getByText("Not updated (90+ days)")).toBeInTheDocument();
     expect(screen.getByText("88%", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Key stats · villages in district" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open review queue (14)" })).toHaveAttribute("href", "/reviews");

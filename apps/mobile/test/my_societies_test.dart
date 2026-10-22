@@ -23,7 +23,7 @@ void main() {
     final store = testStore()..switchDemoRole(UserRole.societyOfficer);
     await _show(tester, store);
 
-    expect(find.text('1 society available to your role'), findsOneWidget);
+    expect(find.bySemanticsLabel('1 society available to your role'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     expect(find.text('Mawathagama SSS'), findsNothing);
     expect(find.text('Wariyapola SSS'), findsNothing);
@@ -35,7 +35,7 @@ void main() {
     final store = testStore()..switchDemoRole(UserRole.districtManager);
     await _show(tester, store);
 
-    expect(find.text('2 societies available to your role'), findsOneWidget);
+    expect(find.bySemanticsLabel('2 societies available to your role'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     expect(find.text('Mawathagama SSS'), findsOneWidget);
     expect(find.text('Wariyapola SSS'), findsNothing);
@@ -45,7 +45,7 @@ void main() {
     final store = testStore()..switchDemoRole(UserRole.hqAdmin);
     await _show(tester, store);
 
-    expect(find.text('3 societies available to your role'), findsOneWidget);
+    expect(find.bySemanticsLabel('3 societies available to your role'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     expect(find.text('Mawathagama SSS'), findsOneWidget);
     expect(find.text('Wariyapola SSS'), findsOneWidget);

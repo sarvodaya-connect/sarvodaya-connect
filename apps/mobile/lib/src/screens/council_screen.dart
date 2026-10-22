@@ -28,7 +28,10 @@ class CouncilScreen extends StatelessWidget {
           title: const Text('Executive Council'),
           bottom: const TabBar(
             labelColor: AppColors.forest,
+            unselectedLabelColor: AppColors.inkSoft,
             indicatorColor: AppColors.leaf,
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: [
               Tab(text: 'Current'),
               Tab(text: 'History'),
@@ -170,13 +173,11 @@ class _CurrentCouncil extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _GroupHeader('Office bearers'),
         for (final member in officeBearers) tile(member),
-        const SizedBox(height: 8),
-        _GroupHeader('Executive members · ${executive.length}'),
+        _GroupHeader('Executive members · ${executive.length} more'),
         for (final member in executive) tile(member),
-        const SizedBox(height: 8),
         _GroupHeader(
           'Elders Council · ${elders.length} of ${CouncilSeatType.elder.seatCount}',
         ),
@@ -277,14 +278,19 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Semantics(
         header: true,
         child: Text(
           text.toUpperCase(),
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
             color: AppColors.leaf,

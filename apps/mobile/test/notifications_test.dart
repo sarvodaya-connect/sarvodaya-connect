@@ -34,7 +34,7 @@ void main() {
     await _openNotifications(tester);
 
     expect(find.byType(NotificationsScreen), findsOneWidget);
-    expect(find.text('4 unread'), findsOneWidget);
+    expect(find.bySemanticsLabel('4 unread'), findsOneWidget);
     expect(find.text('TODAY'), findsOneWidget);
     expect(find.text('EARLIER'), findsOneWidget);
     expect(find.text('HQ asked for the 4 Registrar documents'), findsOneWidget);
@@ -74,7 +74,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('3 unread'), findsOneWidget);
+    expect(find.bySemanticsLabel('3 unread'), findsOneWidget);
     expect(_unreadDot('note-audit-overdue'), findsNothing);
     expect(store.unreadNotificationCount, 3);
 
@@ -119,12 +119,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NotificationsScreen), findsOneWidget);
     expect(_unreadDot('note-district-meeting'), findsNothing);
-    expect(find.text('3 unread'), findsOneWidget);
+    expect(find.bySemanticsLabel('3 unread'), findsOneWidget);
 
     await tester.tap(find.text('Mark all read'));
     await tester.pumpAndSettle();
     expect(store.unreadNotificationCount, 0);
-    expect(find.text('All caught up'), findsOneWidget);
+    expect(find.bySemanticsLabel('All caught up'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('^Unread')), findsNothing);
     expect(
       tester
@@ -189,6 +189,6 @@ void main() {
     store.failLoads = false;
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
-    expect(find.text('4 unread'), findsOneWidget);
+    expect(find.bySemanticsLabel('4 unread'), findsOneWidget);
   });
 }

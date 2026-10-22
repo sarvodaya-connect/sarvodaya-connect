@@ -1,32 +1,52 @@
 import { DistrictCatalogueOverview } from "@/components/dashboard/district-overview";
 import { NationalActivityBreakdown, NationalMapAndEmergency } from "@/components/dashboard/national-support";
 import { PlatformAdminScreen } from "@/components/dashboard/platform-admin";
-import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 
 /**
- * Panel chrome used across the National Overview — matches Screen Catalogue
- * v3 D02 card style: white surface, 1px #DFE5DC border, 14px radius, flat.
+ * Panel chrome used across the National Overview — Screen Catalogue v3 D02:
+ * white surface, 1px border, numbered uppercase section title, flat.
  */
-function Panel({ action, children, className = "", title, eyebrow }: { action?: React.ReactNode; children: React.ReactNode; className?: string; title: string; eyebrow?: string }) {
+function Panel({ action, children, className = "", numbers, title }: { action?: React.ReactNode; children: React.ReactNode; className?: string; numbers: { n: string; title: string }[]; title?: string }) {
   return (
-    <section className={`rounded-card border border-line bg-surface ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft px-5 py-4 md:px-6">
-        <div className="min-w-0">
-          {eyebrow && <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-leaf">{eyebrow}</p>}
-          <h2 className={`${eyebrow ? "mt-1" : ""} text-sm font-semibold text-ink md:text-base`}>{title}</h2>
-        </div>
+    <section aria-label={title ?? numbers.map((item) => item.title).join(" · ")} className={`rounded-card border border-line bg-surface ${className}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 md:px-6">
+        <h2 className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {numbers.map((item) => (
+            <span className="flex items-center gap-2" key={item.n}>
+              <span aria-hidden="true" className="grid size-5 place-items-center rounded-full bg-brand-forest text-[10px] font-bold text-white">{item.n}</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-brand-forest">{item.title}</span>
+            </span>
+          ))}
+        </h2>
         {action && <div className="flex items-center gap-2">{action}</div>}
       </div>
-      <div className="px-5 py-5 md:px-6">{children}</div>
+      <div className="px-5 pb-5 pt-4 md:px-6">{children}</div>
     </section>
   );
 }
 
+const sectionLinks = [
+  { href: "#national-section-1", label: "1 · Societies" },
+  { href: "#national-section-2", label: "2 · Membership" },
+  { href: "#national-section-3", label: "3–4 · Audit & AGM" },
+  { href: "#national-section-5", label: "5 · Wealth" },
+  { href: "#national-section-6", label: "6 · Activities" },
+  { href: "#national-section-7", label: "Map & emergency" },
+];
+
 export function NationalOverview() {
   return (
     <>
+      <nav aria-label="Dashboard sections" className="mb-4 flex flex-wrap items-center gap-2">
+        {sectionLinks.map((link) => (
+          <a className="rounded-md border border-line bg-surface px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:border-brand-leaf hover:text-brand-forest" href={link.href} key={link.href}>
+            {link.label}
+          </a>
+        ))}
+        <span className="ml-auto rounded-md border border-[#e5d59f] bg-[#fff9e9] px-2.5 py-1 text-[11px] font-semibold text-[#755a08]">Demonstration Data · FY 2025/26</span>
+      </nav>
       <section id="national-section-1">
-        <Panel action={<ChangedInV2Badge />} title="Latest Shramadana Societies status" eyebrow="1 · National registry">
+        <Panel numbers={[{ n: "1", title: "Latest Shramadana Societies status" }]}>
           <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
             <div>
               <div className="flex flex-wrap items-end gap-x-7 gap-y-2">
@@ -61,9 +81,9 @@ export function NationalOverview() {
         </Panel>
       </section>
 
-      <div className="mt-4 grid gap-4 2xl:grid-cols-[1.15fr_1fr]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
         <section id="national-section-2">
-          <Panel title="Total membership · male and female" eyebrow="2 · Membership">
+          <Panel numbers={[{ n: "2", title: "Total membership · male and female" }]}>
             <div className="flex flex-wrap items-end justify-between gap-3"><div><strong className="text-4xl font-bold tracking-tight text-[#17211b]">98,640</strong><p className="mt-1 text-[11px] text-[#78857d]">Members in 1,076 active societies</p></div><div className="flex gap-4 text-[11px]"><span className="text-[#8b3889]">● Female&nbsp; <strong>56,214 · 57%</strong></span><span className="text-[#28669a]">● Male&nbsp; <strong>42,426 · 43%</strong></span></div></div>
             <div aria-label="Female members 57 percent, male members 43 percent" className="mt-4 flex h-3 overflow-hidden rounded-full" role="img"><div className="w-[57%] bg-[#93458f]" /><div className="w-[43%] bg-[#28669a]" /></div>
             <div className="mt-5 grid grid-cols-[1fr_auto] gap-x-5 text-[10px] font-semibold uppercase tracking-wide text-[#78857d]"><span>Membership category · female / male</span><span>Total</span></div>
@@ -76,7 +96,7 @@ export function NationalOverview() {
         </section>
         <div className="grid gap-4">
           <section id="national-section-3">
-            <Panel title="Audit compliance · Audit & AGM completion" eyebrow="3–4 · Annual registrar documents">
+            <Panel numbers={[{ n: "3", title: "Audit compliance" }, { n: "4", title: "Audit & AGM completion" }]}>
               <div className="flex flex-wrap items-center gap-5 border-b border-[#edf0eb] pb-4">
                 <div aria-label="75 percent audit compliance" className="grid size-[92px] shrink-0 place-items-center rounded-full" role="img" style={{ background: "conic-gradient(#26744b 0 75%, #e9ede5 75% 100%)" }}><span className="grid size-[68px] place-items-center rounded-full bg-white text-lg font-bold text-[#344239]">75%</span></div>
                 <div className="min-w-[150px] flex-1"><p className="text-[11px] leading-5 text-[#526057]"><strong className="text-[#344239]">812 of 1,076</strong> active societies have an audit report for FY 2025/26, certified by an auditor registered under the Companies Act.</p><p className="mt-1 text-[11px] font-semibold text-[#b33b36]">264 not yet approved, 128 of them overdue</p></div>
@@ -84,9 +104,11 @@ export function NationalOverview() {
               <div className="mt-4"><h3 className="text-xs font-semibold text-[#344239]">Annual documents to the Registrar · FY 2025/26</h3><ul className="mt-3 space-y-3">{[{ label: "Audit report", value: 812, percent: 75 }, { label: "AGM minutes", value: 905, percent: 84 }, { label: "Office bearers list", value: 948, percent: 88 }, { label: "Members list", value: 776, percent: 72 }, { label: "All four submitted", value: 702, percent: 65 }].map((item) => <li className="grid grid-cols-[minmax(110px,1fr)_auto_minmax(54px,0.8fr)] items-center gap-2 text-[10px]" key={item.label}><span className="text-[#526057]">{item.label}</span><strong className="text-right text-[#344239]">{item.value} · {item.percent}%</strong><span aria-label={`${item.label} ${item.percent}% complete`} className="h-2 overflow-hidden rounded-full bg-[#edf0e8]" role="img"><span className="block h-full rounded-full bg-[#26744b]" style={{ width: `${item.percent}%` }} /></span></li>)}</ul></div>
             </Panel>
           </section>
-<section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        </div>
+      </div>
+      <section className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
             <section id="national-section-5">
-              <Panel title="Total wealth of all SSSs" eyebrow="5 · Wealth">
+              <Panel numbers={[{ n: "5", title: "Total wealth of all SSSs" }]}>
                 <strong className="text-3xl font-bold tracking-tight text-[#174a32]">LKR 1.84 bn</strong>
                 <p className="mt-2 text-[10px] leading-4 text-[#78857d]">From the finance tab of 1,076 active societies · 31 Mar 2026</p>
                 <div aria-label="Society wealth composition" className="mt-4 flex h-2.5 overflow-hidden rounded-full" role="img"><span className="w-[40%] bg-[#183c2b]" /><span className="w-[34%] bg-[#26744b]" /><span className="w-[14%] bg-[#8ab875]" /><span className="w-[12%] bg-[#f0c328]" /></div>
@@ -95,13 +117,15 @@ export function NationalOverview() {
               </Panel>
             </section>
             <section id="national-section-6">
-              <Panel title="3,460 of 3,930 planned activities done · 88%" eyebrow="6 · Activities">
+              <Panel numbers={[{ n: "6", title: "Activity status · done vs planned (YTD)" }]}>
+                <div className="mb-3 inline-flex overflow-hidden rounded-md border border-line text-[11px]" role="group" aria-label="Group activities by">
+                  <span className="bg-brand-forest px-2.5 py-1 font-semibold text-white">10 sectors</span>
+                  <span className="px-2.5 py-1 text-ink-soft">Social · Economic · Governance</span>
+                </div>
                 <NationalActivityBreakdown />
               </Panel>
             </section>
-          </section>
-        </div>
-      </div>
+      </section>
       <NationalMapAndEmergency />
       <p className="mt-4 text-[10px] text-[#818c84]">Demonstration figures are fictional and will be replaced by authorised API data.</p>
     </>

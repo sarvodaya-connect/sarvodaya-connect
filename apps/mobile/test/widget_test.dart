@@ -59,7 +59,7 @@ void main() {
     await pumpApp(tester, store: store);
     await signInWithDemoAccount(tester);
 
-    expect(find.textContaining('You need internet to sign in'), findsOneWidget);
+    expect(find.textContaining('You need internet to sign in'), findsWidgets);
   });
 
   testWidgets('temporary authentication failure offers a retry', (

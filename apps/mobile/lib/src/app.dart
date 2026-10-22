@@ -133,18 +133,17 @@ class HomeShell extends StatelessWidget {
           label: _officerLabel(language, 'Home'),
         ),
         NavigationDestination(
-          icon: const Icon(Icons.groups_outlined),
-          selectedIcon: const Icon(Icons.groups),
+          icon: const Icon(Icons.people_outline),
+          selectedIcon: const Icon(Icons.people),
           label: _officerLabel(language, 'Society'),
         ),
         NavigationDestination(
-          icon: const Icon(Icons.add_box_outlined),
-          selectedIcon: const Icon(Icons.add_box),
+          icon: const _SubmitIcon(),
           label: _officerLabel(language, 'Submit'),
         ),
         NavigationDestination(
-          icon: const Icon(Icons.inbox_outlined),
-          selectedIcon: const Icon(Icons.inbox),
+          icon: const _RequestsIcon(),
+          selectedIcon: const _RequestsIcon(selected: true),
           label: _officerLabel(language, 'Requests'),
         ),
         NavigationDestination(
@@ -235,6 +234,38 @@ class HomeShell extends StatelessWidget {
       _ => english,
     };
   }
+}
+
+/// Catalogue bottom-bar "Submit": a filled green square with a plus.
+class _SubmitIcon extends StatelessWidget {
+  const _SubmitIcon();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 34,
+    height: 24,
+    decoration: BoxDecoration(
+      color: AppColors.action,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: const Icon(Icons.add, color: Colors.white, size: 20),
+  );
+}
+
+/// Requests inbox icon with the amber dot for new requests.
+class _RequestsIcon extends StatelessWidget {
+  const _RequestsIcon({this.selected = false});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Badge(
+    smallSize: 7,
+    backgroundColor: const Color(0xFFF3C44E),
+    child: Icon(
+      selected ? Icons.mark_email_unread : Icons.mark_email_unread_outlined,
+    ),
+  );
 }
 
 class _ShellConfiguration {

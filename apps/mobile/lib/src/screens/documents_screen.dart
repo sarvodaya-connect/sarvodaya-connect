@@ -12,7 +12,6 @@ import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
 import '../services/document_upload_service.dart';
-import 'audit_screen.dart';
 import 'review_submit_screen.dart';
 
 /// Allowed demo formats and size from the SC-25 upload rules.
@@ -92,7 +91,17 @@ class DocumentsScreen extends StatelessWidget {
                 child: const Text('Next: review and submit'),
               ),
             )
-          : null,
+          : inFlow
+          ? null
+          : BottomActionBar(
+              primary: FilledButton(
+                onPressed: () => showUploadSheet(
+                  context,
+                  initialType: initialFilter ?? DocumentType.agmMinutes,
+                ),
+                child: const Text('Upload document'),
+              ),
+            ),
     );
   }
 }
@@ -177,8 +186,9 @@ class _DocumentsContentState extends State<_DocumentsContent> {
           SectionCard(
             title: 'Registrar documents · FY 2025/26',
             trailing: Text(
-              '$approvedCount of 4 approved',
-              style: const TextStyle(color: AppColors.muted),
+              '$approvedCount of 4\napproved',
+              textAlign: TextAlign.end,
+              style: const TextStyle(color: AppColors.muted, fontSize: 11),
             ),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             children: [
@@ -192,65 +202,43 @@ class _DocumentsContentState extends State<_DocumentsContent> {
                   dueLabel: row.$2,
                   overdue: row.$3,
                 ),
-              if (!widget.inFlow) ...[
-                const Divider(),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.fact_check_outlined,
-                    color: AppColors.leaf,
-                  ),
-                  title: const Text(
-                    'Annual audit checklist',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    '${store.currentAudit.financialYear} · '
-                    '${store.currentAudit.completedCount} of '
-                    '${store.currentAudit.items.length} steps complete',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AuditScreen(),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
           const SizedBox(height: 12),
         ],
-        SectionCard(
-          title: _filter == null ? 'All documents' : _filter!.label,
-          trailing: Text(
-            '${visible.length}',
-            semanticsLabel:
-                '${visible.length} ${visible.length == 1 ? 'document' : 'documents'}',
-            style: const TextStyle(color: AppColors.muted),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
+          child: Semantics(
+            header: true,
+            label:
+                '${_filter == null ? 'All documents' : _filter!.label}, ${visible.length} ${visible.length == 1 ? 'document' : 'documents'}',
+            excludeSemantics: true,
+            child: Text(
+              (_filter == null ? 'All documents' : _filter!.label)
+                  .toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        ),
+        SectionCard(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
           children: [
             if (visible.isEmpty)
               _EmptyLibrary(
                 filter: _filter,
                 onShowAll: () => setState(() => _filter = null),
               ),
-            for (final document in visible) _DocumentRow(document: document),
+            for (final (i, document) in visible.indexed) ...[
+              if (i > 0) const Divider(height: 1),
+              _DocumentRow(document: document),
+            ],
           ],
         ),
-        if (!widget.inFlow) ...[
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => showUploadSheet(
-              context,
-              initialType: _filter ?? DocumentType.agmMinutes,
-            ),
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Upload document'),
-          ),
-        ],
       ],
     );
   }
@@ -358,50 +346,76 @@ class _RegistrarRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final doc = document;
-    final subtitle = doc == null
-        ? (dueLabel ?? 'Not uploaded')
-        : '${doc.status.style.label} · ${formatDate(doc.uploadedAt)}${doc.restrictedToReviewers ? ' · DM & HQ only' : ''}';
+    final (subtitle, tone) = switch (doc?.status) {
+      null => (
+        dueLabel ?? 'Not uploaded',
+        overdue ? AppColors.danger : AppColors.warning,
+      ),
+      DocumentStatus.approved => (
+        'Approved · ${doc!.restrictedToReviewers ? 'DM & HQ only' : formatDate(doc.uploadedAt)}',
+        AppColors.leaf,
+      ),
+      DocumentStatus.submitted => (
+        'Under Review · sent ${formatDate(doc!.uploadedAt)}',
+        AppColors.warning,
+      ),
+      final status => (
+        '${status.style.label} · ${formatDate(doc!.uploadedAt)}',
+        AppColors.muted,
+      ),
+    };
+    final (circleFg, circleBg) = switch (doc?.status) {
+      null when overdue => (AppColors.danger, AppColors.dangerSoft),
+      null ||
+      DocumentStatus.submitted => (AppColors.warning, AppColors.warningSoft),
+      DocumentStatus.approved => (AppColors.forest, AppColors.mint),
+      _ => (AppColors.inkSoft, const Color(0xFFEEF0EC)),
+    };
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      dense: true,
       leading: CircleAvatar(
-        radius: 14,
-        backgroundColor: doc == null
-            ? (overdue ? AppColors.dangerSoft : AppColors.warningSoft)
-            : AppColors.mint,
+        radius: 12,
+        backgroundColor: circleBg,
         child: Text(
           '$number',
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AppColors.forest,
+            color: circleFg,
           ),
         ),
       ),
+      minLeadingWidth: 24,
       title: Text(
         type.label,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: doc == null && overdue ? AppColors.danger : AppColors.muted,
-        ),
-      ),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: tone)),
       trailing: doc == null
           ? OutlinedButton(
               onPressed: () => showUploadSheet(context, initialType: type),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 36)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 34),
+                foregroundColor: AppColors.forest,
+                side: const BorderSide(color: AppColors.leaf),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               child: Text('Upload', semanticsLabel: 'Upload ${type.label}'),
             )
           : doc.restrictedToReviewers
           ? const Icon(
               Icons.lock_outline,
+              size: 18,
               color: AppColors.muted,
               semanticLabel:
                   'Only the District Manager and HQ can open this file',
             )
-          : StatusChip.document(doc.status, compact: true),
+          : null,
     );
   }
 }
@@ -417,37 +431,47 @@ class _DocumentRow extends StatelessWidget {
     final isDraft = document.status == DocumentStatus.draft;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        document.contentType == 'application/pdf'
-            ? Icons.picture_as_pdf_outlined
-            : Icons.image_outlined,
-        color: AppColors.leaf,
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppColors.mint,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          document.contentType == 'application/pdf'
+              ? Icons.description_outlined
+              : Icons.image_outlined,
+          color: AppColors.forest,
+          size: 18,
+        ),
       ),
       title: Text(
         document.fileName,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        '${document.documentType.label} · ${formatFileSize(document.sizeBytes)}'
-        '${document.submissionReference == null ? '' : ' · ${document.submissionReference}'}'
-        '${document.restrictedToReviewers ? ' · DM & HQ only' : ''}\n'
-        'Uploaded by ${document.uploadedBy} · ${formatDate(document.uploadedAt)}',
-        style: const TextStyle(fontSize: 12, height: 1.35),
+        [
+          document.documentType.label,
+          formatDate(document.uploadedAt),
+          if (document.restrictedToReviewers)
+            'DM & HQ only'
+          else
+            document.status.style.label,
+          ?document.submissionReference,
+        ].join(' · '),
+        semanticsLabel:
+            '${document.documentType.label}, uploaded by ${document.uploadedBy} on ${formatDate(document.uploadedAt)}, status ${document.status.style.label}',
+        style: const TextStyle(fontSize: 11, color: AppColors.muted),
       ),
-      isThreeLine: true,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          StatusChip.document(document.status, compact: true),
-          if (isDraft)
-            IconButton(
+      trailing: isDraft
+          ? IconButton(
               tooltip: 'Remove ${document.fileName}',
               icon: const Icon(Icons.close, size: 20),
               onPressed: () =>
                   DemoScope.read(context).removeDocument(document.id),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 }

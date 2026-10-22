@@ -78,20 +78,40 @@ class _CurrentAuditCard extends StatelessWidget {
     final total = audit.items.length;
     return SectionCard(
       title: audit.financialYear,
-      trailing: StatusChip(audit.status.style, compact: true),
+      trailing: StatusChip(audit.status.style, compact: true, dot: true),
       children: [
         Text(
           'Due ${formatDate(audit.dueOn)} · prepared by ${audit.preparedBy.toLowerCase()}',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
         ),
         if (audit.status == AuditStatus.overdue) ...[
           const SizedBox(height: 12),
-          NoticeBanner(
-            icon: Icons.warning_amber,
-            tone: NoticeTone.error,
-            title:
-                'The report is $daysLate ${daysLate == 1 ? 'day' : 'days'} late',
-            message: 'Upload it as soon as the auditor signs it.',
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.dangerSoft,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Semantics(
+              liveRegion: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'The report is $daysLate ${daysLate == 1 ? 'day' : 'days'} late',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const Text(
+                    'Upload it as soon as the auditor signs it.',
+                    style: TextStyle(fontSize: 13, color: AppColors.ink),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
         if (audit.status == AuditStatus.underReview) ...[
@@ -103,50 +123,52 @@ class _CurrentAuditCard extends StatelessWidget {
             message: 'The District Centre will check it and tell you when it is approved.',
           ),
         ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Required steps',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Text(
-              '${audit.completedCount} of $total complete',
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Semantics(
-          label: '${audit.completedCount} of $total audit steps complete',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: audit.completedCount / total,
-              minHeight: 8,
-              backgroundColor: AppColors.mint,
-              color: AppColors.leaf,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        for (final item in audit.items) _ChecklistRow(item: item),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         if (!audit.reportUploaded)
-          FilledButton.icon(
+          FilledButton(
             onPressed: () =>
                 showUploadSheet(context, initialType: DocumentType.auditReport),
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Upload audit report'),
+            child: const Text('Upload audit report'),
           )
         else
-          OutlinedButton.icon(
+          OutlinedButton(
             onPressed: () => _openReports(context),
-            icon: const Icon(Icons.description_outlined),
-            label: const Text('View in Documents'),
+            child: const Text('View in Documents'),
           ),
+        const SizedBox(height: 4),
+        Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            title: const Text(
+              'Required steps',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Semantics(
+                label: '${audit.completedCount} of $total audit steps complete',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: audit.completedCount / total,
+                    minHeight: 6,
+                    backgroundColor: AppColors.mint,
+                    color: AppColors.leaf,
+                  ),
+                ),
+              ),
+            ),
+            trailing: Text(
+              '${audit.completedCount} of $total complete',
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+            children: [
+              for (final item in audit.items) _ChecklistRow(item: item),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -161,25 +183,29 @@ class _PastAuditCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: audit.financialYear,
-      trailing: StatusChip(audit.status.style, compact: true),
+      trailing: StatusChip(audit.status.style, compact: true, dot: true),
       children: [
         Text(
           audit.reviewedOn == null
               ? 'All ${audit.items.length} steps complete'
-              : 'Approved ${formatDate(audit.reviewedOn!)} by ${audit.reviewedBy} · all ${audit.items.length} steps complete',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              : 'Approved ${formatDate(audit.reviewedOn!)} by ${audit.reviewedBy}',
+          style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
         ),
         if (audit.reviewerComment != null) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.mintSoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               '“${audit.reviewerComment}”',
-              style: const TextStyle(color: AppColors.inkSoft, height: 1.35),
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 13,
+                height: 1.35,
+              ),
             ),
           ),
         ],

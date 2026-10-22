@@ -50,7 +50,7 @@ void main() {
     await tester.tap(find.text('Reviews'));
     await tester.pumpAndSettle();
     expect(find.text('Review queue'), findsOneWidget);
-    expect(find.text('Council update'), findsOneWidget);
+    expect(find.text('Council update · waiting 2 days'), findsOneWidget);
   });
 
   testWidgets('HQ Administrator receives national home and reports', (

@@ -4,6 +4,7 @@ import '../app.dart';
 import '../format.dart';
 import '../models/submission.dart';
 import '../state/demo_store.dart';
+import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
@@ -77,16 +78,20 @@ class _TrackerScreenState extends State<TrackerScreen> {
                                 label: Text(switch (filter) {
                                   _TrackerFilter.all => 'All',
                                   _TrackerFilter.changesRequested =>
-                                    'Changes Requested ($returned)',
+                                    'Returned ($returned)',
                                   _TrackerFilter.inReview => 'In review',
                                   _TrackerFilter.approved => 'Approved',
                                 }),
                                 selected: _filter == filter,
                                 showCheckmark: false,
+                                shape: const StadiumBorder(),
+                                visualDensity: VisualDensity.compact,
                                 labelStyle: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                   color: _filter == filter
                                       ? Colors.white
-                                      : null,
+                                      : AppColors.ink,
                                 ),
                                 onSelected: (_) =>
                                     setState(() => _filter = filter),
@@ -105,13 +110,21 @@ class _TrackerScreenState extends State<TrackerScreen> {
                               onSecondary: () =>
                                   setState(() => _filter = _TrackerFilter.all),
                             )
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: visible.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 8),
-                              itemBuilder: (context, index) =>
-                                  _SubmissionRow(submission: visible[index]),
+                          : ListView(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                              children: [
+                                Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Column(
+                                    children: [
+                                      for (final (i, s) in visible.indexed) ...[
+                                        if (i > 0) const Divider(height: 1),
+                                        _SubmissionRow(submission: s),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                     ),
                   ],
@@ -134,15 +147,17 @@ class _SubmissionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final when = submission.submittedAt ?? submission.updatedAt;
     final detail = switch (submission.status) {
-      SubmissionStatus.draft => 'Not sent · saved ${formatDate(when)}',
+      SubmissionStatus.draft => 'Waiting for internet',
       SubmissionStatus.changesRequested =>
-        '1 field to fix · ${submission.reference}',
+        'Sent ${formatDate(when)} · 1 field to fix',
       SubmissionStatus.approved =>
-        'Approved ${formatDate(submission.updatedAt)} · ${submission.reference}',
-      _ => 'Sent ${formatDate(when)} · ${submission.reference}',
+        'Approved ${formatDate(submission.updatedAt)}',
+      _ => 'Sent ${formatDate(when)}',
     };
-    return Card(
+    return Material(
+      color: AppColors.surface,
       child: ListTile(
+        dense: true,
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => SubmissionDetailScreen(submissionId: submission.id),
@@ -150,10 +165,17 @@ class _SubmissionRow extends StatelessWidget {
         ),
         title: Text(
           submission.title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         ),
-        subtitle: Text(detail, style: const TextStyle(fontSize: 12)),
-        trailing: StatusChip.submission(submission.status, compact: true),
+        subtitle: Text(
+          detail,
+          style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+        ),
+        trailing: StatusChip.submission(
+          submission.status,
+          compact: true,
+          dot: true,
+        ),
       ),
     );
   }

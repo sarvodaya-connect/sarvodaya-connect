@@ -59,7 +59,7 @@ export function Pill({
   const useDot = dot && tone !== "approved" && tone !== "mvp" && tone !== "changed";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-pill font-semibold ${pad} ${toneClass[tone]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill font-semibold ${pad} ${toneClass[tone]}`}
     >
       {useDot && <span aria-hidden="true" className="size-1.5 rounded-full bg-current opacity-75" />}
       {children}

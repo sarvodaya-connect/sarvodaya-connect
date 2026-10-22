@@ -115,19 +115,28 @@ extension AuditStatusStyle on AuditStatus {
 }
 
 class StatusChip extends StatelessWidget {
-  const StatusChip(this.style, {super.key, this.compact = false});
+  const StatusChip(
+    this.style, {
+    super.key,
+    this.compact = false,
+    this.dot = false,
+  });
 
   StatusChip.submission(
     SubmissionStatus status, {
     Key? key,
     bool compact = false,
-  }) : this(status.style, key: key, compact: compact);
+    bool dot = false,
+  }) : this(status.style, key: key, compact: compact, dot: dot);
 
   StatusChip.document(DocumentStatus status, {Key? key, bool compact = false})
     : this(status.style, key: key, compact: compact);
 
   final StatusStyle style;
   final bool compact;
+
+  /// Catalogue list style: a small coloured dot instead of the icon.
+  final bool dot;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +156,21 @@ class StatusChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(style.icon, size: compact ? 13 : 15, color: style.foreground),
+            if (dot)
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: style.foreground,
+                  shape: BoxShape.circle,
+                ),
+              )
+            else
+              Icon(
+                style.icon,
+                size: compact ? 13 : 15,
+                color: style.foreground,
+              ),
             const SizedBox(width: 4),
             Text(
               style.label,

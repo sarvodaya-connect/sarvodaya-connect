@@ -31,11 +31,11 @@ export function PageHeading({
           ))}
         </div>
       )}
-      <h1 className="text-2xl font-semibold tracking-[-0.035em] text-[#17211b] md:text-[28px]">
+      <h1 className="text-[20px] font-bold tracking-[-0.015em] text-[#17211b]">
         {title}
       </h1>
       {description && (
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#68756c]">
+        <p className="mt-0.5 max-w-3xl text-[12px] leading-5 text-[#68756c]">
           {description}
         </p>
       )}

@@ -38,7 +38,7 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
-    expect(find.text('Approved record · Verified'), findsOneWidget);
+    expect(find.text('Basic information'), findsOneWidget);
   });
 
   testWidgets('read-only roles do not see enabled M06 edit actions', (
@@ -54,7 +54,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit Profile'), findsNothing);
+    expect(find.text('Request update'), findsNothing);
     expect(find.text('Update Committee'), findsNothing);
   });
 
@@ -67,7 +67,7 @@ void main() {
     await tester.tap(find.text('Society'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Approved record · Verified'), findsOneWidget);
+    expect(find.text('Basic information'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     expect(find.text('SSS-104233'), findsOneWidget);
@@ -78,12 +78,12 @@ void main() {
 
     await tester.scrollUntilVisible(
       find.text('Address and contact'),
-      -300,
+      300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.scrollUntilVisible(
-      find.text('Secretary'),
-      -300,
+      find.text('N. Wijesinghe · (Secretary)'),
+      300,
       scrollable: find.byType(Scrollable).first,
     );
 
@@ -104,7 +104,7 @@ void main() {
     expect(find.text('2,540'), findsOneWidget);
     expect(find.text('680'), findsOneWidget);
     expect(find.text('108'), findsOneWidget);
-    expect(find.text('Key statistics'), findsOneWidget);
+    expect(find.text('Key stats'), findsOneWidget);
     expect(find.text('58% of homes'), findsOneWidget);
     expect(find.text('Main income · households'), findsOneWidget);
     expect(find.text('Agriculture and livestock'), findsOneWidget);
@@ -155,12 +155,7 @@ void main() {
     await tester.tap(find.text('Society'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Edit Profile'),
-      -300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Edit Profile'));
+    await tester.tap(find.text('Request update').first);
     await tester.pumpAndSettle();
 
     await tester.enterText(

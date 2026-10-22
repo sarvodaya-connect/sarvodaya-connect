@@ -119,34 +119,46 @@ class StateMessage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: background,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: foreground, size: 28),
+                child: Icon(icon, color: foreground, size: 24),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted, height: 1.4),
+                style: const TextStyle(
+                  color: AppColors.inkSoft,
+                  fontSize: 12.5,
+                  height: 1.4,
+                ),
               ),
               if (primaryLabel != null) ...[
-                const SizedBox(height: 20),
-                FilledButton(onPressed: onPrimary, child: Text(primaryLabel!)),
+                const SizedBox(height: 14),
+                FilledButton(
+                  onPressed: onPrimary,
+                  style: _compact,
+                  child: Text(primaryLabel!),
+                ),
               ],
               if (secondaryLabel != null) ...[
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: onSecondary,
+                  style: _compact,
                   child: Text(secondaryLabel!),
                 ),
               ],
@@ -157,6 +169,17 @@ class StateMessage extends StatelessWidget {
     );
   }
 }
+
+final _compact = ButtonStyle(
+  minimumSize: const WidgetStatePropertyAll(Size(48, 40)),
+  padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16)),
+  textStyle: const WidgetStatePropertyAll(
+    TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+  ),
+  shape: WidgetStatePropertyAll(
+    RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  ),
+);
 
 enum StateTone { neutral, error, offline, success }
 

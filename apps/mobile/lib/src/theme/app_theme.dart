@@ -21,6 +21,11 @@ class AppColors {
   static const dangerSoft = Color(0xFFFBE9E7);
   static const warning = Color(0xFF7A5A00);
   static const warningSoft = Color(0xFFFFF4D6);
+  // Catalogue M01 splash backdrop (Sarvodaya Orange).
+  static const orangeSplash = Color(0xFFF26B1F);
+  // Catalogue "Changed in v2" annotation.
+  static const orangeChanged = Color(0xFFD96A2C);
+  static const orangeChangedSoft = Color(0xFFFDECE0);
 }
 
 class AppTheme {
@@ -133,9 +138,18 @@ class AppTheme {
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.mint,
         surfaceTintColor: Colors.transparent,
+        height: 68,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: 22,
+            color: states.contains(WidgetState.selected)
+                ? AppColors.forest
+                : AppColors.inkSoft,
+          ),
+        ),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
                 : FontWeight.w500,
