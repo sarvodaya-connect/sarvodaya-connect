@@ -31,6 +31,7 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
     { href: "/dashboard", icon: "home", label: "Overview" },
     { href: "/societies", icon: "society", label: "Societies" },
     { href: "/membership", icon: "clipboard", label: "Membership" },
+    { href: "/activities", icon: "clipboard", label: "Activities" },
     { href: "/reports", icon: "clipboard", label: "Reports" },
     { href: "/search", icon: "search", label: "Global search" },
     { href: "/districts/kurunegala", icon: "district", label: "District view" },
@@ -63,9 +64,11 @@ export function DashboardShell({
         ? "Societies"
         : pathname.startsWith("/membership")
           ? "Membership"
-          : pathname.startsWith("/reports")
-            ? "Reports"
-            : pathname.startsWith("/districts")
+          : pathname.startsWith("/activities")
+            ? "Activities"
+            : pathname.startsWith("/reports")
+              ? "Reports"
+              : pathname.startsWith("/districts")
             ? "District view"
             : pathname.startsWith("/reviews")
               ? "Review queue"
