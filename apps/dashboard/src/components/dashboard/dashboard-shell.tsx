@@ -7,6 +7,7 @@ import { switchDemoViewer } from "@/app/(dashboard)/actions";
 import {
   canViewCompliance,
   canViewDocumentLibrary,
+  canViewReports,
   type DemoViewer,
   demoViewers,
 } from "@/lib/access";
@@ -38,6 +39,9 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
     { href: "/reviews", icon: "review", label: "Review Queue" },
     { href: "/activities", icon: "clipboard", label: "Activities" },
     { href: "/membership", icon: "clipboard", label: "Membership" },
+    ...(canViewReports(viewer)
+      ? [{ href: "/reports", icon: "clipboard", label: "Reports" } satisfies NavigationItem]
+      : []),
     ...(canViewCompliance(viewer)
       ? [{ href: "/compliance", icon: "shield", label: "Audits" } satisfies NavigationItem]
       : []),
@@ -61,6 +65,8 @@ function headingFor(pathname: string, viewer: DemoViewer): { title: string; subt
           ? "Membership"
           : pathname.startsWith("/activities")
             ? "Activities"
+            : pathname.startsWith("/reports")
+              ? "Reports"
           : pathname.startsWith("/districts")
             ? "District View"
             : pathname.startsWith("/reviews")
