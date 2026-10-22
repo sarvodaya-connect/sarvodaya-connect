@@ -68,7 +68,9 @@ export function DashboardShell({
               ? "Review queue"
               : viewer.role === "DISTRICT_MANAGER"
                 ? "District Dashboard"
-                : "National Dashboard";
+                : viewer.role === "PROGRAMME_COORDINATOR"
+                  ? "My Programmes"
+                  : "National Dashboard";
 
   return (
     <div className="min-h-screen bg-[#f4f5ef] lg:grid lg:grid-cols-[248px_1fr]">
