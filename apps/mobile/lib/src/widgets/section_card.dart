@@ -143,42 +143,35 @@ class ChangeValue extends StatelessWidget {
         children: [
           Text(label, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              if (previous != null && previous!.isNotEmpty)
-                Text(
-                  previous!,
-                  semanticsLabel: 'Was $previous',
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    decoration: TextDecoration.lineThrough,
-                  ),
-                ),
-              if (previous != null && previous!.isNotEmpty)
-                const Icon(
-                  Icons.arrow_forward,
-                  size: 16,
-                  color: AppColors.muted,
-                ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.mint,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  proposed,
-                  semanticsLabel: 'New value $proposed',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.forest,
-                  ),
+          if (previous != null && previous!.isNotEmpty)
+            Text(
+              previous!,
+              semanticsLabel: 'Was $previous',
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 12,
+                decoration: TextDecoration.lineThrough,
+              ),
+            ),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                proposed,
+                semanticsLabel: 'New value $proposed',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: AppColors.ink,
                 ),
               ),
-            ],
+            ),
           ),
           if (note != null) ...[const SizedBox(height: 6), note!],
         ],

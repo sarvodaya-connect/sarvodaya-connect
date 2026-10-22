@@ -58,6 +58,7 @@ export function SocietyDirectory({
   const [audit, setAudit] = useState("all");
   const [tab, setTab] = useState<ViewTab>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [compact, setCompact] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
@@ -162,53 +163,40 @@ export function SocietyDirectory({
     { id: "stale", label: `Stale data (${STALE_DAYS}+ days)`, count: staleCount },
   ];
 
-  return (
-    <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-4">
-        <nav aria-label="View" className="flex flex-wrap gap-2">
-          {tabs.map((item) => (
-            <button
-              aria-pressed={tab === item.id}
-              className={`inline-flex items-center gap-2 rounded-pill px-3 py-1.5 text-[12px] font-semibold transition ${
-                tab === item.id
-                  ? "bg-brand-forest text-white"
-                  : "border border-line bg-surface text-ink-soft hover:border-brand-leaf hover:text-brand-leaf"
-              }`}
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              type="button"
-            >
-              {item.label}
-              {typeof item.count === "number" && (
-                <span
-                  className={`rounded-full px-1.5 text-[10px] font-bold ${
-                    tab === item.id ? "bg-white/15 text-white" : "bg-brand-mint text-brand-forest"
-                  }`}
-                >
-                  {item.count}
-                </span>
-              )}
-            </button>
-          ))}
-          <button className="text-[12px] font-semibold text-brand-leaf hover:underline" type="button">
-            + Save current view
-          </button>
-        </nav>
-        <button
-          className="inline-flex items-center gap-2 rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
-          type="button"
-        >
-          <Icon className="size-4" name="document" />
-          Export CSV / Excel
-        </button>
-      </div>
+  const filterClass =
+    "rounded-button border border-line bg-surface px-2.5 py-1.5 text-[12px] text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]";
+  const cell = compact ? "py-1.5" : "py-2.5";
 
-      <div className="grid gap-3 border-b border-line-soft p-4 md:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(0,1fr))]">
+  return (
+    <section className="mt-4">
+      <nav aria-label="View" className="flex flex-wrap items-end gap-5 border-b border-line">
+        {tabs.map((item) => (
+          <button
+            aria-pressed={tab === item.id}
+            className={`-mb-px border-b-2 pb-2 text-[12px] transition ${
+              tab === item.id
+                ? "border-brand-forest font-semibold text-ink"
+                : "border-transparent text-ink-soft hover:text-brand-forest"
+            }`}
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            type="button"
+          >
+            {item.label}
+            {typeof item.count === "number" && item.id !== "all" && <span> · {item.count}</span>}
+          </button>
+        ))}
+        <button className="pb-2 text-[12px] font-semibold text-[#2d5c88] hover:underline" type="button">
+          + Save current view
+        </button>
+      </nav>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <label className="relative block">
           <span className="sr-only">Search societies</span>
           <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" name="search" />
           <input
-            className="w-full rounded-input border border-line bg-surface py-2.5 pl-9 pr-3 text-sm outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+            className="w-56 rounded-button border border-line bg-surface py-1.5 pl-9 pr-3 text-[12px] outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name, Society ID or local name"
             ref={searchInput}
@@ -219,7 +207,7 @@ export function SocietyDirectory({
         <label>
           <span className="sr-only">Filter by district</span>
           <select
-            className="w-full rounded-input border border-line bg-surface px-3 py-2.5 text-sm text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+            className={filterClass}
             onChange={(event) => setDistrictId(event.target.value)}
             value={districtId}
           >
@@ -232,7 +220,7 @@ export function SocietyDirectory({
         <label>
           <span className="sr-only">Filter by division</span>
           <select
-            className="w-full rounded-input border border-line bg-surface px-3 py-2.5 text-sm text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+            className={filterClass}
             onChange={(event) => setDivision(event.target.value)}
             value={division}
           >
@@ -243,7 +231,7 @@ export function SocietyDirectory({
         <label>
           <span className="sr-only">Filter by status</span>
           <select
-            className="w-full rounded-input border border-line bg-surface px-3 py-2.5 text-sm text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+            className={filterClass}
             onChange={(event) => setStatus(event.target.value)}
             value={status}
           >
@@ -256,7 +244,7 @@ export function SocietyDirectory({
         <label>
           <span className="sr-only">Filter by audit</span>
           <select
-            className="w-full rounded-input border border-line bg-surface px-3 py-2.5 text-sm text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
+            className={filterClass}
             onChange={(event) => setAudit(event.target.value)}
             value={audit}
           >
@@ -266,25 +254,39 @@ export function SocietyDirectory({
             ))}
           </select>
         </label>
+        <div aria-label="Row density" className="ml-auto inline-flex overflow-hidden rounded-button border border-line bg-surface text-[11px]" role="group">
+          {[false, true].map((value) => (
+            <button
+              aria-pressed={compact === value}
+              className={`px-2.5 py-1.5 ${compact === value ? "bg-brand-forest font-semibold text-white" : "text-ink-soft"}`}
+              key={String(value)}
+              onClick={() => setCompact(value)}
+              type="button"
+            >
+              {value ? "Compact" : "Comfortable"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft bg-brand-mint-soft px-5 py-3 text-[12px]">
-          <div className="flex flex-wrap items-center gap-3">
-            <strong className="text-ink">{selected.size} selected</strong>
-            <button className="rounded-button border border-line bg-surface px-3 py-1.5 font-semibold text-ink-soft hover:border-brand-leaf hover:text-brand-leaf" type="button">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-button bg-brand-forest px-4 py-2 text-[12px] text-white">
+          <div className="flex flex-wrap items-center gap-4">
+            <strong>{selected.size} selected</strong>
+            <button className="underline underline-offset-2" type="button">
               Send request
             </button>
-            <button className="rounded-button border border-line bg-surface px-3 py-1.5 font-semibold text-ink-soft hover:border-brand-leaf hover:text-brand-leaf" type="button">
+            <button className="underline underline-offset-2" type="button">
               Export selected
             </button>
           </div>
-          <button className="font-semibold text-brand-leaf hover:underline" onClick={() => setSelected(new Set())} type="button">
+          <button className="underline underline-offset-2" onClick={() => setSelected(new Set())} type="button">
             Clear
           </button>
         </div>
       )}
 
+      <div className="mt-3 overflow-hidden rounded-card border border-line bg-surface">
       {filtered.length === 0 ? (
         <NoResultsState
           filters={activeFilters}
@@ -296,7 +298,7 @@ export function SocietyDirectory({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[940px] border-collapse text-left">
             <caption className="sr-only">Village societies</caption>
-            <thead className="bg-surface-muted text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+            <thead className="bg-surface-muted text-[12px] font-medium text-ink-soft">
               <tr>
                 <th className="px-5 py-3" scope="col">
                   <label className="inline-flex items-center">
@@ -311,12 +313,12 @@ export function SocietyDirectory({
                   </label>
                 </th>
                 <th className="px-4 py-3" scope="col">Society ID</th>
-                <th className="px-4 py-3" scope="col">Name</th>
+                <th className="px-4 py-3" scope="col">Name ↑</th>
                 <th className="px-4 py-3" scope="col">Local name</th>
                 <th className="px-4 py-3" scope="col">District</th>
                 <th className="px-4 py-3" scope="col">DS / GN</th>
                 <th className="px-4 py-3" scope="col">Status</th>
-                <th className="px-4 py-3 text-right" scope="col"><span className="sr-only">Open</span></th>
+                <th className="px-4 py-3 text-right" scope="col">Complete</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
@@ -324,8 +326,8 @@ export function SocietyDirectory({
                 const tone = statusTone[society.status as keyof typeof statusTone] ?? "inactive";
                 const statusLabel = statusOptions.find((item) => item.value === society.status)?.label ?? society.status;
                 return (
-                  <tr className="transition hover:bg-brand-mint-soft" key={society.id}>
-                    <td className="px-5 py-3">
+                  <tr className={`transition hover:bg-brand-mint-soft ${selected.has(society.id) ? "bg-brand-mint-soft" : ""}`} key={society.id}>
+                    <td className={`px-5 ${cell}`}>
                       <label className="inline-flex items-center">
                         <span className="sr-only">Select {society.nameEn}</span>
                         <input
@@ -337,37 +339,27 @@ export function SocietyDirectory({
                         />
                       </label>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-mono text-ink-soft">{society.societyCode}</td>
-                    <td className="px-4 py-3">
+                    <td className={`whitespace-nowrap px-4 ${cell} text-[12px] text-ink-soft`}>{society.societyCode}</td>
+                    <td className={`px-4 ${cell}`}>
                       <Link
-                        className="text-[13px] font-semibold text-ink hover:text-brand-leaf"
+                        aria-label={`Open ${society.nameEn}`}
+                        className="text-[12.5px] text-[#2d5c88] underline underline-offset-2 hover:text-brand-forest"
                         href={`/societies/${society.id}`}
+                        title={`Updated ${dateFormatter.format(new Date(society.updatedAt))}`}
                       >
                         {society.nameEn}
                       </Link>
-                      <p className="mt-0.5 text-[11px] text-muted">
-                        Updated {dateFormatter.format(new Date(society.updatedAt))} · {society.profileCompleteness}% complete
-                      </p>
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-ink-soft">{society.nameLocal ?? "—"}</td>
-                    <td className="px-4 py-3 text-[13px] text-ink-soft">{society.district.nameEn}</td>
-                    <td className="px-4 py-3 text-[12px] text-muted">
-                      {society.address.dsDivision ?? "—"}
-                      {society.address.gnDivision && (
-                        <span className="block text-[11px] text-muted">{society.address.gnDivision}</span>
-                      )}
+                    <td className={`px-4 ${cell} text-[12.5px] text-ink-soft`}>{society.nameLocal ?? "—"}</td>
+                    <td className={`px-4 ${cell} text-[12.5px] text-ink-soft`}>{society.district.nameEn}</td>
+                    <td className={`px-4 ${cell} text-[12px] text-ink-soft`}>
+                      {[society.address.dsDivision, society.address.gnDivision].filter(Boolean).join(" / ") || "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cell}`}>
                       <Pill tone={tone}>{statusLabel}</Pill>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        aria-label={`Open ${society.nameEn}`}
-                        className="inline-flex items-center gap-1 rounded-button px-2 py-1 text-[12px] font-semibold text-brand-leaf hover:bg-brand-mint-soft"
-                        href={`/societies/${society.id}`}
-                      >
-                        Open →
-                      </Link>
+                    <td className={`px-4 ${cell} text-right text-[12px] font-semibold text-ink-soft`}>
+                      {society.profileCompleteness}%
                     </td>
                   </tr>
                 );
@@ -376,7 +368,7 @@ export function SocietyDirectory({
           </table>
         </div>
       )}
-      <div className="flex items-center justify-between border-t border-line-soft px-5 py-3 text-[12px] text-muted">
+      <div className="flex items-center justify-between border-t border-line-soft px-5 py-3 text-[11px] text-muted">
         <p aria-live="polite" role="status">
           Showing {filtered.length} of {societies.length} demonstration records
         </p>
@@ -385,6 +377,7 @@ export function SocietyDirectory({
           <span className="rounded-button bg-brand-mint px-2.5 py-1 font-semibold text-brand-forest">1</span>
           <button className="rounded-button px-2 py-1 text-ink-soft hover:bg-brand-mint-soft" type="button">→</button>
         </nav>
+      </div>
       </div>
     </section>
   );

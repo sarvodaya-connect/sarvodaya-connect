@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ComplianceOverview } from "@/components/dashboard/compliance-overview";
 import { NoPermissionState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { PageHeading } from "@/components/dashboard/page-heading";
-import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { canSeeSociety, canViewCompliance } from "@/lib/access";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import {
@@ -71,7 +70,6 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             {heading}
-            <ChangedInV2Badge />
           </div>
         </div>
         <div className="flex items-center gap-2">

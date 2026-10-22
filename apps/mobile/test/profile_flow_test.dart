@@ -16,14 +16,17 @@ void main() {
     final store = await pumpApp(tester);
     await signInWithDemoAccount(tester);
 
-    // Home -> Society profile -> Update Committee.
-    await tester.tap(find.text('View Society Profile'));
+    // Home -> Society profile -> Council tab -> Update Committee.
+    await tester.tap(find.text('View society profile'));
     await tester.pumpAndSettle();
     expect(find.text('SSS-104233'), findsOneWidget);
-    expect(
+    await tester.scrollUntilVisible(
       find.text('Missing'),
-      findsOneWidget,
+      300,
+      scrollable: find.byType(Scrollable).last,
     ); // Society email is labelled, not hidden.
+    await tester.tap(find.text('Council'));
+    await tester.pumpAndSettle();
     await tapVisible(
       tester,
       find.widgetWithText(FilledButton, 'Update Committee'),
@@ -76,19 +79,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('K. Perera'), findsOneWidget);
     expect(find.text('S. Tharmalingam'), findsOneWidget);
-    await tapVisible(tester, find.text('Submit to District'));
+    await tapVisible(tester, find.text('Send to District'));
     expect(find.text('Confirm this before you submit.'), findsOneWidget);
     await tapVisible(tester, find.byType(Checkbox));
-    await tapVisible(tester, find.text('Submit to District'));
+    await tapVisible(tester, find.text('Send to District'));
     await tester.tap(find.text('Yes, submit'));
     await tester.pumpAndSettle();
 
     expect(find.text('Sent to District Centre'), findsOneWidget);
-    expect(find.text('SUB-2026-0143'), findsOneWidget);
+    expect(find.textContaining('SUB-2026-0143'), findsOneWidget);
     expect(store.councilSubmission?.status, SubmissionStatus.submitted);
 
     // Tracker: the District Manager's review is simulated with the demo controls.
-    await tester.tap(find.text('Track submission'));
+    await tester.tap(find.text('Track it'));
     await tester.pumpAndSettle();
     expect(find.text('Waiting for review'), findsOneWidget);
     await tapVisible(tester, find.text('Start review'));
@@ -98,14 +101,14 @@ void main() {
 
     // Changes Requested: only the returned field is editable.
     await tapVisible(tester, find.text('Open returned submission'));
-    expect(find.text('No Correction Required · read-only'), findsWidgets);
+    expect(find.bySemanticsLabel(RegExp('No Correction Required · read-only')), findsWidgets);
     await tester.tap(
       find.widgetWithText(TextFormField, 'Corrected treasurer start date *'),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Review and resubmit'));
+    await tester.tap(find.text('Send corrected update'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Yes, resubmit'));
     await tester.pumpAndSettle();

@@ -5,7 +5,6 @@ import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
-import '../widgets/section_card.dart';
 import '../widgets/state_views.dart';
 import '../widgets/status_chip.dart';
 import 'submission_detail_screen.dart';
@@ -158,17 +157,35 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: StatusChip.submission(submission.status),
+                    child: StatusChip.submission(
+                      submission.status,
+                      compact: true,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'The District Centre needs you to fix $returnedCount field${returnedCount == 1 ? '' : 's'}. Everything else is accepted.',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'The District Centre needs you to fix ',
+                        ),
+                        TextSpan(
+                          text:
+                              '$returnedCount field${returnedCount == 1 ? '' : 's'}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const TextSpan(text: '. Everything else is accepted.'),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Returned by ${review.reviewerDisplayName} · ${formatDateTime(review.decidedAt)}',
-                    style: const TextStyle(color: AppColors.muted),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
                   ),
                   // Fixed slot so the editable field below is never rebuilt when this appears.
                   Padding(
@@ -182,33 +199,62 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
                             message: _sendError,
                           ),
                   ),
-                  const SizedBox(height: 16),
-                  for (final change in submission.changes)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child:
+                  const SizedBox(height: 14),
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final (i, change)
+                            in submission.changes.indexed) ...[
+                          if (i > 0) const Divider(height: 1),
                           change.correctionStatus == CorrectionStatus.required
-                          ? _ReturnedField(
-                              change: change,
-                              comment: review.field == change.field
-                                  ? review.comment
-                                  : null,
-                              reviewer: review.reviewerDisplayName,
-                              controller: _controllerFor(change),
-                              isDate: _isDateField(change),
-                              onPickDate: () => _pickDate(change),
-                              validator: (value) => _isDateField(change)
-                                  ? Validators.startDate(
-                                      _dates[change.field],
-                                      today: store.now,
-                                    )
-                                  : Validators.required(
-                                      value,
-                                      change.label.toLowerCase(),
-                                    ),
-                            )
-                          : _AcceptedField(change: change),
+                              ? _ReturnedField(
+                                  change: change,
+                                  comment: review.field == change.field
+                                      ? review.comment
+                                      : null,
+                                  reviewer: review.reviewerDisplayName,
+                                  controller: _controllerFor(change),
+                                  isDate: _isDateField(change),
+                                  onPickDate: () => _pickDate(change),
+                                  validator: (value) => _isDateField(change)
+                                      ? Validators.startDate(
+                                          _dates[change.field],
+                                          today: store.now,
+                                        )
+                                      : Validators.required(
+                                          value,
+                                          change.label.toLowerCase(),
+                                        ),
+                                )
+                              : _AcceptedField(change: change),
+                        ],
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SubmissionDetailScreen(
+                            submissionId: submission.id,
+                          ),
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF2D5C88),
+                        textStyle: const TextStyle(
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                      icon: const Icon(Icons.schedule, size: 16),
+                      label: const Text('See full history'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -219,7 +265,7 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
         primary: FilledButton.icon(
           onPressed: _sending ? null : () => _resubmit(submission),
           icon: const Icon(Icons.send),
-          label: const Text('Review and resubmit'),
+          label: const Text('Send corrected update'),
         ),
       ),
     );
@@ -233,34 +279,44 @@ class _AcceptedField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      label:
+          '${change.label}: ${change.proposedValue}. No Correction Required · read-only',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
           children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Icon(
-                Icons.check_circle_outline,
-                color: AppColors.leaf,
-                size: 20,
-              ),
+            const Icon(
+              Icons.check_circle_outline,
+              color: AppColors.leaf,
+              size: 18,
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: InfoRow(label: change.label, value: change.proposedValue),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    change.label,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  Text(
+                    change.proposedValue,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        const Padding(
-          padding: EdgeInsets.only(left: 30, bottom: 8),
-          child: Text(
-            'No Correction Required · read-only',
-            style: TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -288,11 +344,7 @@ class _ReturnedField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF6EE),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE9A46F), width: 1.5),
-      ),
+      color: const Color(0xFFFFF1E2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -300,17 +352,25 @@ class _ReturnedField extends StatelessWidget {
             children: [
               const Icon(
                 Icons.warning_amber,
-                color: Color(0xFFA2470F),
-                size: 20,
+                color: Color(0xFFB4650F),
+                size: 18,
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '${change.label} * — fix this',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFA2470F),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${change.label} *',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const TextSpan(
+                        text: '  — fix this',
+                        style: TextStyle(color: Color(0xFFB4650F)),
+                      ),
+                    ],
                   ),
+                  style: const TextStyle(fontSize: 13, color: AppColors.ink),
                 ),
               ),
             ],
@@ -333,9 +393,22 @@ class _ReturnedField extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      '“$comment”\n$reviewer, District Centre',
-                      style: const TextStyle(height: 1.35),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '“$comment”',
+                          style: const TextStyle(fontSize: 13, height: 1.35),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$reviewer, District Centre',
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -343,11 +416,6 @@ class _ReturnedField extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
-          Text(
-            'You sent: ${change.proposedValue}',
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 8),
           TextFormField(
             controller: controller,
             readOnly: isDate,
@@ -363,6 +431,49 @@ class _ReturnedField extends StatelessWidget {
                   : null,
             ),
             validator: validator,
+          ),
+          const SizedBox(height: 6),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: [
+                Text(
+                  change.proposedValue,
+                  semanticsLabel: 'You sent ${change.proposedValue}',
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                if (value.text.isNotEmpty) ...[
+                  const Text(
+                    '→',
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.mint,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      value.text,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.forest,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

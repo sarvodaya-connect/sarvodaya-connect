@@ -11,10 +11,16 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
 
   return (
     <>
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <PageHeading description="The national registry of village societies. Search, filter and open a society record." title="Societies" />
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <PageHeading
+          description={`${societies.length.toLocaleString("en-GB")} societies in ${visibleDistricts.length} ${visibleDistricts.length === 1 ? "district" : "districts"}`}
+          title="Societies"
+        />
         {societies.length > 0 && (
-          <div className="rounded-xl border border-[#dce5db] bg-white px-5 py-3 shadow-sm"><span className="text-xs text-[#77837b]">Societies in scope</span><strong className="ml-3 text-xl text-[#174a32]">{societies.length.toLocaleString("en-GB")}</strong></div>
+          <button className="inline-flex items-center gap-2 rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft" type="button">
+            <span aria-hidden="true">↓</span>
+            Export CSV / Excel
+          </button>
         )}
       </div>
       <SocietyDirectory districts={visibleDistricts} societies={societies} />

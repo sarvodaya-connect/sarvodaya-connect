@@ -396,12 +396,42 @@ final demoCouncil = <CommitteeMember>[
 /// Fictional member counts for the approved 2026 membership snapshot.
 const demoMembership = MembershipSummary(
   year: 2026,
+  period: 'Jul–Sep 2026',
+  previousPeriod: 'Apr–Jun',
+  changeSincePrevious: 14,
+  familiesWithMember: 415,
+  villageFamilies: 680,
   categories: [
-    MembershipCategoryCounts(category: 'Children', female: 178, male: 164),
-    MembershipCategoryCounts(category: 'Youth', female: 246, male: 219),
-    MembershipCategoryCounts(category: 'Mothers', female: 526, male: 0),
-    MembershipCategoryCounts(category: 'Ordinary', female: 1485, male: 1328),
-    MembershipCategoryCounts(category: 'Elders Council', female: 82, male: 65),
+    MembershipCategoryCounts(
+      category: 'Child',
+      note: '7–14 years',
+      female: 30,
+      male: 28,
+    ),
+    MembershipCategoryCounts(
+      category: 'Youth',
+      note: '15–25 years',
+      female: 40,
+      male: 34,
+    ),
+    MembershipCategoryCounts(
+      category: 'Ordinary',
+      note: 'over 25',
+      female: 138,
+      male: 98,
+    ),
+    MembershipCategoryCounts(
+      category: 'Life',
+      note: 'open',
+      female: 22,
+      male: 16,
+    ),
+    MembershipCategoryCounts(
+      category: 'Invited',
+      note: 'honorary',
+      female: 2,
+      male: 4,
+    ),
   ],
 );
 

@@ -1,6 +1,5 @@
 import { GlobalSearchResults } from "@/components/dashboard/global-search";
 import { PageHeading } from "@/components/dashboard/page-heading";
-import { ChangedInV2Badge } from "@/components/dashboard/ui/changed-in-v2-badge";
 import { societyDetails } from "@/lib/demo-registry";
 import { societiesVisibleTo, demoSocietyAccess } from "@/lib/society-access";
 import { searchRegistry } from "@/lib/registry-search";
@@ -15,7 +14,6 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
     <>
       <div className="flex items-center gap-3">
         <PageHeading description="Societies, people, documents and records" title="Search" />
-        <ChangedInV2Badge />
       </div>
       <GlobalSearchResults query={query} results={results} />
     </>

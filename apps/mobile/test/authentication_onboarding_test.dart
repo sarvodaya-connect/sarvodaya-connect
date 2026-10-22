@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/app.dart';
 import 'package:sarvodaya_connect_mobile/src/models/app_language.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
+import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
 
 import 'test_helpers.dart';
 
@@ -19,7 +20,7 @@ void main() {
 
     expect(find.bySemanticsLabel('Sarvodaya Connect'), findsOneWidget);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, Colors.white);
+    expect(scaffold.backgroundColor, AppColors.orangeSplash);
 
     await tester.pump(const Duration(milliseconds: 901));
     await tester.pumpAndSettle();
@@ -33,35 +34,31 @@ void main() {
     expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
 
     await signInWithDemoAccount(tester);
-    expect(find.text('Set up your account'), findsOneWidget);
+    expect(find.text('Is your society?'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Yes, continue'));
+    await tester.pumpAndSettle();
     expect(find.text('Society Officer'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Yes, continue'));
+    await tester.pumpAndSettle();
 
     final finishButton = find.widgetWithText(FilledButton, 'Finish setup');
-    expect(tester.widget<FilledButton>(finishButton).onPressed, isNull);
-
-    await tester.tap(find.byType(Checkbox).at(0));
-    await tester.pump();
-    await tester.tap(find.byType(Checkbox).at(1));
-    await tester.pump();
-    expect(tester.widget<FilledButton>(finishButton).onPressed, isNotNull);
-
     await tester.tap(finishButton);
     await tester.pumpAndSettle();
     expect(find.textContaining('Nimali'), findsOneWidget);
     expect(find.text('Profile completeness'), findsOneWidget);
   });
 
-  testWidgets('language must be selected before continuing', (tester) async {
+  testWidgets('the chosen language is saved on continue', (tester) async {
     final store = DemoStore(loadDelay: Duration.zero, showSplash: false);
     await tester.pumpWidget(SarvodayaConnectApp(store: store));
     await tester.pumpAndSettle();
 
-    final button = find.widgetWithText(FilledButton, 'Continue');
-    expect(tester.widget<FilledButton>(button).onPressed, isNull);
-
     await tester.tap(find.text('தமிழ்'));
     await tester.pump();
-    expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
+    expect(store.selectedLanguage, AppLanguage.tamil);
   });
 }

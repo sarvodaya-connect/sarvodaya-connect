@@ -31,27 +31,37 @@ class SeatSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        Row(
           children: [
-            for (final type in CouncilSeatType.values)
-              _SeatChip(
-                label: type.label,
-                filled: filled[type] ?? 0,
-                seats: type.seatCount,
+            for (final (i, type) in CouncilSeatType.values.indexed) ...[
+              if (i > 0) const SizedBox(width: 4),
+              Expanded(
+                child: _SeatChip(
+                  label: _shortLabel(type),
+                  filled: filled[type] ?? 0,
+                  seats: type.seatCount,
+                ),
               ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
         const Text(
           '18 Executive Members (3 children, 3 youth, 3 mothers, 9 ordinary) + 7 Elders Council',
-          style: TextStyle(color: AppColors.muted, fontSize: 12),
+          style: TextStyle(color: AppColors.muted, fontSize: 11),
         ),
       ],
     );
   }
 }
+
+String _shortLabel(CouncilSeatType type) => switch (type) {
+  CouncilSeatType.child => 'Children',
+  CouncilSeatType.youth => 'Youth',
+  CouncilSeatType.mother => 'Mothers',
+  CouncilSeatType.ordinary => 'Ordinary',
+  CouncilSeatType.elder => 'Elders',
+};
 
 class _SeatChip extends StatelessWidget {
   const _SeatChip({
@@ -67,23 +77,31 @@ class _SeatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final complete = filled >= seats;
-    final color = complete ? AppColors.leaf : AppColors.warning;
+    final color = complete ? AppColors.forest : AppColors.danger;
     return Semantics(
       label: '$label seats: $filled of $seats filled',
       excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
-          color: complete ? AppColors.mintSoft : AppColors.warningSoft,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: complete ? AppColors.mint : AppColors.dangerSoft,
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Column(
           children: [
-            Text(label, style: TextStyle(fontSize: 11, color: color)),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 9.5, color: AppColors.inkSoft),
+            ),
             Text(
               '$filled / $seats',
-              style: TextStyle(fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -134,92 +152,101 @@ class MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = [
-      member.position,
-      '${member.seatType.label} seat',
-      if (member.age != null) 'age ${member.age}',
-    ].join(' · ');
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            MemberAvatar(member),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          member.fullName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+    final seat = member.age == null
+        ? '${member.seatType.label} seat'
+        : '${member.seatType.label} (age ${member.age}) seat';
+    final subtitle = '${member.position} · $seat';
+    return Material(
+      color: AppColors.surface,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          child: Row(
+            children: [
+              MemberAvatar(member, size: 34),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            member.fullName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.5,
+                            ),
                           ),
                         ),
-                      ),
-                      if (member.isPrimaryContact) ...[
-                        const SizedBox(width: 6),
-                        const Tooltip(
-                          message: 'Primary contact',
-                          child: Icon(
-                            Icons.star,
-                            size: 16,
-                            color: AppColors.leaf,
-                            semanticLabel: 'Primary contact',
+                        if (member.isPrimaryContact) ...[
+                          const SizedBox(width: 6),
+                          const Tooltip(
+                            message: 'Primary contact',
+                            child: Icon(
+                              Icons.star,
+                              size: 16,
+                              color: AppColors.leaf,
+                              semanticLabel: 'Primary contact',
+                            ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 13,
                     ),
-                  ),
-                  if (pendingLabel != null) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11.5,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.warningSoft,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        pendingLabel!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.warning,
+                    ),
+                    if (pendingLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningSoft,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          pendingLabel!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.warning,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            if (onReplace != null)
-              OutlinedButton(
-                onPressed: onReplace,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(48, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                ),
-                child: Text(
-                  'Replace',
-                  semanticsLabel: 'Replace ${member.fullName}',
                 ),
               ),
-          ],
+              if (onReplace != null)
+                OutlinedButton(
+                  onPressed: onReplace,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Replace',
+                    semanticsLabel: 'Replace ${member.fullName}',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
