@@ -80,7 +80,7 @@ export default async function SocietyPage({ params }: PageProps<"/societies/[id]
         </div>
 
         <dl className="grid gap-0 divide-y divide-line-soft sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          <HeroStat label="Members" value={society.membership?.totalMembers?.toLocaleString("en-GB") ?? "—"} note="Across all categories" />
+          <HeroStat label="Members" value={society.membership?.overallTotal?.toLocaleString("en-GB") ?? "—"} note="Across all categories" />
           <HeroStat label="Wealth" value="LKR 2.5M" note="31 Mar 2026" />
           <HeroStat label="SDF shares" value="LKR 640,000" note="320 shares" />
           <HeroStat

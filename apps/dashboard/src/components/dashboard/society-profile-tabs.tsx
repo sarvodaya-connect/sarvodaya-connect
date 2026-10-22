@@ -26,7 +26,7 @@ function formatDate(value?: string) {
 export function SocietyProfileTabs({ society }: { society: SocietyDetails }) {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const primaryContact = society.contacts.find((contact) => contact.isPrimary);
-  const members = society.membership?.totalMembers ?? 612;
+  const members = society.membership?.overallTotal ?? 612;
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface">
