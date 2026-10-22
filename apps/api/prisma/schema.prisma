@@ -360,7 +360,7 @@ model EmergencySituationReport {
   createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  @@unique([createdById, clientMutationId])
+  @@unique([createdById, clientMutationId], map: "emergency_situation_reports_created_by_id_client_mutation_i_key")
   @@index([incidentId, status, createdAt])
   @@map("emergency_situation_reports")
 }

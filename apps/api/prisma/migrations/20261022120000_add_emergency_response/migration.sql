@@ -89,5 +89,5 @@ CREATE INDEX "emergency_incidents_district_id_status_activated_at_idx" ON "emerg
 CREATE INDEX "emergency_assessments_incident_id_society_id_status_idx" ON "emergency_assessments"("incident_id", "society_id", "status");
 CREATE UNIQUE INDEX "emergency_response_actions_created_by_id_client_mutation_id_key" ON "emergency_response_actions"("created_by_id", "client_mutation_id");
 CREATE INDEX "emergency_response_actions_incident_id_status_due_at_idx" ON "emergency_response_actions"("incident_id", "status", "due_at");
-CREATE UNIQUE INDEX "emergency_situation_reports_created_by_id_client_mutation_id_key" ON "emergency_situation_reports"("created_by_id", "client_mutation_id");
+CREATE UNIQUE INDEX "emergency_situation_reports_created_by_id_client_mutation_i_key" ON "emergency_situation_reports"("created_by_id", "client_mutation_id");
 CREATE INDEX "emergency_situation_reports_incident_id_status_created_at_idx" ON "emergency_situation_reports"("incident_id", "status", "created_at");

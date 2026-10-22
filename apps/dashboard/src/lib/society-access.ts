@@ -21,5 +21,8 @@ export function societiesVisibleTo(societies: SocietyDetails[], access: SocietyA
       return societies.filter((society) => access.districtIds.includes(society.district.id));
     case "SOCIETY_OFFICER":
       return societies.filter((society) => access.societyIds.includes(society.id));
+    default:
+      // Unknown or not-yet-scoped roles must not see society records.
+      return [];
   }
 }
