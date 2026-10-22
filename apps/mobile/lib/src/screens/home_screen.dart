@@ -17,6 +17,7 @@ import 'changes_requested_screen.dart';
 import 'council_screen.dart';
 import 'notifications_screen.dart';
 import 'membership_screen.dart';
+import 'activity_form_screen.dart';
 import 'submission_detail_screen.dart';
 
 /// M05 · Society Officer home.
@@ -213,11 +214,9 @@ class _HomeContent extends StatelessWidget {
               _QuickAction(
                 icon: Icons.show_chart,
                 label: copy.reportActivity,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Activity reporting is built in a separate task.',
-                    ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ActivityFormScreen(),
                   ),
                 ),
               ),
