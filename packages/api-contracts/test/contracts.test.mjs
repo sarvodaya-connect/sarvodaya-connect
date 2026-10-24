@@ -19,7 +19,9 @@ import {
   ROLE_PERMISSIONS,
   REVIEW_DECISIONS,
   SOCIETY_STATUSES,
+  SUBMISSION_ACTIONS,
   SUBMISSION_STATUSES,
+  SUBMISSION_TYPES,
   USER_ROLES,
   VERIFICATION_STATUSES,
   hasPermission,
@@ -82,4 +84,16 @@ test("all public enum collections contain unique values", () => {
   for (const collection of collections) {
     assert.equal(new Set(collection).size, collection.length);
   }
+});
+
+test("submission actions and types are explicit and unique", () => {
+  assert.deepEqual([...SUBMISSION_ACTIONS], [
+    "SUBMIT",
+    "START_REVIEW",
+    "REQUEST_CHANGES",
+    "APPROVE",
+    "REJECT",
+    "RESUBMIT",
+  ]);
+  assert.equal(new Set(SUBMISSION_TYPES).size, SUBMISSION_TYPES.length);
 });

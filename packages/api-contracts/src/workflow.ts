@@ -87,3 +87,80 @@ export interface ActivityReport {
 
 /** Only approved activity reports may contribute to HQ dashboard totals. */
 export type ReportableActivity = ActivityReport & { status: "APPROVED" };
+
+export const SUBMISSION_TYPES = [
+  "COUNCIL_UPDATE",
+  "PROFILE_UPDATE",
+  "MEMBERSHIP_COUNTS",
+  "ACTIVITY_REPORT",
+  "PAYMENT",
+] as const;
+export type SubmissionType = (typeof SUBMISSION_TYPES)[number];
+
+export const SUBMISSION_ACTIONS = [
+  "SUBMIT",
+  "START_REVIEW",
+  "REQUEST_CHANGES",
+  "APPROVE",
+  "REJECT",
+  "RESUBMIT",
+] as const;
+export type SubmissionAction = (typeof SUBMISSION_ACTIONS)[number];
+
+export interface SubmissionFieldChange extends SubmissionChange {
+  label: string;
+  correctionStatus: CorrectionStatus;
+  reviewerComment?: string;
+  correctedValue?: unknown;
+}
+
+export interface SubmissionEvent {
+  id: string;
+  action: SubmissionAction;
+  fromStatus: SubmissionStatus;
+  toStatus: SubmissionStatus;
+  actorId: string;
+  actorDisplayName: string;
+  comment?: string;
+  createdAt: IsoDateTime;
+}
+
+/** Full workflow record returned by the submissions API. */
+export interface SubmissionDetail extends Omit<SocietySubmission, "changes"> {
+  reference: string;
+  type: SubmissionType;
+  title: string;
+  /** Send back on every action; a stale value returns 409 CONFLICT. */
+  version: number;
+  changes: SubmissionFieldChange[];
+  events: SubmissionEvent[];
+  reviewerDisplayName?: string;
+  reviewStartedAt?: IsoDateTime;
+  /** Actions the caller may take now. Clients must not re-derive the rules. */
+  allowedActions: SubmissionAction[];
+}
+
+export interface CreateSubmissionRequest {
+  societyId: string;
+  type: SubmissionType;
+  title: string;
+  changes: {
+    field: string;
+    label: string;
+    previousValue?: unknown;
+    proposedValue: unknown;
+  }[];
+}
+
+export interface SubmissionActionRequest {
+  version: number;
+  comment?: string;
+}
+
+export interface RequestChangesRequest extends SubmissionActionRequest {
+  fields: { field: string; comment: string }[];
+}
+
+export interface ResubmitRequest extends SubmissionActionRequest {
+  corrections: { field: string; correctedValue: unknown }[];
+}
