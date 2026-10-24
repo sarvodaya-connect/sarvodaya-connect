@@ -63,6 +63,7 @@ model Society {
   emergencyAssessments EmergencyAssessment[]
   emergencyActions     EmergencyResponseAction[]
   emergencyReports     EmergencySituationReport[]
+  submissions          Submission[]
   createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -363,4 +364,122 @@ model EmergencySituationReport {
   @@unique([createdById, clientMutationId], map: "emergency_situation_reports_created_by_id_client_mutation_i_key")
   @@index([incidentId, status, createdAt])
   @@map("emergency_situation_reports")
+}
+
+// SC-46: submission and approval workflow. Statuses match
+// SUBMISSION_STATUSES in packages/api-contracts.
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  RESUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("submission_status")
+}
+
+enum SubmissionType {
+  COUNCIL_UPDATE
+  PROFILE_UPDATE
+  MEMBERSHIP_COUNTS
+  ACTIVITY_REPORT
+  PAYMENT
+
+  @@map("submission_type")
+}
+
+enum SubmissionAction {
+  SUBMIT
+  START_REVIEW
+  REQUEST_CHANGES
+  APPROVE
+  REJECT
+  RESUBMIT
+
+  @@map("submission_action")
+}
+
+enum CorrectionStatus {
+  NONE
+  REQUIRED
+  CORRECTED
+
+  @@map("correction_status")
+}
+
+model Submission {
+  id              String            @id @default(uuid()) @db.Uuid
+  seq             Int               @unique @default(autoincrement())
+  societyId       String            @map("society_id") @db.Uuid
+  society         Society           @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  type            SubmissionType
+  title           String            @db.VarChar(200)
+  status          SubmissionStatus  @default(DRAFT)
+  // Optimistic-lock counter. Every action must send the version it last saw.
+  version         Int               @default(1)
+  submittedById   String            @map("submitted_by_id") @db.VarChar(64)
+  submittedByName String            @map("submitted_by_name") @db.VarChar(150)
+  reviewerId      String?           @map("reviewer_id") @db.VarChar(64)
+  reviewerName    String?           @map("reviewer_name") @db.VarChar(150)
+  submittedAt     DateTime?         @map("submitted_at") @db.Timestamptz(3)
+  reviewStartedAt DateTime?         @map("review_started_at") @db.Timestamptz(3)
+  decidedAt       DateTime?         @map("decided_at") @db.Timestamptz(3)
+  fields          SubmissionField[]
+  events          SubmissionEvent[]
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([societyId, status])
+  @@index([status, submittedAt])
+  @@map("submissions")
+}
+
+model SubmissionField {
+  id               String           @id @default(uuid()) @db.Uuid
+  submissionId     String           @map("submission_id") @db.Uuid
+  submission       Submission       @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  field            String           @db.VarChar(100)
+  label            String           @db.VarChar(150)
+  previousValue    Json?            @map("previous_value")
+  proposedValue    Json             @map("proposed_value")
+  correctedValue   Json?            @map("corrected_value")
+  correctionStatus CorrectionStatus @default(NONE) @map("correction_status")
+  reviewerComment  String?          @map("reviewer_comment") @db.VarChar(1000)
+
+  @@unique([submissionId, field])
+  @@map("submission_fields")
+}
+
+// Append-only: a trigger in the migration blocks UPDATE and DELETE.
+model SubmissionEvent {
+  id           String           @id @default(uuid()) @db.Uuid
+  submissionId String           @map("submission_id") @db.Uuid
+  submission   Submission       @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  action       SubmissionAction
+  fromStatus   SubmissionStatus @map("from_status")
+  toStatus     SubmissionStatus @map("to_status")
+  actorId      String           @map("actor_id") @db.VarChar(64)
+  actorName    String           @map("actor_name") @db.VarChar(150)
+  comment      String?          @db.VarChar(1000)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([submissionId, createdAt])
+  @@map("submission_events")
+}
+
+// Append-only general audit trail for important actions.
+model AuditLogEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  action     String   @db.VarChar(60)
+  entityType String   @map("entity_type") @db.VarChar(60)
+  entityId   String   @map("entity_id") @db.VarChar(64)
+  actorId    String   @map("actor_id") @db.VarChar(64)
+  actorName  String   @map("actor_name") @db.VarChar(150)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@map("audit_log")
 }
