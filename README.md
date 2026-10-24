@@ -382,7 +382,8 @@ erDiagram
 - Membership is stored as annual counts by category and gender; individual membership records are not currently modeled.
 - Uploaded document files are stored outside PostgreSQL (local storage in development); the database stores metadata and a storage key.
 - User identities are provided by the authentication layer. `recipient_user_id`, `uploaded_by_id` and `uploaded_by_name` are identifiers/snapshots, not foreign keys to a local users table.
-- The schema currently does not define consent records or a general-purpose audit log. Those requirements need to be agreed before real personal data is used in production.
+- Submission workflow data lives in `submissions`, `submission_fields` (one row per changed field, with reviewer comments and corrected values) and `submission_events` (one row per status change). `submission_events` and `audit_log` are append-only: database triggers reject updates and deletes. `audit_log` currently records submission workflow actions only.
+- The schema does not define consent records, and the audit log does not yet cover other sensitive or admin actions. Those requirements need to be agreed before real personal data is used in production.
 
 ### Key constraints and indexes
 
@@ -395,6 +396,7 @@ erDiagram
 | `society_documents` | Unique `storage_key`; unique (`society_id`, `document_type`, `title`, `version`); indexes on (`society_id`, `document_type`) and `status` | Locate stored files and retrieve/filter document records |
 | `notifications` | Indexes on (`recipient_user_id`, `created_at`) and (`recipient_user_id`, `read_at`) | Load a recipient's notification feed and unread items |
 | Emergency assessment, action and situation report tables | Unique creator/client-mutation IDs and incident/status/time indexes | Support retry-safe mobile sync and scoped emergency workflows |
+| Submission workflow tables | Version column checked on every transition; one open submission per society and type; unique field per submission; append-only triggers on `submission_events` and `audit_log` | Optimistic locking, no duplicate open submissions, tamper-resistant history |
 
 These constraints and indexes are defined by Prisma and its migrations. Update this diagram when the schema changes; do not treat it as a substitute for migrations or the Prisma schema.
 
@@ -442,6 +444,7 @@ Emergency response uses `GET /api/v1/emergencies/incidents`, `GET /api/v1/emerge
 | Society records | `PATCH/PUT /api/v1/societies/:id/profile`, `PUT .../:id/council`, `PUT .../:id/membership` | Update permitted society details and snapshots |
 | Documents | `GET/POST /api/v1/documents`, `GET .../:id/download` | List, submit and access authorised document records |
 | Notifications | `GET /api/v1/notifications`, `POST .../:id/read`, `POST .../read-all` | Load and update the signed-in user's notifications |
+| Submissions | `GET/POST /api/v1/submissions`, `GET /api/v1/submissions/:id`, `POST .../:id/submit`, `.../start-review`, `.../request-changes`, `.../approve`, `.../reject`, `.../resubmit` | Create, submit, review and correct society change submissions. Every action sends the `version` it last saw; a stale version returns 409. |
 
 ### Notification flow
 
@@ -605,7 +608,7 @@ The API, dashboard and mobile app are currently used for local development and d
 - Do not deploy the demo authentication or demo identities to production.
 - Production infrastructure and security controls require review and configuration by Sarvodaya IT before launch.
 
-Additional production decisions still needed include a confirmed privacy notice and consent approach, data retention and deletion rules, audit logging for sensitive/admin actions, and review of any external data sharing. The current project does not model consent records or a general-purpose audit log. Do not use real member or society personal information in local demos.
+Additional production decisions still needed include a confirmed privacy notice and consent approach, data retention and deletion rules, audit logging for sensitive/admin actions, and review of any external data sharing. The current project does not model consent records, and its audit log covers submission workflow actions only. Do not use real member or society personal information in local demos.
 
 ## 13. Role-based permissions
 
@@ -614,15 +617,15 @@ The table below records the current intended access boundaries for the three ope
 | Role | Data scope and read access | Create / update | Review / approve | Platform administration |
 | --- | --- | --- | --- | --- |
 | Society Officer | Their assigned society, its membership summaries, standard documents and notifications. Cannot open the restricted signed members list. | Update their assigned society profile, council and membership counts; upload and submit documents for that society. | No reviewer permission. | No. |
-| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot update society profile, council or membership through the current API. | The shared permission contract includes `SUBMISSION_REVIEW`, but review/approval API actions are not yet implemented. | No. |
-| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Intended to review across districts; review/approval API actions are not yet implemented. | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
+| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot update society profile, council or membership through the current API. | Can start review, request field-level changes, approve or reject submissions for societies in assigned districts through `/api/v1/submissions`. Approval records the decision only; it does not yet write to the society registry. | No. |
+| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Can review submissions across all districts through `/api/v1/submissions`. Approval records the decision only; it does not yet write to the society registry. | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
 | System Administrator | No society-record access is defined. | No operational data changes are defined. | No. | A technical-administration persona is described, but `SYSTEM_ADMIN` is not currently an API role and its exact permissions are not implemented. |
 
 ### Enforcement status
 
 - The API has shared role capabilities for `SOCIETY_OFFICER`, `DISTRICT_MANAGER` and `HQ_ADMIN`, with record scope supplied by assigned society and district IDs. Document access rules are enforced in the API, including the signed-members-list restriction.
 - Society Officers and HQ Administrators are allowed by the current API routes to update society profiles, council and membership; District Managers are not. Document upload is allowed for societies within a user's accessible scope.
-- The `SUBMISSION_REVIEW` capability exists in the shared contract, but there is not yet an API endpoint that performs a review or approval. Do not treat a displayed demo action as a real approval.
+- Submission review and approval endpoints are enforced in the API: officers submit and resubmit for their own society, District Managers and HQ Administrators review within their scope, out-of-scope records return 404, and every transition is audit-logged. Approval does not yet change the society registry. Mobile and dashboard screens still use demonstration data until they are connected, so do not treat a displayed demo action as a real approval.
 - Authentication still uses fictional development/test identities. Some registry read routes are not yet guarded by authentication, and dashboard role switching is a demonstration feature. This matrix is therefore a documented target and partial implementation—not a claim that all production access controls are complete.
 
 See the [API guide](apps/api/README.md#access-rules-provisional) for current document-scoping behavior and the [dashboard guide](apps/dashboard/README.md#provisional-role-based-visibility) for demonstration visibility. Confirm the final role names, scopes, restricted data and approval authority with Sarvodaya before connecting production identity or real data.
