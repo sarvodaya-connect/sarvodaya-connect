@@ -7,6 +7,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
+import { SubmissionsModule } from './submissions/submissions.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -33,6 +34,7 @@ const repositoryEnvironmentFile = resolve(
     StorageModule,
     NotificationsModule,
     DocumentsModule,
+    SubmissionsModule,
     EmergenciesModule,
   ],
   controllers: [AppController, DistrictsController, SocietiesController],
