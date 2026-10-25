@@ -3,8 +3,7 @@ import Image from "next/image";
 
 import { HeroScrubFrames } from "./hero-scrub";
 
-const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.sarvodayaconnect.com";
+const DASHBOARD_URL = "/dashboard";
 const CONTACT_EMAIL = "info@sarvodayaconnect.com";
 
 const navLinks = [
