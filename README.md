@@ -446,6 +446,26 @@ Emergency response uses `GET /api/v1/emergencies/incidents`, `GET /api/v1/emerge
 | Notifications | `GET /api/v1/notifications`, `POST .../:id/read`, `POST .../read-all` | Load and update the signed-in user's notifications |
 | Submissions | `GET/POST /api/v1/submissions`, `GET /api/v1/submissions/:id`, `POST .../:id/submit`, `.../start-review`, `.../request-changes`, `.../approve`, `.../reject`, `.../resubmit` | Create, submit, review and correct society change submissions. Every action sends the `version` it last saw; a stale version returns 409. |
 
+### Approval and the society registry
+
+Approving a `PROFILE_UPDATE`, `COUNCIL_UPDATE` or `MEMBERSHIP_COUNTS` submission applies its changes to the society registry. The registry update, status change, history event and audit entry are written in **one database transaction**: if any step fails, nothing changes. `ACTIVITY_REPORT` and `PAYMENT` are record-only, so approval changes no registry data.
+
+| Type | Field path | Registry target | Value |
+| --- | --- | --- | --- |
+| `PROFILE_UPDATE` | `profile.<column>`, column one of `nameEn`, `nameLocal`, `dsDivision`, `gnDivision`, `village`, `addressLine`, `latitude`, `longitude`, `establishedOn` | `societies` | Text; JSON numbers for coordinates (both must be set); `YYYY-MM-DD` for `establishedOn` |
+| `COUNCIL_UPDATE` | `council.<seat 1-25>.<column>`, column one of `fullName`, `position`, `appointedOn`, `endedOn` | Existing row in `society_council_members` | Text or `YYYY-MM-DD`; end date not before start date |
+| `MEMBERSHIP_COUNTS` | `membership.<year>.<CATEGORY>.<female or male>` | Existing row in `society_membership_counts` | Whole number, 0 or more |
+
+Rules:
+
+- The same allowlist is checked when a submission is created, when corrections are resubmitted, and again at approval. Any other field returns 400. System-controlled fields (`id`, `societyCode`, `districtId`, `status`) can never be changed this way.
+- The corrected value is applied when one was provided; otherwise the proposed value.
+- The registry value must still equal the submission's `previousValue` (empty when omitted). If it changed, approval returns 409 and writes nothing; the reviewer can request changes instead.
+- Approval updates existing council seats and membership rows only. It never creates a new year or seat.
+- Scope is unchanged: officers submit for their own society, District Managers approve within their districts, HQ Administrators across districts. Every registry change is listed in the `SUBMISSION_APPROVE` audit entry.
+
+Not supported until Sarvodaya confirms: primary-contact changes; council `age`, `phone`, `email`, `isActive`, `isPrimaryContact`, `seatType` and seat reassignment; clearing a value; creating new-year membership records; and overriding a stale-value conflict.
+
 ### Notification flow
 
 ```mermaid
@@ -617,15 +637,15 @@ The table below records the current intended access boundaries for the three ope
 | Role | Data scope and read access | Create / update | Review / approve | Platform administration |
 | --- | --- | --- | --- | --- |
 | Society Officer | Their assigned society, its membership summaries, standard documents and notifications. Cannot open the restricted signed members list. | Update their assigned society profile, council and membership counts; upload and submit documents for that society. | No reviewer permission. | No. |
-| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot update society profile, council or membership through the current API. | Can start review, request field-level changes, approve or reject submissions for societies in assigned districts through `/api/v1/submissions`. Approval records the decision only; it does not yet write to the society registry. | No. |
-| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Can review submissions across all districts through `/api/v1/submissions`. Approval records the decision only; it does not yet write to the society registry. | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
+| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot edit society profile, council or membership directly; may change only allowlisted fields by approving a submission for a society in their district. | Can start review, request field-level changes, approve or reject submissions for societies in assigned districts through `/api/v1/submissions`. Approving a profile, council or membership submission also applies its allowlisted fields to the society registry in the same transaction (see section 7). | No. |
+| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Can review submissions across all districts through `/api/v1/submissions`. Approving a profile, council or membership submission also applies its allowlisted fields to the society registry in the same transaction (see section 7). | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
 | System Administrator | No society-record access is defined. | No operational data changes are defined. | No. | A technical-administration persona is described, but `SYSTEM_ADMIN` is not currently an API role and its exact permissions are not implemented. |
 
 ### Enforcement status
 
 - The API has shared role capabilities for `SOCIETY_OFFICER`, `DISTRICT_MANAGER` and `HQ_ADMIN`, with record scope supplied by assigned society and district IDs. Document access rules are enforced in the API, including the signed-members-list restriction.
 - Society Officers and HQ Administrators are allowed by the current API routes to update society profiles, council and membership; District Managers are not. Document upload is allowed for societies within a user's accessible scope.
-- Submission review and approval endpoints are enforced in the API: officers submit and resubmit for their own society, District Managers and HQ Administrators review within their scope, out-of-scope records return 404, and every transition is audit-logged. Approval does not yet change the society registry. Mobile and dashboard screens still use demonstration data until they are connected, so do not treat a displayed demo action as a real approval.
+- Submission review and approval endpoints are enforced in the API: officers submit and resubmit for their own society, District Managers and HQ Administrators review within their scope, out-of-scope records return 404, and every transition is audit-logged. Approval applies allowlisted registry fields in the same database transaction as the decision, and returns 409 if the registry changed since the submission. Mobile and dashboard screens still use demonstration data until they are connected, so do not treat a displayed demo action as a real approval.
 - Authentication still uses fictional development/test identities. Some registry read routes are not yet guarded by authentication, and dashboard role switching is a demonstration feature. This matrix is therefore a documented target and partial implementation—not a claim that all production access controls are complete.
 
 See the [API guide](apps/api/README.md#access-rules-provisional) for current document-scoping behavior and the [dashboard guide](apps/dashboard/README.md#provisional-role-based-visibility) for demonstration visibility. Confirm the final role names, scopes, restricted data and approval authority with Sarvodaya before connecting production identity or real data.

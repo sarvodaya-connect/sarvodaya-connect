@@ -24,8 +24,12 @@ import {
   applyTransition,
   type SubmissionAction,
 } from './submission-transitions.js';
+import {
+  assertChangesSupported,
+  resolveRegistryChanges,
+} from './registry-fields.js';
 
-type Extras = Pick<TransitionInput, 'comment' | 'data' | 'fieldUpdates'>;
+type Extras = Pick<TransitionInput, 'comment' | 'data' | 'fieldUpdates' | 'registry'>;
 
 const DECISIONS: Partial<Record<SubmissionAction, string>> = {
   APPROVE: 'APPROVED',
@@ -49,6 +53,7 @@ export class SubmissionsService {
     if (new Set(fields).size !== fields.length) {
       throw new BadRequestException('Each field can appear only once');
     }
+    assertChangesSupported(dto.type, dto.changes);
     if (!(await this.repository.findSociety(dto.societyId))) {
       throw new NotFoundException('Society not found');
     }
@@ -133,7 +138,11 @@ export class SubmissionsService {
   }
 
   approve(principal: Principal, id: string, dto: SubmissionActionDto) {
-    return this.act(principal, id, 'APPROVE', dto.version, () => ({
+    return this.act(principal, id, 'APPROVE', dto.version, (record) => ({
+      registry: {
+        societyId: record.societyId,
+        changes: resolveRegistryChanges(record.type, record.fields),
+      },
       comment: dto.comment,
       data: { decidedAt: new Date() },
     }));
@@ -154,6 +163,11 @@ export class SubmissionsService {
         .filter((field) => field.correctionStatus === 'REQUIRED')
         .map((field) => field.field);
       const sent = dto.corrections.map((correction) => correction.field);
+      for (const correction of dto.corrections) {
+        assertChangesSupported(record.type, [
+          { field: correction.field, proposedValue: correction.correctedValue },
+        ]);
+      }
       const sameSet =
         sent.length === required.length &&
         required.every((field) => sent.includes(field));

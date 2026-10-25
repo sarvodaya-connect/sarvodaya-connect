@@ -33,6 +33,7 @@ const OPEN = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'CHANGES_REQUESTED', 'RESUBM
 class InMemorySubmissionsRepository {
   rows: any[] = [];
   auditActions: string[] = [];
+  transitions: TransitionInput[] = [];
   private seq = 0;
 
   findById(id: string) {
@@ -113,6 +114,7 @@ class InMemorySubmissionsRepository {
   }
 
   transition(input: TransitionInput) {
+    this.transitions.push(input);
     const row = this.rows.find((r) => r.id === input.id);
     if (!row || row.version !== input.version || row.status !== input.from) {
       return Promise.resolve(false);
@@ -179,6 +181,7 @@ describe('Submissions workflow (e2e)', () => {
   beforeEach(() => {
     repo.rows = [];
     repo.auditActions = [];
+    repo.transitions = [];
   });
 
   // ---- helpers ----
@@ -190,7 +193,7 @@ describe('Submissions workflow (e2e)', () => {
 
   const draftBody = (overrides: object = {}) => ({
     societyId: SUNRISE,
-    type: 'COUNCIL_UPDATE',
+    type: 'ACTIVITY_REPORT', // record-only; registry types are covered below
     title: 'Treasurer change',
     changes: [
       { field: 'treasurer.fullName', label: 'Treasurer', previousValue: 'A', proposedValue: 'B' },
@@ -501,6 +504,150 @@ describe('Submissions workflow (e2e)', () => {
         expect.arrayContaining(['REQUEST_CHANGES', 'APPROVE', 'REJECT']),
       );
       expect((await getOne(id, OFFICER)).body.allowedActions).toEqual([]);
+    });
+  });
+  // ---- registry approvals (service layer; PostgreSQL behaviour is in test/db/submission-registry.db-spec.ts) ----
+  describe('registry approvals', () => {
+    const HQ = 'demo-hq-admin';
+    const change = (field: string, previousValue: unknown, proposedValue: unknown) => ({
+      field,
+      label: field,
+      previousValue,
+      proposedValue,
+    });
+    const approvals = () => repo.transitions.filter((t) => t.action === 'APPROVE');
+    const toReview = async (type: string, changes: object[]) => {
+      const res = await post('', OFFICER, draftBody({ type, changes })).expect(201);
+      const id = res.body.id as string;
+      await post(`/${id}/submit`, OFFICER, { version: 1 }).expect(200);
+      await post(`/${id}/start-review`, MANAGER, { version: 2 }).expect(200);
+      return id; // version 3
+    };
+
+    it('accepts allowlisted fields for each registry type', async () => {
+      await post('', OFFICER, draftBody({
+        type: 'PROFILE_UPDATE',
+        changes: [change('profile.village', 'Old', 'New'), change('profile.establishedOn', '2010-05-20', '2011-06-01')],
+      })).expect(201);
+      await post('', OFFICER, draftBody({
+        type: 'COUNCIL_UPDATE',
+        changes: [change('council.3.fullName', 'Fictional Person', 'Another Fictional Person')],
+      })).expect(201);
+      await post('', OFFICER, draftBody({
+        type: 'MEMBERSHIP_COUNTS',
+        changes: [change('membership.2026.CHILDREN.female', 10, 12)],
+      })).expect(201);
+    });
+
+    it('rejects unsupported and system-controlled fields when a submission is created', async () => {
+      const unsupported: [string, string, unknown][] = [
+        ['PROFILE_UPDATE', 'profile.status', 'ACTIVE'],
+        ['PROFILE_UPDATE', 'profile.districtId', 'x'],
+        ['PROFILE_UPDATE', 'profile.societyCode', 'DEMO-X'],
+        ['PROFILE_UPDATE', 'profile.id', 'x'],
+        ['PROFILE_UPDATE', 'profile.primaryContact.phone', '0110000000'],
+        ['PROFILE_UPDATE', 'treasurer.fullName', 'x'],
+        ['COUNCIL_UPDATE', 'council.3.phone', '0110000000'],
+        ['COUNCIL_UPDATE', 'council.3.email', 'a@example.test'],
+        ['COUNCIL_UPDATE', 'council.3.age', 30],
+        ['COUNCIL_UPDATE', 'council.3.seatType', 'YOUTH'],
+        ['COUNCIL_UPDATE', 'council.3.seatNumber', 4],
+        ['COUNCIL_UPDATE', 'council.3.isActive', false],
+        ['COUNCIL_UPDATE', 'council.3.isPrimaryContact', true],
+        ['COUNCIL_UPDATE', 'council.26.fullName', 'Name Here'],
+        ['MEMBERSHIP_COUNTS', 'membership.2026.TEENS.female', 5],
+        ['MEMBERSHIP_COUNTS', 'membership.2026.CHILDREN.total', 5],
+      ];
+      for (const [type, field, value] of unsupported) {
+        await post('', OFFICER, draftBody({ type, changes: [change(field, null, value)] })).expect(400);
+      }
+    });
+
+    it('rejects invalid values for allowlisted fields', async () => {
+      const invalid: [string, string, unknown][] = [
+        ['PROFILE_UPDATE', 'profile.latitude', '7.1'],
+        ['PROFILE_UPDATE', 'profile.latitude', 95],
+        ['PROFILE_UPDATE', 'profile.establishedOn', '2026-02-30'],
+        ['COUNCIL_UPDATE', 'council.3.appointedOn', '10/01/2026'],
+        ['MEMBERSHIP_COUNTS', 'membership.2026.CHILDREN.female', -1],
+        ['MEMBERSHIP_COUNTS', 'membership.2026.CHILDREN.female', 1.5],
+      ];
+      for (const [type, field, value] of invalid) {
+        await post('', OFFICER, draftBody({ type, changes: [change(field, null, value)] })).expect(400);
+      }
+    });
+
+    it('rejects an invalid corrected value on resubmit', async () => {
+      const id = await toReview('PROFILE_UPDATE', [change('profile.latitude', 6.9, 7.1)]);
+      await post(`/${id}/request-changes`, MANAGER, {
+        version: 3,
+        fields: [{ field: 'profile.latitude', comment: 'Check the coordinates' }],
+      }).expect(200);
+      await post(`/${id}/resubmit`, OFFICER, {
+        version: 4,
+        corrections: [{ field: 'profile.latitude', correctedValue: 'north' }],
+      }).expect(400);
+      expect(repo.rows[0].status).toBe('CHANGES_REQUESTED');
+    });
+
+    it('passes the corrected values and previous values to the approval transaction', async () => {
+      const id = await toReview('PROFILE_UPDATE', [
+        change('profile.latitude', 6.9, 7.1),
+        change('profile.longitude', 79.8, 79.9),
+        change('profile.village', 'Old Village', 'Proposed Village'),
+      ]);
+      await post(`/${id}/request-changes`, MANAGER, {
+        version: 3,
+        fields: [{ field: 'profile.village', comment: 'Check the spelling' }],
+      }).expect(200);
+      await post(`/${id}/resubmit`, OFFICER, {
+        version: 4,
+        corrections: [{ field: 'profile.village', correctedValue: 'Corrected Village' }],
+      }).expect(200);
+      await post(`/${id}/start-review`, MANAGER, { version: 5 }).expect(200);
+      await post(`/${id}/approve`, MANAGER, { version: 6 }).expect(200);
+
+      const [approval] = approvals();
+      expect(approval?.registry?.societyId).toBe(SUNRISE);
+      expect(approval?.registry?.changes.map((c) => [c.field, c.previousValue, c.value])).toEqual([
+        ['profile.latitude', 6.9, 7.1],
+        ['profile.longitude', 79.8, 79.9],
+        ['profile.village', 'Old Village', 'Corrected Village'],
+      ]);
+    });
+
+    it('lets an HQ administrator approve across districts', async () => {
+      const id = await toReview('PROFILE_UPDATE', [change('profile.village', 'Old', 'New')]);
+      await post(`/${id}/approve`, HQ, { version: 3 }).expect(200);
+      expect(approvals()).toHaveLength(1);
+    });
+
+    it('applies nothing for officers or out-of-district managers', async () => {
+      const id = await toReview('PROFILE_UPDATE', [change('profile.village', 'Old', 'New')]);
+      await post(`/${id}/approve`, OTHER_MANAGER, { version: 3 }).expect(404);
+      await post(`/${id}/approve`, OFFICER, { version: 3 }).expect(403);
+      expect(approvals()).toHaveLength(0);
+      expect(repo.rows[0].status).toBe('UNDER_REVIEW');
+    });
+
+    it('refuses to approve a stored submission that contains an unsupported field', async () => {
+      const { id } = await createDraft();
+      await post(`/${id}/submit`, OFFICER, { version: 1 }).expect(200);
+      await post(`/${id}/start-review`, MANAGER, { version: 2 }).expect(200);
+      repo.rows[0].type = 'COUNCIL_UPDATE'; // simulate a record stored before the allowlist existed
+      await post(`/${id}/approve`, MANAGER, { version: 3 }).expect(400);
+      expect(repo.rows[0].status).toBe('UNDER_REVIEW');
+      expect(approvals()).toHaveLength(0);
+    });
+
+    it('keeps activity reports and payments record-only', async () => {
+      for (const type of ['ACTIVITY_REPORT', 'PAYMENT']) {
+        repo.rows = [];
+        repo.transitions = [];
+        const id = await toReview(type, [change('anything.goes', null, 'Fictional value')]);
+        await post(`/${id}/approve`, MANAGER, { version: 3 }).expect(200);
+        expect(approvals()[0]?.registry?.changes).toEqual([]);
+      }
     });
   });
 });

@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 
 import { Prisma } from '../generated/prisma/client.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { SubmissionTypeValue } from './dto/submission.dto.js';
+import { applyRegistryChanges, RegistryApplyError } from './registry-apply.js';
+import type { ResolvedRegistryChange } from './registry-fields.js';
 import type {
   SubmissionAction,
   SubmissionStatus,
@@ -47,6 +49,8 @@ export interface TransitionInput {
   comment?: string;
   data?: Prisma.SubmissionUpdateManyMutationInput;
   fieldUpdates?: { field: string; data: Prisma.SubmissionFieldUpdateInput }[];
+  /** Registry changes applied in the same transaction when the action is APPROVE. */
+  registry?: { societyId: string; changes: readonly ResolvedRegistryChange[] };
 }
 
 @Injectable()
@@ -154,58 +158,86 @@ export class SubmissionsRepository {
    * field updates, history event and audit entry. Returns false when someone
    * else changed the submission first.
    */
-  transition(input: TransitionInput): Promise<boolean> {
-    return executeDatabaseOperation(() =>
-      this.prisma.$transaction(async (tx) => {
-        const result = await tx.submission.updateMany({
-          where: { id: input.id, version: input.version, status: input.from },
-          data: {
-            ...input.data,
-            status: input.to,
-            version: { increment: 1 },
-          },
-        });
-        if (result.count !== 1) return false;
-
-        for (const update of input.fieldUpdates ?? []) {
-          await tx.submissionField.update({
-            where: {
-              submissionId_field: {
-                submissionId: input.id,
-                field: update.field,
+  async transition(input: TransitionInput): Promise<boolean> {
+    const outcome = await executeDatabaseOperation(
+      async (): Promise<{ applied: boolean; failure?: RegistryApplyError }> => {
+        try {
+          const applied = await this.prisma.$transaction(async (tx) => {
+            const result = await tx.submission.updateMany({
+              where: { id: input.id, version: input.version, status: input.from },
+              data: {
+                ...input.data,
+                status: input.to,
+                version: { increment: 1 },
               },
-            },
-            data: update.data,
+            });
+            if (result.count !== 1) return false;
+
+            // Registry writes share this transaction: if any step below
+            // throws, the status change, registry, event and audit all roll back.
+            const registryChanges =
+              input.action === 'APPROVE' && input.registry
+                ? await applyRegistryChanges(
+                    tx,
+                    input.registry.societyId,
+                    input.registry.changes,
+                  )
+                : [];
+
+            for (const update of input.fieldUpdates ?? []) {
+              await tx.submissionField.update({
+                where: {
+                  submissionId_field: {
+                    submissionId: input.id,
+                    field: update.field,
+                  },
+                },
+                data: update.data,
+              });
+            }
+            await tx.submissionEvent.create({
+              data: {
+                submissionId: input.id,
+                action: input.action,
+                fromStatus: input.from,
+                toStatus: input.to,
+                actorId: input.actor.id,
+                actorName: input.actor.name,
+                comment: input.comment,
+              },
+            });
+            await tx.auditLogEntry.create({
+              data: {
+                action: `SUBMISSION_${input.action}`,
+                entityType: 'Submission',
+                entityId: input.id,
+                actorId: input.actor.id,
+                actorName: input.actor.name,
+                metadata: {
+                  from: input.from,
+                  to: input.to,
+                  version: input.version,
+                  ...(input.comment ? { comment: input.comment } : {}),
+                  ...(registryChanges.length > 0 ? { registryChanges } : {}),
+                },
+              },
+            });
+            return true;
           });
+          return { applied };
+        } catch (error) {
+          if (error instanceof RegistryApplyError) {
+            return { applied: false, failure: error };
+          }
+          throw error;
         }
-        await tx.submissionEvent.create({
-          data: {
-            submissionId: input.id,
-            action: input.action,
-            fromStatus: input.from,
-            toStatus: input.to,
-            actorId: input.actor.id,
-            actorName: input.actor.name,
-            comment: input.comment,
-          },
-        });
-        await tx.auditLogEntry.create({
-          data: {
-            action: `SUBMISSION_${input.action}`,
-            entityType: 'Submission',
-            entityId: input.id,
-            actorId: input.actor.id,
-            actorName: input.actor.name,
-            metadata: {
-              from: input.from,
-              to: input.to,
-              version: input.version,
-              ...(input.comment ? { comment: input.comment } : {}),
-            },
-          },
-        });
-        return true;
-      }),
+      },
     );
+    if (outcome.failure) {
+      throw outcome.failure.status === 409
+        ? new ConflictException(outcome.failure.message)
+        : new BadRequestException(outcome.failure.message);
+    }
+    return outcome.applied;
   }
 }

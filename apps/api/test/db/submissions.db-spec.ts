@@ -63,7 +63,7 @@ describe('Submission workflow persistence (PostgreSQL)', () => {
     });
 
   async function draft(
-    type: SubmissionTypeValue = 'COUNCIL_UPDATE',
+    type: SubmissionTypeValue = 'ACTIVITY_REPORT',
     fields = ['treasurer.fullName', 'secretary.fullName'],
   ) {
     const { id } = await repo.create({

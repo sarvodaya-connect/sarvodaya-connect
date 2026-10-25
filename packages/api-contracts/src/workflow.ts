@@ -164,3 +164,68 @@ export interface RequestChangesRequest extends SubmissionActionRequest {
 export interface ResubmitRequest extends SubmissionActionRequest {
   corrections: { field: string; correctedValue: unknown }[];
 }
+
+/**
+ * Approving a submission of one of these types applies its changes to the
+ * society registry in the same transaction as the approval.
+ */
+export const REGISTRY_UPDATE_TYPES = [
+  "PROFILE_UPDATE",
+  "COUNCIL_UPDATE",
+  "MEMBERSHIP_COUNTS",
+] as const;
+
+/** Approval records the decision only; no registry data changes. */
+export const RECORD_ONLY_SUBMISSION_TYPES = [
+  "ACTIVITY_REPORT",
+  "PAYMENT",
+] as const;
+
+/** `profile.<column>`: columns of the society record that approval may change. */
+export const REGISTRY_UPDATE_PROFILE_FIELDS = [
+  "nameEn",
+  "nameLocal",
+  "dsDivision",
+  "gnDivision",
+  "village",
+  "addressLine",
+  "latitude",
+  "longitude",
+  "establishedOn",
+] as const;
+
+/** `council.<seat 1-25>.<column>`: existing seats only. Personal data and seat changes are not supported. */
+export const REGISTRY_UPDATE_COUNCIL_FIELDS = [
+  "fullName",
+  "position",
+  "appointedOn",
+  "endedOn",
+] as const;
+
+export const REGISTRY_UPDATE_MEMBERSHIP_CATEGORIES = [
+  "CHILDREN",
+  "YOUTH",
+  "MOTHERS",
+  "ORDINARY",
+  "ELDERS_COUNCIL",
+] as const;
+
+export const REGISTRY_UPDATE_MEMBERSHIP_GENDERS = ["female", "male"] as const;
+
+/**
+ * Field paths accepted for registry-type submissions. Values are JSON numbers
+ * for coordinates and counts, and YYYY-MM-DD strings for dates.
+ */
+export const registryUpdateFieldPath = {
+  profile: (column: (typeof REGISTRY_UPDATE_PROFILE_FIELDS)[number]) =>
+    `profile.${column}`,
+  council: (
+    seatNumber: number,
+    column: (typeof REGISTRY_UPDATE_COUNCIL_FIELDS)[number],
+  ) => `council.${seatNumber}.${column}`,
+  membership: (
+    year: number,
+    category: (typeof REGISTRY_UPDATE_MEMBERSHIP_CATEGORIES)[number],
+    gender: (typeof REGISTRY_UPDATE_MEMBERSHIP_GENDERS)[number],
+  ) => `membership.${year}.${category}.${gender}`,
+};

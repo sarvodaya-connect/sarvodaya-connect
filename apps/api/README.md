@@ -299,3 +299,7 @@ npm audit --omit=dev
 ```
 
 All checks must pass before requesting review.
+
+## Submission approval and the society registry
+
+Approving a profile, council or membership-counts submission applies its allowlisted fields to the society registry inside the same transaction as the approval, history event and audit entry (`src/submissions/registry-fields.ts` holds the allowlist, `registry-apply.ts` applies it). The supported field paths and rules are in section 7 of the root README and in `packages/api-contracts` (`REGISTRY_UPDATE_*`). Activity reports and payments are record-only.
