@@ -3,6 +3,7 @@ import type { IsoDateTime } from "./common.js";
 export const USER_ROLES = [
   "SOCIETY_OFFICER",
   "DISTRICT_MANAGER",
+  "PROGRAMME_COORDINATOR",
   "HQ_ADMIN",
 ] as const;
 
@@ -29,6 +30,10 @@ export const PERMISSIONS = [
   "NOTIFICATION_READ",
   "SUBMISSION_REVIEW",
   "PLATFORM_ADMIN",
+  "EMERGENCY_READ",
+  "EMERGENCY_ASSESS",
+  "EMERGENCY_COORDINATE",
+  "EMERGENCY_ACTIVATE",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -45,6 +50,8 @@ export const ROLE_PERMISSIONS: Readonly<
     "DOCUMENT_READ",
     "DOCUMENT_UPLOAD",
     "NOTIFICATION_READ",
+    "EMERGENCY_READ",
+    "EMERGENCY_ASSESS",
   ],
   DISTRICT_MANAGER: [
     "SOCIETY_READ",
@@ -53,6 +60,14 @@ export const ROLE_PERMISSIONS: Readonly<
     "DOCUMENT_UPLOAD",
     "NOTIFICATION_READ",
     "SUBMISSION_REVIEW",
+    "EMERGENCY_READ",
+    "EMERGENCY_COORDINATE",
+  ],
+  PROGRAMME_COORDINATOR: [
+    "SOCIETY_READ",
+    "EMERGENCY_READ",
+    "EMERGENCY_ASSESS",
+    "EMERGENCY_COORDINATE",
   ],
   HQ_ADMIN: PERMISSIONS,
 };

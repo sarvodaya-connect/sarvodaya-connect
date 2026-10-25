@@ -69,7 +69,8 @@ SC-39 adds role-aware mobile homes and navigation:
 - **M26 states:** role homes and work areas use the shared loading, empty, offline and error states. Existing workflows continue to use success and named locked-during-review states.
 - Use **Demo options → Preview role home** to switch between the three fictional roles when reviewing the UI. Production roles will come from Amazon Cognito claims.
 
-- All data is fictional and held in memory (`lib/src/data/demo_data.dart`, `lib/src/state/demo_store.dart`). Nothing is written to a backend, and closing the app resets the demo.
+- Most demonstration data is held in memory (`lib/src/data/demo_data.dart`, `lib/src/state/demo_store.dart`); emergency response is the exception described below.
+- Emergency response (M22–M25) is connected to the local NestJS API. Rapid assessments are saved in a device-local retry queue so they survive app restarts and sync with stable mutation IDs when online. The queued store is not encrypted; use fictional data only until device encryption and production identity are implemented.
 - Sign in with **Use demo account** on the sign-in screen. Production authentication will be connected through Amazon Cognito.
 - On a submission's tracker page, the **Demo: District Manager actions** buttons (Start review, Return start date, Approve) stand in for the reviewer, whose real actions happen on the web dashboard.
 - The document chooser lists demonstration files, including one that is too large and one with a type that is not accepted, to show the upload errors. Uploads go through `DocumentUploadService` (`lib/src/services`); the demo implementation, `DemoDocumentUploadService`, never sends files anywhere and is the boundary to replace when document storage is connected.

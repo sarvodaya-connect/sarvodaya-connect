@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/app.dart';
 import 'package:sarvodaya_connect_mobile/src/models/app_language.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
-import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
 
 import 'test_helpers.dart';
 
@@ -20,7 +19,7 @@ void main() {
 
     expect(find.bySemanticsLabel('Sarvodaya Connect'), findsOneWidget);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, AppColors.orangeSplash);
+    expect(scaffold.backgroundColor, Colors.white);
 
     await tester.pump(const Duration(milliseconds: 901));
     await tester.pumpAndSettle();

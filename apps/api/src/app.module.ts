@@ -15,6 +15,7 @@ import { SocietiesController } from './societies/societies.controller.js';
 import { SocietiesService } from './societies/societies.service.js';
 import { SocietiesRepository } from './societies/societies.repository.js';
 import { DistrictsService } from './districts/districts.service.js';
+import { EmergenciesModule } from './emergencies/emergencies.module.js';
 
 const repositoryEnvironmentFile = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -32,6 +33,7 @@ const repositoryEnvironmentFile = resolve(
     StorageModule,
     NotificationsModule,
     DocumentsModule,
+    EmergenciesModule,
   ],
   controllers: [AppController, DistrictsController, SocietiesController],
   providers: [

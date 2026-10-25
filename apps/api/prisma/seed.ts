@@ -85,8 +85,68 @@ async function main() {
         update: { female: row.female, male: row.male },
       });
     }
+    await tx.emergencyIncident.upsert({
+      where: { id: '29000000-0000-4000-8000-000000000501' },
+      create: {
+        id: '29000000-0000-4000-8000-000000000501',
+        districtId: districtData[0].id,
+        title: 'Demo flood response · Sunrise district',
+        type: 'FLOOD',
+        severity: 'HIGH',
+        description: 'Fictional rainfall has affected several roads and households. Use this record to exercise the local emergency workflow.',
+        location: 'Imaginary Sunrise Village',
+        latitude: 7.3,
+        longitude: 80.6,
+        createdById: 'demo-dm-north',
+      },
+      update: { title: 'Demo flood response · Sunrise district', status: 'ACTIVE' },
+    });
+    await tx.emergencyAssessment.upsert({
+      where: { createdById_clientMutationId: { createdById: 'demo-officer-sunrise', clientMutationId: '29000000-0000-4000-8000-000000000502' } },
+      create: {
+        incidentId: '29000000-0000-4000-8000-000000000501',
+        societyId: societyData[0].id,
+        clientMutationId: '29000000-0000-4000-8000-000000000502',
+        status: 'SUBMITTED',
+        observedAt: new Date('2026-10-20T08:00:00.000Z'),
+        peopleAffected: 42,
+        householdsAffected: 11,
+        displacedPeople: 6,
+        infrastructureNotes: 'Fictional demo: one footbridge closed.',
+        urgentNeeds: 'Fictional demo: drinking water and dry food.',
+        notes: 'Example field assessment; no real incident data.',
+        createdById: 'demo-officer-sunrise',
+      },
+      update: {},
+    });
+    await tx.emergencyResponseAction.upsert({
+      where: { createdById_clientMutationId: { createdById: 'demo-dm-north', clientMutationId: '29000000-0000-4000-8000-000000000503' } },
+      create: {
+        incidentId: '29000000-0000-4000-8000-000000000501',
+        societyId: societyData[0].id,
+        clientMutationId: '29000000-0000-4000-8000-000000000503',
+        title: 'Coordinate drinking-water delivery',
+        description: 'Fictional demonstration response assignment.',
+        status: 'IN_PROGRESS',
+        createdById: 'demo-dm-north',
+      },
+      update: {},
+    });
+    await tx.emergencySituationReport.upsert({
+      where: { createdById_clientMutationId: { createdById: 'demo-officer-sunrise', clientMutationId: '29000000-0000-4000-8000-000000000504' } },
+      create: {
+        incidentId: '29000000-0000-4000-8000-000000000501',
+        societyId: societyData[0].id,
+        clientMutationId: '29000000-0000-4000-8000-000000000504',
+        status: 'SUBMITTED',
+        summary: 'Fictional demo: water is receding, with six residents temporarily displaced.',
+        needs: 'Fictional demo: clean water, dry food and transport.',
+        createdById: 'demo-officer-sunrise',
+      },
+      update: {},
+    });
   });
-  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats and ${demoMembership.length} fictional membership categories.`);
+  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats, ${demoMembership.length} fictional membership categories and one fictional emergency-response scenario.`);
 }
 
 try {
