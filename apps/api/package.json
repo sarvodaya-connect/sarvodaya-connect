@@ -65,6 +65,9 @@
   },
   "overrides": {
     "deepmerge-ts": "^8.0.2",
-    "mysql2": "^3.24.4"
+    "mysql2": "^3.24.4",
+    "multer": "2.5.0",
+    "body-parser": "2.4.0",
+    "fast-uri": "3.1.9"
   }
 }
