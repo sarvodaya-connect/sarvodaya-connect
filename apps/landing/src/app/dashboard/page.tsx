@@ -23,7 +23,7 @@ export default function DashboardComingSoonPage() {
           Staff dashboard
         </p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-          Under development
+          Under Development
         </h1>
         <p className="mx-auto mt-4 max-w-md text-base leading-7 text-muted">
           We’re preparing the secure dashboard for Sarvodaya staff. Please check
