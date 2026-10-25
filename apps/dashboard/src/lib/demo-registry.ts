@@ -143,7 +143,7 @@ export type ReviewQueueItem = {
   societyId: string;
   societyName: string;
   societyCode: string;
-  type: "Committee update" | "Activity report";
+  type: "Committee update" | "Activity report" | "Profile update" | "Membership counts" | "Payment";
   submittedAt: string;
   status: SubmissionStatus;
   waitingLabel: string;

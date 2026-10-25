@@ -14,7 +14,7 @@ import type {
 const include = {
   fields: { orderBy: { field: 'asc' } },
   events: { orderBy: { createdAt: 'asc' } },
-  society: { select: { districtId: true } },
+  society: { select: { districtId: true, nameEn: true, societyCode: true } },
 } as const;
 
 export type SubmissionRecord = NonNullable<

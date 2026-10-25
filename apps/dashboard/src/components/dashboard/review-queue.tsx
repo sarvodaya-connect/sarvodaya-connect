@@ -48,7 +48,7 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
         (tab === "past-target" && targetStatus(item.submittedAt) === "past-target") ||
         (tab === "committee" && item.type === "Committee update") ||
         (tab === "activities" && item.type === "Activity report") ||
-        (tab === "payments" && false);
+        (tab === "payments" && item.type === "Payment");
       return matchesSearch && matchesTab;
     });
   }, [items, query, tab]);
@@ -177,7 +177,7 @@ export function ReviewQueue({ items }: { items: ReviewQueueItem[] }) {
                         <Link
                           aria-label={`Review ${item.reference} from ${item.societyName}`}
                           className="inline-flex items-center gap-1 rounded-button bg-brand-action px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]"
-                          href={`/societies/${item.societyId}`}
+                          href={`/reviews/${item.id}`}
                         >
                           Review
                         </Link>

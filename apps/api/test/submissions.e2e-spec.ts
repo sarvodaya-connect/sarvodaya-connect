@@ -26,7 +26,9 @@ const OFFICER = 'demo-officer-sunrise';
 const MANAGER = 'demo-dm-north';
 const OTHER_MANAGER = 'demo-dm-central';
 
-const societies = [{ id: SUNRISE, districtId: NORTH }];
+const societies = [
+  { id: SUNRISE, districtId: NORTH, nameEn: 'Example Sunrise Society', societyCode: 'DEMO-SOC-001' },
+];
 const OPEN = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'CHANGES_REQUESTED', 'RESUBMITTED'];
 
 /** In-memory stand-in for PostgreSQL with the same optimistic-locking rule as the real repository. */
@@ -43,7 +45,11 @@ class InMemorySubmissionsRepository {
     return Promise.resolve({
       ...row,
       fields: [...row.fields].sort((a, b) => a.field.localeCompare(b.field)),
-      society: { districtId: society.districtId },
+      society: {
+        districtId: society.districtId,
+        nameEn: (society as { nameEn?: string }).nameEn,
+        societyCode: (society as { societyCode?: string }).societyCode,
+      },
     });
   }
 
@@ -245,6 +251,11 @@ describe('Submissions workflow (e2e)', () => {
         events: [],
       });
       expect(res.body.reference).toMatch(/^SUB-\d{5}$/);
+      expect(res.body).toMatchObject({
+        societyName: 'Example Sunrise Society',
+        societyCode: 'DEMO-SOC-001',
+        submittedByName: expect.any(String),
+      });
     });
 
     it('runs submit, review, return, resubmit and approve with a version bump each time', async () => {

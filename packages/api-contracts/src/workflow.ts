@@ -134,6 +134,11 @@ export interface SubmissionDetail extends Omit<SocietySubmission, "changes"> {
   version: number;
   changes: SubmissionFieldChange[];
   events: SubmissionEvent[];
+  /** Society name and code, so reviewers do not see bare identifiers. */
+  societyName?: string;
+  societyCode?: string;
+  /** Display name of the submitter; `submittedBy` is the user id. */
+  submittedByName?: string;
   reviewerDisplayName?: string;
   reviewStartedAt?: IsoDateTime;
   /** Actions the caller may take now. Clients must not re-derive the rules. */
