@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "Sarvodaya Connect | One record for every village society",
   description:
     "Sarvodaya Connect gives village societies and Sarvodaya staff a shared digital place to keep society records, submit documents and follow reviews from society to district to national level.",
+  icons: {
+    icon: [{ url: "/brand/sarvodaya-connect-logo.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/brand/sarvodaya-connect-logo.jpg", type: "image/jpeg" }],
+  },
   openGraph: {
     title: "Sarvodaya Connect",
     description:
