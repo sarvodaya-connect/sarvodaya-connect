@@ -43,6 +43,7 @@ class SubmissionChange {
     required this.proposedValue,
     this.correctionStatus = CorrectionStatus.none,
     this.correctedValue,
+    this.reviewerComment,
   });
 
   /// Machine name of the changed field, for example "treasurer.appointedOn".
@@ -54,6 +55,9 @@ class SubmissionChange {
   final String proposedValue;
   final CorrectionStatus correctionStatus;
   final String? correctedValue;
+
+  /// The District Manager's comment when this field was returned.
+  final String? reviewerComment;
 
   /// The value the reviewer will see next: the correction if one was made.
   String get currentValue => correctedValue ?? proposedValue;
@@ -69,6 +73,7 @@ class SubmissionChange {
       proposedValue: proposedValue,
       correctionStatus: correctionStatus ?? this.correctionStatus,
       correctedValue: correctedValue ?? this.correctedValue,
+      reviewerComment: reviewerComment,
     );
   }
 }
@@ -130,6 +135,7 @@ class SocietySubmission {
     this.reviewStartedAt,
     this.reviewerDisplayName,
     this.activityReport,
+    this.version = 1,
   });
 
   final String id;
@@ -148,6 +154,9 @@ class SocietySubmission {
   final DateTime updatedAt;
   final DateTime? reviewStartedAt;
   final String? reviewerDisplayName;
+
+  /// Server version; every workflow action must send the version it last saw.
+  final int version;
 
   /// Immutable snapshot of submitted M09 details; null for other types.
   final ActivityReportData? activityReport;
@@ -171,6 +180,7 @@ class SocietySubmission {
     DateTime? updatedAt,
     DateTime? reviewStartedAt,
     String? reviewerDisplayName,
+    int? version,
   }) {
     return SocietySubmission(
       id: id,
@@ -190,6 +200,7 @@ class SocietySubmission {
       reviewStartedAt: reviewStartedAt ?? this.reviewStartedAt,
       reviewerDisplayName: reviewerDisplayName ?? this.reviewerDisplayName,
       activityReport: activityReport,
+      version: version ?? this.version,
     );
   }
 }
