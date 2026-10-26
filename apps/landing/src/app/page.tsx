@@ -196,8 +196,8 @@ const sarvodayaLeads: Person[] = [
 // STAMPx (Group CS-10) members.
 const stampxMembers: Person[] = [
   { name: "Ashwin Jayarahal", role: "Team Leader, STAMPx", photo: "/team/ashwin-jayarahal.png" },
-  { name: "Sithara Pasanmith", role: "Member, STAMPx", photo: "/team/sithara-pasanmith.png" },
   { name: "Miththujan Niranjan", role: "Member, STAMPx", photo: "/team/miththujan-niranjan.png" },
+  { name: "Sithara Pasanmith", role: "Member, STAMPx", photo: "/team/sithara-pasanmith.png" },
   // Placeholders until the remaining two members send their photos.
   { name: "Name", role: "Member, STAMPx" },
   { name: "Name", role: "Member, STAMPx" },
