@@ -173,7 +173,7 @@ const sarvodayaLeads: Person[] = [
   },
   {
     name: "Indunil Hiththtiya",
-    role: "Field Operations Director, Sarvodaya Shramadana Movement",
+    role: "Head of Field Operations, Sarvodaya Shramadana Movement",
     photo: "/team/indunil-hiththtiya.png",
   },
   {
