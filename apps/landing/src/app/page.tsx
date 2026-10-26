@@ -193,13 +193,14 @@ const sarvodayaLeads: Person[] = [
   },
 ];
 
-// STAMPx (Group CS-10) members. Fill in names, roles and photos.
+// STAMPx (Group CS-10) members.
 const stampxMembers: Person[] = [
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
+  { name: "Ashwin Jayarahal", role: "Team Leader, STAMPx", photo: "/team/ashwin-jayarahal.png" },
+  { name: "Sithara Pasanmith", role: "Member, STAMPx", photo: "/team/sithara-pasanmith.png" },
+  { name: "Miththujan Niranjan", role: "Member, STAMPx", photo: "/team/miththujan-niranjan.png" },
+  // Placeholders until the remaining two members send their photos.
+  { name: "Name", role: "Member, STAMPx" },
+  { name: "Name", role: "Member, STAMPx" },
 ];
 
 /** Stagger helper: sets the animation delay offset (ms) used by the motion classes. */
