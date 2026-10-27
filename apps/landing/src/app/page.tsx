@@ -484,9 +484,9 @@ function Overview() {
           className="relative block aspect-video w-full rounded-tile bg-ink ring-1 ring-black/10 shadow-[0_0_48px_8px_rgba(0,0,0,0.16)]"
           controls
           playsInline
-          poster="/video/sarvodaya-connect-agm-poster.jpg"
+          poster="/video/sarvodaya-connect-agm-v2-poster.jpg"
           preload="metadata"
-          src="/video/sarvodaya-connect-agm.mp4"
+          src="/video/sarvodaya-connect-agm-v2.mp4"
         >
           Your browser can&apos;t play this video.
         </video>
