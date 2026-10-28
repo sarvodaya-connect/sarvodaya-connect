@@ -11,11 +11,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "next": "16.4.3",
+    "next": "15.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -26,7 +27,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^9",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "15.5.28",
     "jsdom": "^30.1.2",
     "tailwindcss": "^4",
     "typescript": "^5",
@@ -36,5 +37,8 @@
   "author": "STAMPx",
   "engines": {
     "node": ">=24 <25"
+  },
+  "overrides": {
+    "postcss": "^8.5.23"
   }
 }
