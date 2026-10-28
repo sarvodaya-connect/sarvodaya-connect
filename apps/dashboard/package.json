@@ -37,5 +37,8 @@
   "author": "STAMPx",
   "engines": {
     "node": ">=24 <25"
+  },
+  "overrides": {
+    "postcss": "^8.5.23"
   }
 }
