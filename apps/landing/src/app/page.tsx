@@ -195,10 +195,30 @@ const sarvodayaLeads: Person[] = [
 
 // STAMPx (Group CS-10) members.
 const stampxMembers: Person[] = [
-  { name: "Ashwin Jayarahal", role: "Team Leader, STAMPx", photo: "/team/stampx-ashwin-jayarahal.png" },
-  { name: "Sithara Pasanmith", role: "Member, STAMPx", photo: "/team/stampx-sithara-pasanmith.png" },
-  { name: "Miththujan Niranjan", role: "Member, STAMPx", photo: "/team/stampx-miththujan-niranjan.png" },
-  { name: "Kumaresan Piragatheesan", role: "Member, STAMPx", photo: "/team/stampx-kumaresan-piragatheesan.png" },
+  {
+    name: "Ashwin Jayarahal",
+    role: "Team Leader, STAMPx",
+    photo: "/team/stampx-ashwin-jayarahal.png",
+    linkedin: "https://www.linkedin.com/in/ashwin-jayarahal-296511329/",
+  },
+  {
+    name: "Sithara Pasanmith",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-sithara-pasanmith.png",
+    linkedin: "https://www.linkedin.com/in/sithara-pasanmith-035078353/",
+  },
+  {
+    name: "Miththujan Niranjan",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-miththujan-niranjan.png",
+    linkedin: "https://www.linkedin.com/in/miththujanniranjan/",
+  },
+  {
+    name: "Kumaresan Piragatheesan",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-kumaresan-piragatheesan.png",
+    linkedin: "https://www.linkedin.com/in/piragatheesan/",
+  },
   // Placeholder until the remaining member sends their photo.
   { name: "Name", role: "Member, STAMPx" },
 ];
