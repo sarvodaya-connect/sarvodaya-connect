@@ -198,8 +198,8 @@ const stampxMembers: Person[] = [
   { name: "Ashwin Jayarahal", role: "Team Leader, STAMPx", photo: "/team/stampx-ashwin-jayarahal.png" },
   { name: "Sithara Pasanmith", role: "Member, STAMPx", photo: "/team/stampx-sithara-pasanmith.png" },
   { name: "Miththujan Niranjan", role: "Member, STAMPx", photo: "/team/stampx-miththujan-niranjan.png" },
-  // Placeholders until the remaining two members send their photos.
-  { name: "Name", role: "Member, STAMPx" },
+  { name: "Kumaresan Piragatheesan", role: "Member, STAMPx", photo: "/team/stampx-kumaresan-piragatheesan.png" },
+  // Placeholder until the remaining member sends their photo.
   { name: "Name", role: "Member, STAMPx" },
 ];
 
