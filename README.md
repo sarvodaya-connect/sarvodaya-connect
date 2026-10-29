@@ -55,7 +55,7 @@ The local development stack has a Flutter mobile client, a Next.js dashboard, a 
 flowchart LR
     subgraph Clients[User channels]
         Mobile[Flutter mobile app]
-        Dashboard[Next.js administration dashboard]
+        Dashboard[Next.js 15 administration dashboard]
     end
 
     subgraph Local[Local development services]
@@ -84,7 +84,7 @@ flowchart TB
     subgraph Entry[2. Edge delivery and identity]
         Cognito[Amazon Cognito<br/>OIDC and user groups]
         Cloudflare[Cloudflare<br/>DNS, TLS and WAF]
-        Amplify[AWS Amplify Hosting<br/>Next.js dashboard]
+        Amplify[AWS Amplify Hosting<br/>Next.js 15 dashboard]
     end
     Mobile -->|Sign-in| Cognito
     Browser -->|Sign-in| Cognito
@@ -199,7 +199,7 @@ Each application has a detailed guide: [API](apps/api/README.md), [dashboard](ap
 | Technology | Purpose |
 | --- | --- |
 | Flutter and Dart | iOS and Android mobile app |
-| Next.js, React and TypeScript | Administration dashboard |
+| Next.js 15, React and TypeScript | Administration dashboard (pinned to the Next.js major version supported by AWS Amplify Hosting) |
 | NestJS and TypeScript | REST API and application services |
 | PostgreSQL and Prisma ORM | Relational database and schema/migrations |
 | Docker Compose | Local PostgreSQL development environment |

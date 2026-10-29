@@ -3,8 +3,7 @@ import Image from "next/image";
 
 import { HeroScrubFrames } from "./hero-scrub";
 
-const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.sarvodayaconnect.com";
+const DASHBOARD_URL = "/dashboard";
 const CONTACT_EMAIL = "info@sarvodayaconnect.com";
 
 const navLinks = [
@@ -174,7 +173,7 @@ const sarvodayaLeads: Person[] = [
   },
   {
     name: "Indunil Hiththtiya",
-    role: "Field Operations Director, Sarvodaya Shramadana Movement",
+    role: "Head of Field Operations, Sarvodaya Shramadana Movement",
     photo: "/team/indunil-hiththtiya.png",
   },
   {
@@ -194,13 +193,34 @@ const sarvodayaLeads: Person[] = [
   },
 ];
 
-// STAMPx (Group CS-10) members. Fill in names, roles and photos.
+// STAMPx (Group CS-10) members.
 const stampxMembers: Person[] = [
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
-  { name: "Name", role: "STAMPx team member" },
+  {
+    name: "Ashwin Jayarahal",
+    role: "Team Leader, STAMPx",
+    photo: "/team/stampx-ashwin-jayarahal.png",
+    linkedin: "https://www.linkedin.com/in/ashwin-jayarahal-296511329/",
+  },
+  {
+    name: "Sithara Pasanmith",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-sithara-pasanmith.png",
+    linkedin: "https://www.linkedin.com/in/sithara-pasanmith-035078353/",
+  },
+  {
+    name: "Miththujan Niranjan",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-miththujan-niranjan.png",
+    linkedin: "https://www.linkedin.com/in/miththujanniranjan/",
+  },
+  {
+    name: "Kumaresan Piragatheesan",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-kumaresan-piragatheesan.png",
+    linkedin: "https://www.linkedin.com/in/piragatheesan/",
+  },
+  // Placeholder until the remaining member sends their photo.
+  { name: "Name", role: "Member, STAMPx" },
 ];
 
 /** Stagger helper: sets the animation delay offset (ms) used by the motion classes. */
@@ -484,9 +504,9 @@ function Overview() {
           className="relative block aspect-video w-full rounded-tile bg-ink ring-1 ring-black/10 shadow-[0_0_48px_8px_rgba(0,0,0,0.16)]"
           controls
           playsInline
-          poster="/video/sarvodaya-connect-agm-poster.jpg"
+          poster="/video/sarvodaya-connect-agm-v2-poster.jpg"
           preload="metadata"
-          src="/video/sarvodaya-connect-agm.mp4"
+          src="/video/sarvodaya-connect-agm-v2.mp4"
         >
           Your browser can&apos;t play this video.
         </video>

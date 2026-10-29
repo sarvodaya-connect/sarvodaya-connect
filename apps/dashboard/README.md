@@ -4,7 +4,7 @@ The web administration dashboard for the Sarvodaya Connect platform.
 
 ## Technology
 
-- Next.js
+- Next.js 15.5.28 (pinned for AWS Amplify Hosting compatibility)
 - React
 - TypeScript
 - Tailwind CSS
