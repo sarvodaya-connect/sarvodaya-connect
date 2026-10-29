@@ -24,12 +24,13 @@ import {
 import { SocietiesService } from './societies.service.js';
 
 @Controller('societies')
+@UseGuards(AuthenticationGuard, RolesGuard)
 export class SocietiesController {
   constructor(private readonly service: SocietiesService) {}
 
   @Get()
-  list(@Query() query: SocietyQueryDto) {
-    return this.service.list(query);
+  list(@Query() query: SocietyQueryDto, @CurrentPrincipal() principal: Principal) {
+    return this.service.list(query, principal);
   }
 
   @Get('membership')
@@ -86,7 +87,7 @@ export class SocietiesController {
   }
 
   @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.service.getById(id);
+  getById(@Param('id', new ParseUUIDPipe()) id: string, @CurrentPrincipal() principal: Principal) {
+    return this.service.getById(id, principal);
   }
 }

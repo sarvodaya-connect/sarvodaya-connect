@@ -26,8 +26,9 @@ const detailInclude = {
 export class SocietiesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: SocietyQueryDto) {
+  async list(query: SocietyQueryDto, principal: Principal) {
     const where: Prisma.SocietyWhereInput = {
+      AND: [societyWhereForPrincipal(principal)],
       ...(query.districtId ? { districtId: query.districtId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search?.trim()

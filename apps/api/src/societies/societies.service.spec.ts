@@ -1,3 +1,5 @@
+import { findDemoPrincipal } from '../auth/demo-principals.js';
+const hq = findDemoPrincipal('demo-hq-admin')!;
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
@@ -43,7 +45,7 @@ describe('SocietiesService', () => {
     const result = await service.list({
       page: 1,
       pageSize: 10,
-    });
+    }, hq);
 
     expect(result.data).toHaveLength(1);
     expect(result.meta.totalItems).toBe(1);
@@ -56,7 +58,7 @@ describe('SocietiesService', () => {
       page: 1,
       pageSize: 10,
       verificationStatus: 'VERIFIED',
-    });
+    }, hq);
 
     expect(result.data).toEqual([]);
     expect(result.meta.totalItems).toBe(0);
@@ -67,7 +69,7 @@ describe('SocietiesService', () => {
     repository.findById.mockResolvedValue(null);
 
     await expect(
-      service.getById('00000000-0000-4000-8000-000000000001'),
+      service.getById('00000000-0000-4000-8000-000000000001', hq),
     ).rejects.toThrow(NotFoundException);
   });
 });

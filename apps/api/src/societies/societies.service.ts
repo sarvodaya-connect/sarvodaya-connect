@@ -11,7 +11,7 @@ import type {
   SocietyMembershipUpdateDto,
   SocietyProfileUpdateDto,
 } from './dto/society-updates.dto.js';
-import { assertCanEditSociety } from './society-access.policy.js';
+import { assertCanEditSociety, canViewSociety } from './society-access.policy.js';
 import {
   SocietiesRepository,
   type SocietyRecord,
@@ -96,7 +96,7 @@ const expectedCouncilSeats: Record<MembershipCategory, number> = {
 export class SocietiesService {
   constructor(private readonly repository: SocietiesRepository) {}
 
-  async list(query: SocietyQueryDto) {
+  async list(query: SocietyQueryDto, principal: Principal) {
     if (query.verificationStatus && query.verificationStatus !== 'UNVERIFIED') {
       return {
         data: [],
@@ -108,7 +108,7 @@ export class SocietiesService {
         },
       };
     }
-    const { records, totalItems } = await this.repository.list(query);
+    const { records, totalItems } = await this.repository.list(query, principal);
     return {
       data: records.map(summary),
       meta: {
@@ -120,9 +120,10 @@ export class SocietiesService {
     };
   }
 
-  async getById(id: string) {
+  async getById(id: string, principal: Principal) {
     const record = await this.repository.findById(id);
     if (!record) throw new NotFoundException('Society not found');
+    if (!canViewSociety(principal, record)) throw new NotFoundException('Society not found');
     return {
       ...summary(record),
       ...(record.establishedOn
@@ -202,7 +203,7 @@ export class SocietiesService {
       );
     }
     await this.repository.updateProfile(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async updateCouncil(
@@ -244,7 +245,7 @@ export class SocietiesService {
       }
     }
     await this.repository.replaceCouncil(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async updateMembership(
@@ -268,7 +269,7 @@ export class SocietiesService {
       );
     }
     await this.repository.replaceMembership(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async membership(year: number, principal: Principal) {

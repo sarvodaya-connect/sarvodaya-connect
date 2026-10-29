@@ -14,6 +14,12 @@ export function assertCanEditSociety(
   throw new ForbiddenException('You are not authorised to update this society');
 }
 
+export function canViewSociety(principal: Principal, society: { id: string; districtId: string }) {
+  if (principal.roles.includes('HQ_ADMIN')) return true;
+  return readableDistrictIds(principal).includes(society.districtId) ||
+    principal.societyIds.includes(society.id);
+}
+
 export function societyWhereForPrincipal(principal: Principal) {
   if (principal.roles.includes('HQ_ADMIN')) return {};
   const districtIds = readableDistrictIds(principal);
