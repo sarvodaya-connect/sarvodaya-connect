@@ -66,7 +66,7 @@ export const ROLE_PERMISSIONS: Readonly<
   ],
   DEPUTY_DISTRICT_MANAGER: [
     "SOCIETY_READ", "MEMBERSHIP_READ", "DOCUMENT_READ",
-    "NOTIFICATION_READ", "EMERGENCY_READ",
+    "SOCIETY_UPDATE", "DOCUMENT_UPLOAD", "NOTIFICATION_READ", "EMERGENCY_READ",
     "EMERGENCY_ASSESS",
   ],
   PROGRAMME_COORDINATOR: [
@@ -108,6 +108,6 @@ export interface AuthenticatedUser {
   districtIds: string[];
   societyIds: string[];
   /** Time-limited whole-district read access granted to a DDM by a DM. */
-  delegatedDistrictAccess?: { districtId: string; expiresAt: IsoDateTime }[];
+  delegatedDistrictAccess?: { districtId: string; startsAt?: IsoDateTime; expiresAt: IsoDateTime }[];
   lastLoginAt?: IsoDateTime;
 }

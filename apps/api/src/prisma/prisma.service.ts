@@ -15,7 +15,17 @@ export class PrismaService
       throw new Error('DATABASE_URL is required');
     }
 
-    super({ adapter: new PrismaPg({ connectionString: url }) });
+    const max = Number(config.get<string>('DATABASE_CONNECTION_LIMIT') ?? 2);
+    if (!Number.isInteger(max) || max < 1 || max > 20)
+      throw new Error('DATABASE_CONNECTION_LIMIT must be between 1 and 20');
+    super({
+      adapter: new PrismaPg({
+        connectionString: url,
+        max,
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 10000,
+      }),
+    });
   }
 
   async onModuleInit(): Promise<void> {

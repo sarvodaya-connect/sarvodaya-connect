@@ -1,3 +1,4 @@
+import '../auth/api_auth_service.dart';
 import '../models/activity_draft.dart';
 import '../models/activity_report_data.dart';
 import '../validation/activity_validators.dart';
@@ -51,8 +52,8 @@ class CouncilReplacementDraft {
   final DateTime startDate;
 }
 
-/// Safe, in-memory demonstration state. Nothing is written to a backend:
-/// the real API and Amazon Cognito replace the local services in later tasks.
+/// Shared app state. SC_DEMO_MODE selects fictional UI data or authenticated
+/// local API identity and society entry flows; feature modules keep their own adapters.
 class DemoStore extends ChangeNotifier {
   DemoStore({
     this.loadDelay = const Duration(milliseconds: 700),
@@ -63,7 +64,12 @@ class DemoStore extends ChangeNotifier {
     this.languageChosen = false,
     this.firstTimeSetupComplete = false,
   }) : _clock = clock ?? DateTime.now {
-    _authService = authService ?? DemoAuthService(isOnline: () => !offline);
+    identityApi.onUnauthorized = signOut;
+    _authService =
+        authService ??
+        (demoMode
+            ? DemoAuthService(isOnline: () => !offline)
+            : ApiAuthService(identityApi));
     _uploadService =
         uploadService ??
         DemoDocumentUploadService(
@@ -73,6 +79,11 @@ class DemoStore extends ChangeNotifier {
         );
   }
 
+  static const demoMode = bool.fromEnvironment(
+    'SC_DEMO_MODE',
+    defaultValue: true,
+  );
+  final IdentityApi identityApi = IdentityApi();
   final Duration loadDelay;
   final DateTime Function() _clock;
   late final AuthService _authService;
@@ -151,6 +162,8 @@ class DemoStore extends ChangeNotifier {
   void switchDemoRole(UserRole role) {
     _user = switch (role) {
       UserRole.societyOfficer => demoOfficer,
+      UserRole.programmeCoordinator => demoSpc,
+      UserRole.deputyDistrictManager => demoDdm,
       UserRole.districtManager => demoDistrictManager,
       UserRole.hqAdmin => demoHqAdmin,
     };
@@ -270,7 +283,21 @@ class DemoStore extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshIdentity() async {
+    if (demoMode || identityApi.token == null) return;
+    final data = await identityApi.request('/identity/me');
+    _user = AuthenticatedUser.fromJson(data as Map<String, dynamic>);
+    notifyListeners();
+  }
+
   void signOut() {
+    final token = identityApi.token;
+    if (token != null) {
+      identityApi
+          .request('/identity/logout', method: 'POST')
+          .catchError((Object _) => <String, dynamic>{});
+    }
+    identityApi.token = null;
     _user = null;
     _accountRequiresSetup = false;
     _selectedTab = 0;

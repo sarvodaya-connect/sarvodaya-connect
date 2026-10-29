@@ -63,7 +63,7 @@ describe('SocietiesService profile, council and membership', () => {
     expect(repository.updateProfile).toHaveBeenCalledWith(societyId, {
       latitude: 7.3,
       longitude: 80.6,
-    });
+    }, officer);
   });
 
   it('rejects a partial GPS location without changing stored values', async () => {

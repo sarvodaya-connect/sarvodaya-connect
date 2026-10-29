@@ -17,7 +17,7 @@ class EmergencyResponseScreen extends StatefulWidget {
 }
 
 class _EmergencyResponseScreenState extends State<EmergencyResponseScreen> {
-  final _api = EmergencyApiClient();
+  late EmergencyApiClient _api;
   late EmergencyAssessmentQueue _queue;
   late DemoStore _store;
   var _initialized = false;
@@ -37,6 +37,10 @@ class _EmergencyResponseScreenState extends State<EmergencyResponseScreen> {
     if (_initialized) return;
     _initialized = true;
     _store = DemoScope.read(context);
+    _api = EmergencyApiClient(
+      token: () => _store.identityApi.token,
+      demoMode: DemoStore.demoMode,
+    );
     _open();
   }
 

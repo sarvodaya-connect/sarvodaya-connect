@@ -89,10 +89,16 @@ class EmergencyIncident {
 /// Demo-only API adapter. Replace the X-Demo-User header with Cognito tokens
 /// when the production identity provider is connected.
 class EmergencyApiClient {
-  EmergencyApiClient({http.Client? client}) : _client = client ?? http.Client();
+  EmergencyApiClient({http.Client? client, this.token, this.demoMode = true})
+    : _client = client ?? http.Client();
 
+  final String? Function()? token;
+  final bool demoMode;
   final http.Client _client;
-  static const _configuredBaseUrl = String.fromEnvironment('SC_API_BASE_URL');
+  static const _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: String.fromEnvironment('SC_API_BASE_URL'),
+  );
 
   String get _baseUrl {
     if (_configuredBaseUrl.isNotEmpty) {
@@ -107,6 +113,8 @@ class EmergencyApiClient {
 
   String demoUserId(UserRole role) => switch (role) {
     UserRole.societyOfficer => 'demo-officer-sunrise',
+    UserRole.programmeCoordinator => 'demo-programme-coordinator',
+    UserRole.deputyDistrictManager => 'demo-deputy-district-manager',
     UserRole.districtManager => 'demo-dm-north',
     UserRole.hqAdmin => 'demo-hq-admin',
   };
@@ -114,7 +122,8 @@ class EmergencyApiClient {
   Map<String, String> _headers(UserRole role) => {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
-    'X-Demo-User': demoUserId(role),
+    if (token?.call() != null) 'Authorization': 'Bearer ${token!()}',
+    if (token?.call() == null && demoMode) 'X-Demo-User': demoUserId(role),
   };
 
   Future<List<EmergencyIncident>> listIncidents(UserRole role) async {

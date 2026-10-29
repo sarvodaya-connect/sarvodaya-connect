@@ -1,3 +1,5 @@
+import 'account_activation_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
@@ -49,7 +51,7 @@ class _SignInScreenState extends State<SignInScreen> {
     } on OfflineException {
       if (!mounted) return;
       setState(
-        () => _error = 'You need internet to sign in the first time. Connect and try again.',
+        () => _error = 'You need internet to sign in. Connect and try again.',
       );
     } on AuthServiceException {
       if (!mounted) return;
@@ -96,7 +98,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Use the account your District Centre gave you. You will be taken to the secure Sarvodaya sign-in page.',
+                        'Use the username and password for the account HQ assigned to you.',
                         style: TextStyle(color: AppColors.muted, height: 1.4),
                       ),
                       const SizedBox(height: 20),
@@ -157,23 +159,36 @@ class _SignInScreenState extends State<SignInScreen> {
                             Validators.required(value, 'password'),
                       ),
                       const SizedBox(height: 24),
-                      NoticeBanner(
-                        icon: Icons.info_outline,
-                        title: 'Demonstration sign-in',
-                        message:
-                            'This build uses a fictional account. Production authentication will '
-                            'be connected securely through Amazon Cognito.',
-                        action: Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            onPressed: _useDemoAccount,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const AccountActivationScreen(),
+                                ),
+                              ),
+                        child: const Text('Activate my account'),
+                      ),
+                      if (DemoStore.demoMode)
+                        NoticeBanner(
+                          icon: Icons.info_outline,
+                          title: 'Demonstration sign-in',
+                          message:
+                              'This build uses a fictional account. Production authentication will '
+                              'be connected securely through Amazon Cognito.',
+                          action: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _useDemoAccount,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Text('Use demo account'),
                             ),
-                            child: const Text('Use demo account'),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),

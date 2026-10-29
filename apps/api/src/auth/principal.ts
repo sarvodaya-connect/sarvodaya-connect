@@ -16,7 +16,11 @@ export interface Principal {
   roles: UserRole[];
   districtIds: string[];
   societyIds: string[];
-  delegatedDistrictAccess?: { districtId: string; expiresAt: string }[];
+  delegatedDistrictAccess?: {
+    districtId: string;
+    startsAt?: string;
+    expiresAt: string;
+  }[];
 }
 
 export function hasRole(principal: Principal, role: UserRole): boolean {
@@ -24,16 +28,21 @@ export function hasRole(principal: Principal, role: UserRole): boolean {
 }
 
 /** Delegation is read-only and valid only until its server-provided expiry. */
-export function readableDistrictIds(principal: Principal, now = new Date()): string[] {
+export function readableDistrictIds(
+  principal: Principal,
+  now = new Date(),
+): string[] {
   const districts = principal.roles.includes('DISTRICT_MANAGER')
     ? principal.districtIds
     : principal.roles.includes('DEPUTY_DISTRICT_MANAGER')
-      ? [
-          ...principal.districtIds,
-          ...(principal.delegatedDistrictAccess ?? [])
-            .filter((grant) => Date.parse(grant.expiresAt) > now.getTime())
-            .map((grant) => grant.districtId),
-        ]
+      ? (principal.delegatedDistrictAccess ?? [])
+          .filter(
+            (grant) =>
+              (!grant.startsAt ||
+                Date.parse(grant.startsAt) <= now.getTime()) &&
+              Date.parse(grant.expiresAt) > now.getTime(),
+          )
+          .map((grant) => grant.districtId)
       : [];
   return [...new Set(districts)];
 }

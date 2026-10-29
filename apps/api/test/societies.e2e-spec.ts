@@ -106,6 +106,7 @@ describe('Societies endpoints (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/societies')
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(200);
 
       expect(response.body.data).toHaveLength(1);
@@ -124,6 +125,7 @@ describe('Societies endpoints (e2e)', () => {
       });
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ page: 1, pageSize: 10 }),
+        expect.objectContaining({ id: 'demo-hq-admin' }),
       );
     });
 
@@ -132,6 +134,7 @@ describe('Societies endpoints (e2e)', () => {
 
       await request(app.getHttpServer())
         .get('/api/v1/societies')
+        .set('X-Demo-User', 'demo-hq-admin')
         .query({
           page: 2,
           pageSize: 5,
@@ -149,6 +152,7 @@ describe('Societies endpoints (e2e)', () => {
           districtId: DISTRICT_ID,
           status: 'ACTIVE',
         }),
+        expect.objectContaining({ id: 'demo-hq-admin' }),
       );
     });
 
@@ -157,6 +161,7 @@ describe('Societies endpoints (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/societies?search=nothing-matches')
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(200);
 
       expect(response.body.data).toEqual([]);
@@ -167,6 +172,7 @@ describe('Societies endpoints (e2e)', () => {
     it('returns an empty page for a verification status that cannot match yet', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/societies?verificationStatus=VERIFIED')
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(200);
 
       expect(response.body.data).toEqual([]);
@@ -186,6 +192,7 @@ describe('Societies endpoints (e2e)', () => {
     ])('returns 400 VALIDATION_ERROR for invalid query: %s', async (query) => {
       const response = await request(app.getHttpServer())
         .get(`/api/v1/societies?${query}`)
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -200,6 +207,7 @@ describe('Societies endpoints (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/v1/societies/${SOCIETY_ID}`)
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(200);
 
       expect(repository.findById).toHaveBeenCalledWith(SOCIETY_ID);
@@ -221,6 +229,7 @@ describe('Societies endpoints (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/v1/societies/${MISSING_ID}`)
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
@@ -231,6 +240,7 @@ describe('Societies endpoints (e2e)', () => {
     it('returns 400 VALIDATION_ERROR when the id is not a UUID', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/societies/not-a-uuid')
+        .set('X-Demo-User', 'demo-hq-admin')
         .expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -273,10 +283,14 @@ describe('Societies endpoints (e2e)', () => {
         .send({ latitude: 7.3, longitude: 80.6 })
         .expect(200);
 
-      expect(repository.updateProfile).toHaveBeenCalledWith(SOCIETY_ID, {
-        latitude: 7.3,
-        longitude: 80.6,
-      });
+      expect(repository.updateProfile).toHaveBeenCalledWith(
+        SOCIETY_ID,
+        {
+          latitude: 7.3,
+          longitude: 80.6,
+        },
+        expect.objectContaining({ id: 'demo-hq-admin' }),
+      );
     });
 
     it('requires latitude and longitude together', async () => {

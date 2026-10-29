@@ -123,7 +123,7 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
       .expect(200);
 
     const detail = await request(app.getHttpServer())
-      .get(`/api/v1/societies/${societyId}`)
+      .get(`/api/v1/societies/${societyId}`).set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
     expect(detail.body).toMatchObject({
       nameEn: 'Fictional Registry Test Society Updated',
@@ -144,7 +144,7 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
     });
 
     const dashboard = await request(app.getHttpServer())
-      .get(`/api/v1/societies/membership?year=${year}`)
+      .get(`/api/v1/societies/membership?year=${year}`).set('X-Demo-User', 'demo-hq-admin')
       .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
     expect(
@@ -154,7 +154,7 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
     ).toMatchObject({ overallTotal: 171 });
 
     await request(app.getHttpServer())
-      .get('/api/v1/societies?page=1&pageSize=10')
+      .get('/api/v1/societies?page=1&pageSize=10').set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
   });
 

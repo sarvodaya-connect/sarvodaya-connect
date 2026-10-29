@@ -167,14 +167,15 @@ Production and staging are separate environments: staging uses fictional test da
 
 ## 3. Core modules, personas and user roles
 
-| Persona / role | Main goal | Current pain point to validate | Intended app value |
-| --- | --- | --- | --- |
-| Society Officer | Maintain their society's profile, council and membership information; submit documents and activity updates; follow status and reminders. | Repeated follow-ups and uncertainty about what is due, received or returned. | One place to update records and see the next action or correction. |
-| District Manager | Review and support societies within an assigned district; follow submissions and compliance needs. | Hard to see which societies need a review or practical support. | District-scoped overview and clearer review queues. |
-| HQ / National Administrator | View the national registry and approved cross-district information; oversee national workflows. | Difficult to build a consistent national picture from distributed records. | Aggregated, role-appropriate information for coordination and planning. |
-| System Administrator | Manage technical access and platform configuration, separate from routine society-record work. | Risk of overly broad technical access to operational records. | Maintain the platform with separation between technical and society-data access. |
+| Role | Access |
+| --- | --- |
+| Society Officer | View and edit one HQ-assigned society. |
+| SPC | View and edit assigned societies. |
+| DDM | View and edit assigned societies; optional temporary read-only view of the rest of the district. |
+| DM | View the whole district and grant/revoke temporary DDM district view. |
+| HQ | View/edit nationally, manage accounts and assignments. |
 
-These are working personas based on catalogue roles, not findings from completed user research. Validate goals and pain points with society officers and Sarvodaya staff. The role scopes and business rules are provisional. The dashboard's role selector is a demonstration feature, and production identity and permissions must be confirmed with Sarvodaya and enforced by the API. Feature-level progress is documented in the [mobile guide](apps/mobile/README.md), [dashboard guide](apps/dashboard/README.md) and [API guide](apps/api/README.md).
+All five roles use the phone app; the desktop dashboard is HQ-only. The current local identity/account/access implementation and AWS handoff are described in the [V4 foundation guide](docs/platform-v4-foundation.md). Feature modules owned by the other sprint tasks continue to be integrated separately.
 
 ---
 
@@ -586,7 +587,7 @@ Run each set from its application/package directory. GitHub Actions runs the rel
 
 ## 10. Demo access and data
 
-The mobile app provides a fictional demo account and a role preview for Society Officer, District Manager and HQ Administrator flows. API endpoints that require a user accept the development-only `X-Demo-User` header. For example:
+The mobile app provides a fictional demo account and a role preview for all five V4 business roles. API endpoints that require a user accept the development-only `X-Demo-User` header. For example:
 
 ```bash
 curl -H "X-Demo-User: demo-dm-north" http://localhost:3001/api/v1/documents
@@ -609,26 +610,18 @@ Additional production decisions still needed include a confirmed privacy notice 
 
 ## 13. Role-based permissions
 
-The table below records the current intended access boundaries for the three operational roles, plus the separate system-administration persona. These rules are provisional and need confirmation from Sarvodaya before production use. “Read” and “write” are also data-scoped: a role must not gain access to records outside its assigned society or district just because it has the general capability.
+The API authenticates society list/detail reads and applies the five-role society/district scopes above. Out-of-scope detail requests return 404. SPCs and DDMs can update assigned societies; a DDM's temporary whole-district access adds read permission only. Expiry and revocation are enforced from server-side account/grant records on every authenticated request.
 
-| Role | Data scope and read access | Create / update | Review / approve | Platform administration |
-| --- | --- | --- | --- | --- |
-| Society Officer | Their assigned society, its membership summaries, standard documents and notifications. Cannot open the restricted signed members list. | Update their assigned society profile, council and membership counts; upload and submit documents for that society. | No reviewer permission. | No. |
-| District Manager | Societies and membership summaries in assigned districts; may read district documents including signed members lists. | May upload documents within their district. Cannot update society profile, council or membership through the current API. | The shared permission contract includes `SUBMISSION_REVIEW`, but review/approval API actions are not yet implemented. | No. |
-| HQ Administrator | All districts and societies, including restricted signed members lists. | Update any society profile, council and membership counts; upload documents within scope. | Intended to review across districts; review/approval API actions are not yet implemented. | The shared permission contract currently maps `PLATFORM_ADMIN` to `HQ_ADMIN`; confirm whether technical administration should instead be a separate role. |
-| System Administrator | No society-record access is defined. | No operational data changes are defined. | No. | A technical-administration persona is described, but `SYSTEM_ADMIN` is not currently an API role and its exact permissions are not implemented. |
+HQ creates and recovers accounts and sets their roles/assignments. Users choose their own permanent passwords during single-use activation. A society's NICs are encrypted, masked in ordinary responses, and revealed only after a scoped permission check with an audit entry. Society record mutations, account administration and district-access changes are logged.
 
-### Enforcement status
-
-- The API has shared role capabilities for `SOCIETY_OFFICER`, `DISTRICT_MANAGER` and `HQ_ADMIN`, with record scope supplied by assigned society and district IDs. Document access rules are enforced in the API, including the signed-members-list restriction.
-- Society Officers and HQ Administrators are allowed by the current API routes to update society profiles, council and membership; District Managers are not. Document upload is allowed for societies within a user's accessible scope.
-- The `SUBMISSION_REVIEW` capability exists in the shared contract, but there is not yet an API endpoint that performs a review or approval. Do not treat a displayed demo action as a real approval.
-- Authentication still uses fictional development/test identities. Some registry read routes are not yet guarded by authentication, and dashboard role switching is a demonstration feature. This matrix is therefore a documented target and partial implementation—not a claim that all production access controls are complete.
-
-See the [API guide](apps/api/README.md#access-rules-provisional) for current document-scoping behavior and the [dashboard guide](apps/dashboard/README.md#provisional-role-based-visibility) for demonstration visibility. Confirm the final role names, scopes, restricted data and approval authority with Sarvodaya before connecting production identity or real data.
+Local identity is a development/test adapter. Cognito and production deployment are the next AWS integration step; development demo headers and local credentials fail closed in production. See the [V4 foundation guide](docs/platform-v4-foundation.md) for the full API contract, screen ownership, configuration and validation instructions.
 
 ---
 
 ## 14. Team and contributing
 
 Sarvodaya Connect is developed by **Group CS-10** as a STAMPx university project for Sarvodaya. Work is tracked in Jira. Create a feature branch for the assigned work item, run the checks for the affected app, and open a pull request for review before merging. See [CONTRIBUTING.md](CONTRIBUTING.md) for the team workflow.
+
+## V4 platform foundation
+
+See [V4 platform foundation](docs/platform-v4-foundation.md) for the five-role access rules, API-backed local account activation, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.

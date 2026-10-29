@@ -11,7 +11,10 @@ import type {
   SocietyMembershipUpdateDto,
   SocietyProfileUpdateDto,
 } from './dto/society-updates.dto.js';
-import { assertCanEditSociety, canViewSociety } from './society-access.policy.js';
+import {
+  assertCanEditSociety,
+  canViewSociety,
+} from './society-access.policy.js';
 import {
   SocietiesRepository,
   type SocietyRecord,
@@ -108,7 +111,10 @@ export class SocietiesService {
         },
       };
     }
-    const { records, totalItems } = await this.repository.list(query, principal);
+    const { records, totalItems } = await this.repository.list(
+      query,
+      principal,
+    );
     return {
       data: records.map(summary),
       meta: {
@@ -123,7 +129,8 @@ export class SocietiesService {
   async getById(id: string, principal: Principal) {
     const record = await this.repository.findById(id);
     if (!record) throw new NotFoundException('Society not found');
-    if (!canViewSociety(principal, record)) throw new NotFoundException('Society not found');
+    if (!canViewSociety(principal, record))
+      throw new NotFoundException('Society not found');
     return {
       ...summary(record),
       ...(record.establishedOn
@@ -155,6 +162,7 @@ export class SocietiesService {
       committee: record.councilMembers.map((member) => ({
         id: member.id,
         seatNumber: member.seatNumber,
+        nicMasked: member.nicLastFour ? `••••${member.nicLastFour}` : undefined,
         fullName: member.fullName,
         position: member.position,
         seatType: member.seatType,
@@ -190,7 +198,9 @@ export class SocietiesService {
     principal: Principal,
   ) {
     if (Object.values(input).every((value) => value === undefined)) {
-      throw new BadRequestException('Provide at least one profile field to update');
+      throw new BadRequestException(
+        'Provide at least one profile field to update',
+      );
     }
     const current = await this.repository.findById(id);
     if (!current) throw new NotFoundException('Society not found');
@@ -202,7 +212,7 @@ export class SocietiesService {
         'Latitude and longitude must be supplied together',
       );
     }
-    await this.repository.updateProfile(id, input);
+    await this.repository.updateProfile(id, input, principal);
     return this.getById(id, principal);
   }
 
@@ -244,7 +254,7 @@ export class SocietiesService {
         );
       }
     }
-    await this.repository.replaceCouncil(id, input);
+    await this.repository.replaceCouncil(id, input, principal);
     return this.getById(id, principal);
   }
 
@@ -268,7 +278,7 @@ export class SocietiesService {
         'Membership data must contain each of the five categories exactly once',
       );
     }
-    await this.repository.replaceMembership(id, input);
+    await this.repository.replaceMembership(id, input, principal);
     return this.getById(id, principal);
   }
 

@@ -22,6 +22,8 @@ class RoleWorkspaceScreen extends StatelessWidget {
   final RoleWorkspace workspace;
 
   bool get _permitted => switch ((role, workspace)) {
+    (UserRole.programmeCoordinator, RoleWorkspace.alerts) ||
+    (UserRole.deputyDistrictManager, RoleWorkspace.alerts) ||
     (UserRole.districtManager, RoleWorkspace.societies) ||
     (UserRole.districtManager, RoleWorkspace.reviews) ||
     (UserRole.districtManager, RoleWorkspace.alerts) ||

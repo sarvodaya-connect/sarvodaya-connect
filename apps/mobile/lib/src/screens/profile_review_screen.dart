@@ -5,7 +5,6 @@ import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/profile_draft.dart';
 import '../models/submission.dart';
-import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/profile_widgets.dart';
@@ -117,7 +116,7 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    if (store.activeRole != UserRole.societyOfficer) {
+    if (!(store.user?.canEditSociety(store.society.id) ?? false)) {
       return Scaffold(
         appBar: AppBar(title: const Text('Society profile')),
         body: const Center(

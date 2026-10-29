@@ -29,6 +29,7 @@ test("roles expose the provisional access levels", () => {
   assert.deepEqual(USER_ROLES, [
     "SOCIETY_OFFICER",
     "DISTRICT_MANAGER",
+    "DEPUTY_DISTRICT_MANAGER",
     "PROGRAMME_COORDINATOR",
     "HQ_ADMIN",
   ]);

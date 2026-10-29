@@ -8,7 +8,7 @@ export function canManageEmergency(principal: Principal) {
 export function canAssessEmergency(principal: Principal) {
   return principal.roles.some((role) =>
     role === 'HQ_ADMIN' || role === 'DISTRICT_MANAGER' ||
-    role === 'SOCIETY_OFFICER' || role === 'PROGRAMME_COORDINATOR');
+    role === 'SOCIETY_OFFICER' || role === 'PROGRAMME_COORDINATOR' || role === 'DEPUTY_DISTRICT_MANAGER');
 }
 
 export function assertCanUseEmergency(principal: Principal) {
@@ -39,6 +39,6 @@ export function assertCanAccessDistrict(principal: Principal, districtId: string
 export function assertCanAccessSociety(principal: Principal, societyId: string, districtId: string) {
   if (principal.roles.includes('HQ_ADMIN')) return;
   if (principal.roles.includes('DISTRICT_MANAGER') && principal.districtIds.includes(districtId)) return;
-  if ((principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR')) && principal.societyIds.includes(societyId)) return;
+  if ((principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR') || principal.roles.includes('DEPUTY_DISTRICT_MANAGER')) && principal.societyIds.includes(societyId)) return;
   throw new ForbiddenException('This society is outside your assigned record scope');
 }

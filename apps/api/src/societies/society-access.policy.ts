@@ -7,17 +7,24 @@ export function assertCanEditSociety(
 ) {
   if (principal.roles.includes('HQ_ADMIN')) return;
   if (
-    (principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR')) &&
+    (principal.roles.includes('SOCIETY_OFFICER') ||
+      principal.roles.includes('PROGRAMME_COORDINATOR') ||
+      principal.roles.includes('DEPUTY_DISTRICT_MANAGER')) &&
     principal.societyIds.includes(society.id)
   )
     return;
   throw new ForbiddenException('You are not authorised to update this society');
 }
 
-export function canViewSociety(principal: Principal, society: { id: string; districtId: string }) {
+export function canViewSociety(
+  principal: Principal,
+  society: { id: string; districtId: string },
+) {
   if (principal.roles.includes('HQ_ADMIN')) return true;
-  return readableDistrictIds(principal).includes(society.districtId) ||
-    principal.societyIds.includes(society.id);
+  return (
+    readableDistrictIds(principal).includes(society.districtId) ||
+    principal.societyIds.includes(society.id)
+  );
 }
 
 export function societyWhereForPrincipal(principal: Principal) {
@@ -25,13 +32,19 @@ export function societyWhereForPrincipal(principal: Principal) {
   const districtIds = readableDistrictIds(principal);
   if (districtIds.length) {
     return principal.societyIds.length
-      ? { OR: [
-          { districtId: { in: districtIds } },
-          { id: { in: principal.societyIds } },
-        ] }
+      ? {
+          OR: [
+            { districtId: { in: districtIds } },
+            { id: { in: principal.societyIds } },
+          ],
+        }
       : { districtId: { in: districtIds } };
   }
-  if (principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR') || principal.roles.includes('DEPUTY_DISTRICT_MANAGER')) {
+  if (
+    principal.roles.includes('SOCIETY_OFFICER') ||
+    principal.roles.includes('PROGRAMME_COORDINATOR') ||
+    principal.roles.includes('DEPUTY_DISTRICT_MANAGER')
+  ) {
     return { id: { in: principal.societyIds } };
   }
   return { id: { in: [] } };

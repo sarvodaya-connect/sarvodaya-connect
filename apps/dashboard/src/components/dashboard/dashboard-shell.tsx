@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { switchDemoViewer } from "@/app/(dashboard)/actions";
+import { signOut } from "@/app/identity-actions";
 import {
   canViewCompliance,
   canViewDocumentLibrary,
   type DemoViewer,
-  demoViewers,
 } from "@/lib/access";
 
 import { Brand } from "./brand";
@@ -34,6 +33,8 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
       label: viewer.role === "DISTRICT_MANAGER" ? "District Home" : "National Overview",
     },
     { href: "/districts/kurunegala", icon: "district", label: "District View" },
+    { href: "/accounts", icon: "building", label: "Accounts & invitations" },
+    { href: "/audit", icon: "shield", label: "Change & access log" },
     { href: "/societies", icon: "society", label: "Societies" },
     { href: "/reviews", icon: "review", label: "Review Queue" },
     { href: "/activities", icon: "clipboard", label: "Activities" },
@@ -181,12 +182,12 @@ export function DashboardShell({
                     {viewer.roleLabel} · {viewer.scopeLabel}
                   </span>
                 </span>
-                <Link aria-label="Sign out" href="/">
+                <form action={signOut}><button aria-label="Sign out" type="submit">
                   <Icon className="size-4 text-[#a8c7b1]" name="logout" />
-                </Link>
+                </button></form>
               </div>
               <div className="mt-3 border-t border-white/10 pt-3">
-                <ViewerSwitcher viewer={viewer} />
+                <span className="text-xs">HQ · National access</span>
               </div>
             </div>
           </div>
@@ -207,43 +208,11 @@ export function DashboardShell({
                 </Link>
               ))}
             </nav>
-            <div className="mt-2"><ViewerSwitcher viewer={viewer} /></div>
+            <div className="mt-2"><span className="text-xs">HQ · National access</span></div>
           </div>
           <main className="px-5 py-6 md:px-7 md:py-7 xl:px-8">{children}</main>
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Demonstration control: choose which fictional staff member is viewing the
- * dashboard, to show the role-based visibility rules. Replaced by sign-in later.
- */
-function ViewerSwitcher({ viewer }: { viewer: DemoViewer }) {
-  return (
-    <form action={switchDemoViewer} className="flex items-center gap-2">
-      <label className="flex w-full flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a8c7b1]">
-        Demonstration · viewing as
-        <select
-          className="w-full rounded-md border border-white/20 bg-[#174a32] px-2 py-1.5 text-[11px] font-medium normal-case tracking-normal text-white outline-none focus:border-[#8db39a]"
-          defaultValue={viewer.id}
-          key={viewer.id}
-          name="viewer"
-          onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        >
-          {demoViewers.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.roleLabel} · {option.displayName}
-            </option>
-          ))}
-        </select>
-      </label>
-      <noscript>
-        <button className="rounded-lg border border-[#ccd6ce] px-2.5 py-1.5 text-xs font-semibold" type="submit">
-          Switch
-        </button>
-      </noscript>
-    </form>
   );
 }

@@ -31,7 +31,9 @@ class MoreScreen extends StatelessWidget {
       body: ListView(
         children: [
           if (store.offline)
-            const OfflineBanner(message: 'Offline · last synced 2 hours ago'),
+            const OfflineBanner(
+              message: 'No connection. Connect to load or save information.',
+            ),
           Material(
             color: AppColors.surface,
             child: ListTile(
@@ -67,38 +69,21 @@ class MoreScreen extends StatelessWidget {
               ),
             ),
           ),
-          _QueueHeader(count: store.offline ? 3 : 0),
-          if (store.offline) ...const [
-            _QueueRow(
-              icon: Icons.show_chart,
-              title: 'Tank cleaning activity',
-              detail: 'Saved 09 Oct, 14:20 · 4 photos',
-            ),
-            _QueueRow(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Payment LKR 12,500.00',
-              detail: 'Saved 09 Oct, 13:02 · receipt',
-            ),
-            _QueueRow(
-              icon: Icons.error_outline,
-              title: 'Audit report PDF',
-              detail: 'File too large (14 MB). Replace it.',
-              failed: true,
-            ),
-          ] else
-            const _QueueRow(
-              icon: Icons.cloud_done_outlined,
-              title: 'Everything has been sent',
-              detail: 'Nothing is waiting on this phone',
-            ),
           const SizedBox(height: 16),
           ListTile(
-            leading: const Icon(Icons.health_and_safety_outlined, color: AppColors.leaf),
+            leading: const Icon(
+              Icons.health_and_safety_outlined,
+              color: AppColors.leaf,
+            ),
             title: const Text('Emergency response'),
-            subtitle: const Text('Incidents, rapid assessments and situation reports'),
+            subtitle: const Text(
+              'Incidents, rapid assessments and situation reports',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const EmergencyResponseScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => const EmergencyResponseScreen(),
+              ),
             ),
           ),
           _MenuRow(
@@ -196,91 +181,6 @@ class MoreScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QueueHeader extends StatelessWidget {
-  const _QueueHeader({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    color: AppColors.background,
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-    child: Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            header: true,
-            child: Text(
-              'Waiting to send ($count)',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const Icon(Icons.sync, size: 14, color: Color(0xFFB4650F)),
-        const SizedBox(width: 4),
-        const Text(
-          'Sends when online',
-          style: TextStyle(fontSize: 11, color: AppColors.muted),
-        ),
-      ],
-    ),
-  );
-}
-
-class _QueueRow extends StatelessWidget {
-  const _QueueRow({
-    required this.icon,
-    required this.title,
-    required this.detail,
-    this.failed = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-  final bool failed;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: failed ? AppColors.dangerSoft : AppColors.surface,
-      border: const Border(bottom: BorderSide(color: AppColors.line)),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-    child: Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: failed ? AppColors.danger : AppColors.inkSoft,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                detail,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: failed ? AppColors.danger : AppColors.muted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _MenuRow extends StatelessWidget {

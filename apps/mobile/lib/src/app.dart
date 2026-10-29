@@ -1,3 +1,8 @@
+import 'screens/live_societies_screen.dart';
+import 'screens/v4_role_home_screen.dart';
+import 'screens/district_access_screen.dart';
+import 'screens/emergency_response_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import 'screens/documents_screen.dart';
@@ -6,7 +11,6 @@ import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/my_societies_screen.dart';
-import 'screens/role_home_screen.dart';
 import 'screens/role_workspace_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/society_profile_screen.dart';
@@ -100,7 +104,11 @@ class HomeShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final role = store.activeRole;
-    final configuration = _configuration(role, store.selectedLanguage);
+    final configuration = _configuration(
+      role,
+      store.selectedLanguage,
+      store.selectedTab,
+    );
     return Scaffold(
       body: IndexedStack(
         index: store.selectedTab,
@@ -117,11 +125,14 @@ class HomeShell extends StatelessWidget {
   static _ShellConfiguration _configuration(
     UserRole role,
     AppLanguage language,
+    int selectedTab,
   ) => switch (role) {
     UserRole.societyOfficer => _ShellConfiguration(
       pages: const [
-        HomeScreen(),
-        SocietyProfileScreen(),
+        DemoStore.demoMode
+            ? HomeScreen()
+            : V4RoleHomeScreen(role: UserRole.societyOfficer),
+        DemoStore.demoMode ? SocietyProfileScreen() : LiveSocietiesScreen(),
         DocumentsScreen(),
         TrackerScreen(),
         MoreScreen(),
@@ -153,72 +164,40 @@ class HomeShell extends StatelessWidget {
         ),
       ],
     ),
-    UserRole.districtManager => const _ShellConfiguration(
+    UserRole.programmeCoordinator ||
+    UserRole.deputyDistrictManager ||
+    UserRole.districtManager ||
+    UserRole.hqAdmin => _ShellConfiguration(
       pages: [
-        RoleHomeScreen(role: UserRole.districtManager),
-        MySocietiesScreen(),
-        RoleWorkspaceScreen(
-          role: UserRole.districtManager,
-          workspace: RoleWorkspace.reviews,
-        ),
-        RoleWorkspaceScreen(
-          role: UserRole.districtManager,
-          workspace: RoleWorkspace.alerts,
-        ),
-        MoreScreen(),
+        V4RoleHomeScreen(role: role),
+        const MySocietiesScreen(),
+        role == UserRole.districtManager
+            ? const DistrictAccessScreen()
+            : RoleWorkspaceScreen(role: role, workspace: RoleWorkspace.alerts),
+        selectedTab == 3
+            ? const EmergencyResponseScreen()
+            : const SizedBox.shrink(),
+        const MoreScreen(),
       ],
       destinations: [
-        _HomeDestination(),
-        NavigationDestination(
+        const _HomeDestination(),
+        const NavigationDestination(
           icon: Icon(Icons.holiday_village_outlined),
-          selectedIcon: Icon(Icons.holiday_village),
           label: 'Societies',
         ),
         NavigationDestination(
-          icon: Icon(Icons.fact_check_outlined),
-          selectedIcon: Icon(Icons.fact_check),
-          label: 'Reviews',
+          icon: Icon(
+            role == UserRole.districtManager
+                ? Icons.schedule
+                : Icons.notifications_outlined,
+          ),
+          label: role == UserRole.districtManager ? 'Access' : 'Alerts',
         ),
-        NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications),
-          label: 'Alerts',
+        const NavigationDestination(
+          icon: Icon(Icons.warning_amber_outlined),
+          label: 'Disasters',
         ),
-        _MoreDestination(),
-      ],
-    ),
-    UserRole.hqAdmin => const _ShellConfiguration(
-      pages: [
-        RoleHomeScreen(role: UserRole.hqAdmin),
-        MySocietiesScreen(),
-        RoleWorkspaceScreen(
-          role: UserRole.hqAdmin,
-          workspace: RoleWorkspace.reports,
-        ),
-        RoleWorkspaceScreen(
-          role: UserRole.hqAdmin,
-          workspace: RoleWorkspace.alerts,
-        ),
-        MoreScreen(),
-      ],
-      destinations: [
-        _HomeDestination(),
-        NavigationDestination(
-          icon: Icon(Icons.holiday_village_outlined),
-          selectedIcon: Icon(Icons.holiday_village),
-          label: 'Societies',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.assessment_outlined),
-          selectedIcon: Icon(Icons.assessment),
-          label: 'Reports',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications),
-          label: 'Alerts',
-        ),
-        _MoreDestination(),
+        const _MoreDestination(),
       ],
     ),
   };
