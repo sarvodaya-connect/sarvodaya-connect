@@ -3,6 +3,7 @@ import type { IsoDateTime } from "./common.js";
 export const USER_ROLES = [
   "SOCIETY_OFFICER",
   "DISTRICT_MANAGER",
+  "DEPUTY_DISTRICT_MANAGER",
   "PROGRAMME_COORDINATOR",
   "HQ_ADMIN",
 ] as const;
@@ -63,8 +64,18 @@ export const ROLE_PERMISSIONS: Readonly<
     "EMERGENCY_READ",
     "EMERGENCY_COORDINATE",
   ],
+  DEPUTY_DISTRICT_MANAGER: [
+    "SOCIETY_READ", "MEMBERSHIP_READ", "DOCUMENT_READ",
+    "NOTIFICATION_READ", "EMERGENCY_READ",
+    "EMERGENCY_ASSESS",
+  ],
   PROGRAMME_COORDINATOR: [
     "SOCIETY_READ",
+    "SOCIETY_UPDATE",
+    "MEMBERSHIP_READ",
+    "DOCUMENT_READ",
+    "DOCUMENT_UPLOAD",
+    "NOTIFICATION_READ",
     "EMERGENCY_READ",
     "EMERGENCY_ASSESS",
     "EMERGENCY_COORDINATE",
@@ -96,5 +107,7 @@ export interface AuthenticatedUser {
   roles: UserRole[];
   districtIds: string[];
   societyIds: string[];
+  /** Time-limited whole-district read access granted to a DDM by a DM. */
+  delegatedDistrictAccess?: { districtId: string; expiresAt: IsoDateTime }[];
   lastLoginAt?: IsoDateTime;
 }

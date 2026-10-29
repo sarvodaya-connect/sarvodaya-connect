@@ -43,7 +43,7 @@ export class SocietiesController {
 
   @Patch(':id/profile')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'HQ_ADMIN')
   updateProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -54,7 +54,7 @@ export class SocietiesController {
 
   @Put(':id/profile')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'HQ_ADMIN')
   createOrReplaceProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -65,7 +65,7 @@ export class SocietiesController {
 
   @Put(':id/council')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'HQ_ADMIN')
   updateCouncil(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyCouncilUpdateDto,
@@ -76,7 +76,7 @@ export class SocietiesController {
 
   @Put(':id/membership')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'HQ_ADMIN')
   updateMembership(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyMembershipUpdateDto,

@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
-import type { Principal } from '../auth/principal.js';
+import { readableDistrictIds, type Principal } from '../auth/principal.js';
 
 export function assertCanEditSociety(
   principal: Principal,
@@ -7,7 +7,7 @@ export function assertCanEditSociety(
 ) {
   if (principal.roles.includes('HQ_ADMIN')) return;
   if (
-    principal.roles.includes('SOCIETY_OFFICER') &&
+    (principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR')) &&
     principal.societyIds.includes(society.id)
   )
     return;
@@ -16,10 +16,16 @@ export function assertCanEditSociety(
 
 export function societyWhereForPrincipal(principal: Principal) {
   if (principal.roles.includes('HQ_ADMIN')) return {};
-  if (principal.roles.includes('DISTRICT_MANAGER')) {
-    return { districtId: { in: principal.districtIds } };
+  const districtIds = readableDistrictIds(principal);
+  if (districtIds.length) {
+    return principal.societyIds.length
+      ? { OR: [
+          { districtId: { in: districtIds } },
+          { id: { in: principal.societyIds } },
+        ] }
+      : { districtId: { in: districtIds } };
   }
-  if (principal.roles.includes('SOCIETY_OFFICER')) {
+  if (principal.roles.includes('SOCIETY_OFFICER') || principal.roles.includes('PROGRAMME_COORDINATOR') || principal.roles.includes('DEPUTY_DISTRICT_MANAGER')) {
     return { id: { in: principal.societyIds } };
   }
   return { id: { in: [] } };
