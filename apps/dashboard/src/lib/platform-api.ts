@@ -25,9 +25,23 @@ export async function platformApi(path: string, init: RequestInit = {}) {
   }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
+    const message = body.error?.message ?? body.message;
+    const details = Array.isArray(body.error?.details)
+      ? body.error.details
+          .map((detail: { field?: string; messages?: string[] }) => {
+            const explanation = detail.messages?.join(", ");
+            return explanation
+              ? `${detail.field ?? "Field"}: ${explanation}`
+              : null;
+          })
+          .filter(Boolean)
+          .join("; ")
+      : "";
     throw new Error(
-      typeof (body.error?.message ?? body.message) === "string"
-        ? (body.error?.message ?? body.message)
+      typeof message === "string"
+        ? message === "Request validation failed" && details
+          ? `${message}: ${details}`
+          : message
         : "The request could not be completed. Check the fields and try again.",
     );
   }

@@ -31,7 +31,7 @@ export interface AccountSummary {
     usedAt: IsoDateTime | null;
   }[];
 }
-export interface InviteAccountInput {
+export interface CreateAccountInput {
   username: string;
   displayName: string;
   phone: string;
@@ -39,7 +39,11 @@ export interface InviteAccountInput {
   role: UserRole;
   districtId?: string;
   societyIds: string[];
-  method: ActivationMethod;
+  password: string;
+}
+export type UpdateAccountInput = Omit<CreateAccountInput, "password">;
+export interface SetAccountPasswordInput {
+  password: string;
 }
 export interface ActivationIssueResult {
   account: { id: string; username: string };

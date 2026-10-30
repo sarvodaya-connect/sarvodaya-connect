@@ -72,42 +72,65 @@ export async function activate(
     return { error: e instanceof Error ? e.message : "Activation failed" };
   }
 }
-export async function inviteAccount(
+export async function createAccount(
   _previous: FormResult,
   form: FormData,
 ): Promise<FormResult> {
   const viewer = await getCurrentViewer();
   if (viewer.role !== "HQ_ADMIN") return { error: "HQ access required" };
+  const password = String(form.get("password") ?? "");
+  if (password !== form.get("confirmPassword"))
+    return { error: "The passwords do not match." };
   const input = {
     displayName: form.get("displayName"),
-    username: form.get("username"),
+    username: String(form.get("username") ?? "").trim().toLowerCase(),
     phone: form.get("phone"),
     email: form.get("email") || undefined,
     role: form.get("role"),
     districtId: form.get("districtId") || undefined,
     societyIds: form.getAll("societyIds"),
-    method: form.get("method"),
+    password,
   };
   try {
-    const result = await platformApi("/identity/accounts", {
+    await platformApi("/identity/accounts", {
       method: "POST",
       body: JSON.stringify(input),
     });
     revalidatePath("/accounts");
     return {
-      activationUrl: result.activationUrl,
-      credential: result.credential,
-      username: result.account.username,
-      expiresAt: result.expiresAt,
-      method: result.method,
-      success:
-        "Account created. Give these activation details to the intended person. They are shown once.",
+      success: "Account created. Hand the username and password to the staff member securely.",
     };
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "Could not create account",
     };
   }
+}
+export async function setAccountPassword(
+  _previous: FormResult,
+  form: FormData,
+): Promise<FormResult> {
+  const viewer = await getCurrentViewer();
+  if (viewer.role !== "HQ_ADMIN") return { error: "HQ access required" };
+  const id = String(form.get("id"));
+  if (!/^[a-f0-9-]{36}$/i.test(id)) return { error: "Invalid account" };
+  const password = String(form.get("password") ?? "");
+  if (password !== form.get("confirmPassword"))
+    return { error: "The passwords do not match." };
+  try {
+    await platformApi(`/identity/accounts/${id}/password`, {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not change password" };
+  }
+  revalidatePath("/accounts");
+  if (id === viewer.id) {
+    (await cookies()).delete(SESSION_COOKIE);
+    redirect("/");
+  }
+  return { success: "Password replaced. Give the new password to the staff member securely." };
 }
 export async function reissueAccount(
   _previous: FormResult,
@@ -154,7 +177,6 @@ export async function updateAccount(
     role: form.get("role"),
     districtId: form.get("districtId") || undefined,
     societyIds: form.getAll("societyIds"),
-    method: "LINK",
   };
   try {
     await platformApi(`/identity/accounts/${id}`, {

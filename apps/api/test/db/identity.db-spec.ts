@@ -29,28 +29,23 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .send(body);
   async function create(role: string, assigned: string[]) {
     const username = `test.${role.toLowerCase()}.${suffix}`;
-    const invitation = await post('/identity/accounts', {
+    const created = await post('/identity/accounts', {
       username,
       displayName: `Test ${role}`,
       phone: '+94000000001',
       role,
       districtId,
       societyIds: assigned,
-      method: 'LINK',
-    }).expect(201);
-    accounts.push(invitation.body.account.id);
-    await post('/identity/activation/complete', {
-      credential: invitation.body.credential,
       password: 'test-password-123',
     }).expect(201);
+    accounts.push(created.body.account.id);
     const login = await post('/identity/login', {
       username,
       password: 'test-password-123',
     }).expect(201);
     return {
-      id: invitation.body.account.id,
+      id: created.body.account.id,
       token: login.body.token as string,
-      credential: invitation.body.credential,
     };
   }
   beforeAll(async () => {
@@ -147,7 +142,7 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     }
     await app?.close();
   });
-  it('enforces activation, scopes, temporary district read, NIC audit and session revocation', async () => {
+  it('enforces HQ-created passwords, scopes, temporary district read, NIC audit and session revocation', async () => {
     await request(app.getHttpServer())
       .get('/api/v1/identity/scope-options')
       .set('Authorization', `Bearer ${hqToken}`)
@@ -157,10 +152,6 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     const ddm = await create('DEPUTY_DISTRICT_MANAGER', [societyId]);
     const dm = await create('DISTRICT_MANAGER', []);
     await request(app.getHttpServer()).get('/api/v1/societies').expect(401);
-    await post('/identity/activation/complete', {
-      credential: so.credential,
-      password: 'another-password-123',
-    }).expect(410);
     const list = await request(app.getHttpServer())
       .get('/api/v1/societies')
       .set('Authorization', `Bearer ${so.token}`)

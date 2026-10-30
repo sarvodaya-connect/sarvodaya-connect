@@ -12,7 +12,7 @@ import {
   ArrayUnique,
 } from 'class-validator';
 import { USER_ROLES } from '../auth/principal.js';
-export class InviteAccountDto {
+export class AccountDetailsDto {
   @IsString() @Length(2, 150) displayName: string;
   @Matches(/^[a-z0-9][a-z0-9._-]{2,99}$/) username: string;
   @IsString() @Length(7, 30) phone: string;
@@ -20,7 +20,13 @@ export class InviteAccountDto {
   @IsIn(USER_ROLES) role: (typeof USER_ROLES)[number];
   @IsOptional() @IsUUID() districtId?: string;
   @IsArray() @ArrayUnique() @IsUUID('4', { each: true }) societyIds: string[];
-  @IsIn(['LINK', 'TEMPORARY_PASSWORD']) method: 'LINK' | 'TEMPORARY_PASSWORD';
+}
+export class CreateAccountDto extends AccountDetailsDto {
+  @IsString() @Length(10, 128) @Matches(/\d/) password: string;
+}
+export class UpdateAccountDto extends AccountDetailsDto {}
+export class SetAccountPasswordDto {
+  @IsString() @Length(10, 128) @Matches(/\d/) password: string;
 }
 export class IssueInvitationDto {
   @IsIn(['LINK', 'TEMPORARY_PASSWORD']) method: 'LINK' | 'TEMPORARY_PASSWORD';

@@ -24,9 +24,12 @@ import {
 import type {
   ActivateAccountDto,
   ActivationCheckDto,
+  AccountDetailsDto,
+  CreateAccountDto,
   GrantDistrictAccessDto,
-  InviteAccountDto,
   LoginDto,
+  SetAccountPasswordDto,
+  UpdateAccountDto,
 } from './identity.dto.js';
 
 const digest = (value: string) =>
@@ -73,7 +76,7 @@ export class IdentityService {
     if (!hasRole(principal, 'HQ_ADMIN'))
       throw new ForbiddenException('HQ access required');
   }
-  private async validateScope(input: InviteAccountDto) {
+  private async validateScope(input: AccountDetailsDto) {
     if (input.role === 'HQ_ADMIN') {
       if (input.districtId || input.societyIds.length)
         throw new BadRequestException('HQ has national scope');
@@ -143,7 +146,7 @@ export class IdentityService {
     });
     return { data: rows };
   }
-  async invite(input: InviteAccountDto, principal: Principal) {
+  async createAccount(input: CreateAccountDto, principal: Principal) {
     this.localOnly();
     this.hq(principal);
     await this.validateScope(input);
@@ -153,8 +156,7 @@ export class IdentityService {
       })
     )
       throw new ConflictException('Username is already in use');
-    const credential = randomBytes(32).toString('base64url');
-    const expiresAt = new Date(Date.now() + 72 * 3600_000);
+    this.validatePassword(input.password, input.username);
     const account = await this.db.$transaction(async (tx) => {
       const created = await tx.platformAccount.create({
         data: {
@@ -165,39 +167,38 @@ export class IdentityService {
           role: input.role,
           districtId: input.districtId,
           societyIds: input.societyIds,
-        },
-      });
-      await tx.accountInvitation.create({
-        data: {
-          accountId: created.id,
-          tokenHash: digest(credential),
-          method: input.method,
-          expiresAt,
+          passwordHash: passwordHash(input.password),
+          status: 'ACTIVE',
         },
       });
       await tx.platformAuditEvent.create({
         data: {
           actorId: principal.id,
-          action: 'ACCOUNT_INVITED',
+          action: 'ACCOUNT_CREATED',
           targetId: created.id,
           districtId: created.districtId,
-          detail: `Role ${created.role}; activation ${input.method}`,
+          detail: `Role ${created.role}; initial password set by HQ`,
         },
       });
-      return { id: created.id, username: created.username };
+      return { id: created.id, username: created.username, status: created.status };
     });
-    return {
-      account,
-      activationUrl: this.activationUrl(credential, account.username),
-      method: input.method,
-      credential,
-      expiresAt,
-      delivery: 'MANUAL_HANDOVER',
-    };
+    return { account, delivery: 'MANUAL_HANDOVER' };
+  }
+  private validatePassword(password: string, username: string) {
+    if (
+      password.length < 10 ||
+      password.length > 128 ||
+      !/\d/.test(password) ||
+      password.toLowerCase() === username.toLowerCase()
+    ) {
+      throw new BadRequestException(
+        'Use at least 10 characters with a number, different from the username',
+      );
+    }
   }
   async updateAccount(
     id: string,
-    input: InviteAccountDto,
+    input: UpdateAccountDto,
     principal: Principal,
   ) {
     this.hq(principal);
@@ -234,6 +235,37 @@ export class IdentityService {
       });
       return { id: account.id, role: account.role, status: account.status };
     });
+  }
+  async setPassword(
+    id: string,
+    input: SetAccountPasswordDto,
+    principal: Principal,
+  ) {
+    this.hq(principal);
+    const account = await this.db.platformAccount.findUnique({ where: { id } });
+    if (!account) throw new NotFoundException('Account not found');
+    this.validatePassword(input.password, account.username);
+    await this.db.$transaction(async (tx) => {
+      await tx.platformAccount.update({
+        where: { id },
+        data: { passwordHash: passwordHash(input.password), status: 'ACTIVE' },
+      });
+      await tx.accountInvitation.updateMany({
+        where: { accountId: id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.accountSession.deleteMany({ where: { accountId: id } });
+      await tx.platformAuditEvent.create({
+        data: {
+          actorId: principal.id,
+          action: 'ACCOUNT_PASSWORD_CHANGED',
+          targetId: id,
+          districtId: account.districtId,
+          detail: 'HQ set a replacement password; existing sessions revoked',
+        },
+      });
+    });
+    return { status: 'ACTIVE' };
   }
   async disableAccount(id: string, principal: Principal) {
     this.hq(principal);

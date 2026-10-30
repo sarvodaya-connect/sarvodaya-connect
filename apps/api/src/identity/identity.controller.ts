@@ -19,9 +19,11 @@ import {
   ActivateAccountDto,
   ActivationCheckDto,
   GrantDistrictAccessDto,
-  InviteAccountDto,
+  CreateAccountDto,
   IssueInvitationDto,
   LoginDto,
+  SetAccountPasswordDto,
+  UpdateAccountDto,
 } from './identity.dto.js';
 @Controller('identity')
 export class IdentityController {
@@ -69,18 +71,28 @@ export class IdentityController {
   @Header('Cache-Control', 'no-store')
   @Post('accounts')
   @UseGuards(AuthenticationGuard)
-  invite(
-    @Body() input: InviteAccountDto,
+  createAccount(
+    @Body() input: CreateAccountDto,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.identity.invite(input, principal);
+    return this.identity.createAccount(input, principal);
   }
   @Put('accounts/:id') @UseGuards(AuthenticationGuard) update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() input: InviteAccountDto,
+    @Body() input: UpdateAccountDto,
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.identity.updateAccount(id, input, principal);
+  }
+  @Header('Cache-Control', 'no-store')
+  @Post('accounts/:id/password')
+  @UseGuards(AuthenticationGuard)
+  setPassword(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: SetAccountPasswordDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.identity.setPassword(id, input, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Post('accounts/:id/disable')

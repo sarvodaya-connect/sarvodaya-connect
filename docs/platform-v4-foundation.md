@@ -7,7 +7,7 @@ This change implements the local identity/access foundation and its mobile/HQ en
 | SC-63 responsibility | Screen / implementation |
 |---|---|
 | Shared splash, language, username sign-in | M01–M03; existing brand/language screens and updated sign-in |
-| Account details, temporary password, new password, expired credential, account ready | M04, M04t, M04b, M04x, M04c; mobile activation and browser `/activate` |
+| Account details, password setup, expired credential, account ready | M04, M04t, M04b, M04x, M04c; mobile activation and browser `/activate` (initial local HQ / legacy pending accounts) |
 | SO, SPC, assigned DDM, temporary DDM, DM, HQ homes | M05, M05s, M05d, M05t, M05m, M05h |
 | HQ sign-in and accounts/invitations | D01 `/`, D16/D16i/D16t `/accounts` |
 | Access/audit and standard loading/error/empty states | D24 `/audit`, D21 shared page states |
@@ -37,16 +37,16 @@ Use Node 24, Flutter stable compatible with `pubspec.yaml`, and local PostgreSQL
 2. Set `NODE_ENV=development`, `DATABASE_CONNECTION_LIMIT=2`, and a local `NIC_ENCRYPTION_KEY`. Generate the latter with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`; save it only in the ignored environment file. Never commit or log NICs, permanent passwords or access tokens.
 3. Create the initial local HQ invitation with `BOOTSTRAP_HQ_USERNAME=local.hq npm run identity:bootstrap` from `apps/api`. This works only in development/test and only while no HQ account exists. It prints a one-time credential once; it never creates or displays a permanent password.
 4. Start the API (`npm run start:dev`). In `apps/dashboard`, run `npm ci` and `npm run dev`. Set `API_BASE_URL=http://localhost:3001/api/v1` for the dashboard server and `DASHBOARD_PUBLIC_URL=http://localhost:3000` for invitation links.
-5. Open `/activate`, enter the initial credential, check the account details and choose a password. Sign in at `/`. Invite staff from `/accounts`, selecting their role, district and societies. Activation links contain the credential in a fragment, which the activation page clears from browser history after reading. No SMS or email is sent locally: hand over the intended person's details securely.
+5. Open `/activate`, enter the initial local HQ credential, check the account details and choose a password. Sign in at `/`. From `/accounts`, HQ creates each staff account with a username and permanent password, selecting the role, district and societies. HQ hands both credentials to the assigned person using a secure method. Ordinary new accounts are active immediately and do not need to complete an activation flow.
 6. Run the mobile app with `flutter run --dart-define=SC_DEMO_MODE=false --dart-define=API_BASE_URL=http://10.0.2.2:3001/api/v1` for an Android emulator. iOS simulator uses `http://127.0.0.1:3001/api/v1`. Physical devices need a reachable development API host; use HTTPS for hosted environments. Sign in with an activated staff account.
 
 For a fictional UI demonstration, mobile `SC_DEMO_MODE=true` retains the demo account/role previews. Dashboard `PLATFORM_DEMO_MODE=true` explicitly enables HQ demo viewing only outside production. Demo identities are never accepted in production. API-backed accounts remain authoritative for real requests.
 
 ## Account and activation rules
 
-HQ alone creates accounts and changes assignments. SO scope is exactly one society. SPC/DDM scopes contain one or more societies in their district; DM has a district and no explicit society list; HQ has national scope. Unknown roles and invalid district/society combinations are rejected.
+HQ alone creates accounts, usernames and permanent passwords, and changes assignments. HQ can set a replacement password for any active account when the assigned person changes; doing so invalidates existing sessions. Passwords are stored only as salted scrypt hashes, so HQ can set a new password but cannot retrieve the old one. Passwords require 10–128 characters and a number and must differ from the username. SO scope is exactly one society. SPC/DDM scopes contain one or more societies in their district; DM has a district and no explicit society list; HQ has national scope. Unknown roles and invalid district/society combinations are rejected.
 
-Invitation credentials and session tokens contain 32 random bytes and are stored only as SHA-256 hashes. Credentials expire after 72 hours. Passwords require 10–128 characters and a number and must differ from the username; the local provider stores salted scrypt hashes. A conditional transactional claim makes activation single-use, including concurrent requests. Reissuing an invitation invalidates old invitations/sessions and requires activation again. Disabling an account invalidates its sessions. Local sessions expire after eight hours; clients hold mobile tokens in memory and the dashboard uses an HttpOnly SameSite cookie. Local sign-in has a five-attempt/15-minute username throttle; production rate limiting belongs to the production identity provider and API entry.
+The initial local HQ bootstrap and any legacy pending accounts use single-use invitation credentials, stored only as SHA-256 hashes and expiring after 72 hours. For regular staff accounts, HQ sets the permanent password during creation. Passwords are stored as salted scrypt hashes. Replacing a password invalidates existing sessions. Disabling an account invalidates its sessions. Local sessions expire after eight hours; clients hold mobile tokens in memory and the dashboard uses an HttpOnly SameSite cookie. Local sign-in has a five-attempt/15-minute username throttle; production rate limiting belongs to the production identity provider and API entry.
 
 Local credentials, activation and sessions deliberately fail closed outside development/test. `SessionAuthenticationProvider` and `AuthenticationProvider` are the replacement points for AWS Cognito verification. Cognito challenge handling, SMS delivery and deployment are AWS integration work, not claimed as deployed here. Avoid putting any real personal data into a development instance with demo authentication enabled.
 
@@ -61,8 +61,9 @@ All paths are under `/api/v1`. DTO validation rejects unsupported body fields.
 | `POST /identity/activation/complete` | Consume credential and choose permanent password |
 | `GET /identity/me`, `POST /identity/logout` | Current principal / revoke current local session |
 | `GET /identity/scope-options` | HQ district/society choices, including every society beyond the first list page |
-| `GET/POST /identity/accounts` | HQ list / invite |
+| `GET/POST /identity/accounts` | HQ list / create active account with an HQ-set password |
 | `PUT /identity/accounts/:id` | HQ role/assignment update; sessions/grants revoked |
+| `POST /identity/accounts/:id/password` | HQ sets a replacement password; old sessions revoked |
 | `POST /identity/accounts/:id/invitation` | HQ recovery/reissue; no permanent password visibility |
 | `POST /identity/accounts/:id/disable` | HQ disable; self-disable rejected |
 | `GET /identity/district-deputies` | DM's active district DDM choices |

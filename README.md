@@ -612,7 +612,7 @@ Additional production decisions still needed include a confirmed privacy notice 
 
 The API authenticates society list/detail reads and applies the five-role society/district scopes above. Out-of-scope detail requests return 404. SPCs and DDMs can update assigned societies; a DDM's temporary whole-district access adds read permission only. Expiry and revocation are enforced from server-side account/grant records on every authenticated request.
 
-HQ creates and recovers accounts and sets their roles/assignments. Users choose their own permanent passwords during single-use activation. A society's NICs are encrypted, masked in ordinary responses, and revealed only after a scoped permission check with an audit entry. Society record mutations, account administration and district-access changes are logged.
+HQ creates accounts, usernames and permanent passwords, then securely hands the credentials to the assigned staff member. HQ can set a replacement password for an account when responsibility changes; changing it signs out existing sessions. Passwords are stored only as salted hashes, so HQ can replace a password but cannot read the one already stored. A society's NICs are encrypted, masked in ordinary responses, and revealed only after a scoped permission check with an audit entry. Society record mutations, account administration and district-access changes are logged.
 
 Local identity is a development/test adapter. Cognito and production deployment are the next AWS integration step; development demo headers and local credentials fail closed in production. See the [V4 foundation guide](docs/platform-v4-foundation.md) for the full API contract, screen ownership, configuration and validation instructions.
 

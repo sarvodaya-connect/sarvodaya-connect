@@ -104,7 +104,7 @@ class _ActivationState extends State<AccountActivationScreen> {
             style: const TextStyle(fontSize: 22),
           ),
           const Text(
-            'HQ gives you a one-time activation credential or temporary password. Your permanent password stays private.',
+            'Use this only if HQ gave you a one-time activation credential for a pending account. Most staff should sign in with the username and permanent password provided by HQ.',
           ),
           TextField(
             controller: _username,
