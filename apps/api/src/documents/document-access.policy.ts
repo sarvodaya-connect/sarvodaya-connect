@@ -3,6 +3,10 @@ import {
   readableDistrictIds,
   type Principal,
 } from '../auth/principal.js';
+import {
+  canEditAnnualSummary,
+  canEditSocietyRecord,
+} from '../societies/society-record.policy.js';
 
 /**
  * Provisional role-based access rules for society documents:
@@ -55,19 +59,21 @@ export function canAccessSociety(
   return false;
 }
 
-/** Anyone who can see a society can add documents to it. */
+/**
+ * V4 (Prototype v4, M13 and M13a): people who can edit the society add its
+ * documents; District Managers and DDMs using temporary district access only
+ * view. The audit report is uploaded by the Society Officer or assigned SPC.
+ */
 export function canCreateDocument(
   principal: Principal,
   society: SocietyScope,
+  documentType?: string,
 ): boolean {
-  if (
-    hasRole(principal, 'DEPUTY_DISTRICT_MANAGER') &&
-    !hasRole(principal, 'HQ_ADMIN') &&
-    !hasRole(principal, 'DISTRICT_MANAGER') &&
-    !principal.societyIds.includes(society.societyId)
-  )
-    return false;
-  return canAccessSociety(principal, society);
+  const scope = { id: society.societyId, districtId: society.districtId };
+  if (documentType === 'AUDIT_REPORT') {
+    return canEditAnnualSummary(principal, scope);
+  }
+  return canEditSocietyRecord(principal, scope);
 }
 
 export function canViewDocument(

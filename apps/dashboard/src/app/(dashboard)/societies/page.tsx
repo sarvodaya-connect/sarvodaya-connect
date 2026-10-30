@@ -1,5 +1,6 @@
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { SocietyDirectory } from "@/components/dashboard/society-directory";
+import { LiveSocietyRecords } from "@/components/dashboard/society-record/live-society-records";
 import { loadSocietyRegistry, parseDemoScenario } from "@/lib/demo-scenarios";
 import { demoSocietyAccess, societiesVisibleTo } from "@/lib/society-access";
 
@@ -23,6 +24,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
           </button>
         )}
       </div>
+      <LiveSocietyRecords />
       <SocietyDirectory districts={visibleDistricts} societies={societies} />
     </>
   );

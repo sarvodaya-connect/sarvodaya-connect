@@ -37,6 +37,15 @@ export interface NewDocument {
   accessLevel: AccessLevel;
   uploadedById: string;
   uploadedByName: string;
+  uploadedByRole?: string | null;
+  financialYear?: number | null;
+}
+
+/** Who confirmed the upload, for the society change history. */
+export interface UploadActor {
+  id: string;
+  displayName: string;
+  role: string | null;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -134,12 +143,34 @@ export class DocumentsRepository {
     }
   }
 
-  markUploaded(id: string, uploadedAt: Date) {
+  /** Marks the file uploaded and adds it to the society change history. */
+  markUploaded(id: string, uploadedAt: Date, actor?: UploadActor) {
     return executeDatabaseOperation(() =>
-      this.prisma.societyDocument.update({
-        where: { id },
-        data: { uploadedAt, status: 'SUBMITTED' },
-        include,
+      this.prisma.$transaction(async (tx) => {
+        const record = await tx.societyDocument.update({
+          where: { id },
+          data: { uploadedAt, status: 'SUBMITTED' },
+          include,
+        });
+        if (actor) {
+          const isAuditReport = record.documentType === 'AUDIT_REPORT';
+          await tx.platformAuditEvent.create({
+            data: {
+              actorId: actor.id,
+              actorName: actor.displayName,
+              actorRole: actor.role,
+              action: isAuditReport ? 'AUDIT_REPORT_UPLOADED' : 'DOCUMENT_UPLOADED',
+              targetId: record.id,
+              societyId: record.societyId,
+              districtId: record.society.districtId,
+              detail: `${record.title} uploaded · ${record.fileName}`.slice(
+                0,
+                2000,
+              ),
+            },
+          });
+        }
+        return record;
       }),
     );
   }

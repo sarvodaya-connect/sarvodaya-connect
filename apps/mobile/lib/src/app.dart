@@ -132,6 +132,8 @@ class HomeShell extends StatelessWidget {
         DemoStore.demoMode
             ? HomeScreen()
             : V4RoleHomeScreen(role: UserRole.societyOfficer),
+        // API mode opens the V4 society record (SC-65, M06). Demo mode keeps
+        // the v3 profile that the Society Officer demo journey still uses.
         DemoStore.demoMode ? SocietyProfileScreen() : LiveSocietiesScreen(),
         DocumentsScreen(),
         TrackerScreen(),

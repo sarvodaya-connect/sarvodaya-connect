@@ -19,30 +19,41 @@ void main() {
   });
 
   test('saved assessments survive reopening the local queue', () async {
-    final queue = await EmergencyAssessmentQueue.open(documentsDirectory: directory);
+    final queue = await EmergencyAssessmentQueue.open(
+      documentsDirectory: directory,
+    );
     await queue.save({'clientMutationId': 'mutation-1', 'notes': 'fictional'});
 
-    final reopened = await EmergencyAssessmentQueue.open(documentsDirectory: directory);
+    final reopened = await EmergencyAssessmentQueue.open(
+      documentsDirectory: directory,
+    );
     final items = await reopened.all();
     expect(items, hasLength(1));
     expect(items.single.payload['notes'], 'fictional');
   });
 
-  test('sync removes confirmed records but preserves failed records and errors', () async {
-    final queue = await EmergencyAssessmentQueue.open(documentsDirectory: directory);
-    await queue.save({'clientMutationId': 'confirmed', 'notes': 'fictional'});
-    await queue.save({'clientMutationId': 'retry', 'notes': 'fictional'});
-    final api = EmergencyApiClient(
-      client: MockClient((request) async => request.body.contains('confirmed')
-          ? http.Response('{"record":{},"replayed":false}', 200)
-          : http.Response('{"message":"temporarily unavailable"}', 503)),
-    );
+  test(
+    'sync removes confirmed records but preserves failed records and errors',
+    () async {
+      final queue = await EmergencyAssessmentQueue.open(
+        documentsDirectory: directory,
+      );
+      await queue.save({'clientMutationId': 'confirmed', 'notes': 'fictional'});
+      await queue.save({'clientMutationId': 'retry', 'notes': 'fictional'});
+      final api = EmergencyApiClient(
+        client: MockClient(
+          (request) async => request.body.contains('confirmed')
+              ? http.Response('{"record":{},"replayed":false}', 200)
+              : http.Response('{"message":"temporarily unavailable"}', 503),
+        ),
+      );
 
-    expect(await queue.sync(api, UserRole.societyOfficer), 1);
-    final pending = await queue.all();
-    expect(pending, hasLength(1));
-    expect(pending.single.clientMutationId, 'retry');
-    expect(pending.single.lastError, contains('temporarily unavailable'));
-    api.close();
-  });
+      expect(await queue.sync(api, UserRole.societyOfficer), 1);
+      final pending = await queue.all();
+      expect(pending, hasLength(1));
+      expect(pending.single.clientMutationId, 'retry');
+      expect(pending.single.lastError, contains('temporarily unavailable'));
+      api.close();
+    },
+  );
 }

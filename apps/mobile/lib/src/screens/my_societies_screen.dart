@@ -1,3 +1,4 @@
+import '../society_record/society_record_screen.dart';
 import 'live_societies_screen.dart';
 
 import 'package:flutter/material.dart';
@@ -203,79 +204,90 @@ class _SocietyCard extends StatelessWidget {
         : percent < 85
         ? const Color(0xFFE0B03A)
         : AppColors.leaf;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  society.nameEn,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+    // SC-65: opens the society record (M06), or its view-only form (M06v).
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => SocietyRecordScreen(societyId: society.id),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    society.nameEn,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
-                ),
-                Text(
-                  [
-                    society.societyCode,
-                    if (society.lastVerifiedOn != null)
-                      'updated ${formatDate(society.lastVerifiedOn!)}',
-                  ].join(' · '),
-                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 70,
-                      child: Semantics(
-                        label: '$percent% complete',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: percent / 100,
-                            minHeight: 4,
-                            color: color,
-                            backgroundColor: AppColors.line,
+                  Text(
+                    [
+                      society.societyCode,
+                      if (society.lastVerifiedOn != null)
+                        'updated ${formatDate(society.lastVerifiedOn!)}',
+                    ].join(' · '),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 70,
+                        child: Semantics(
+                          label: '$percent% complete',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: percent / 100,
+                              minHeight: 4,
+                              color: color,
+                              backgroundColor: AppColors.line,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$percent%',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 8),
+                      Text(
+                        '$percent%',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          OutlinedButton(
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Follow-up notes for ${society.nameEn} come in a later phase.',
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 34),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              textStyle: const TextStyle(fontSize: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            OutlinedButton(
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Follow-up notes for ${society.nameEn} come in a later phase.',
+                  ),
+                ),
               ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                textStyle: const TextStyle(fontSize: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text('Note', semanticsLabel: 'Note for ${society.nameEn}'),
             ),
-            child: Text('Note', semanticsLabel: 'Note for ${society.nameEn}'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

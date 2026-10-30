@@ -48,18 +48,17 @@ void main() {
     expect(find.text('Use my location'), findsNothing);
   });
 
-  testWidgets(
-    'Request update opens profile edit with the approved values',
-    (tester) async {
-      await _openEditProfile(tester);
+  testWidgets('Request update opens profile edit with the approved values', (
+    tester,
+  ) async {
+    await _openEditProfile(tester);
 
-      expect(find.text('Edit profile'), findsOneWidget);
-      expect(find.text('No. 12, Temple Road'), findsOneWidget);
-      expect(find.text('Pahala Kosgama'), findsOneWidget);
-      expect(find.text('+94 00 000 0010'), findsOneWidget);
-      expect(find.text('Changes are saved as a draft'), findsOneWidget);
-    },
-  );
+    expect(find.text('Edit profile'), findsOneWidget);
+    expect(find.text('No. 12, Temple Road'), findsOneWidget);
+    expect(find.text('Pahala Kosgama'), findsOneWidget);
+    expect(find.text('+94 00 000 0010'), findsOneWidget);
+    expect(find.text('Changes are saved as a draft'), findsOneWidget);
+  });
 
   testWidgets('required fields show inline errors and a summary', (
     tester,

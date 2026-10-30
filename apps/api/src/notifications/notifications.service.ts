@@ -70,6 +70,22 @@ export class NotificationsService {
     };
   }
 
+  /** Sends the same notification to each listed user (SC-65 grade requests and decisions). */
+  async notifyUsers(
+    recipientUserIds: string[],
+    notification: Omit<NewNotification, 'recipientUserId'>,
+  ): Promise<number> {
+    const recipients = [...new Set(recipientUserIds)];
+    if (recipients.length === 0) return 0;
+    const result = await this.repository.createMany(
+      recipients.map((recipientUserId) => ({
+        ...notification,
+        recipientUserId,
+      })),
+    );
+    return result.count;
+  }
+
   /** Sends one notification to every reviewer of the district (District Managers and HQ). */
   async notifyReviewers(
     input: Omit<NewNotification, 'recipientUserId'> & {

@@ -47,12 +47,12 @@ void main() {
       expect(report.maleParticipants, '9');
       expect(report.outcomes, 'Fictional results only');
       expect(report.supportingInformation, 'Demo meeting notes');
-    ActivityDraftRegistry.clear(store);
-    expect(ActivityDraftRegistry.forStore(store).title, isEmpty);
-    expect(
-      fetched.copyWith(status: SubmissionStatus.underReview).activityReport,
-      same(report),
-    );
+      ActivityDraftRegistry.clear(store);
+      expect(ActivityDraftRegistry.forStore(store).title, isEmpty);
+      expect(
+        fetched.copyWith(status: SubmissionStatus.underReview).activityReport,
+        same(report),
+      );
       draft.title = 'Changed after submission';
       draft.gpsLocation = '0, 0';
       expect(

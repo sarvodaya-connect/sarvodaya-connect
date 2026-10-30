@@ -143,6 +143,10 @@ describe('Document and notification persistence (PostgreSQL)', () => {
           ],
         },
       });
+      // SC-65: completed uploads are added to the society change history.
+      await prisma.platformAuditEvent.deleteMany({
+        where: { targetId: { in: createdDocumentIds } },
+      });
       await prisma.societyDocument.deleteMany({
         where: { id: { in: createdDocumentIds } },
       });

@@ -59,6 +59,8 @@ export interface CommitteeMember {
   seatType?: MembershipCategory;
   age?: number;
   isPrimaryContact?: boolean;
+  /** The last four NIC characters, e.g. "••••0012". The full NIC needs a recorded reveal. */
+  nicMasked?: string;
 }
 
 export const MEMBERSHIP_CATEGORIES = [

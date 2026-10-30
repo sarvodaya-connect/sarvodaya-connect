@@ -1,3 +1,6 @@
+import '../society_record/demo_society_record_api.dart';
+import '../society_record/document_picker.dart';
+import '../society_record/society_record_api.dart';
 import '../auth/api_auth_service.dart';
 import '../models/activity_draft.dart';
 import '../models/activity_report_data.dart';
@@ -60,6 +63,8 @@ class DemoStore extends ChangeNotifier {
     DateTime Function()? clock,
     AuthService? authService,
     DocumentUploadService? uploadService,
+    SocietyRecordApi? societyRecordApi,
+    DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
     this.firstTimeSetupComplete = false,
@@ -70,6 +75,19 @@ class DemoStore extends ChangeNotifier {
         (demoMode
             ? DemoAuthService(isOnline: () => !offline)
             : ApiAuthService(identityApi));
+    societyRecords =
+        societyRecordApi ??
+        (demoMode
+            ? DemoSocietyRecordApi(
+                user: () => _user,
+                clock: _clock,
+                delay: loadDelay,
+                isOnline: () => !offline,
+              )
+            : HttpSocietyRecordApi(identityApi));
+    this.documentPicker =
+        documentPicker ??
+        (demoMode ? const DemoDocumentPicker() : const DeviceDocumentPicker());
     _uploadService =
         uploadService ??
         DemoDocumentUploadService(
@@ -88,6 +106,12 @@ class DemoStore extends ChangeNotifier {
   final DateTime Function() _clock;
   late final AuthService _authService;
   late final DocumentUploadService _uploadService;
+
+  /// SC-65 society record (M06–M13): API-backed, or fictional in demo mode.
+  late final SocietyRecordApi societyRecords;
+
+  /// Chooses the audit report file to upload (M13a).
+  late final DocumentPicker documentPicker;
 
   DateTime get now => _clock();
 

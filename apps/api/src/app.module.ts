@@ -14,6 +14,9 @@ import { DistrictsController } from './districts/districts.controller.js';
 import { SocietiesController } from './societies/societies.controller.js';
 import { SocietiesService } from './societies/societies.service.js';
 import { SocietiesRepository } from './societies/societies.repository.js';
+import { SocietyRecordController } from './societies/society-record.controller.js';
+import { SocietyRecordRepository } from './societies/society-record.repository.js';
+import { SocietyRecordService } from './societies/society-record.service.js';
 import { DistrictsService } from './districts/districts.service.js';
 import { EmergenciesModule } from './emergencies/emergencies.module.js';
 
@@ -35,11 +38,18 @@ const repositoryEnvironmentFile = resolve(
     DocumentsModule,
     EmergenciesModule,
   ],
-  controllers: [AppController, DistrictsController, SocietiesController],
+  controllers: [
+    AppController,
+    DistrictsController,
+    SocietiesController,
+    SocietyRecordController,
+  ],
   providers: [
     AppService,
     SocietiesService,
     SocietiesRepository,
+    SocietyRecordService,
+    SocietyRecordRepository,
     DistrictsService,
   ],
 })

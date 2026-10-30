@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -20,7 +20,50 @@ const detailInclude = {
   contacts: true,
   councilMembers: { orderBy: { seatNumber: 'asc' } },
   memberships: { orderBy: [{ year: 'desc' }, { category: 'asc' }] },
+  gradeRequests: {
+    where: { status: 'PENDING' },
+    orderBy: { requestedAt: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.SocietyInclude;
+
+/** Audit actions that count as a change to the society record (not reads or NIC reveals). */
+export const SOCIETY_CHANGE_ACTIONS = [
+  'SOCIETY_PROFILE_UPDATED',
+  'SOCIETY_COUNCIL_UPDATED',
+  'SOCIETY_MEMBERSHIP_UPDATED',
+  'MEMBER_NIC_UPDATED',
+  'SOCIETY_GRADE_CHANGED',
+  'GRADE_CHANGE_REQUESTED',
+  'GRADE_CHANGE_APPROVED',
+  'GRADE_CHANGE_REJECTED',
+  'ANNUAL_SUMMARY_UPDATED',
+  'AUDIT_REPORT_UPLOADED',
+  'DOCUMENT_UPLOADED',
+  'WORK_PLAN_UPDATED',
+] as const;
+
+/** A direct grade change made by HQ while editing the record (D05e). */
+export interface GradeChange {
+  from: 'A' | 'B' | 'C' | null;
+  to: 'A' | 'B' | 'C';
+  reason: string;
+}
+
+function actorFields(principal: Principal) {
+  return {
+    actorId: principal.id,
+    actorName: principal.displayName,
+    actorRole: principal.roles[0] ?? null,
+  };
+}
+
+function isUniqueViolation(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}
 
 @Injectable()
 export class SocietiesRepository {
@@ -79,72 +122,199 @@ export class SocietiesRepository {
     );
   }
 
-  updateProfile(
+  /**
+   * Yearly figures, audit report, assigned staff and the latest change for the
+   * society record. Read in one transaction so the record is consistent.
+   */
+  findRecordContext(
+    society: { id: string; districtId: string },
+    financialYear: number,
+  ) {
+    return executeDatabaseOperation(() =>
+      this.prisma.$transaction([
+        this.prisma.annualFinancialSummary.findUnique({
+          where: {
+            societyId_financialYear: { societyId: society.id, financialYear },
+          },
+        }),
+        this.prisma.societyDocument.findFirst({
+          where: {
+            societyId: society.id,
+            documentType: 'AUDIT_REPORT',
+            financialYear,
+            uploadedAt: { not: null },
+          },
+          orderBy: [{ uploadedAt: 'desc' }, { version: 'desc' }],
+        }),
+        this.prisma.platformAccount.findMany({
+          where: {
+            OR: [
+              { societyIds: { has: society.id } },
+              { role: 'DISTRICT_MANAGER', districtId: society.districtId },
+            ],
+          },
+          select: { displayName: true, role: true, status: true },
+          orderBy: { displayName: 'asc' },
+        }),
+        this.prisma.platformAuditEvent.findFirst({
+          where: {
+            societyId: society.id,
+            action: { in: [...SOCIETY_CHANGE_ACTIONS] },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]),
+    ).then(([summary, auditReport, staff, lastChange]) => ({
+      summary,
+      auditReport,
+      staff,
+      lastChange,
+    }));
+  }
+
+  async updateProfile(
     id: string,
     input: SocietyProfileUpdateDto,
     principal: Principal,
+    change: { summary: string; grade?: GradeChange } = {
+      summary: `Fields: ${Object.keys(input)
+        .filter((key) => input[key as keyof typeof input] !== undefined)
+        .join(', ')}`,
+    },
   ) {
-    return executeDatabaseOperation(() =>
-      this.prisma.$transaction(async (tx) => {
-        const { primaryContact, establishedOn } = input;
-        const society = await tx.society.update({
-          where: { id },
-          data: {
-            nameEn: input.nameEn,
-            nameLocal: input.nameLocal,
-            dsDivision: input.dsDivision,
-            gnDivision: input.gnDivision,
-            village: input.village,
-            addressLine: input.addressLine,
-            latitude: input.latitude,
-            longitude: input.longitude,
-            ...(establishedOn
-              ? { establishedOn: new Date(`${establishedOn}T00:00:00.000Z`) }
-              : {}),
-          },
+    try {
+      return await this.saveProfile(id, input, principal, change);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(
+          `S number ${input.societyCode} is already used by another society`,
+        );
+      }
+      return executeDatabaseOperation(() => Promise.reject(error));
+    }
+  }
+
+  private saveProfile(
+    id: string,
+    input: SocietyProfileUpdateDto,
+    principal: Principal,
+    change: { summary: string; grade?: GradeChange },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const { primaryContact, establishedOn } = input;
+      const now = new Date();
+      const society = await tx.society.update({
+        where: { id },
+        data: {
+          nameEn: input.nameEn,
+          nameLocal: input.nameLocal,
+          dsDivision: input.dsDivision,
+          gnDivision: input.gnDivision,
+          village: input.village,
+          addressLine: input.addressLine,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          memberCount: input.memberCount,
+          societyCode: input.societyCode,
+          ...(input.landline !== undefined
+            ? { landline: input.landline || null }
+            : {}),
+          ...(input.businessDescription !== undefined
+            ? { businessDescription: input.businessDescription || null }
+            : {}),
+          ...(change.grade
+            ? {
+                grade: change.grade.to,
+                gradeChangedAt: now,
+                gradeChangedByName: principal.displayName,
+                gradeChangedByRole: principal.roles[0] ?? null,
+              }
+            : {}),
+          ...(establishedOn
+            ? { establishedOn: new Date(`${establishedOn}T00:00:00.000Z`) }
+            : {}),
+        },
+      });
+      if (primaryContact) {
+        const current = await tx.societyContact.findFirst({
+          where: { societyId: id, isPrimary: true },
         });
-        if (primaryContact) {
-          const current = await tx.societyContact.findFirst({
+        const contactData = {
+          label: primaryContact.position ?? 'Primary contact',
+          fullName: primaryContact.fullName,
+          position: primaryContact.position,
+          phone: primaryContact.phone,
+          email: primaryContact.email,
+          isPrimary: true,
+        };
+        if (current) {
+          await tx.societyContact.updateMany({
             where: { societyId: id, isPrimary: true },
+            data: { isPrimary: false },
           });
-          const contactData = {
-            label: primaryContact.position ?? 'Primary contact',
-            fullName: primaryContact.fullName,
-            position: primaryContact.position,
-            phone: primaryContact.phone,
-            email: primaryContact.email,
-            isPrimary: true,
-          };
-          if (current) {
-            await tx.societyContact.updateMany({
-              where: { societyId: id, isPrimary: true },
-              data: { isPrimary: false },
-            });
-            await tx.societyContact.update({
-              where: { id: current.id },
-              data: contactData,
-            });
-          } else {
-            await tx.societyContact.create({
-              data: { societyId: id, ...contactData },
-            });
-          }
+          await tx.societyContact.update({
+            where: { id: current.id },
+            data: contactData,
+          });
+        } else {
+          await tx.societyContact.create({
+            data: { societyId: id, ...contactData },
+          });
         }
+      }
+      if (change.summary) {
         await tx.platformAuditEvent.create({
           data: {
-            actorId: principal.id,
+            ...actorFields(principal),
             action: 'SOCIETY_PROFILE_UPDATED',
             targetId: id,
             societyId: id,
             districtId: society.districtId,
-            detail: `Fields: ${Object.keys(input)
-              .filter((key) => input[key as keyof typeof input] !== undefined)
-              .join(', ')}`,
+            detail: change.summary.slice(0, 2000),
           },
         });
-        return society;
-      }),
-    );
+      }
+      if (change.grade) {
+        const { from, to, reason } = change.grade;
+        // D05e: a direct change closes any request waiting for HQ.
+        const pending = await tx.gradeChangeRequest.findMany({
+          where: { societyId: id, status: 'PENDING' },
+        });
+        for (const request of pending) {
+          const approved = request.toGrade === to;
+          await tx.gradeChangeRequest.update({
+            where: { id: request.id },
+            data: {
+              status: approved ? 'APPROVED' : 'REJECTED',
+              decidedById: principal.id,
+              decidedByName: principal.displayName,
+              decidedAt: now,
+              decisionComment: approved
+                ? `Grade changed directly by HQ: ${reason}`.slice(0, 500)
+                : `Grade changed directly by HQ to ${to}: ${reason}`.slice(
+                    0,
+                    500,
+                  ),
+            },
+          });
+        }
+        await tx.platformAuditEvent.create({
+          data: {
+            ...actorFields(principal),
+            action: 'SOCIETY_GRADE_CHANGED',
+            targetId: id,
+            societyId: id,
+            districtId: society.districtId,
+            detail:
+              `Grade ${from ?? 'not set'} → ${to} changed directly by HQ · reason: “${reason}”`.slice(
+                0,
+                2000,
+              ),
+          },
+        });
+      }
+      return society;
+    });
   }
 
   replaceCouncil(
@@ -195,7 +365,7 @@ export class SocietiesRepository {
         const society = await tx.society.findUniqueOrThrow({ where: { id } });
         await tx.platformAuditEvent.create({
           data: {
-            actorId: principal.id,
+            ...actorFields(principal),
             action: 'SOCIETY_COUNCIL_UPDATED',
             targetId: id,
             societyId: id,
@@ -234,7 +404,7 @@ export class SocietiesRepository {
         const society = await tx.society.findUniqueOrThrow({ where: { id } });
         await tx.platformAuditEvent.create({
           data: {
-            actorId: principal.id,
+            ...actorFields(principal),
             action: 'SOCIETY_MEMBERSHIP_UPDATED',
             targetId: id,
             societyId: id,

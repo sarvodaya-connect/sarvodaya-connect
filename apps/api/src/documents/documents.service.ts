@@ -18,6 +18,10 @@ import {
   StorageUnavailableError,
 } from '../storage/document-storage.js';
 import {
+  financialYear as financialYearOf,
+  isSelectableFinancialYear,
+} from '../societies/financial-year.js';
+import {
   accessLevelFor,
   canAccessSociety,
   canCreateDocument,
@@ -66,6 +70,10 @@ export function toDocumentResponse(record: DocumentRecord) {
     accessLevel: record.accessLevel,
     version: record.version,
     uploadedBy: record.uploadedByName,
+    ...(record.uploadedByRole ? { uploadedByRole: record.uploadedByRole } : {}),
+    ...(record.financialYear != null
+      ? { financialYear: financialYearOf(record.financialYear) }
+      : {}),
     ...(record.uploadedAt
       ? { uploadedAt: record.uploadedAt.toISOString() }
       : {}),
@@ -109,15 +117,35 @@ export class DocumentsService {
   /** Records the metadata and returns a short-lived URL for uploading the file. */
   async create(principal: Principal, input: CreateDocumentDto) {
     const society = await this.repository.findSociety(input.societyId);
+    const scope = society && {
+      societyId: society.id,
+      districtId: society.districtId,
+    };
     // Societies outside the user's scope are reported as not found.
-    if (
-      !society ||
-      !canCreateDocument(principal, {
-        societyId: society.id,
-        districtId: society.districtId,
-      })
-    ) {
+    if (!society || !scope || !canAccessSociety(principal, scope)) {
       throw new NotFoundException('Society not found');
+    }
+    if (!canCreateDocument(principal, scope, input.documentType)) {
+      throw new ForbiddenException(
+        input.documentType === 'AUDIT_REPORT'
+          ? "Only the society's Society Officer or assigned SPC can upload the audit report"
+          : 'You can view this society but cannot add documents to it',
+      );
+    }
+    const isAuditReport = input.documentType === 'AUDIT_REPORT';
+    if (isAuditReport) {
+      if (input.financialYear == null) {
+        throw new BadRequestException(
+          'Choose the financial year of the audit report',
+        );
+      }
+      if (!isSelectableFinancialYear(input.financialYear)) {
+        throw new BadRequestException(
+          'Choose one of the last completed financial years',
+        );
+      }
+    } else if (input.financialYear != null) {
+      throw new BadRequestException('Only audit reports have a financial year');
     }
     const extension = extensionFor(input.fileName, input.contentType);
     if (!extension) {
@@ -131,7 +159,10 @@ export class DocumentsService {
       id,
       societyId: society.id,
       documentType: input.documentType,
-      title: input.title,
+      // Each year's audit report keeps its own version history.
+      title: isAuditReport
+        ? `Audit report ${financialYearOf(input.financialYear!).label}`
+        : input.title,
       fileName: input.fileName,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
@@ -143,6 +174,8 @@ export class DocumentsService {
       accessLevel: accessLevelFor(input.documentType),
       uploadedById: principal.id,
       uploadedByName: principal.displayName,
+      uploadedByRole: principal.roles[0] ?? null,
+      financialYear: isAuditReport ? input.financialYear! : null,
     });
     const upload = await this.withStorage(() =>
       this.storage.createUploadRequest({
@@ -176,7 +209,11 @@ export class DocumentsService {
       );
     }
 
-    const updated = await this.repository.markUploaded(record.id, new Date());
+    const updated = await this.repository.markUploaded(record.id, new Date(), {
+      id: principal.id,
+      displayName: principal.displayName,
+      role: principal.roles[0] ?? null,
+    });
     await this.notifyReviewers(updated);
     return toDocumentResponse(updated);
   }

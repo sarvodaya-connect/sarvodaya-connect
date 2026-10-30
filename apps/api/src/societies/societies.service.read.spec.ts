@@ -54,6 +54,12 @@ describe('SocietiesService read behaviour', () => {
   const repository = {
     list: vi.fn(),
     findById: vi.fn(),
+    findRecordContext: vi.fn().mockResolvedValue({
+      summary: null,
+      auditReport: null,
+      staff: [],
+      lastChange: null,
+    }),
   };
 
   beforeEach(() => {

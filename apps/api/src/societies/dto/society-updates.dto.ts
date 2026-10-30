@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -8,6 +8,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsIn,
   IsISO8601,
   IsLatitude,
   IsLongitude,
@@ -15,11 +16,18 @@ import {
   IsString,
   Max,
   MaxLength,
+  Matches,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { MembershipCategory } from '../../generated/prisma/client.js';
+
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
+export const SOCIETY_GRADE_VALUES = ['A', 'B', 'C'] as const;
+export type SocietyGradeValue = (typeof SOCIETY_GRADE_VALUES)[number];
 
 export class PrimaryContactDto {
   @IsString() @MinLength(2) @MaxLength(150) fullName!: string;
@@ -42,6 +50,38 @@ export class SocietyProfileUpdateDto {
   @ValidateNested()
   @Type(() => PrimaryContactDto)
   primaryContact?: PrimaryContactDto;
+  // SC-65: V4 society record fields.
+  @IsOptional() @IsInt() @Min(0) @Max(1_000_000) memberCount?: number;
+  /** A 10-digit number such as 037 000 0000, or +94 and 9 digits. Empty removes it. */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(30)
+  landline?: string;
+  /** Empty removes it. Information only: no sales, stock or accounts. */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(1000)
+  businessDescription?: string;
+  /** HQ only. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsString()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{2,19}$/, {
+    message: 'societyCode must look like S-104233',
+  })
+  societyCode?: string;
+  /** HQ only, with a reason. */
+  @IsOptional() @IsIn(SOCIETY_GRADE_VALUES) grade?: SocietyGradeValue;
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  gradeReason?: string;
 }
 
 export class CouncilMemberDto {
