@@ -309,6 +309,37 @@ describe('SocietyRecordService', () => {
       );
     });
 
+    it('rejects with HQ’s reason and tells the requester', async () => {
+      repository.decideGradeRequest.mockResolvedValue(
+        pendingRequest({
+          status: 'REJECTED',
+          decidedByName: hq.displayName,
+          decidedAt: new Date('2026-10-26T05:00:00.000Z'),
+          decisionComment: 'Audit report is still missing.',
+        }),
+      );
+      const result = await service.decideGradeRequest(
+        SUNRISE.id,
+        REQUEST_ID,
+        { decision: 'REJECT', comment: 'Audit report is still missing.' },
+        hq,
+      );
+      expect(repository.decideGradeRequest).toHaveBeenCalledWith(
+        SUNRISE,
+        expect.objectContaining({ id: REQUEST_ID }),
+        { approve: false, comment: 'Audit report is still missing.' },
+        hq,
+      );
+      expect(result).toMatchObject({
+        status: 'REJECTED',
+        decisionComment: 'Audit report is still missing.',
+      });
+      expect(notifications.notifyUsers).toHaveBeenCalledWith(
+        [spc.id],
+        expect.objectContaining({ category: 'RETURNED' }),
+      );
+    });
+
     it('refuses requests from another society or already decided', async () => {
       repository.findGradeRequest.mockResolvedValueOnce(
         pendingRequest({ societyId: LOTUS_ID }),

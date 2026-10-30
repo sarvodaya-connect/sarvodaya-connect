@@ -413,6 +413,49 @@ describe('SC-65 society record, yearly summary and grade requests (PostgreSQL)',
       status: 'APPROVED',
       decisionComment: expect.stringContaining('Grade changed directly by HQ'),
     });
+
+    // Rejecting keeps the grade, needs a reason and is shown in the history.
+    const third = await api(tokens.so!.token)
+      .post(`/societies/${societyId}/grade-requests`, { toGrade: 'B', reason })
+      .expect(201);
+    const rejectThird = (token: string, body: object) =>
+      api(token).post(
+        `/societies/${societyId}/grade-requests/${third.body.id}/decision`,
+        body,
+      );
+    await rejectThird(tokens.ddm!.token, {
+      decision: 'REJECT',
+      comment: 'Not yet',
+    }).expect(403);
+    await rejectThird(hqToken, { decision: 'REJECT', comment: '   ' }).expect(
+      400,
+    );
+    const rejected = await rejectThird(hqToken, {
+      decision: 'REJECT',
+      comment: 'Grade A needs a full year of reports.',
+    }).expect(200);
+    expect(rejected.body).toMatchObject({
+      status: 'REJECTED',
+      decidedBy: { displayName: 'Fictional HQ' },
+      decidedAt: expect.any(String),
+      decisionComment: 'Grade A needs a full year of reports.',
+    });
+    await rejectThird(hqToken, { decision: 'APPROVE' }).expect(409);
+    const unchanged = await api(tokens.so!.token)
+      .get(`/societies/${societyId}`)
+      .expect(200);
+    expect(unchanged.body).toMatchObject({
+      grade: 'A',
+      openGradeRequest: null,
+    });
+    const gradeHistory = await api(tokens.so!.token)
+      .get(`/societies/${societyId}/history?category=GRADE`)
+      .expect(200);
+    expect(gradeHistory.body.data[0]).toMatchObject({
+      category: 'GRADE',
+      summary: expect.stringContaining('rejected by HQ'),
+      actor: { displayName: 'Fictional HQ' },
+    });
   });
 
   it('shows every change with who made it, filtered by tab, without NIC reveals', async () => {

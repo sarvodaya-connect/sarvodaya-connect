@@ -48,6 +48,31 @@ export async function updateSocietyRecord(
   redirect(`/societies/${id}?saved=1`);
 }
 
+/**
+ * D05: HQ approves or rejects a waiting grade-change request. The API checks
+ * that the user is HQ, needs a reason to reject and refuses a second decision.
+ */
+export async function decideGradeRequest(
+  societyId: string,
+  requestId: string,
+  decision: "APPROVE" | "REJECT",
+  comment: string,
+): Promise<{ error?: string }> {
+  await getCurrentViewer();
+  const text = comment.trim();
+  if (decision === "REJECT" && !text) return { error: "Enter a reason for rejecting. The requester will see it." };
+  try {
+    await platformApi(`/societies/${societyId}/grade-requests/${requestId}/decision`, {
+      method: "POST",
+      body: JSON.stringify(text ? { decision, comment: text } : { decision }),
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The decision could not be saved. Try again." };
+  }
+  revalidatePath(`/societies/${societyId}`, "layout");
+  redirect(`/societies/${societyId}/grade?decided=${decision === "APPROVE" ? "approved" : "rejected"}`);
+}
+
 /** D05x: shows one member's full NIC. The API checks scope and records the reveal. */
 export async function revealMemberNic(societyId: string, memberId: string): Promise<{ nic?: string; error?: string }> {
   await getCurrentViewer();

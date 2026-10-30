@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { GradeChangeRequest, SocietyHistoryCategory, SocietyHistoryEvent } from "@sarvodaya-connect/api-contracts";
 
 import { Pill } from "../ui/pill";
+import { type DecideGradeRequest, GradeDecisionActions } from "./grade-decision";
 import type { RecordDocument } from "@/lib/society-record-api";
 import { actorLabel, formatDate, ROLE_LABELS } from "@/lib/society-record-format";
 
@@ -68,10 +69,32 @@ const STATUS: Record<GradeChangeRequest["status"], { label: string; tone: "fast-
   REJECTED: { label: "Rejected", tone: "overdue" },
 };
 
-/** Grade tab: the open request and earlier requests with each decision. */
-export function GradeRequestList({ requests }: { requests: GradeChangeRequest[] }) {
+const DECIDED: Record<string, string> = {
+  approved: "Request approved. The society's grade has been changed.",
+  rejected: "Request rejected. The grade is unchanged and the requester has been told why.",
+};
+
+/**
+ * Grade tab: the open request and earlier requests with each decision.
+ * `decide` is passed only for HQ, who alone can approve or reject.
+ */
+export function GradeRequestList({
+  decide,
+  decided,
+  requests,
+}: {
+  decide?: DecideGradeRequest;
+  decided?: string;
+  requests: GradeChangeRequest[];
+}) {
   if (requests.length === 0) return <Empty>No grade-change requests have been sent for this society.</Empty>;
   return (
+    <>
+    {decided && DECIDED[decided] && (
+      <p className="mt-4 rounded-lg border border-[var(--success-ring)] bg-success-bg px-3 py-2 text-[11px] font-semibold text-success-text" role="status">
+        {DECIDED[decided]}
+      </p>
+    )}
     <ul className="mt-4 space-y-3">
       {requests.map((request) => (
         <li className="rounded-card border border-line bg-surface px-4 py-3" key={request.id}>
@@ -92,9 +115,11 @@ export function GradeRequestList({ requests }: { requests: GradeChangeRequest[] 
               {request.decisionComment && ` · “${request.decisionComment}”`}
             </p>
           )}
+          {decide && request.status === "PENDING" && <GradeDecisionActions decide={decide} request={request} />}
         </li>
       ))}
     </ul>
+    </>
   );
 }
 

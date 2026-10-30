@@ -9,7 +9,7 @@ import { formatLkr, isSocietyRecordId, waitingLabel } from "@/lib/society-record
 import { AnnualSummaryCards } from "./annual-summary-cards";
 import { EditSocietyPanel } from "./edit-society-panel";
 import { ExcoTable } from "./exco-table";
-import { HistoryList } from "./record-lists";
+import { GradeRequestList, HistoryList } from "./record-lists";
 import { RecordOverview } from "./record-overview";
 import { WorkPlanOverview } from "./work-plan-overview";
 
@@ -238,6 +238,66 @@ describe("society history", () => {
     );
     expect(screen.getByText("N. Wijesinghe (Society Officer) · 22 Oct 2026")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Annual summary" })).toHaveAttribute("aria-current", "page");
+  });
+});
+
+describe("D05 HQ grade-change decisions", () => {
+  const pending = record.openGradeRequest!;
+  const decided = {
+    ...pending,
+    id: "older",
+    toGrade: "C" as const,
+    status: "REJECTED" as const,
+    decidedBy: { displayName: "D. Gunawardena", role: "HQ_ADMIN" as const },
+    decidedAt: "2026-09-02T04:00:00.000Z",
+    decisionComment: "Audit report is still missing.",
+  };
+
+  it("does not offer decisions to anyone but HQ, or on decided requests", () => {
+    render(<GradeRequestList requests={[pending, decided]} />);
+    expect(screen.queryByRole("button", { name: /Approve/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.tagName === "P" && /^Rejected by D\. Gunawardena \(HQ\) · .*2026 · “Audit report is still missing\.”$/.test(element.textContent ?? "")),
+    ).toBeInTheDocument();
+  });
+
+  it("lets HQ approve the waiting request, with an optional comment", async () => {
+    const decide = vi.fn().mockResolvedValue({});
+    render(<GradeRequestList decide={decide} requests={[pending, decided]} />);
+    expect(screen.getAllByRole("button", { name: "Reject" })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Approve B → A" }));
+    expect(decide).toHaveBeenCalledWith("request", "APPROVE", "");
+  });
+
+  it("needs a reason before HQ can reject", async () => {
+    const decide = vi.fn().mockResolvedValue({});
+    render(<GradeRequestList decide={decide} requests={[pending]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Reject" }));
+    expect(decide).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: /HQ comment/ })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter a reason for rejecting. The requester will see it.")).toBeInTheDocument();
+    await userEvent.type(screen.getByRole("textbox", { name: /HQ comment/ }), "Grade A needs a full year of reports.");
+    await userEvent.click(screen.getByRole("button", { name: "Reject" }));
+    expect(decide).toHaveBeenCalledWith("request", "REJECT", "Grade A needs a full year of reports.");
+  });
+
+  it("disables both actions while saving and shows API errors such as an already-decided request", async () => {
+    let finish: (value: { error?: string }) => void = () => {};
+    const decide = vi.fn(() => new Promise<{ error?: string }>((resolve) => (finish = resolve)));
+    render(<GradeRequestList decide={decide} requests={[pending]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Approve B → A" }));
+    expect(screen.getByRole("button", { name: "Approving…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
+    await act(async () => finish({ error: "This grade-change request has already been decided" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("This grade-change request has already been decided");
+    expect(screen.getByRole("button", { name: "Approve B → A" })).toBeEnabled();
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirms the decision after it is saved", () => {
+    render(<GradeRequestList decided="rejected" requests={[decided]} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Request rejected. The grade is unchanged");
   });
 });
 
