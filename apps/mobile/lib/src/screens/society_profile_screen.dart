@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../models/society.dart';
-import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/council_widgets.dart';
@@ -130,7 +129,7 @@ class _CouncilTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    final canEdit = store.activeRole == UserRole.societyOfficer;
+    final canEdit = (store.user?.canEditSociety(store.society.id) ?? false);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -165,7 +164,7 @@ class _ProfileContent extends StatelessWidget {
     final approved = store.approvedProfile;
     final draft = store.profileDraft;
     final pending = store.pendingProfileSubmission;
-    final canEdit = store.activeRole == UserRole.societyOfficer;
+    final canEdit = (store.user?.canEditSociety(store.society.id) ?? false);
     final draftChanged = draft == null
         ? const <String>{}
         : draft.values.changedFieldsComparedTo(approved).toSet();

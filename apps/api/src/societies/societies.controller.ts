@@ -24,12 +24,16 @@ import {
 import { SocietiesService } from './societies.service.js';
 
 @Controller('societies')
+@UseGuards(AuthenticationGuard, RolesGuard)
 export class SocietiesController {
   constructor(private readonly service: SocietiesService) {}
 
   @Get()
-  list(@Query() query: SocietyQueryDto) {
-    return this.service.list(query);
+  list(
+    @Query() query: SocietyQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.service.list(query, principal);
   }
 
   @Get('membership')
@@ -43,7 +47,12 @@ export class SocietiesController {
 
   @Patch(':id/profile')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles(
+    'SOCIETY_OFFICER',
+    'PROGRAMME_COORDINATOR',
+    'DEPUTY_DISTRICT_MANAGER',
+    'HQ_ADMIN',
+  )
   updateProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -54,7 +63,12 @@ export class SocietiesController {
 
   @Put(':id/profile')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles(
+    'SOCIETY_OFFICER',
+    'PROGRAMME_COORDINATOR',
+    'DEPUTY_DISTRICT_MANAGER',
+    'HQ_ADMIN',
+  )
   createOrReplaceProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyProfileUpdateDto,
@@ -65,7 +79,12 @@ export class SocietiesController {
 
   @Put(':id/council')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles(
+    'SOCIETY_OFFICER',
+    'PROGRAMME_COORDINATOR',
+    'DEPUTY_DISTRICT_MANAGER',
+    'HQ_ADMIN',
+  )
   updateCouncil(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyCouncilUpdateDto,
@@ -76,7 +95,12 @@ export class SocietiesController {
 
   @Put(':id/membership')
   @UseGuards(AuthenticationGuard, RolesGuard)
-  @RequireRoles('SOCIETY_OFFICER', 'HQ_ADMIN')
+  @RequireRoles(
+    'SOCIETY_OFFICER',
+    'PROGRAMME_COORDINATOR',
+    'DEPUTY_DISTRICT_MANAGER',
+    'HQ_ADMIN',
+  )
   updateMembership(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() input: SocietyMembershipUpdateDto,
@@ -86,7 +110,10 @@ export class SocietiesController {
   }
 
   @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.service.getById(id);
+  getById(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.service.getById(id, principal);
   }
 }

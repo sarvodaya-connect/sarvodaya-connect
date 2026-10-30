@@ -69,6 +69,10 @@ export class DocumentsRepository {
       ...(scope.kind === 'societies'
         ? { societyId: { in: scope.societyIds } }
         : {}),
+      ...(scope.kind === 'mixed' ? { OR: [
+        { societyId: { in: scope.societyIds } },
+        { society: { districtId: { in: scope.districtIds } } },
+      ] } : {}),
       ...(filters.societyId ? { AND: [{ societyId: filters.societyId }] } : {}),
       society: {
         ...(scope.kind === 'districts'

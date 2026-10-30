@@ -1,12 +1,26 @@
-import { cookies } from "next/headers";
-
-import { DEMO_VIEWER_COOKIE, getViewer, type DemoViewer } from "./access";
-
-/**
- * The demonstration user viewing the dashboard, chosen with "Viewing as" in
- * the header. Replaced by the signed-in Amazon Cognito user later.
- */
+import { redirect } from "next/navigation";
+import { demoViewers, type DemoViewer } from "./access";
+import { isDemoMode, platformApi } from "./platform-api";
 export async function getCurrentViewer(): Promise<DemoViewer> {
-  const cookieStore = await cookies();
-  return getViewer(cookieStore.get(DEMO_VIEWER_COOKIE)?.value);
+  if (isDemoMode()) return demoViewers[0]!;
+  let user;
+  try {
+    user = await platformApi("/identity/me");
+  } catch {
+    redirect("/");
+  }
+  if (!user.roles.includes("HQ_ADMIN")) redirect("/?access=mobile");
+  return {
+    id: user.id,
+    displayName: user.displayName,
+    initials: user.displayName
+      .split(" ")
+      .map((s: string) => s[0])
+      .slice(0, 2)
+      .join(""),
+    role: "HQ_ADMIN",
+    roleLabel: "HQ",
+    scopeLabel: "National",
+    districtIds: "ALL",
+  };
 }

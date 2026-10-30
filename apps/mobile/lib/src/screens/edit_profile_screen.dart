@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../models/profile_draft.dart';
 import '../models/society.dart';
-import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
@@ -206,7 +205,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
-    if (store.activeRole != UserRole.societyOfficer) {
+    if (!(store.user?.canEditSociety(store.society.id) ?? false)) {
       return Scaffold(
         appBar: AppBar(title: const Text('Society profile')),
         body: const Center(

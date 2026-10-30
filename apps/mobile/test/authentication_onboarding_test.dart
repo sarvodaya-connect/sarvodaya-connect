@@ -33,17 +33,10 @@ void main() {
     expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
 
     await signInWithDemoAccount(tester);
-    expect(find.text('Is your society?'), findsOneWidget);
+    expect(find.text('Your account is ready'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Yes, continue'));
-    await tester.pumpAndSettle();
     expect(find.text('Society Officer'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Yes, continue'));
-    await tester.pumpAndSettle();
-
-    final finishButton = find.widgetWithText(FilledButton, 'Finish setup');
-    await tester.tap(finishButton);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue to home'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Nimali'), findsOneWidget);
     expect(find.text('Profile completeness'), findsOneWidget);

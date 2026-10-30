@@ -32,6 +32,7 @@ model District {
   id                 String              @id @default(uuid()) @db.Uuid
   code               String              @unique @db.VarChar(10)
   nameEn             String              @unique @map("name_en") @db.VarChar(100)
+  accounts           PlatformAccount[]
   societies          Society[]
   emergencyIncidents EmergencyIncident[]
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -95,6 +96,8 @@ model SocietyCouncilMember {
   society          Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
   seatNumber       Int                @map("seat_number")
   fullName         String             @map("full_name") @db.VarChar(150)
+  nicCiphertext    String?            @map("nic_ciphertext")
+  nicLastFour      String?            @map("nic_last_four") @db.VarChar(4)
   position         String             @db.VarChar(100)
   seatType         MembershipCategory @map("seat_type")
   phone            String?            @db.VarChar(30)
@@ -363,4 +366,77 @@ model EmergencySituationReport {
   @@unique([createdById, clientMutationId], map: "emergency_situation_reports_created_by_id_client_mutation_i_key")
   @@index([incidentId, status, createdAt])
   @@map("emergency_situation_reports")
+}
+
+// V4 identity and access. Credentials and invitation tokens are never stored in plaintext.
+model PlatformAccount {
+  id String @id @default(uuid()) @db.Uuid
+  username String @unique @db.VarChar(100)
+  displayName String @map("display_name") @db.VarChar(150)
+  phone String @db.VarChar(30)
+  email String? @db.VarChar(254)
+  role String @db.VarChar(40)
+  districtId String? @map("district_id") @db.Uuid
+  district District? @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  societyIds String[] @default([]) @map("society_ids") @db.Uuid
+  status String @default("PENDING") @db.VarChar(20)
+  passwordHash String? @map("password_hash")
+  providerSubject String? @unique @map("provider_subject")
+  invitations AccountInvitation[]
+  sessions AccountSession[]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([districtId, role])
+  @@map("platform_accounts")
+}
+
+model AccountInvitation {
+  id String @id @default(uuid()) @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  account PlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash String @unique @map("token_hash")
+  method String @db.VarChar(25)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+  attempts Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@map("account_invitations")
+}
+
+model AccountSession {
+  id String @id @default(uuid()) @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  account PlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash String @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  @@index([accountId])
+  @@map("account_sessions")
+}
+
+model DistrictAccessGrant {
+  id String @id @default(uuid()) @db.Uuid
+  districtId String @map("district_id") @db.Uuid
+  deputyId String @map("deputy_id") @db.Uuid
+  grantedById String @map("granted_by_id") @db.VarChar(64)
+  startsAt DateTime @map("starts_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  reason String @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([deputyId, expiresAt])
+  @@map("district_access_grants")
+}
+
+model PlatformAuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @map("actor_id") @db.VarChar(64)
+  action String @db.VarChar(60)
+  targetId String @map("target_id") @db.VarChar(64)
+  societyId String? @map("society_id") @db.Uuid
+  districtId String? @map("district_id") @db.Uuid
+  detail String @default("") @db.VarChar(2000)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([createdAt])
+  @@index([societyId, createdAt])
+  @@map("platform_audit_events")
 }

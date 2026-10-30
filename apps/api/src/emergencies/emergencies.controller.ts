@@ -18,7 +18,7 @@ import { EmergenciesService } from './emergencies.service.js';
 
 @Controller('emergencies')
 @UseGuards(AuthenticationGuard, RolesGuard)
-@RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'DISTRICT_MANAGER', 'HQ_ADMIN')
+@RequireRoles('SOCIETY_OFFICER', 'PROGRAMME_COORDINATOR', 'DEPUTY_DISTRICT_MANAGER', 'DISTRICT_MANAGER', 'HQ_ADMIN')
 export class EmergenciesController {
   constructor(private readonly service: EmergenciesService) {}
 

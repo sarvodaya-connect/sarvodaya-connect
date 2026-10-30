@@ -35,43 +35,30 @@ void main() {
     expect(find.text('மேலும்'), findsOneWidget);
   });
 
-  testWidgets('District Manager receives district-only home and work areas', (
-    tester,
-  ) async {
-    final store = testStore();
-    store.switchDemoRole(UserRole.districtManager);
-    await pumpApp(tester, store: store);
-
-    expect(find.textContaining('Kurunegala District'), findsOneWidget);
-    expect(find.text('Pending reviews'), findsOneWidget);
-    expect(find.text('Reviews'), findsOneWidget);
-    expect(find.text('Submit'), findsNothing);
-
-    await tester.tap(find.text('Reviews'));
-    await tester.pumpAndSettle();
-    expect(find.text('Review queue'), findsOneWidget);
-    expect(find.text('Council update · waiting 2 days'), findsOneWidget);
-  });
-
-  testWidgets('HQ Administrator receives national home and reports', (
-    tester,
-  ) async {
-    final store = testStore();
-    store.switchDemoRole(UserRole.hqAdmin);
-    await pumpApp(tester, store: store);
-
-    expect(
-      find.text('Sarvodaya societies across Sri Lanka'),
-      findsOneWidget,
+  for (final role in [
+    UserRole.programmeCoordinator,
+    UserRole.deputyDistrictManager,
+    UserRole.districtManager,
+    UserRole.hqAdmin,
+  ]) {
+    testWidgets(
+      '${role.label} receives the V4 role home and scoped directory',
+      (tester) async {
+        final store = testStore()..switchDemoRole(role);
+        await pumpApp(tester, store: store);
+        expect(find.text('${role.label} home'), findsOneWidget);
+        expect(find.text('Societies'), findsOneWidget);
+        expect(find.text('Submit'), findsNothing);
+        expect(find.text('Reviews'), findsNothing);
+        if (role == UserRole.districtManager) {
+          expect(find.text('Access'), findsOneWidget);
+        }
+        await tester.tap(find.text('Societies'));
+        await tester.pumpAndSettle();
+        expect(find.text('My societies'), findsOneWidget);
+      },
     );
-    expect(find.text('Registered societies'), findsOneWidget);
-    expect(find.text('Reports'), findsOneWidget);
-    expect(find.text('Reviews'), findsNothing);
-
-    await tester.tap(find.text('Reports'));
-    await tester.pumpAndSettle();
-    expect(find.text('Activities by sector'), findsOneWidget);
-  });
+  }
 
   testWidgets('M17 More changes language and signs out', (tester) async {
     final store = testStore();
@@ -80,7 +67,7 @@ void main() {
 
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
-    expect(find.text('Waiting to send (0)'), findsOneWidget);
+    expect(find.text('Waiting to send (0)'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
 
     await tester.tap(find.text('Sign out'));
@@ -94,7 +81,7 @@ void main() {
     store.setDemoOptions(emptyRecords: true);
     await pumpApp(tester, store: store);
 
-    expect(find.text('No national records yet'), findsOneWidget);
+    expect(find.text('No records yet'), findsOneWidget);
   });
 
   testWidgets('role home exposes the M26 error state', (tester) async {

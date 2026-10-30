@@ -1,3 +1,5 @@
+import { findDemoPrincipal } from '../auth/demo-principals.js';
+const hq = findDemoPrincipal('demo-hq-admin')!;
 import { ServiceUnavailableException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,7 +35,7 @@ describe('SocietiesRepository', () => {
       search: '  sunrise  ',
       districtId: '29000000-0000-4000-8000-000000000001',
       status: 'ACTIVE',
-    });
+    }, hq);
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({

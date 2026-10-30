@@ -8,16 +8,19 @@ type BrandProps = {
 };
 
 export function Brand({ compact = false, inverse = false, masthead = false, sidebar = false }: BrandProps) {
+  const logoSrc = inverse
+    ? "/brand/sarvodaya-connect-logo-white.png"
+    : "/brand/sarvodaya-connect-logo.jpg";
   return (
     <div className={sidebar ? "flex w-full justify-center" : "flex items-center gap-3"}>
-      <span className={`relative block shrink-0 overflow-hidden rounded-md bg-white ${sidebar ? "h-[72px] w-full max-w-[190px]" : masthead ? "h-14 w-[148px] md:h-[68px] md:w-[178px]" : "h-11 w-[116px]"}`}>
+      <span className={`relative block shrink-0 overflow-hidden rounded-md ${inverse ? "bg-transparent" : "bg-white"} ${sidebar ? "h-[72px] w-full max-w-[190px]" : masthead ? "h-14 w-[148px] md:h-[68px] md:w-[178px]" : "h-11 w-[116px]"}`}>
         <Image
           alt="Sarvodaya Connect"
-          className="object-cover"
+          className={inverse ? "object-contain" : "object-cover"}
           fill
           priority
           sizes={sidebar ? "208px" : masthead ? "178px" : "116px"}
-          src="/brand/sarvodaya-connect-logo.jpg"
+          src={logoSrc}
         />
       </span>
       {!compact && !sidebar && (

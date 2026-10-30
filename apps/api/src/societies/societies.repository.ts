@@ -26,8 +26,9 @@ const detailInclude = {
 export class SocietiesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: SocietyQueryDto) {
+  async list(query: SocietyQueryDto, principal: Principal) {
     const where: Prisma.SocietyWhereInput = {
+      AND: [societyWhereForPrincipal(principal)],
       ...(query.districtId ? { districtId: query.districtId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search?.trim()
@@ -78,7 +79,11 @@ export class SocietiesRepository {
     );
   }
 
-  updateProfile(id: string, input: SocietyProfileUpdateDto) {
+  updateProfile(
+    id: string,
+    input: SocietyProfileUpdateDto,
+    principal: Principal,
+  ) {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         const { primaryContact, establishedOn } = input;
@@ -125,17 +130,50 @@ export class SocietiesRepository {
             });
           }
         }
+        await tx.platformAuditEvent.create({
+          data: {
+            actorId: principal.id,
+            action: 'SOCIETY_PROFILE_UPDATED',
+            targetId: id,
+            societyId: id,
+            districtId: society.districtId,
+            detail: `Fields: ${Object.keys(input)
+              .filter((key) => input[key as keyof typeof input] !== undefined)
+              .join(', ')}`,
+          },
+        });
         return society;
       }),
     );
   }
 
-  replaceCouncil(id: string, input: SocietyCouncilUpdateDto) {
+  replaceCouncil(
+    id: string,
+    input: SocietyCouncilUpdateDto,
+    principal: Principal,
+  ) {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
+        const previous = await tx.societyCouncilMember.findMany({
+          where: { societyId: id },
+        });
         await tx.societyCouncilMember.deleteMany({ where: { societyId: id } });
         await tx.societyCouncilMember.createMany({
           data: input.members.map((member) => ({
+            ...(() => {
+              const before = previous.find(
+                (p) =>
+                  p.seatNumber === member.seatNumber &&
+                  p.fullName === member.fullName,
+              );
+              return before
+                ? {
+                    id: before.id,
+                    nicCiphertext: before.nicCiphertext,
+                    nicLastFour: before.nicLastFour,
+                  }
+                : {};
+            })(),
             societyId: id,
             seatNumber: member.seatNumber,
             fullName: member.fullName,
@@ -154,6 +192,18 @@ export class SocietiesRepository {
               : {}),
           })),
         });
+        const society = await tx.society.findUniqueOrThrow({ where: { id } });
+        await tx.platformAuditEvent.create({
+          data: {
+            actorId: principal.id,
+            action: 'SOCIETY_COUNCIL_UPDATED',
+            targetId: id,
+            societyId: id,
+            districtId: society.districtId,
+            detail:
+              'Council updated; NIC retained only for unchanged member identities',
+          },
+        });
         return tx.societyCouncilMember.findMany({
           where: { societyId: id },
           orderBy: { seatNumber: 'asc' },
@@ -162,7 +212,11 @@ export class SocietiesRepository {
     );
   }
 
-  replaceMembership(id: string, input: SocietyMembershipUpdateDto) {
+  replaceMembership(
+    id: string,
+    input: SocietyMembershipUpdateDto,
+    principal: Principal,
+  ) {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         await tx.societyMembershipCount.deleteMany({
@@ -176,6 +230,17 @@ export class SocietiesRepository {
             female: category.female,
             male: category.male,
           })),
+        });
+        const society = await tx.society.findUniqueOrThrow({ where: { id } });
+        await tx.platformAuditEvent.create({
+          data: {
+            actorId: principal.id,
+            action: 'SOCIETY_MEMBERSHIP_UPDATED',
+            targetId: id,
+            societyId: id,
+            districtId: society.districtId,
+            detail: `Year ${input.year}`,
+          },
         });
         return tx.societyMembershipCount.findMany({
           where: { societyId: id, year: input.year },

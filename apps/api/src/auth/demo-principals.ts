@@ -46,6 +46,13 @@ export const DEMO_PRINCIPALS: readonly Principal[] = [
     displayName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
     roles: ['PROGRAMME_COORDINATOR'],
     districtIds: [],
+    societyIds: ['29000000-0000-4000-8000-000000000101', '29000000-0000-4000-8000-000000000102'],
+  },
+  {
+    id: 'demo-deputy-district-manager',
+    displayName: 'Demo Deputy District Manager (Fictional North District)',
+    roles: ['DEPUTY_DISTRICT_MANAGER'],
+    districtIds: [],
     societyIds: ['29000000-0000-4000-8000-000000000101'],
   },
 ];

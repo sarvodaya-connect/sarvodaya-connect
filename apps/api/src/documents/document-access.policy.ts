@@ -1,4 +1,8 @@
-import { hasRole, type Principal } from '../auth/principal.js';
+import {
+  hasRole,
+  readableDistrictIds,
+  type Principal,
+} from '../auth/principal.js';
 
 /**
  * Provisional role-based access rules for society documents:
@@ -21,6 +25,12 @@ export interface SocietyScope {
 export type DocumentScopeFilter =
   | { kind: 'all'; includeRestricted: boolean }
   | { kind: 'districts'; districtIds: string[]; includeRestricted: boolean }
+  | {
+      kind: 'mixed';
+      districtIds: string[];
+      societyIds: string[];
+      includeRestricted: boolean;
+    }
   | { kind: 'societies'; societyIds: string[]; includeRestricted: boolean };
 
 export function isReviewer(principal: Principal): boolean {
@@ -34,13 +44,11 @@ export function canAccessSociety(
   society: SocietyScope,
 ): boolean {
   if (hasRole(principal, 'HQ_ADMIN')) return true;
+  if (readableDistrictIds(principal).includes(society.districtId)) return true;
   if (
-    hasRole(principal, 'DISTRICT_MANAGER') &&
-    principal.districtIds.includes(society.districtId)
-  )
-    return true;
-  if (
-    hasRole(principal, 'SOCIETY_OFFICER') &&
+    (hasRole(principal, 'SOCIETY_OFFICER') ||
+      hasRole(principal, 'PROGRAMME_COORDINATOR') ||
+      hasRole(principal, 'DEPUTY_DISTRICT_MANAGER')) &&
     principal.societyIds.includes(society.societyId)
   )
     return true;
@@ -52,6 +60,13 @@ export function canCreateDocument(
   principal: Principal,
   society: SocietyScope,
 ): boolean {
+  if (
+    hasRole(principal, 'DEPUTY_DISTRICT_MANAGER') &&
+    !hasRole(principal, 'HQ_ADMIN') &&
+    !hasRole(principal, 'DISTRICT_MANAGER') &&
+    !principal.societyIds.includes(society.societyId)
+  )
+    return false;
   return canAccessSociety(principal, society);
 }
 
@@ -66,10 +81,19 @@ export function canViewDocument(
 export function documentScopeFilter(principal: Principal): DocumentScopeFilter {
   const includeRestricted = isReviewer(principal);
   if (hasRole(principal, 'HQ_ADMIN')) return { kind: 'all', includeRestricted };
-  if (hasRole(principal, 'DISTRICT_MANAGER')) {
+  const districtIds = readableDistrictIds(principal);
+  if (districtIds.length && principal.societyIds.length) {
+    return {
+      kind: 'mixed',
+      districtIds,
+      societyIds: principal.societyIds,
+      includeRestricted,
+    };
+  }
+  if (districtIds.length && !principal.societyIds.length) {
     return {
       kind: 'districts',
-      districtIds: principal.districtIds,
+      districtIds,
       includeRestricted,
     };
   }

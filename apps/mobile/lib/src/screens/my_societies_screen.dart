@@ -1,3 +1,5 @@
+import 'live_societies_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import '../data/demo_data.dart';
@@ -23,6 +25,7 @@ class _MySocietiesScreenState extends State<MySocietiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!DemoStore.demoMode) return const LiveSocietiesScreen();
     final store = DemoScope.of(context);
     final user = store.user;
     final role = store.activeRole;
@@ -110,13 +113,7 @@ List<SocietyDetails> societiesVisibleToRole(
 ) {
   if (!user.roles.contains(role)) return const [];
   return societies.where((society) {
-    return switch (role) {
-      UserRole.societyOfficer => user.societyIds.contains(society.id),
-      UserRole.districtManager => user.districtIds.contains(
-        society.district.id,
-      ),
-      UserRole.hqAdmin => true,
-    };
+    return user.canViewSociety(society.id, society.district.id, DateTime.now());
   }).toList();
 }
 
