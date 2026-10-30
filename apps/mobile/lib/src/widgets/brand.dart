@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 /// Client-approved Sarvodaya Connect brand mark.
 class BrandMark extends StatelessWidget {
-  const BrandMark({super.key, this.compact = false});
+  const BrandMark({super.key, this.compact = false, this.width});
 
   final bool compact;
+
+  /// Overrides the compact/full width, for example in the v4 home header.
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +23,7 @@ class BrandMark extends StatelessWidget {
           alignment: Alignment.center,
           child: Image.asset(
             'assets/branding/sarvodaya_connect_logo.jpg',
-            width: compact ? 150 : 180,
+            width: width ?? (compact ? 150 : 180),
             fit: BoxFit.contain,
           ),
         ),

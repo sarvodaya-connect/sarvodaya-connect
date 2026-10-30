@@ -56,7 +56,7 @@ function headingFor(pathname: string, viewer: DemoViewer): { title: string; subt
     : pathname.startsWith("/states")
       ? "Page states"
       : /^\/societies\/[^/]+/.test(pathname)
-        ? "Society Profile"
+        ? "Society record"
         : pathname.startsWith("/societies")
         ? "Societies"
         : pathname.startsWith("/membership")

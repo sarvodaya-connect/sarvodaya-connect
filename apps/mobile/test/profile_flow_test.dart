@@ -101,7 +101,10 @@ void main() {
 
     // Changes Requested: only the returned field is editable.
     await tapVisible(tester, find.text('Open returned submission'));
-    expect(find.bySemanticsLabel(RegExp('No Correction Required · read-only')), findsWidgets);
+    expect(
+      find.bySemanticsLabel(RegExp('No Correction Required · read-only')),
+      findsWidgets,
+    );
     await tester.tap(
       find.widgetWithText(TextFormField, 'Corrected treasurer start date *'),
     );

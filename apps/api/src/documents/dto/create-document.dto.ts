@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -52,4 +53,11 @@ export class CreateDocumentDto {
   @Min(1)
   @Max(MAX_DOCUMENT_BYTES)
   sizeBytes: number;
+
+  /** SC-65: required for audit reports. 2025 means FY 2025/26. */
+  @IsOptional()
+  @IsInt()
+  @Min(2000)
+  @Max(2200)
+  financialYear?: number;
 }

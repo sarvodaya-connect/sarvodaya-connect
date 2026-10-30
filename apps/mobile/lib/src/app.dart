@@ -13,6 +13,7 @@ import 'screens/more_screen.dart';
 import 'screens/my_societies_screen.dart';
 import 'screens/role_workspace_screen.dart';
 import 'screens/sign_in_screen.dart';
+import 'screens/society_officer_home_screen.dart';
 import 'screens/society_profile_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/tracker_screen.dart';
@@ -104,10 +105,21 @@ class HomeShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final role = store.activeRole;
+    final user = store.user;
+    // A Society Officer with one society gets the Prototype v4 home in API
+    // mode; demo mode keeps the v3 journey.
+    final officerSocietyId =
+        !DemoStore.demoMode &&
+            role == UserRole.societyOfficer &&
+            user != null &&
+            user.societyIds.length == 1
+        ? user.societyIds.single
+        : null;
     final configuration = _configuration(
       role,
       store.selectedLanguage,
       store.selectedTab,
+      officerSocietyId,
     );
     return Scaffold(
       body: IndexedStack(
@@ -115,6 +127,12 @@ class HomeShell extends StatelessWidget {
         children: configuration.pages,
       ),
       bottomNavigationBar: NavigationBar(
+        // The v4 officer bar shows icons only; labels stay as tooltips and
+        // screen-reader names.
+        labelBehavior: officerSocietyId == null
+            ? null
+            : NavigationDestinationLabelBehavior.alwaysHide,
+        height: officerSocietyId == null ? null : 60,
         selectedIndex: store.selectedTab,
         onDestinationSelected: store.selectTab,
         destinations: configuration.destinations,
@@ -126,12 +144,61 @@ class HomeShell extends StatelessWidget {
     UserRole role,
     AppLanguage language,
     int selectedTab,
+    String? officerSocietyId,
   ) => switch (role) {
+    // API mode: Prototype v4 M05 home and bottom bar (Home, Society, Exco,
+    // Work plan, More). Submissions to District are not part of v4.
+    UserRole.societyOfficer when officerSocietyId != null =>
+      _ShellConfiguration(
+        pages: [
+          SocietyOfficerHomeScreen(societyId: officerSocietyId),
+          const LiveSocietiesScreen(),
+          selectedTab == OfficerTabs.exco
+              ? const LiveSocietiesScreen(initialTab: 1)
+              : const SizedBox.shrink(),
+          selectedTab == OfficerTabs.workPlan
+              ? const LiveSocietiesScreen(initialTab: 2)
+              : const SizedBox.shrink(),
+          const MoreScreen(),
+        ],
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            label: 'Home',
+            tooltip: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.apartment_outlined),
+            selectedIcon: Icon(Icons.apartment),
+            label: 'Society',
+            tooltip: 'Society',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Exco',
+            tooltip: 'Exco',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
+            label: 'Work plan',
+            tooltip: 'Work plan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu),
+            label: 'More',
+            tooltip: 'More',
+          ),
+        ],
+      ),
     UserRole.societyOfficer => _ShellConfiguration(
       pages: const [
         DemoStore.demoMode
             ? HomeScreen()
             : V4RoleHomeScreen(role: UserRole.societyOfficer),
+        // Demo mode keeps the v3 profile that the Society Officer demo
+        // journey still uses.
         DemoStore.demoMode ? SocietyProfileScreen() : LiveSocietiesScreen(),
         DocumentsScreen(),
         TrackerScreen(),

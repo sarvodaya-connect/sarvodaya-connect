@@ -84,3 +84,19 @@ test("all public enum collections contain unique values", () => {
     assert.equal(new Set(collection).size, collection.length);
   }
 });
+
+test("society record grades, grade requests and history categories are explicit", async () => {
+  const {
+    GRADE_DECISIONS,
+    GRADE_REQUEST_STATUSES,
+    SOCIETY_GRADES,
+    SOCIETY_GRADE_LABELS,
+    SOCIETY_HISTORY_CATEGORIES,
+  } = await import("../dist/index.js");
+  assert.deepEqual(SOCIETY_GRADES, ["A", "B", "C"]);
+  assert.deepEqual(Object.keys(SOCIETY_GRADE_LABELS), SOCIETY_GRADES);
+  assert.deepEqual(GRADE_REQUEST_STATUSES, ["PENDING", "APPROVED", "REJECTED"]);
+  assert.deepEqual(GRADE_DECISIONS, ["APPROVE", "REJECT"]);
+  assert.equal(new Set(SOCIETY_HISTORY_CATEGORIES).size, SOCIETY_HISTORY_CATEGORIES.length);
+  assert.ok(SOCIETY_HISTORY_CATEGORIES.includes("ANNUAL_SUMMARY"));
+});

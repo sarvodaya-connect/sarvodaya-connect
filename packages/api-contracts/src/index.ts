@@ -4,3 +4,4 @@ export * from "./registry.js";
 export * from "./workflow.js";
 export * from "./emergency.js";
 export * from './platform.js';
+export * from "./society-record.js";

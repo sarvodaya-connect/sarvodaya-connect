@@ -18,6 +18,23 @@ enum SocietyStatus {
   @@map("society_status")
 }
 
+// SC-65: A Strong, B Developing, C Needs strengthening.
+enum SocietyGrade {
+  A
+  B
+  C
+
+  @@map("society_grade")
+}
+
+enum GradeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("grade_request_status")
+}
+
 enum MembershipCategory {
   CHILDREN
   YOUTH
@@ -56,6 +73,19 @@ model Society {
   longitude            Float?
   establishedOn        DateTime?                  @map("established_on") @db.Date
   status               SocietyStatus              @default(UNDER_REVIEW)
+  // SC-65: V4 society record fields (Prototype v4, M06 and D05).
+  memberCount          Int?                       @map("member_count")
+  landline             String?                    @db.VarChar(30)
+  // Information only: the app keeps no sales, stock or business accounts.
+  businessDescription  String?                    @map("business_description") @db.VarChar(1000)
+  // Only HQ changes the grade, directly or by approving a request.
+  grade                SocietyGrade?
+  gradeChangedAt       DateTime?                  @map("grade_changed_at") @db.Timestamptz(3)
+  gradeChangedByName   String?                    @map("grade_changed_by_name") @db.VarChar(150)
+  gradeChangedByRole   String?                    @map("grade_changed_by_role") @db.VarChar(40)
+  annualSummaries      AnnualFinancialSummary[]
+  gradeRequests        GradeChangeRequest[]
+  workPlanActivities   WorkPlanActivity[]
   contacts             SocietyContact[]
   councilMembers       SocietyCouncilMember[]
   memberships          SocietyMembershipCount[]
@@ -186,14 +216,88 @@ model SocietyDocument {
   uploadedById   String              @map("uploaded_by_id") @db.VarChar(64)
   uploadedByName String              @map("uploaded_by_name") @db.VarChar(150)
   uploadedAt     DateTime?           @map("uploaded_at") @db.Timestamptz(3)
+  uploadedByRole String?             @map("uploaded_by_role") @db.VarChar(40)
+  // SC-65: required for audit reports. 2025 means FY 2025/26.
+  financialYear  Int?                @map("financial_year_start")
   notifications  Notification[]
   createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([societyId, documentType, title, version])
   @@index([societyId, documentType])
+  @@index([societyId, documentType, financialYear])
   @@index([status])
   @@map("society_documents")
+}
+
+// SC-65: the society's two yearly totals in LKR (Prototype v4, M06f and D05).
+// A summary only: no transactions, loans, savings, payments, sales or accounts.
+model AnnualFinancialSummary {
+  id                    String    @id @default(uuid()) @db.Uuid
+  societyId             String    @map("society_id") @db.Uuid
+  society               Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  // 2025 means FY 2025/26 (1 Apr 2025 to 31 Mar 2026).
+  financialYear         Int       @map("financial_year_start")
+  totalProfit           Decimal?  @map("total_profit") @db.Decimal(14, 2)
+  totalExpenses         Decimal?  @map("total_expenses") @db.Decimal(14, 2)
+  previousProfit        Decimal?  @map("previous_profit") @db.Decimal(14, 2)
+  previousExpenses      Decimal?  @map("previous_expenses") @db.Decimal(14, 2)
+  profitUpdatedAt       DateTime? @map("profit_updated_at") @db.Timestamptz(3)
+  profitUpdatedByName   String?   @map("profit_updated_by_name") @db.VarChar(150)
+  profitUpdatedByRole   String?   @map("profit_updated_by_role") @db.VarChar(40)
+  expensesUpdatedAt     DateTime? @map("expenses_updated_at") @db.Timestamptz(3)
+  expensesUpdatedByName String?   @map("expenses_updated_by_name") @db.VarChar(150)
+  expensesUpdatedByRole String?   @map("expenses_updated_by_role") @db.VarChar(40)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([societyId, financialYear])
+  @@map("annual_financial_summaries")
+}
+
+// SC-65: Society Officers, SPCs and DDMs request; only HQ decides.
+model GradeChangeRequest {
+  id              String             @id @default(uuid()) @db.Uuid
+  societyId       String             @map("society_id") @db.Uuid
+  society         Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  fromGrade       SocietyGrade?      @map("from_grade")
+  toGrade         SocietyGrade       @map("to_grade")
+  reason          String             @db.VarChar(500)
+  status          GradeRequestStatus @default(PENDING)
+  requestedById   String             @map("requested_by_id") @db.VarChar(64)
+  requestedByName String             @map("requested_by_name") @db.VarChar(150)
+  requestedByRole String             @map("requested_by_role") @db.VarChar(40)
+  requestedAt     DateTime           @default(now()) @map("requested_at") @db.Timestamptz(3)
+  decidedById     String?            @map("decided_by_id") @db.VarChar(64)
+  decidedByName   String?            @map("decided_by_name") @db.VarChar(150)
+  decidedAt       DateTime?          @map("decided_at") @db.Timestamptz(3)
+  decisionComment String?            @map("decision_comment") @db.VarChar(500)
+
+  @@index([societyId, requestedAt])
+  @@index([status, requestedAt])
+  @@map("grade_change_requests")
+}
+
+// SC-65: read model for the D05w work-plan overview. Allocated costs are
+// planning figures, not payments or spending. Editing belongs to SC-66 (M09a).
+model WorkPlanActivity {
+  id            String   @id @default(uuid()) @db.Uuid
+  societyId     String   @map("society_id") @db.Uuid
+  society       Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  year          Int
+  month         Int
+  name          String   @db.VarChar(150)
+  description   String   @db.VarChar(1000)
+  sector        String?  @db.VarChar(100)
+  datesLabel    String?  @map("dates_label") @db.VarChar(60)
+  allocatedCost Decimal  @map("allocated_cost") @db.Decimal(14, 2)
+  updatedByName String?  @map("updated_by_name") @db.VarChar(150)
+  updatedByRole String?  @map("updated_by_role") @db.VarChar(40)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([societyId, year, month])
+  @@map("work_plan_activities")
 }
 
 // SC-49: notifications for dashboard and mobile users. Categories follow the
@@ -430,6 +534,9 @@ model DistrictAccessGrant {
 model PlatformAuditEvent {
   id String @id @default(uuid()) @db.Uuid
   actorId String @map("actor_id") @db.VarChar(64)
+  // SC-65: shown in the society change history.
+  actorName String? @map("actor_name") @db.VarChar(150)
+  actorRole String? @map("actor_role") @db.VarChar(40)
   action String @db.VarChar(60)
   targetId String @map("target_id") @db.VarChar(64)
   societyId String? @map("society_id") @db.Uuid

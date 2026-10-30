@@ -65,6 +65,62 @@ const demoMembership = [
   { category: MembershipCategory.ELDERS_COUNCIL, female: 82, male: 65 },
 ].map((row) => ({ societyId: societyData[0].id, year: 2026, ...row }));
 
+// SC-65: fictional V4 society-record values. Lotus has no yearly figures, to show "Not added yet".
+const v4Records = [
+  { id: societyData[0].id, memberCount: 418, landline: '037 000 0100', grade: 'B', businessDescription: 'A small fictional rice mill for members\' paddy, and a stall at the weekly fair selling members\' vegetables.' },
+  { id: societyData[1].id, memberCount: 188, landline: null, grade: 'C', businessDescription: null },
+  { id: societyData[2].id, memberCount: 265, landline: '081 000 0200', grade: 'A', businessDescription: 'Fictional coir rope sold to a buyer in town.' },
+  { id: societyData[3].id, memberCount: 143, landline: null, grade: 'C', businessDescription: null },
+  { id: societyData[4].id, memberCount: 301, landline: null, grade: 'B', businessDescription: null },
+  { id: societyData[5].id, memberCount: 356, landline: null, grade: 'C', businessDescription: null },
+] as const;
+const demoAnnualSummary = {
+  id: '29000000-0000-4000-8000-000000000601',
+  societyId: societyData[0].id,
+  financialYear: 2025,
+  totalProfit: 412500,
+  totalExpenses: 1286000,
+  previousProfit: 398000,
+  profitUpdatedAt: new Date('2026-10-22T10:40:00.000Z'),
+  profitUpdatedByName: 'Demo Officer (Example Sunrise Society)',
+  profitUpdatedByRole: 'SOCIETY_OFFICER',
+  expensesUpdatedAt: new Date('2026-10-21T09:00:00.000Z'),
+  expensesUpdatedByName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
+  expensesUpdatedByRole: 'PROGRAMME_COORDINATOR',
+};
+const demoGradeRequest = {
+  id: '29000000-0000-4000-8000-000000000611',
+  societyId: societyData[0].id,
+  fromGrade: 'B',
+  toGrade: 'A',
+  reason: 'Fictional demo: the Exco was re-formed at the AGM, the 2027 work plan is ready and every planned 2026 activity took place.',
+  status: 'PENDING',
+  requestedById: 'demo-programme-coordinator',
+  requestedByName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
+  requestedByRole: 'PROGRAMME_COORDINATOR',
+  requestedAt: new Date('2026-10-24T10:10:00.000Z'),
+} as const;
+const demoWorkPlan = [
+  [1, 'Tank cleaning shramadana', 'Clear the village tank before the Yala season, with all households.', '10 · Environment', null, 25000],
+  [2, "Pre-school parents' meeting", 'Meeting with parents about the pre-school timetable and meals.', '2 · Child wellbeing', null, 8000],
+  [3, 'Clean-water awareness day', 'Session on boiling water and keeping wells clean.', '6 · Health', null, 15000],
+  [3, 'Home-garden seed sharing', 'Members share seeds and plant home gardens together.', '9 · Agriculture', null, 12000],
+  [4, 'New Year community festival', 'Traditional games and a shared meal for the whole village.', '1 · Community', null, 30000],
+  [9, 'Youth leadership camp', 'Three-day camp for 40 young people.', '1 · Community', '12–14 Sep', 55000],
+].map(([month, name, description, sector, datesLabel, allocatedCost], index) => ({
+  id: `29000000-0000-4000-8000-${String(621 + index).padStart(12, '0')}`,
+  societyId: societyData[0].id,
+  year: 2027,
+  month: month as number,
+  name: name as string,
+  description: description as string,
+  sector: sector as string,
+  datesLabel: datesLabel as string | null,
+  allocatedCost: allocatedCost as number,
+  updatedByName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
+  updatedByRole: 'PROGRAMME_COORDINATOR',
+}));
+
 async function main() {
   await prisma.$transaction(async (tx) => {
     for (const row of districtData) {
@@ -84,6 +140,14 @@ async function main() {
         create: row,
         update: { female: row.female, male: row.male },
       });
+    }
+    for (const { id, ...record } of v4Records) {
+      await tx.society.update({ where: { id }, data: record });
+    }
+    await tx.annualFinancialSummary.upsert({ where: { id: demoAnnualSummary.id }, create: demoAnnualSummary, update: demoAnnualSummary });
+    await tx.gradeChangeRequest.upsert({ where: { id: demoGradeRequest.id }, create: demoGradeRequest, update: {} });
+    for (const row of demoWorkPlan) {
+      await tx.workPlanActivity.upsert({ where: { id: row.id }, create: row, update: row });
     }
     await tx.emergencyIncident.upsert({
       where: { id: '29000000-0000-4000-8000-000000000501' },
@@ -147,6 +211,7 @@ async function main() {
     });
   });
   console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats, ${demoMembership.length} fictional membership categories and one fictional emergency-response scenario.`);
+  console.log(`SC-65 seed complete: V4 record values for ${v4Records.length} societies, one yearly summary, one waiting grade request and ${demoWorkPlan.length} work-plan activities.`);
 }
 
 try {

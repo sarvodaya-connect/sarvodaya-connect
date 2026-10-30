@@ -68,6 +68,12 @@ describe('SocietiesRepository', () => {
         contacts: true,
         councilMembers: { orderBy: { seatNumber: 'asc' } },
         memberships: { orderBy: [{ year: 'desc' }, { category: 'asc' }] },
+        // SC-65: the request waiting for HQ, if any.
+        gradeRequests: {
+          where: { status: 'PENDING' },
+          orderBy: { requestedAt: 'desc' },
+          take: 1,
+        },
       },
     });
   });

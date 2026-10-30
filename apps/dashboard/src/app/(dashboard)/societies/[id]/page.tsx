@@ -7,6 +7,9 @@ import { SocietyProfileTabs } from "@/components/dashboard/society-profile-tabs"
 import { Pill } from "@/components/dashboard/ui/pill";
 import { getMissingProfileInformation, societyDetails } from "@/lib/demo-registry";
 import { demoSocietyAccess, societiesVisibleTo } from "@/lib/society-access";
+import { isSocietyRecordId } from "@/lib/society-record-format";
+
+import { RecordOverviewPage } from "./record-overview-page";
 
 export function generateStaticParams() {
   return societyDetails.map((society) => ({ id: society.id }));
@@ -21,8 +24,13 @@ const statusTone = {
   SUSPENDED: "overdue",
 } as const;
 
-export default async function SocietyPage({ params }: PageProps<"/societies/[id]">) {
+export default async function SocietyPage({ params, searchParams }: PageProps<"/societies/[id]">) {
   const { id } = await params;
+  // SC-65: API-backed society records (D05). Demonstration profiles keep their readable ids.
+  if (isSocietyRecordId(id)) {
+    const { panel, saved } = await searchParams;
+    return <RecordOverviewPage id={id} panel={typeof panel === "string" ? panel : undefined} saved={saved === "1"} />;
+  }
   const society = societiesVisibleTo(societyDetails, demoSocietyAccess).find((item) => item.id === id);
   if (!society) notFound();
   const missingInformation = getMissingProfileInformation(society);

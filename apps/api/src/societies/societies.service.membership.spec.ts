@@ -38,6 +38,12 @@ const otherOfficer: Principal = {
 describe('SocietiesService profile, council and membership', () => {
   const repository = {
     findById: vi.fn(),
+    findRecordContext: vi.fn().mockResolvedValue({
+      summary: null,
+      auditReport: null,
+      staff: [],
+      lastChange: null,
+    }),
     updateProfile: vi.fn(),
     replaceCouncil: vi.fn(),
     replaceMembership: vi.fn(),
@@ -60,10 +66,13 @@ describe('SocietiesService profile, council and membership', () => {
       { latitude: 7.3, longitude: 80.6 },
       officer,
     );
-    expect(repository.updateProfile).toHaveBeenCalledWith(societyId, {
-      latitude: 7.3,
-      longitude: 80.6,
-    }, officer);
+    expect(repository.updateProfile).toHaveBeenCalledWith(
+      societyId,
+      { latitude: 7.3, longitude: 80.6 },
+      officer,
+      // SC-65: a readable entry for the change history.
+      { summary: 'Map location changed' },
+    );
   });
 
   it('rejects a partial GPS location without changing stored values', async () => {

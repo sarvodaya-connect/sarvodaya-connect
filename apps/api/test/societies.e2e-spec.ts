@@ -59,6 +59,12 @@ describe('Societies endpoints (e2e)', () => {
   const repository = {
     list: vi.fn(),
     findById: vi.fn(),
+    findRecordContext: vi.fn().mockResolvedValue({
+      summary: null,
+      auditReport: null,
+      staff: [],
+      lastChange: null,
+    }),
     updateProfile: vi.fn(),
     replaceCouncil: vi.fn(),
     replaceMembership: vi.fn(),
@@ -290,6 +296,7 @@ describe('Societies endpoints (e2e)', () => {
           longitude: 80.6,
         },
         expect.objectContaining({ id: 'demo-hq-admin' }),
+        { summary: 'Map location changed' },
       );
     });
 
