@@ -11,7 +11,11 @@ import '../widgets/state_views.dart';
 /// demo records). A Society Officer has one society, so its record (M06)
 /// opens directly; other roles choose from the list.
 class LiveSocietiesScreen extends StatefulWidget {
-  const LiveSocietiesScreen({super.key});
+  const LiveSocietiesScreen({super.key, this.initialTab = 0});
+
+  /// Record tab a Society Officer's own society opens on (see
+  /// [SocietyRecordScreen.initialTab]).
+  final int initialTab;
   @override
   State<LiveSocietiesScreen> createState() => _LiveSocietiesState();
 }
@@ -61,6 +65,7 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
       return SocietyRecordScreen(
         societyId: user.societyIds.single,
         showBack: false,
+        initialTab: widget.initialTab,
       );
     }
     return Scaffold(

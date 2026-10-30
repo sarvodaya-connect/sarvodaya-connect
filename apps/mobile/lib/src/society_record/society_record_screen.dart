@@ -24,12 +24,16 @@ class SocietyRecordScreen extends StatefulWidget {
     super.key,
     required this.societyId,
     this.showBack = true,
+    this.initialTab = 0,
   });
 
   final String societyId;
 
   /// False when the record is the Society Officer's home tab.
   final bool showBack;
+
+  /// Tab shown first: 0 Overview, 1 Exco, 2 Work plan, 3 Documents, 4 History.
+  final int initialTab;
 
   @override
   State<SocietyRecordScreen> createState() => _SocietyRecordScreenState();
@@ -75,6 +79,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
     final user = DemoScope.of(context).user!;
     return DefaultTabController(
       length: 5,
+      initialIndex: widget.initialTab,
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 58,
