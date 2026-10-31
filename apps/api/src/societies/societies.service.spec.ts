@@ -4,6 +4,8 @@ import { NotFoundException } from '@nestjs/common';
 
 import { SocietiesService } from './societies.service.js';
 import { SocietiesRepository } from './societies.repository.js';
+import type { Principal } from '../auth/principal.js';
+const hq: Principal = { id: 'hq', displayName: 'HQ', roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] };
 
 describe('SocietiesService', () => {
   let service: SocietiesService;
@@ -11,6 +13,7 @@ describe('SocietiesService', () => {
   const repository = {
     list: vi.fn(),
     findById: vi.fn(),
+    activeDelegatedDistrictIds: vi.fn().mockResolvedValue([]),
   };
 
   beforeEach(() => {
@@ -34,6 +37,10 @@ describe('SocietiesService', () => {
             nameEn: 'Colombo',
           },
           status: 'ACTIVE',
+          grade: 'B',
+          dsDivision: null,
+          memberships: [],
+          assignments: [],
           updatedAt: new Date('2026-01-01'),
         },
       ],
@@ -43,7 +50,7 @@ describe('SocietiesService', () => {
     const result = await service.list({
       page: 1,
       pageSize: 10,
-    });
+    }, hq);
 
     expect(result.data).toHaveLength(1);
     expect(result.meta.totalItems).toBe(1);
@@ -56,7 +63,7 @@ describe('SocietiesService', () => {
       page: 1,
       pageSize: 10,
       verificationStatus: 'VERIFIED',
-    });
+    }, hq);
 
     expect(result.data).toEqual([]);
     expect(result.meta.totalItems).toBe(0);
@@ -67,7 +74,7 @@ describe('SocietiesService', () => {
     repository.findById.mockResolvedValue(null);
 
     await expect(
-      service.getById('00000000-0000-4000-8000-000000000001'),
+      service.getById('00000000-0000-4000-8000-000000000001', hq),
     ).rejects.toThrow(NotFoundException);
   });
 });

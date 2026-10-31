@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app.dart';
@@ -6,70 +8,146 @@ import '../models/notification.dart';
 import '../models/submission.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
-import '../widgets/demo_loader.dart';
+import '../services/registry_api_client.dart';
 import '../widgets/state_views.dart';
 import 'audit_screen.dart';
 import 'changes_requested_screen.dart';
 import 'submission_detail_screen.dart';
 
-/// M16 · Notifications: approvals, returns, requests and reminders in one list.
+/// M16 · Notifications: incident alerts, grade updates, reminders and account events.
 /// Unread notifications are tinted, bold and marked with a dot and the word
 /// "Unread" for screen readers. Tapping one marks it read and opens its item.
-class NotificationsScreen extends StatelessWidget {
-  const NotificationsScreen({super.key});
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key, this.api});
+  final RegistryApiClient? api;
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late final RegistryApiClient _api;
+  late Future<List<AppNotification>> _future;
+  @override
+  void initState() {
+    super.initState();
+    _api =
+        widget.api ??
+        DemoScope.read(context).registryApiClient ??
+        RegistryApiClient();
+    _future = _load();
+  }
+
+  Future<List<AppNotification>> _load() async {
+    final store = DemoScope.read(context);
+    final items = await _api.listNotifications(store.activeRole);
+    store.replaceNotificationsFromApi(items);
+    return items;
+  }
+  Future<void> _markAll() async {
+    final store = DemoScope.read(context);
+    try {
+      await _api.markAllRead(store.activeRole);
+      store.markAllNotificationsRead();
+      if (mounted) setState(() { _future = _load(); });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not mark notifications read: $error')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final unread = store.unreadNotificationCount;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          TextButton(
-            onPressed: unread == 0 ? null : store.markAllNotificationsRead,
-            child: const Text('Mark all read'),
+    return FutureBuilder<List<AppNotification>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final notifications = snapshot.data ?? const <AppNotification>[];
+        final unread = notifications.where((item) => !item.read).length;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Notifications'),
+            actions: [
+              TextButton(
+                onPressed: unread == 0 ? null : _markAll,
+                child: const Text('Mark all read'),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (store.offline) const OfflineBanner(),
-          Expanded(
-            child: DemoLoader(
-              loadingLabel: 'Loading notifications',
-              skeletonCards: 2,
-              builder: (context) => const _NotificationsContent(),
-            ),
+          body: Column(
+            children: [
+              Expanded(
+                child: snapshot.connectionState == ConnectionState.waiting
+                    ? const Center(child: CircularProgressIndicator())
+                    : snapshot.hasError
+                    ? StateMessage(
+                        icon: Icons.cloud_off,
+                        title: 'Notifications unavailable',
+                        message: 'Check your connection and retry.',
+                        tone: StateTone.error,
+                        primaryLabel: 'Retry',
+                        onPrimary: () => setState(() { _future = _load(); }),
+                        isAlert: true,
+                      )
+                    : _NotificationsContent(
+                        notifications: notifications,
+                        onTap: _openNotification,
+                        now: DemoScope.read(context).now,
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _openNotification(AppNotification notification) async {
+    final store = DemoScope.read(context);
+    try {
+      await _api.markRead(store.activeRole, notification.id);
+      if (!mounted) return;
+      openNotification(context, notification);
+      store.markNotificationRead(notification.id);
+      setState(() { _future = _load(); });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not mark notification read: $error')),
+        );
+      }
+    }
   }
 }
 
 class _NotificationsContent extends StatelessWidget {
-  const _NotificationsContent();
+  const _NotificationsContent({
+    required this.notifications,
+    required this.onTap,
+    required this.now,
+  });
+  final List<AppNotification> notifications;
+  final ValueChanged<AppNotification> onTap;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final notifications = store.notifications;
     if (notifications.isEmpty) {
       return StateMessage(
         icon: Icons.notifications_none,
         title: 'No notifications',
-        message: 'Approvals, returned updates, requests from your District Centre and reminders will appear here.',
+        message: 'Incident alerts, grade requests and decisions, reminders and account updates will appear here.',
         secondaryLabel: 'Back to Home',
         onSecondary: () => HomeShell.openTab(context, HomeShell.homeTab),
       );
     }
-    final now = store.now;
     bool isToday(DateTime date) =>
         date.year == now.year && date.month == now.month && date.day == now.day;
     final today = notifications.where((n) => isToday(n.receivedAt)).toList();
     final earlier = notifications.where((n) => !isToday(n.receivedAt)).toList();
-    final unread = store.unreadNotificationCount;
+    final unread = notifications.where((item) => !item.read).length;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -84,12 +162,20 @@ class _NotificationsContent extends StatelessWidget {
         if (today.isNotEmpty) ...[
           const _GroupHeader('Today'),
           for (final notification in today)
-            _NotificationTile(notification: notification, showTime: true),
+            _NotificationTile(
+              notification: notification,
+              showTime: true,
+              onTap: () => onTap(notification),
+            ),
         ],
         if (earlier.isNotEmpty) ...[
           const _GroupHeader('Earlier'),
           for (final notification in earlier)
-            _NotificationTile(notification: notification, showTime: false),
+            _NotificationTile(
+              notification: notification,
+              showTime: false,
+              onTap: () => onTap(notification),
+            ),
         ],
       ],
     );
@@ -126,10 +212,15 @@ class _GroupHeader extends StatelessWidget {
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.notification, required this.showTime});
+  const _NotificationTile({
+    required this.notification,
+    required this.showTime,
+    required this.onTap,
+  });
 
   final AppNotification notification;
   final bool showTime;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -148,11 +239,11 @@ class _NotificationTile extends StatelessWidget {
       ].join('. '),
       hint: notification.opensItem ? 'Opens the related item' : null,
       excludeSemantics: true,
-      onTap: () => openNotification(context, notification),
+      onTap: onTap,
       child: Material(
         color: unread ? AppColors.mintSoft : AppColors.surface,
         child: InkWell(
-          onTap: () => openNotification(context, notification),
+          onTap: onTap,
           child: Container(
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.line)),
@@ -219,6 +310,11 @@ class _NotificationTile extends StatelessWidget {
 
   static (IconData, Color, Color) _kindStyle(NotificationKind kind) =>
       switch (kind) {
+        NotificationKind.incident => (
+          Icons.warning_amber_rounded,
+          AppColors.danger,
+          AppColors.dangerSoft,
+        ),
         NotificationKind.returned => (
           Icons.undo,
           const Color(0xFFA2470F),
@@ -255,7 +351,6 @@ class _NotificationTile extends StatelessWidget {
 /// Marks the notification read and opens the local item it refers to.
 void openNotification(BuildContext context, AppNotification notification) {
   final store = DemoScope.read(context);
-  store.markNotificationRead(notification.id);
   final navigator = Navigator.of(context);
   switch (notification.target) {
     case NotificationTarget.none:

@@ -30,6 +30,7 @@ test("roles expose the provisional access levels", () => {
     "SOCIETY_OFFICER",
     "DISTRICT_MANAGER",
     "PROGRAMME_COORDINATOR",
+    "DEPUTY_DISTRICT_MANAGER",
     "HQ_ADMIN",
   ]);
 });

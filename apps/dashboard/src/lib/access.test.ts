@@ -4,6 +4,7 @@ import { navigationFor } from "@/components/dashboard/dashboard-shell";
 
 import {
   canSeeSociety,
+  canApproveGradeChanges,
   canViewCompliance,
   canViewDocument,
   canViewDocumentLibrary,
@@ -22,6 +23,14 @@ const visibleTo = (viewer: ReturnType<typeof getViewer>) =>
   libraryDocuments.filter((document) => canViewDocument(viewer, document));
 
 describe("provisional role-based visibility", () => {
+  it("reserves grade-change decisions for HQ while allowing scoped read access", () => {
+    expect(canApproveGradeChanges(hq)).toBe(true);
+    expect(canApproveGradeChanges(districtManager)).toBe(false);
+    expect(canApproveGradeChanges(coordinator)).toBe(false);
+    expect(canApproveGradeChanges(systemAdmin)).toBe(false);
+    expect(canSeeSociety(districtManager, { societyId: "society-pahala-kosgama", districtId: "district-kurunegala" })).toBe(true);
+    expect(canSeeSociety(districtManager, { societyId: "society-galewela", districtId: "district-matale" })).toBe(false);
+  });
   it("falls back to the HQ Administrator for an unknown or missing viewer", () => {
     expect(getViewer(undefined).role).toBe("HQ_ADMIN");
     expect(getViewer("not-a-user").role).toBe("HQ_ADMIN");
@@ -80,10 +89,14 @@ describe("provisional role-based visibility", () => {
     const labels = (viewer: ReturnType<typeof getViewer>) => navigationFor(viewer).map((item) => item.label);
     expect(labels(hq)).toEqual(expect.arrayContaining(["Audits", "Documents", "Notifications"]));
     expect(labels(hq)).toContain("Membership");
+    expect(labels(hq)).toContain("Grade changes");
     expect(labels(districtManager)).toEqual(expect.arrayContaining(["Audits", "Documents"]));
+    expect(labels(districtManager)).not.toContain("Grade changes");
     expect(labels(districtManager)[0]).toBe("District Home");
     expect(labels(coordinator)).not.toContain("Audits");
     expect(labels(coordinator)).toContain("Documents");
+    expect(labels(coordinator)).not.toContain("Grade changes");
+    expect(labels(systemAdmin)).not.toContain("Grade changes");
     expect(labels(systemAdmin)).not.toContain("Documents");
     expect(labels(systemAdmin)).not.toContain("Membership");
     expect(labels(systemAdmin)).toContain("Notifications");

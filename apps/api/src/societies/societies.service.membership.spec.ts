@@ -19,6 +19,9 @@ const baseRecord = {
   contacts: [],
   councilMembers: [],
   memberships: [],
+  assignments: [],
+  grade: 'C',
+  auditEvents: [],
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
 };
@@ -42,6 +45,7 @@ describe('SocietiesService profile, council and membership', () => {
     replaceCouncil: vi.fn(),
     replaceMembership: vi.fn(),
     membershipForPrincipal: vi.fn(),
+    activeDelegatedDistrictIds: vi.fn().mockResolvedValue([]),
   };
   let service: SocietiesService;
 

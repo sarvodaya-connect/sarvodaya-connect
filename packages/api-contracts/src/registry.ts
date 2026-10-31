@@ -8,6 +8,8 @@ export const SOCIETY_STATUSES = [
 ] as const;
 
 export type SocietyStatus = (typeof SOCIETY_STATUSES)[number];
+export const SOCIETY_GRADES = ["A", "B", "C"] as const;
+export type SocietyGrade = (typeof SOCIETY_GRADES)[number];
 
 export const VERIFICATION_STATUSES = [
   "UNVERIFIED",
@@ -176,6 +178,13 @@ export interface SocietySummary {
   nameLocal?: string;
   district: Pick<DistrictSummary, "id" | "code" | "nameEn">;
   status: SocietyStatus;
+  grade?: "A" | "B" | "C";
+  dsDivision?: string | null;
+  memberCount?: number;
+  spcName?: string | null;
+  spcUserId?: string | null;
+  societyOfficerName?: string | null;
+  hasOpenGradeRequest?: boolean;
   verificationStatus: VerificationStatus;
   profileCompleteness: number;
   updatedAt: IsoDateTime;

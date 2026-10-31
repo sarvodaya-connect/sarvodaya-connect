@@ -33,15 +33,16 @@ describe('SocietiesRepository', () => {
       search: '  sunrise  ',
       districtId: '29000000-0000-4000-8000-000000000001',
       status: 'ACTIVE',
-    });
+    }, {
+      id: 'demo-hq-admin', displayName: 'Demo HQ', roles: ['HQ_ADMIN'], districtIds: [], societyIds: [],
+    }, []);
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          districtId: '29000000-0000-4000-8000-000000000001',
-          status: 'ACTIVE',
-          OR: expect.arrayContaining([
-            { nameEn: { contains: 'sunrise', mode: 'insensitive' } },
+          AND: expect.arrayContaining([
+            expect.objectContaining({ districtId: '29000000-0000-4000-8000-000000000001', status: 'ACTIVE' }),
+            expect.objectContaining({ OR: expect.arrayContaining([{ nameEn: { contains: 'sunrise', mode: 'insensitive' } }]) }),
           ]),
         }),
         skip: 5,
@@ -66,6 +67,9 @@ describe('SocietiesRepository', () => {
         contacts: true,
         councilMembers: { orderBy: { seatNumber: 'asc' } },
         memberships: { orderBy: [{ year: 'desc' }, { category: 'asc' }] },
+        auditEvents: { orderBy: [{ occurredAt: 'desc' }, { id: 'asc' }] },
+        assignments: { where: { revokedAt: null } },
+        gradeChangeRequests: { where: { status: 'PENDING' }, select: { id: true }, take: 1 },
       },
     });
   });
@@ -82,6 +86,7 @@ describe('SocietiesRepository', () => {
         societyIds: [],
       },
       2026,
+      [],
     );
 
     expect(findMany).toHaveBeenCalledWith(

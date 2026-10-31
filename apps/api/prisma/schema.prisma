@@ -28,12 +28,36 @@ enum MembershipCategory {
   @@map("membership_category")
 }
 
+enum SocietyGrade {
+  A
+  B
+  C
+
+  @@map("society_grade")
+}
+
+enum GradeChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("grade_change_status")
+}
+
+enum SocietyAssignmentRole {
+  SOCIETY_OFFICER
+  SPC
+
+  @@map("society_assignment_role")
+}
+
 model District {
   id                 String              @id @default(uuid()) @db.Uuid
   code               String              @unique @db.VarChar(10)
   nameEn             String              @unique @map("name_en") @db.VarChar(100)
   societies          Society[]
   emergencyIncidents EmergencyIncident[]
+  ddmDelegations     DistrictDelegation[]
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -55,6 +79,7 @@ model Society {
   longitude            Float?
   establishedOn        DateTime?                  @map("established_on") @db.Date
   status               SocietyStatus              @default(UNDER_REVIEW)
+  grade                SocietyGrade                @default(C)
   contacts             SocietyContact[]
   councilMembers       SocietyCouncilMember[]
   memberships          SocietyMembershipCount[]
@@ -63,6 +88,9 @@ model Society {
   emergencyAssessments EmergencyAssessment[]
   emergencyActions     EmergencyResponseAction[]
   emergencyReports     EmergencySituationReport[]
+  gradeChangeRequests  GradeChangeRequest[]
+  auditEvents          SocietyAuditEvent[]
+  assignments          SocietyAssignment[]
   createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -70,6 +98,80 @@ model Society {
   @@index([status])
   @@index([nameEn])
   @@map("societies")
+}
+
+model SocietyAssignment {
+  id           String                @id @default(uuid()) @db.Uuid
+  societyId    String                @map("society_id") @db.Uuid
+  society      Society               @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  role         SocietyAssignmentRole
+  userId       String                @map("user_id") @db.VarChar(64)
+  assignedById String                @map("assigned_by_id") @db.VarChar(64)
+  assignedAt   DateTime              @default(now()) @map("assigned_at") @db.Timestamptz(3)
+  revokedAt    DateTime?             @map("revoked_at") @db.Timestamptz(3)
+
+  @@unique([societyId, role, userId])
+  @@index([userId, role, revokedAt])
+  @@map("society_assignments")
+}
+
+model DistrictDelegation {
+  id            String    @id @default(uuid()) @db.Uuid
+  districtId    String    @map("district_id") @db.Uuid
+  district      District  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  deputyUserId  String    @map("deputy_user_id") @db.VarChar(64)
+  grantedById   String    @map("granted_by_id") @db.VarChar(64)
+  grantedByName String    @map("granted_by_name") @db.VarChar(150)
+  startsAt      DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt        DateTime  @map("ends_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedById   String?   @map("revoked_by_id") @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([deputyUserId, districtId, startsAt, endsAt])
+  @@index([districtId, endsAt])
+  @@map("district_delegations")
+}
+
+model GradeChangeRequest {
+  id               String            @id @default(uuid()) @db.Uuid
+  societyId        String            @map("society_id") @db.Uuid
+  society          Society           @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  currentGrade     SocietyGrade      @map("current_grade")
+  proposedGrade    SocietyGrade      @map("proposed_grade")
+  rationale        String            @db.VarChar(2000)
+  status           GradeChangeStatus @default(PENDING)
+  requestedById    String            @map("requested_by_id") @db.VarChar(64)
+  requestedByName  String            @map("requested_by_name") @db.VarChar(150)
+  requestedAt      DateTime          @default(now()) @map("requested_at") @db.Timestamptz(3)
+  decidedById      String?           @map("decided_by_id") @db.VarChar(64)
+  decidedByName    String?           @map("decided_by_name") @db.VarChar(150)
+  decisionComment  String?           @map("decision_comment") @db.VarChar(2000)
+  decidedAt        DateTime?         @map("decided_at") @db.Timestamptz(3)
+  auditEvents      SocietyAuditEvent[]
+
+  @@index([status, requestedAt])
+  @@index([societyId, requestedAt])
+  @@map("grade_change_requests")
+}
+
+model SocietyAuditEvent {
+  id                 String              @id @default(uuid()) @db.Uuid
+  societyId          String              @map("society_id") @db.Uuid
+  society            Society             @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  gradeChangeRequestId String?           @map("grade_change_request_id") @db.Uuid
+  gradeChangeRequest GradeChangeRequest? @relation(fields: [gradeChangeRequestId], references: [id], onDelete: SetNull)
+  eventType          String              @map("event_type") @db.VarChar(40)
+  fromGrade          SocietyGrade?       @map("from_grade")
+  toGrade            SocietyGrade?       @map("to_grade")
+  summary            String              @db.VarChar(500)
+  comment            String?             @db.VarChar(2000)
+  actorId            String              @map("actor_id") @db.VarChar(64)
+  actorDisplayName   String              @map("actor_display_name") @db.VarChar(150)
+  occurredAt         DateTime            @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  @@index([societyId, occurredAt])
+  @@map("society_audit_events")
 }
 
 model SocietyContact {

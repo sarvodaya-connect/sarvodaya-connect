@@ -39,6 +39,14 @@ const contactData = [
   { id: '29000000-0000-4000-8000-000000000204', societyId: societyData[4].id, label: 'Fictional Contact', email: 'riverstone@example.com', isPrimary: true },
 ] as const;
 
+const assignmentData = [
+  { id: '29000000-0000-4000-8000-000000000601', societyId: societyData[0].id, role: 'SOCIETY_OFFICER' as const, userId: 'demo-officer-sunrise', assignedById: 'demo-hq-admin' },
+  { id: '29000000-0000-4000-8000-000000000602', societyId: societyData[0].id, role: 'SPC' as const, userId: 'demo-programme-coordinator', assignedById: 'demo-hq-admin' },
+  { id: '29000000-0000-4000-8000-000000000603', societyId: societyData[1].id, role: 'SPC' as const, userId: 'demo-programme-coordinator', assignedById: 'demo-hq-admin' },
+  { id: '29000000-0000-4000-8000-000000000604', societyId: societyData[2].id, role: 'SOCIETY_OFFICER' as const, userId: 'demo-officer-lotus', assignedById: 'demo-hq-admin' },
+  { id: '29000000-0000-4000-8000-000000000605', societyId: societyData[2].id, role: 'SPC' as const, userId: 'demo-programme-coordinator', assignedById: 'demo-hq-admin' },
+] as const;
+
 const councilTypes = [
   ...Array<MembershipCategory>(3).fill(MembershipCategory.CHILDREN),
   ...Array<MembershipCategory>(3).fill(MembershipCategory.YOUTH),
@@ -72,6 +80,13 @@ async function main() {
     }
     for (const row of societyData) {
       await tx.society.upsert({ where: { id: row.id }, create: row, update: row });
+    }
+    for (const row of assignmentData) {
+      await tx.societyAssignment.upsert({
+        where: { societyId_role_userId: { societyId: row.societyId, role: row.role, userId: row.userId } },
+        create: row,
+        update: { assignedById: row.assignedById, revokedAt: null },
+      });
     }
     for (const row of contactData) {
       await tx.societyContact.upsert({ where: { id: row.id }, create: row, update: row });
@@ -146,7 +161,7 @@ async function main() {
       update: {},
     });
   });
-  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats, ${demoMembership.length} fictional membership categories and one fictional emergency-response scenario.`);
+  console.log(`SC-29 seed complete: ${districtData.length} fictional districts, ${societyData.length} fictional societies, ${assignmentData.length} fictional staff assignments, ${contactData.length} fictional contacts, ${demoCouncil.length} fictional council seats, ${demoMembership.length} fictional membership categories and one fictional emergency-response scenario.`);
 }
 
 try {

@@ -1,6 +1,12 @@
 // Mirrors AuthenticatedUser from packages/api-contracts/src/identity.ts.
 
-enum UserRole { societyOfficer, districtManager, hqAdmin }
+enum UserRole {
+  societyOfficer,
+  programmeCoordinator,
+  deputyDistrictManager,
+  districtManager,
+  hqAdmin,
+}
 
 class AuthenticatedUser {
   const AuthenticatedUser({
@@ -25,6 +31,8 @@ class AuthenticatedUser {
 extension UserRoleLabels on UserRole {
   String get label => switch (this) {
     UserRole.societyOfficer => 'Society Officer',
+    UserRole.programmeCoordinator => 'SPC',
+    UserRole.deputyDistrictManager => 'Deputy District Manager',
     UserRole.districtManager => 'District Manager',
     UserRole.hqAdmin => 'HQ Administrator',
   };

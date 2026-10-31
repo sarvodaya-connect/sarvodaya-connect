@@ -52,6 +52,24 @@ const demoDistrictManager = AuthenticatedUser(
   societyIds: [],
 );
 
+const demoProgrammeCoordinator = AuthenticatedUser(
+  id: 'user-demo-spc',
+  displayName: 'P. Wickramasinghe',
+  email: 'spc@example.invalid',
+  roles: [UserRole.programmeCoordinator],
+  districtIds: [],
+  societyIds: ['society-pahala-kosgama'],
+);
+
+const demoDeputyDistrictManager = AuthenticatedUser(
+  id: 'user-demo-ddm',
+  displayName: 'M. Jayasinghe',
+  email: 'ddm@example.invalid',
+  roles: [UserRole.deputyDistrictManager],
+  districtIds: [],
+  societyIds: ['society-pahala-kosgama'],
+);
+
 const demoHqAdmin = AuthenticatedUser(
   id: 'user-demo-hq-admin',
   displayName: 'S. Perera',
@@ -581,15 +599,15 @@ final demoPreviousAudit = AnnualAudit(
 /// the "Today" group is never empty during a demonstration.
 List<AppNotification> demoNotifications(DateTime now) => [
   AppNotification(
-    id: 'note-registrar-request',
+    id: 'note-grade-request',
     kind: NotificationKind.request,
-    title: 'HQ asked for the 4 Registrar documents',
-    message: 'Upload the audit report, AGM minutes, office-bearer list and signed members list for FY 2025/26.',
-    receivedAt: now.subtract(const Duration(minutes: 45)),
-    target: NotificationTarget.documents,
+    title: 'Grade B → A requested',
+    message: 'S. Karunaratne (SPC) sent a grade-change request to HQ for Pahala Kosgama SSS.',
+    receivedAt: now.subtract(const Duration(hours: 1)),
+    target: NotificationTarget.societyProfile,
   ),
   AppNotification(
-    id: 'note-audit-overdue',
+    id: 'note-audit-reminder',
     kind: NotificationKind.reminder,
     title: 'Audit report FY 2025/26 is overdue',
     message:
@@ -598,40 +616,36 @@ List<AppNotification> demoNotifications(DateTime now) => [
     target: NotificationTarget.audit,
   ),
   AppNotification(
-    id: 'note-review-tank',
-    kind: NotificationKind.review,
-    title: 'Tank cleaning shramadana is under review',
-    message: '$demoReviewerName started reviewing your activity report.',
-    receivedAt: now.subtract(const Duration(hours: 3)),
-    target: NotificationTarget.submission,
-    targetId: 'sub-activity-tank',
+    id: 'note-incident-flood',
+    kind: NotificationKind.notice,
+    title: 'New incident: Floods — North Western',
+    message: 'Opened by N. Wijesinghe (Society Officer) · sent to all users.',
+    receivedAt: now.subtract(const Duration(minutes: 12)),
   ),
   AppNotification(
-    id: 'note-district-meeting',
-    kind: NotificationKind.notice,
-    title: 'District society meeting on 25 Oct 2026',
-    message:
-        '$demoReviewerOffice, 10:00. Bring a copy of your latest AGM minutes.',
+    id: 'note-work-plan-reminder',
+    kind: NotificationKind.reminder,
+    title: 'Plan your 2027 activities',
+    message: 'November and December are empty in the society work plan.',
     receivedAt: now.subtract(const Duration(days: 3)),
   ),
   AppNotification(
-    id: 'note-location-verified',
+    id: 'note-society-updated',
     kind: NotificationKind.approved,
-    title: 'Society location verified',
-    message: '$demoReviewerName checked the society GPS location.',
-    receivedAt: DateTime(2026, 10, 2, 9, 30),
+    title: 'Society information updated',
+    message: 'Your society record was updated by N. Wijesinghe.',
+    receivedAt: DateTime(2026, 10, 20, 9, 30),
     read: true,
     target: NotificationTarget.societyProfile,
   ),
   AppNotification(
-    id: 'note-membership-q2',
+    id: 'note-grade-approved',
     kind: NotificationKind.approved,
-    title: 'Membership Apr–Jun approved',
-    message: 'Counts match the register. Thank you.',
-    receivedAt: DateTime(2026, 7, 2, 14, 10),
+    title: 'Grade C → B approved by HQ',
+    message: 'D. Gunawardena (HQ) approved the society grade change.',
+    receivedAt: DateTime(2026, 10, 1, 14, 10),
     read: true,
-    target: NotificationTarget.submission,
-    targetId: 'sub-membership-q2',
+    target: NotificationTarget.societyProfile,
   ),
 ];
 

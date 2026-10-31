@@ -124,6 +124,7 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
 
     const detail = await request(app.getHttpServer())
       .get(`/api/v1/societies/${societyId}`)
+      .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
     expect(detail.body).toMatchObject({
       nameEn: 'Fictional Registry Test Society Updated',
@@ -155,6 +156,7 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
 
     await request(app.getHttpServer())
       .get('/api/v1/societies?page=1&pageSize=10')
+      .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
   });
 

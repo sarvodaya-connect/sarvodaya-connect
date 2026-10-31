@@ -1,15 +1,9 @@
-import { PageHeading } from "@/components/dashboard/page-heading";
-import { ReviewQueue } from "@/components/dashboard/review-queue";
-import { reviewQueue } from "@/lib/demo-registry";
+import { redirect } from "next/navigation";
+import { AccessDeniedState } from "@/components/dashboard/data-states";
+import { getCurrentViewer } from "@/lib/current-viewer";
 
-export default function ReviewsPage() {
-  return (
-    <>
-      <PageHeading
-        description="Submissions from village societies waiting for your review. Oldest first."
-        title="Review Queue"
-      />
-      <ReviewQueue items={reviewQueue} />
-    </>
-  );
+export default async function ReviewsPage() {
+  const viewer = await getCurrentViewer();
+  if (viewer.role !== "HQ_ADMIN") return <AccessDeniedState role={viewer.roleLabel} />;
+  redirect("/grade-changes");
 }

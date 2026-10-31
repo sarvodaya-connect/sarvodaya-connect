@@ -102,6 +102,11 @@ export function canSeeSociety(viewer: DemoViewer, record: ScopedRecord): boolean
   }
 }
 
+/** Grade decisions change the national classification and are reserved for HQ. */
+export function canApproveGradeChanges(viewer: DemoViewer): boolean {
+  return viewer.role === "HQ_ADMIN";
+}
+
 /** D11 Audits & compliance: HQ and District Managers only. */
 export function canViewCompliance(viewer: DemoViewer): boolean {
   return REVIEWER_ROLES.includes(viewer.role);

@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/my_societies_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/role_home_screen.dart';
 import 'screens/role_workspace_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -161,10 +162,7 @@ class HomeShell extends StatelessWidget {
           role: UserRole.districtManager,
           workspace: RoleWorkspace.reviews,
         ),
-        RoleWorkspaceScreen(
-          role: UserRole.districtManager,
-          workspace: RoleWorkspace.alerts,
-        ),
+        NotificationsScreen(),
         MoreScreen(),
       ],
       destinations: [
@@ -187,6 +185,50 @@ class HomeShell extends StatelessWidget {
         _MoreDestination(),
       ],
     ),
+    UserRole.programmeCoordinator => const _ShellConfiguration(
+      pages: [
+        RoleHomeScreen(role: UserRole.programmeCoordinator),
+        MySocietiesScreen(),
+        NotificationsScreen(),
+        MoreScreen(),
+      ],
+      destinations: [
+        _HomeDestination(),
+        NavigationDestination(
+          icon: Icon(Icons.holiday_village_outlined),
+          selectedIcon: Icon(Icons.holiday_village),
+          label: 'Societies',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications),
+          label: 'Notifications',
+        ),
+        _MoreDestination(),
+      ],
+    ),
+    UserRole.deputyDistrictManager => const _ShellConfiguration(
+      pages: [
+        RoleHomeScreen(role: UserRole.deputyDistrictManager),
+        MySocietiesScreen(),
+        NotificationsScreen(),
+        MoreScreen(),
+      ],
+      destinations: [
+        _HomeDestination(),
+        NavigationDestination(
+          icon: Icon(Icons.holiday_village_outlined),
+          selectedIcon: Icon(Icons.holiday_village),
+          label: 'Societies',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications),
+          label: 'Notifications',
+        ),
+        _MoreDestination(),
+      ],
+    ),
     UserRole.hqAdmin => const _ShellConfiguration(
       pages: [
         RoleHomeScreen(role: UserRole.hqAdmin),
@@ -195,10 +237,7 @@ class HomeShell extends StatelessWidget {
           role: UserRole.hqAdmin,
           workspace: RoleWorkspace.reports,
         ),
-        RoleWorkspaceScreen(
-          role: UserRole.hqAdmin,
-          workspace: RoleWorkspace.alerts,
-        ),
+        NotificationsScreen(),
         MoreScreen(),
       ],
       destinations: [

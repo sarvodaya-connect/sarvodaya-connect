@@ -107,6 +107,8 @@ class EmergencyApiClient {
 
   String demoUserId(UserRole role) => switch (role) {
     UserRole.societyOfficer => 'demo-officer-sunrise',
+    UserRole.programmeCoordinator => 'demo-programme-coordinator',
+    UserRole.deputyDistrictManager => 'demo-deputy-district-manager',
     UserRole.districtManager => 'demo-dm-north',
     UserRole.hqAdmin => 'demo-hq-admin',
   };

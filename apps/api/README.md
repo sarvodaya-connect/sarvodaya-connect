@@ -275,6 +275,22 @@ The existing society registry endpoints continue to serve the dashboard and mobi
 
 These operations use the existing society routes and demo identity guard. HQ Administrators can update any society; Society Officers can update only their assigned society. District Managers can read aggregates for their districts but cannot edit profiles. The API validates GPS bounds and paired coordinates, council seat distribution and membership category counts before writing. PostgreSQL constraints enforce unique seat numbers, unique annual category rows, valid years and nonnegative counts. The `SC-29` local seed retains its existing fictional societies and contacts and adds a fictional 25-member council and 2026 membership snapshot for Example Sunrise Society.
 
+## National overview, society directory and grade review (SC-67)
+
+| Method and path | Purpose |
+|---|---|
+| `GET /api/v1/dashboard/national-overview` | HQ-only national totals, grade distribution, district summaries, active DDM delegations, recent grade history and pending grade requests |
+| `GET /api/v1/societies` | Scoped, paginated society search and filters, including district, grade, DS division, assigned SPC, record freshness and open grade-request status |
+| `GET /api/v1/societies/:id` | Society details and grade-change history, when visible to the current principal |
+| `POST /api/v1/societies/:id/grade-change-requests` | Submit a grade request as an assigned Society Officer, SPC or DDM |
+| `GET /api/v1/grade-changes` and `GET /api/v1/grade-changes/:id` | HQ-only grade-review queue and request detail |
+| `POST /api/v1/grade-changes/:id/decision` | HQ decision (`APPROVED` or `REJECTED`), required comment, persisted grade update and audit event |
+| `PATCH /api/v1/societies/:id/grade` | HQ-only direct grade update with a required reason and audit event |
+| `GET /api/v1/district-delegations` | View active/inactive district delegation records within authorized scope |
+| `POST /api/v1/district-delegations` and `POST /api/v1/district-delegations/:id/revoke` | District Manager grants or revokes temporary read-only district access for an assigned DDM |
+
+HQ Administrators can search all societies and are the only role allowed to decide grade requests or directly change grades. District Managers have read-only access to their district. Society Officers and SPCs remain assigned-society scoped. DDMs may request a grade change for an assigned society; active District Manager delegation grants district-wide read access only and never editing or grade-approval permission. The API checks scope on every read and write, prevents duplicate pending requests, and records request decisions, grade history and audit events in the database transaction. The migration `20261031120000_add_grade_workflow_and_delegations` adds the grade workflow and delegation records.
+
 ## API conventions
 
 - All API routes begin with `/api/v1`.

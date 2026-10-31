@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/current-viewer", () => ({ getCurrentViewer }));
 
 import DashboardHome from "./page";
-import { DistrictOverview, NationalOverview } from "@/components/dashboard/role-overviews";
+import { NationalOverview } from "@/components/dashboard/role-overviews";
 import { getViewer } from "@/lib/access";
 
 describe("dashboard role home routing", () => {
@@ -26,12 +26,11 @@ describe("dashboard role home routing", () => {
     expect(page.type).toBe(NationalOverview);
   });
 
-  it("shows the district overview to district managers", async () => {
+  it("sends district managers to their read-only society directory", async () => {
     getCurrentViewer.mockResolvedValue(getViewer("district-manager"));
 
-    const page = await DashboardHome();
-
-    expect(page.type).toBe(DistrictOverview);
+    await expect(DashboardHome()).rejects.toThrow("REDIRECT:/societies");
+    expect(redirect).toHaveBeenCalledWith("/societies");
   });
 
   it("sends platform administrators to administration", async () => {

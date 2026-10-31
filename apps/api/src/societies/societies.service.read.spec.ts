@@ -3,9 +3,11 @@ import { NotFoundException } from '@nestjs/common';
 
 import { SocietiesService } from './societies.service.js';
 import { SocietiesRepository } from './societies.repository.js';
+import type { Principal } from '../auth/principal.js';
 
 const SOCIETY_ID = '00000000-0000-4000-8000-000000000001';
 const DISTRICT = { id: 'district-1', code: 'COL', nameEn: 'Colombo' };
+const hq: Principal = { id: 'hq', displayName: 'HQ', roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] };
 
 function listRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -15,6 +17,10 @@ function listRecord(overrides: Record<string, unknown> = {}) {
     nameLocal: null,
     district: DISTRICT,
     status: 'ACTIVE',
+    grade: 'B',
+    dsDivision: null,
+    memberships: [],
+    assignments: [],
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
   };
@@ -39,6 +45,9 @@ function detailRecord(overrides: Record<string, unknown> = {}) {
         isPrimary: true,
       },
     ],
+    grade: 'B',
+    assignments: [],
+    auditEvents: [],
     councilMembers: [],
     memberships: [],
     createdAt: new Date('2025-12-01T00:00:00.000Z'),
@@ -52,6 +61,7 @@ describe('SocietiesService read behaviour', () => {
   const repository = {
     list: vi.fn(),
     findById: vi.fn(),
+    activeDelegatedDistrictIds: vi.fn().mockResolvedValue([]),
   };
 
   beforeEach(() => {
@@ -72,10 +82,10 @@ describe('SocietiesService read behaviour', () => {
         status: 'ACTIVE' as const,
       };
 
-      await service.list(query);
+      await service.list(query, hq);
 
       expect(repository.list).toHaveBeenCalledTimes(1);
-      expect(repository.list).toHaveBeenCalledWith(query);
+      expect(repository.list).toHaveBeenCalledWith(query, hq, []);
     });
 
     it('rounds totalPages up', async () => {
@@ -84,7 +94,7 @@ describe('SocietiesService read behaviour', () => {
         totalItems: 25,
       });
 
-      const result = await service.list({ page: 1, pageSize: 10 });
+      const result = await service.list({ page: 1, pageSize: 10 }, hq);
 
       expect(result.meta).toEqual({
         page: 1,
@@ -97,7 +107,7 @@ describe('SocietiesService read behaviour', () => {
     it('returns an empty page when nothing matches', async () => {
       repository.list.mockResolvedValue({ records: [], totalItems: 0 });
 
-      const result = await service.list({ page: 1, pageSize: 10 });
+      const result = await service.list({ page: 1, pageSize: 10 }, hq);
 
       expect(result.data).toEqual([]);
       expect(result.meta.totalItems).toBe(0);
@@ -113,7 +123,7 @@ describe('SocietiesService read behaviour', () => {
         totalItems: 2,
       });
 
-      const result = await service.list({ page: 1, pageSize: 10 });
+      const result = await service.list({ page: 1, pageSize: 10 }, hq);
 
       expect(result.data[0]).toHaveProperty('nameLocal', 'Local Name');
       expect(result.data[1]).not.toHaveProperty('nameLocal');
@@ -125,12 +135,19 @@ describe('SocietiesService read behaviour', () => {
         totalItems: 1,
       });
 
-      const result = await service.list({ page: 1, pageSize: 10 });
+      const result = await service.list({ page: 1, pageSize: 10 }, hq);
 
       expect(result.data[0]).toEqual({
         id: 'society-1',
         societyCode: 'SOC001',
         nameEn: 'Test Society',
+        grade: 'B',
+        dsDivision: null,
+        memberCount: 0,
+        spcName: null,
+        spcUserId: null,
+        societyOfficerName: null,
+        hasOpenGradeRequest: false,
         district: DISTRICT,
         status: 'ACTIVE',
         verificationStatus: 'UNVERIFIED',
@@ -146,7 +163,7 @@ describe('SocietiesService read behaviour', () => {
         page: 1,
         pageSize: 10,
         verificationStatus: 'UNVERIFIED',
-      });
+      }, hq);
 
       expect(repository.list).toHaveBeenCalledTimes(1);
     });
@@ -156,7 +173,7 @@ describe('SocietiesService read behaviour', () => {
     it('looks the society up by id and returns the full detail', async () => {
       repository.findById.mockResolvedValue(detailRecord());
 
-      const result = await service.getById(SOCIETY_ID);
+      const result = await service.getById(SOCIETY_ID, hq);
 
       expect(repository.findById).toHaveBeenCalledWith(SOCIETY_ID);
       expect(result).toMatchObject({
@@ -200,7 +217,7 @@ describe('SocietiesService read behaviour', () => {
         }),
       );
 
-      const result = await service.getById(SOCIETY_ID);
+      const result = await service.getById(SOCIETY_ID, hq);
 
       expect(result).not.toHaveProperty('establishedOn');
       expect(result).not.toHaveProperty('location');
@@ -211,7 +228,7 @@ describe('SocietiesService read behaviour', () => {
     it('throws NotFoundException with a clear message when missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      const call = service.getById(SOCIETY_ID);
+      const call = service.getById(SOCIETY_ID, hq);
 
       await expect(call).rejects.toBeInstanceOf(NotFoundException);
       await expect(call).rejects.toThrow('Society not found');

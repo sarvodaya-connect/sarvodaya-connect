@@ -33,9 +33,10 @@ export function navigationFor(viewer: DemoViewer): NavigationItem[] {
       icon: "home",
       label: viewer.role === "DISTRICT_MANAGER" ? "District Home" : "National Overview",
     },
-    { href: "/districts/kurunegala", icon: "district", label: "District View" },
-    { href: "/societies", icon: "society", label: "Societies" },
-    { href: "/reviews", icon: "review", label: "Review Queue" },
+    { href: "/societies", icon: "society", label: viewer.role === "DISTRICT_MANAGER" ? "District societies" : "Societies" },
+    ...(viewer.role === "HQ_ADMIN"
+      ? [{ href: "/grade-changes", icon: "review", label: "Grade changes" } satisfies NavigationItem]
+      : []),
     { href: "/activities", icon: "clipboard", label: "Activities" },
     { href: "/emergencies", icon: "alert", label: "Emergency response" },
     { href: "/membership", icon: "clipboard", label: "Membership" },
@@ -58,6 +59,8 @@ function headingFor(pathname: string, viewer: DemoViewer): { title: string; subt
         ? "Society Profile"
         : pathname.startsWith("/societies")
         ? "Societies"
+        : pathname.startsWith("/grade-changes")
+          ? "Grade changes"
         : pathname.startsWith("/membership")
           ? "Membership"
           : pathname.startsWith("/activities")
@@ -66,8 +69,8 @@ function headingFor(pathname: string, viewer: DemoViewer): { title: string; subt
               ? "Emergency response"
           : pathname.startsWith("/districts")
             ? "District View"
-            : pathname.startsWith("/reviews")
-              ? "Review Queue"
+              : pathname.startsWith("/reviews")
+              ? "Grade changes"
               : pathname.startsWith("/compliance")
                 ? "Audits & compliance"
                 : pathname.startsWith("/documents")
@@ -154,11 +157,6 @@ export function DashboardShell({
                 >
                   <Icon className="size-[17px]" name={item.icon} />
                   {item.label}
-                  {item.href === "/reviews" && (
-                    <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
-                      2
-                    </span>
-                  )}
                   {item.href === "/notifications" && unreadCount > 0 && (
                     <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
                       {unreadCount}

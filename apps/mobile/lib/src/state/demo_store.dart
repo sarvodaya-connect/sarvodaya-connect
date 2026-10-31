@@ -19,6 +19,7 @@ import '../models/submission.dart';
 import '../models/user.dart';
 import '../services/demo_document_upload_service.dart';
 import '../services/document_upload_service.dart';
+import '../services/registry_api_client.dart';
 import '../validation/validators.dart';
 
 /// Thrown when the demo is in offline mode and an action needs the network.
@@ -62,6 +63,7 @@ class DemoStore extends ChangeNotifier {
     this.showSplash = true,
     this.languageChosen = false,
     this.firstTimeSetupComplete = false,
+    this.registryApiClient,
   }) : _clock = clock ?? DateTime.now {
     _authService = authService ?? DemoAuthService(isOnline: () => !offline);
     _uploadService =
@@ -75,6 +77,7 @@ class DemoStore extends ChangeNotifier {
 
   final Duration loadDelay;
   final DateTime Function() _clock;
+  final RegistryApiClient? registryApiClient;
   late final AuthService _authService;
   late final DocumentUploadService _uploadService;
 
@@ -151,6 +154,8 @@ class DemoStore extends ChangeNotifier {
   void switchDemoRole(UserRole role) {
     _user = switch (role) {
       UserRole.societyOfficer => demoOfficer,
+      UserRole.programmeCoordinator => demoProgrammeCoordinator,
+      UserRole.deputyDistrictManager => demoDeputyDistrictManager,
       UserRole.districtManager => demoDistrictManager,
       UserRole.hqAdmin => demoHqAdmin,
     };
@@ -613,27 +618,35 @@ class DemoStore extends ChangeNotifier {
   // ----- Notifications (SC-47, M16) -----
 
   late final List<AppNotification> _notifications = demoNotifications(now);
+  List<AppNotification>? _apiNotifications;
 
   /// Notifications, newest first.
   List<AppNotification> get notifications {
     if (emptyRecords) return const [];
-    return _notifications.toList()
+    return (_apiNotifications ?? _notifications).toList()
       ..sort((a, b) => b.receivedAt.compareTo(a.receivedAt));
   }
 
   int get unreadNotificationCount =>
       notifications.where((notification) => !notification.read).length;
 
+  void replaceNotificationsFromApi(List<AppNotification> items) {
+    _apiNotifications = List.of(items);
+    notifyListeners();
+  }
+
   void markNotificationRead(String id) {
-    final index = _notifications.indexWhere((n) => n.id == id);
-    if (index < 0 || _notifications[index].read) return;
-    _notifications[index] = _notifications[index].markedRead();
+    final items = _apiNotifications ?? _notifications;
+    final index = items.indexWhere((n) => n.id == id);
+    if (index < 0 || items[index].read) return;
+    items[index] = items[index].markedRead();
     notifyListeners();
   }
 
   void markAllNotificationsRead() {
-    for (var i = 0; i < _notifications.length; i++) {
-      _notifications[i] = _notifications[i].markedRead();
+    final items = _apiNotifications ?? _notifications;
+    for (var i = 0; i < items.length; i++) {
+      items[i] = items[i].markedRead();
     }
     notifyListeners();
   }

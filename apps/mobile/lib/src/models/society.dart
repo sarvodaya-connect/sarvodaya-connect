@@ -89,6 +89,12 @@ class SocietyDetails {
     required this.contacts,
     this.lastVerifiedOn,
     this.lastVerifiedBy,
+    this.grade,
+    this.dsDivision,
+    this.memberCount,
+    this.spcName,
+    this.spcUserId,
+    this.hasOpenGradeRequest = false,
   });
 
   final String id;
@@ -109,6 +115,12 @@ class SocietyDetails {
   final List<SocietyContact> contacts;
   final DateTime? lastVerifiedOn;
   final String? lastVerifiedBy;
+  final String? grade;
+  final String? dsDivision;
+  final int? memberCount;
+  final String? spcName;
+  final String? spcUserId;
+  final bool hasOpenGradeRequest;
 
   /// Copy with an updated address, location, contacts or update time.
   SocietyDetails copyWith({
@@ -116,6 +128,12 @@ class SocietyDetails {
     GeoLocation? location,
     List<SocietyContact>? contacts,
     DateTime? updatedAt,
+    String? grade,
+    String? dsDivision,
+    int? memberCount,
+    String? spcName,
+    String? spcUserId,
+    bool? hasOpenGradeRequest,
   }) {
     return SocietyDetails(
       id: id,
@@ -134,6 +152,12 @@ class SocietyDetails {
       contacts: contacts ?? this.contacts,
       lastVerifiedOn: lastVerifiedOn,
       lastVerifiedBy: lastVerifiedBy,
+      grade: grade ?? this.grade,
+      dsDivision: dsDivision ?? this.dsDivision,
+      memberCount: memberCount ?? this.memberCount,
+      spcName: spcName ?? this.spcName,
+      spcUserId: spcUserId ?? this.spcUserId,
+      hasOpenGradeRequest: hasOpenGradeRequest ?? this.hasOpenGradeRequest,
     );
   }
 

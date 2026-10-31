@@ -2,7 +2,15 @@
 // UI model for the provisional demo. Replace it with the shared API contract
 // when notifications are added to packages/api-contracts.
 
-enum NotificationKind { returned, request, reminder, review, approved, notice }
+enum NotificationKind {
+  incident,
+  returned,
+  request,
+  reminder,
+  review,
+  approved,
+  notice,
+}
 
 /// The local item a notification opens when tapped.
 enum NotificationTarget { none, documents, audit, submission, societyProfile }

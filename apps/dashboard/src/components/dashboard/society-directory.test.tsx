@@ -1,103 +1,35 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-
-import { districts, societyDetails } from "@/lib/demo-registry";
-
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { DistrictSummary, SocietySummary } from "@sarvodaya-connect/api-contracts";
 import { SocietyDirectory } from "./society-directory";
 
-function renderDirectory(items = societyDetails) {
-  const user = userEvent.setup();
-  render(<SocietyDirectory districts={districts} societies={items} />);
-  return { user };
-}
+const district: DistrictSummary = { id: "district-1", code: "N", nameEn: "North", societyCount: 1 };
+const society: SocietySummary = { id: "society-1", societyCode: "DEMO-001", nameEn: "Example Sunrise Society", district: { id: district.id, code: district.code, nameEn: district.nameEn }, status: "ACTIVE", verificationStatus: "UNVERIFIED", profileCompleteness: 75, updatedAt: "2026-10-20T08:00:00.000Z", grade: "B", dsDivision: "North Division", memberCount: 22, spcName: "P. Coordinator", spcUserId: "spc-1", societyOfficerName: "Officer", hasOpenGradeRequest: false };
+const result = { data: [society], meta: { page: 1, pageSize: 10, totalItems: 1, totalPages: 1 } };
+const response = (body: unknown, ok = true) => Promise.resolve({ ok, json: async () => body });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("SocietyDirectory", () => {
-  it("lists every society with a labelled open action when no filters are applied", () => {
-    renderDirectory();
-
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societyDetails.length);
-    expect(screen.getByRole("link", { name: "Open Galewela Sarvodaya Shramadana Society" })).toHaveAttribute(
-      "href",
-      "/societies/society-galewela",
-    );
-    expect(screen.getByText(`Showing ${societyDetails.length} of ${societyDetails.length} demonstration records`)).toBeInTheDocument();
+  it("renders API records and applies filters through the scoped API", async () => {
+    const fetch = vi.fn().mockResolvedValue(response(result));
+    vi.stubGlobal("fetch", fetch);
+    render(<SocietyDirectory districts={[district]} societies={[society]} initialTotal={1} />);
+    expect(await screen.findByRole("link", { name: "Example Sunrise Society" })).toHaveAttribute("href", "/societies/society-1");
+    await userEvent.setup().selectOptions(screen.getByRole("combobox", { name: "Filter by grade" }), "B");
+    await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.stringContaining("grade=B"), { cache: "no-store" }));
   });
 
-  it("gives the search and filter controls readable labels", () => {
-    renderDirectory();
-
-    expect(screen.getByRole("searchbox", { name: "Search societies" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by district" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by division" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by status" })).toBeInTheDocument();
+  it("shows a retryable error when results fail to load", async () => {
+    const fetch = vi.fn().mockResolvedValue(response({ error: { message: "failed" } }, false));
+    vi.stubGlobal("fetch", fetch);
+    render(<SocietyDirectory districts={[district]} societies={[society]} initialTotal={1} />);
+    expect(await screen.findByText(/Society results couldn't be loaded/)).toBeInTheDocument();
   });
 
-  it("filters societies by search term", async () => {
-    const { user } = renderDirectory();
-
-    await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "galewela");
-
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(1);
-    expect(screen.getByText(`Showing 1 of ${societyDetails.length} demonstration records`)).toBeInTheDocument();
-  });
-
-  it("filters by DS division and status together", async () => {
-    const { user } = renderDirectory();
-
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by division" }), "Polgahawela");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "ACTIVE");
-
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Open Pahala Kosgama Sarvodaya Shramadana Society" })).toBeInTheDocument();
-  });
-
-  it("shows a no-results state that lists the active filters", async () => {
-    const { user } = renderDirectory();
-
-    await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "zzz");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by district" }), "district-kandy");
-
-    expect(screen.getByRole("heading", { name: "No societies match your filters" })).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-
-    const filters = within(screen.getByRole("list", { name: "Active filters" }));
-    expect(filters.getByText("“zzz”")).toBeInTheDocument();
-    expect(filters.getByText("Kandy")).toBeInTheDocument();
-    expect(filters.queryByText("Status:")).not.toBeInTheDocument();
-  });
-
-  it("removes a single filter from the no-results state", async () => {
-    const { user } = renderDirectory();
-
-    await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "Galewela");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by district" }), "district-kandy");
-    await user.click(screen.getByRole("button", { name: "Remove District filter" }));
-
-    expect(screen.getByRole("link", { name: "Open Galewela Sarvodaya Shramadana Society" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by district" })).toHaveValue("all");
-    expect(screen.getByRole("searchbox", { name: "Search societies" })).toHaveValue("Galewela");
-  });
-
-  it("clears all filters from the keyboard and returns focus to the search field", async () => {
-    const { user } = renderDirectory();
-
-    await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "zzz");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by status" }), "INACTIVE");
-
-    screen.getByRole("button", { name: "Clear all filters" }).focus();
-    await user.keyboard("{Enter}");
-
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(societyDetails.length);
-    expect(screen.getByRole("searchbox", { name: "Search societies" })).toHaveFocus();
-    expect(screen.getByRole("searchbox", { name: "Search societies" })).toHaveValue("");
-  });
-
-  it("shows an empty state when the registry has no societies", () => {
-    renderDirectory([]);
-
-    expect(screen.getByRole("heading", { name: "No societies in the registry yet" })).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+  it("shows a no-societies state for an empty authorized registry scope", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ data: [], meta: { page: 1, pageSize: 10, totalItems: 0, totalPages: 0 } })));
+    render(<SocietyDirectory districts={[]} societies={[]} initialTotal={0} />);
+    expect(screen.getByRole("heading", { name: "No societies in your permitted scope" })).toBeInTheDocument();
   });
 });

@@ -16,6 +16,11 @@ import { SocietiesService } from './societies/societies.service.js';
 import { SocietiesRepository } from './societies/societies.repository.js';
 import { DistrictsService } from './districts/districts.service.js';
 import { EmergenciesModule } from './emergencies/emergencies.module.js';
+import { GradeChangesController } from './societies/grade-changes.controller.js';
+import { GradeChangesService } from './societies/grade-changes.service.js';
+import { DistrictDelegationsController } from './districts/district-delegations.controller.js';
+import { DistrictDelegationsService } from './districts/district-delegations.service.js';
+import { NationalDashboardController } from './societies/national-dashboard.controller.js';
 
 const repositoryEnvironmentFile = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -35,11 +40,13 @@ const repositoryEnvironmentFile = resolve(
     DocumentsModule,
     EmergenciesModule,
   ],
-  controllers: [AppController, DistrictsController, SocietiesController],
+  controllers: [AppController, DistrictsController, DistrictDelegationsController, SocietiesController, GradeChangesController, NationalDashboardController],
   providers: [
     AppService,
     SocietiesService,
     SocietiesRepository,
+    GradeChangesService,
+    DistrictDelegationsService,
     DistrictsService,
   ],
 })

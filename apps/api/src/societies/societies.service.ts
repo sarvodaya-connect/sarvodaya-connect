@@ -1,5 +1,8 @@
 import {
+  Inject,
+  Optional,
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,7 +14,8 @@ import type {
   SocietyMembershipUpdateDto,
   SocietyProfileUpdateDto,
 } from './dto/society-updates.dto.js';
-import { assertCanEditSociety } from './society-access.policy.js';
+import { assertCanEditSociety, assertCanReadSociety } from './society-access.policy.js';
+import { USER_DIRECTORY, type UserDirectory } from '../auth/user-directory.js';
 import {
   SocietiesRepository,
   type SocietyRecord,
@@ -55,7 +59,7 @@ function membershipSummary(
   };
 }
 
-function summary(record: SocietySummaryRecord) {
+function summary(record: SocietySummaryRecord, displayNames: Record<string, string>) {
   const primary = record.contacts?.find((contact) => contact.isPrimary);
   const present = [
     record.establishedOn,
@@ -71,6 +75,17 @@ function summary(record: SocietySummaryRecord) {
     id: record.id,
     societyCode: record.societyCode,
     nameEn: record.nameEn,
+    grade: record.grade,
+    dsDivision: record.dsDivision,
+    memberCount: record.memberships.reduce((sum, row) => sum + row.female + row.male, 0),
+    spcName: record.assignments.find((assignment) => assignment.role === 'SPC')
+      ? displayNames[record.assignments.find((assignment) => assignment.role === 'SPC')!.userId] ?? 'Assigned SPC'
+      : null,
+    spcUserId: record.assignments.find((assignment) => assignment.role === 'SPC')?.userId ?? null,
+    societyOfficerName: record.assignments.find((assignment) => assignment.role === 'SOCIETY_OFFICER')
+      ? displayNames[record.assignments.find((assignment) => assignment.role === 'SOCIETY_OFFICER')!.userId] ?? 'Assigned Society Officer'
+      : null,
+    hasOpenGradeRequest: (record.gradeChangeRequests ?? []).length > 0,
     ...(record.nameLocal ? { nameLocal: record.nameLocal } : {}),
     district: {
       id: record.district.id,
@@ -94,9 +109,19 @@ const expectedCouncilSeats: Record<MembershipCategory, number> = {
 
 @Injectable()
 export class SocietiesService {
-  constructor(private readonly repository: SocietiesRepository) {}
+  constructor(
+    private readonly repository: SocietiesRepository,
+    @Optional() @Inject(USER_DIRECTORY) private readonly users?: UserDirectory,
+  ) {}
 
-  async list(query: SocietyQueryDto) {
+  async nationalOverview(principal: Principal) {
+    if (!principal.roles.includes('HQ_ADMIN')) {
+      throw new ForbiddenException('Only HQ can access the national overview');
+    }
+    return this.repository.nationalOverview();
+  }
+
+  async list(query: SocietyQueryDto, principal: Principal) {
     if (query.verificationStatus && query.verificationStatus !== 'UNVERIFIED') {
       return {
         data: [],
@@ -108,9 +133,12 @@ export class SocietiesService {
         },
       };
     }
-    const { records, totalItems } = await this.repository.list(query);
+    const delegatedDistrictIds = await this.repository.activeDelegatedDistrictIds(principal);
+    const { records, totalItems } = await this.repository.list(query, principal, delegatedDistrictIds);
+    const userIds = records.flatMap((record) => record.assignments.map((assignment) => assignment.userId));
+    const displayNames = await this.users?.findDisplayNames(userIds) ?? {};
     return {
-      data: records.map(summary),
+      data: records.map((record) => summary(record, displayNames)),
       meta: {
         page: query.page,
         pageSize: query.pageSize,
@@ -120,11 +148,14 @@ export class SocietiesService {
     };
   }
 
-  async getById(id: string) {
+  async getById(id: string, principal: Principal) {
     const record = await this.repository.findById(id);
     if (!record) throw new NotFoundException('Society not found');
+    const delegatedDistrictIds = await this.repository.activeDelegatedDistrictIds(principal);
+    assertCanReadSociety(principal, record, delegatedDistrictIds);
+    const displayNames = await this.users?.findDisplayNames(record.assignments.map((assignment) => assignment.userId)) ?? {};
     return {
-      ...summary(record),
+      ...summary(record as unknown as SocietySummaryRecord, displayNames),
       ...(record.establishedOn
         ? { establishedOn: record.establishedOn.toISOString().slice(0, 10) }
         : {}),
@@ -178,7 +209,13 @@ export class SocietiesService {
           }
         : {}),
       documents: [],
-      history: [],
+      history: record.auditEvents.map((event) => ({
+        id: event.id,
+        eventType: event.eventType,
+        summary: event.summary,
+        actorDisplayName: event.actorDisplayName,
+        occurredAt: event.occurredAt.toISOString(),
+      })),
       createdAt: record.createdAt.toISOString(),
     };
   }
@@ -202,7 +239,7 @@ export class SocietiesService {
       );
     }
     await this.repository.updateProfile(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async updateCouncil(
@@ -244,7 +281,7 @@ export class SocietiesService {
       }
     }
     await this.repository.replaceCouncil(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async updateMembership(
@@ -268,14 +305,12 @@ export class SocietiesService {
       );
     }
     await this.repository.replaceMembership(id, input);
-    return this.getById(id);
+    return this.getById(id, principal);
   }
 
   async membership(year: number, principal: Principal) {
-    const societies = await this.repository.membershipForPrincipal(
-      principal,
-      year,
-    );
+    const delegatedDistrictIds = await this.repository.activeDelegatedDistrictIds(principal);
+    const societies = await this.repository.membershipForPrincipal(principal, year, delegatedDistrictIds);
     const rows = societies.map((society) => ({
       societyId: society.id,
       societyCode: society.societyCode,

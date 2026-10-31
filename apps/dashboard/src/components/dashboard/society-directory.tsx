@@ -1,384 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
-
-import type { DistrictSummary, SocietyDetails } from "@sarvodaya-connect/api-contracts";
-
-import { type ActiveFilter, EmptyState, NoResultsState } from "./data-states";
+import { useEffect, useMemo, useState } from "react";
+import type { DistrictSummary, PaginatedResponse, SocietySummary } from "@sarvodaya-connect/api-contracts";
+import { EmptyState, ErrorState, NoResultsState, TableSkeleton } from "./data-states";
 import { Icon } from "./icon";
 import { Pill } from "./ui/pill";
 
-const statusOptions = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "UNDER_REVIEW", label: "Under review" },
-  { value: "INACTIVE", label: "Inactive" },
-  { value: "SUSPENDED", label: "Suspended" },
-] as const;
-
-const auditOptions = [
-  { value: "VERIFIED", label: "Verified" },
-  { value: "PENDING", label: "Pending" },
-  { value: "UNVERIFIED", label: "Unverified" },
-] as const;
-
-type ViewTab = "all" | "follow-up" | "stale";
-
-const STALE_DAYS = 90;
-
+type Props = { districts: DistrictSummary[]; societies: SocietySummary[]; initialTotal: number };
+type Filters = { search: string; districtId: string; division: string; grade: string; spcUserId: string; freshness: string; gradeRequest: string };
+const initialFilters: Filters = { search: "", districtId: "all", division: "all", grade: "all", spcUserId: "all", freshness: "all", gradeRequest: "all" };
+const PAGE_SIZE = 10;
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-function isStale(society: SocietyDetails) {
-  const updated = new Date(society.updatedAt).getTime();
-  return Number.isFinite(updated) && Date.now() - updated > STALE_DAYS * 24 * 60 * 60 * 1000;
-}
+export function SocietyDirectory({ districts, societies: initialSocieties, initialTotal }: Props) {
+  const [filters, setFilters] = useState(initialFilters);
+  const [page, setPage] = useState(1);
+  const [societies, setSocieties] = useState(initialSocieties);
+  const [total, setTotal] = useState(initialTotal);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const params = useMemo(() => {
+    const query = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (filters.search.trim()) query.set("search", filters.search.trim());
+    if (filters.districtId !== "all") query.set("districtId", filters.districtId);
+    if (filters.division !== "all") query.set("dsDivision", filters.division);
+    if (filters.grade !== "all") query.set("grade", filters.grade);
+    if (filters.spcUserId !== "all") query.set("spcUserId", filters.spcUserId);
+    if (filters.freshness !== "all") query.set("freshness", filters.freshness.toUpperCase());
+    if (filters.gradeRequest !== "all") query.set("gradeRequest", filters.gradeRequest.toUpperCase());
+    return query.toString();
+  }, [filters, page]);
 
-function needsFollowUp(society: SocietyDetails) {
-  return society.status === "UNDER_REVIEW" || society.status === "SUSPENDED" || society.verificationStatus === "UNVERIFIED";
-}
-
-const statusTone = {
-  ACTIVE: "on-time",
-  UNDER_REVIEW: "under-review",
-  INACTIVE: "inactive",
-  SUSPENDED: "overdue",
-} as const;
-
-export function SocietyDirectory({
-  districts,
-  societies,
-}: {
-  districts: DistrictSummary[];
-  societies: SocietyDetails[];
-}) {
-  const [districtId, setDistrictId] = useState("all");
-  const [division, setDivision] = useState("all");
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const [audit, setAudit] = useState("all");
-  const [tab, setTab] = useState<ViewTab>("all");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [compact, setCompact] = useState(false);
-  const searchInput = useRef<HTMLInputElement>(null);
-
-  const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return societies.filter((society) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        society.nameEn.toLowerCase().includes(normalizedQuery) ||
-        society.societyCode.toLowerCase().includes(normalizedQuery) ||
-        (society.nameLocal?.toLowerCase().includes(normalizedQuery) ?? false);
-      const matchesDistrict = districtId === "all" || society.district.id === districtId;
-      const matchesDivision = division === "all" || society.address.dsDivision === division;
-      const matchesStatus = status === "all" || society.status === status;
-      const matchesAudit = audit === "all" || society.verificationStatus === audit;
-      const matchesTab =
-        tab === "all" ||
-        (tab === "follow-up" && needsFollowUp(society)) ||
-        (tab === "stale" && isStale(society));
-      return matchesQuery && matchesDistrict && matchesDivision && matchesStatus && matchesAudit && matchesTab;
-    });
-  }, [audit, districtId, division, query, societies, status, tab]);
-
-  const divisions = Array.from(
-    new Set(societies.map((society) => society.address.dsDivision).filter((value): value is string => Boolean(value))),
-  ).sort();
-
-  const followUpCount = useMemo(() => societies.filter(needsFollowUp).length, [societies]);
-  const staleCount = useMemo(() => societies.filter(isStale).length, [societies]);
-
-  const activeFilters: ActiveFilter[] = [];
-  if (query.trim()) activeFilters.push({ id: "query", label: "Search", value: `“${query.trim()}”` });
-  if (districtId !== "all") {
-    const district = districts.find((item) => item.id === districtId);
-    activeFilters.push({ id: "district", label: "District", value: district?.nameEn ?? districtId });
-  }
-  if (division !== "all") activeFilters.push({ id: "division", label: "Division", value: division });
-  if (status !== "all") {
-    const option = statusOptions.find((item) => item.value === status);
-    activeFilters.push({ id: "status", label: "Status", value: option?.label ?? status });
-  }
-  if (audit !== "all") {
-    const option = auditOptions.find((item) => item.value === audit);
-    activeFilters.push({ id: "audit", label: "Audit", value: option?.label ?? audit });
-  }
-
-  function removeFilter(id: string) {
-    if (id === "query") setQuery("");
-    if (id === "district") setDistrictId("all");
-    if (id === "division") setDivision("all");
-    if (id === "status") setStatus("all");
-    if (id === "audit") setAudit("all");
-  }
-
-  function clearAllFilters() {
-    setQuery("");
-    setDistrictId("all");
-    setDivision("all");
-    setStatus("all");
-    setAudit("all");
-    searchInput.current?.focus();
-  }
-
-  function toggleSelected(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  const allVisibleSelected = filtered.length > 0 && filtered.every((society) => selected.has(society.id));
-
-  function toggleSelectAll() {
-    setSelected((prev) => {
-      if (allVisibleSelected) {
-        const next = new Set(prev);
-        filtered.forEach((society) => next.delete(society.id));
-        return next;
+  useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      setLoading(true); setError(false);
+      try {
+        const response = await fetch(`/api/societies?${params}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("Society directory unavailable");
+        const result = await response.json() as PaginatedResponse<SocietySummary>;
+        if (!cancelled) { setSocieties(result.data); setTotal(result.meta.totalItems); }
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      const next = new Set(prev);
-      filtered.forEach((society) => next.add(society.id));
-      return next;
-    });
+    }, filters.search ? 250 : 0);
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [filters.search, params, retryKey]);
+
+  const divisions = [...new Set(initialSocieties.map((society) => society.dsDivision).filter((value): value is string => Boolean(value)))].sort();
+  const spcs = [...new Map(initialSocieties.filter((society) => society.spcUserId && society.spcName).map((society) => [society.spcUserId!, society.spcName!])).entries()];
+  const filterClass = "rounded-button border border-line bg-surface px-2.5 py-1.5 text-[12px] text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]";
+  function updateFilter<Key extends keyof Filters>(key: Key, value: Filters[Key]) {
+    setPage(1);
+    setFilters((current) => ({ ...current, [key]: value }));
   }
+  function clearAll() { setFilters(initialFilters); setPage(1); }
 
-  if (societies.length === 0) {
-    return (
-      <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface">
-        <EmptyState
-          description="Societies appear here once they are added to the registry and approved by their District Centre."
-          icon="society"
-          title="No societies in the registry yet"
-        />
-      </section>
-    );
-  }
+  if (initialTotal === 0 && !loading) return <section className="mt-6 rounded-card border border-line bg-surface"><EmptyState title="No societies in your permitted scope" description="The registry doesn&apos;t have society records available to your role yet." icon="society" /></section>;
 
-  const tabs: { id: ViewTab; label: string; count?: number }[] = [
-    { id: "all", label: "All societies", count: societies.length },
-    { id: "follow-up", label: "Needs follow-up", count: followUpCount },
-    { id: "stale", label: `Stale data (${STALE_DAYS}+ days)`, count: staleCount },
-  ];
-
-  const filterClass =
-    "rounded-button border border-line bg-surface px-2.5 py-1.5 text-[12px] text-ink-soft outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]";
-  const cell = compact ? "py-1.5" : "py-2.5";
-
-  return (
-    <section className="mt-4">
-      <nav aria-label="View" className="flex flex-wrap items-end gap-5 border-b border-line">
-        {tabs.map((item) => (
-          <button
-            aria-pressed={tab === item.id}
-            className={`-mb-px border-b-2 pb-2 text-[12px] transition ${
-              tab === item.id
-                ? "border-brand-forest font-semibold text-ink"
-                : "border-transparent text-ink-soft hover:text-brand-forest"
-            }`}
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            type="button"
-          >
-            {item.label}
-            {typeof item.count === "number" && item.id !== "all" && <span> · {item.count}</span>}
-          </button>
-        ))}
-        <button className="pb-2 text-[12px] font-semibold text-[#2d5c88] hover:underline" type="button">
-          + Save current view
-        </button>
-      </nav>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="relative block">
-          <span className="sr-only">Search societies</span>
-          <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" name="search" />
-          <input
-            className="w-56 rounded-button border border-line bg-surface py-1.5 pl-9 pr-3 text-[12px] outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name, Society ID or local name"
-            ref={searchInput}
-            type="search"
-            value={query}
-          />
-        </label>
-        <label>
-          <span className="sr-only">Filter by district</span>
-          <select
-            className={filterClass}
-            onChange={(event) => setDistrictId(event.target.value)}
-            value={districtId}
-          >
-            <option value="all">District: All</option>
-            {districts.map((district) => (
-              <option key={district.id} value={district.id}>{district.nameEn}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Filter by division</span>
-          <select
-            className={filterClass}
-            onChange={(event) => setDivision(event.target.value)}
-            value={division}
-          >
-            <option value="all">DS/GN: All</option>
-            {divisions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Filter by status</span>
-          <select
-            className={filterClass}
-            onChange={(event) => setStatus(event.target.value)}
-            value={status}
-          >
-            <option value="all">Status: All</option>
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Filter by audit</span>
-          <select
-            className={filterClass}
-            onChange={(event) => setAudit(event.target.value)}
-            value={audit}
-          >
-            <option value="all">Audit: All</option>
-            {auditOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <div aria-label="Row density" className="ml-auto inline-flex overflow-hidden rounded-button border border-line bg-surface text-[11px]" role="group">
-          {[false, true].map((value) => (
-            <button
-              aria-pressed={compact === value}
-              className={`px-2.5 py-1.5 ${compact === value ? "bg-brand-forest font-semibold text-white" : "text-ink-soft"}`}
-              key={String(value)}
-              onClick={() => setCompact(value)}
-              type="button"
-            >
-              {value ? "Compact" : "Comfortable"}
-            </button>
-          ))}
-        </div>
+  return <section className="mt-4">
+    <div className="rounded-card border border-line bg-surface p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative block min-w-[220px] flex-1"><span className="sr-only">Search societies</span><Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" name="search" /><input className="w-full rounded-button border border-line bg-surface py-1.5 pl-9 pr-3 text-[12px] outline-none focus:border-brand-leaf focus:ring-3 focus:ring-[#dbeadd]" onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search name or S number" type="search" value={filters.search} /></label>
+        <label><span className="sr-only">Filter by district</span><select className={filterClass} onChange={(event) => updateFilter("districtId", event.target.value)} value={filters.districtId}><option value="all">District: All</option>{districts.map((district) => <option key={district.id} value={district.id}>{district.nameEn}</option>)}</select></label>
+        <label><span className="sr-only">Filter by DS division</span><select className={filterClass} onChange={(event) => updateFilter("division", event.target.value)} value={filters.division}><option value="all">DS division: All</option>{divisions.map((division) => <option key={division} value={division}>{division}</option>)}</select></label>
+        <label><span className="sr-only">Filter by grade</span><select className={filterClass} onChange={(event) => updateFilter("grade", event.target.value)} value={filters.grade}><option value="all">Grade: All</option>{["A", "B", "C"].map((grade) => <option key={grade} value={grade}>Grade {grade}</option>)}</select></label>
+        <label><span className="sr-only">Filter by assigned SPC</span><select className={filterClass} onChange={(event) => updateFilter("spcUserId", event.target.value)} value={filters.spcUserId}><option value="all">SPC: Any</option>{spcs.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+        <label><span className="sr-only">Filter by record freshness</span><select className={filterClass} onChange={(event) => updateFilter("freshness", event.target.value)} value={filters.freshness}><option value="all">Records: Any</option><option value="recent">Updated recently</option><option value="stale">90+ days</option></select></label>
+        <label><span className="sr-only">Filter by open grade request</span><select className={filterClass} onChange={(event) => updateFilter("gradeRequest", event.target.value)} value={filters.gradeRequest}><option value="all">Grade request: Any</option><option value="open">Open requests</option><option value="none">No open request</option></select></label>
+        {Object.entries(filters).some(([key, value]) => key !== "search" || value.trim()) && <button className="px-2 py-1 text-xs font-semibold text-[#2d5c88] underline" onClick={clearAll} type="button">Clear filters</button>}
       </div>
-
-      {selected.size > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-button bg-brand-forest px-4 py-2 text-[12px] text-white">
-          <div className="flex flex-wrap items-center gap-4">
-            <strong>{selected.size} selected</strong>
-            <button className="underline underline-offset-2" type="button">
-              Send request
-            </button>
-            <button className="underline underline-offset-2" type="button">
-              Export selected
-            </button>
-          </div>
-          <button className="underline underline-offset-2" onClick={() => setSelected(new Set())} type="button">
-            Clear
-          </button>
-        </div>
-      )}
-
-      <div className="mt-3 overflow-hidden rounded-card border border-line bg-surface">
-      {filtered.length === 0 ? (
-        <NoResultsState
-          filters={activeFilters}
-          itemLabel="societies"
-          onClearAll={clearAllFilters}
-          onRemoveFilter={removeFilter}
-        />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[940px] border-collapse text-left">
-            <caption className="sr-only">Village societies</caption>
-            <thead className="bg-surface-muted text-[12px] font-medium text-ink-soft">
-              <tr>
-                <th className="px-5 py-3" scope="col">
-                  <label className="inline-flex items-center">
-                    <span className="sr-only">Select all</span>
-                    <input
-                      aria-label="Select all societies on this page"
-                      checked={allVisibleSelected}
-                      className="size-4 rounded border-line text-brand-action focus:ring-brand-leaf"
-                      onChange={toggleSelectAll}
-                      type="checkbox"
-                    />
-                  </label>
-                </th>
-                <th className="px-4 py-3" scope="col">Society ID</th>
-                <th className="px-4 py-3" scope="col">Name ↑</th>
-                <th className="px-4 py-3" scope="col">Local name</th>
-                <th className="px-4 py-3" scope="col">District</th>
-                <th className="px-4 py-3" scope="col">DS / GN</th>
-                <th className="px-4 py-3" scope="col">Status</th>
-                <th className="px-4 py-3 text-right" scope="col">Complete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {filtered.map((society) => {
-                const tone = statusTone[society.status as keyof typeof statusTone] ?? "inactive";
-                const statusLabel = statusOptions.find((item) => item.value === society.status)?.label ?? society.status;
-                return (
-                  <tr className={`transition hover:bg-brand-mint-soft ${selected.has(society.id) ? "bg-brand-mint-soft" : ""}`} key={society.id}>
-                    <td className={`px-5 ${cell}`}>
-                      <label className="inline-flex items-center">
-                        <span className="sr-only">Select {society.nameEn}</span>
-                        <input
-                          aria-label={`Select ${society.nameEn}`}
-                          checked={selected.has(society.id)}
-                          className="size-4 rounded border-line text-brand-action focus:ring-brand-leaf"
-                          onChange={() => toggleSelected(society.id)}
-                          type="checkbox"
-                        />
-                      </label>
-                    </td>
-                    <td className={`whitespace-nowrap px-4 ${cell} text-[12px] text-ink-soft`}>{society.societyCode}</td>
-                    <td className={`px-4 ${cell}`}>
-                      <Link
-                        aria-label={`Open ${society.nameEn}`}
-                        className="text-[12.5px] text-[#2d5c88] underline underline-offset-2 hover:text-brand-forest"
-                        href={`/societies/${society.id}`}
-                        title={`Updated ${dateFormatter.format(new Date(society.updatedAt))}`}
-                      >
-                        {society.nameEn}
-                      </Link>
-                    </td>
-                    <td className={`px-4 ${cell} text-[12.5px] text-ink-soft`}>{society.nameLocal ?? "—"}</td>
-                    <td className={`px-4 ${cell} text-[12.5px] text-ink-soft`}>{society.district.nameEn}</td>
-                    <td className={`px-4 ${cell} text-[12px] text-ink-soft`}>
-                      {[society.address.dsDivision, society.address.gnDivision].filter(Boolean).join(" / ") || "—"}
-                    </td>
-                    <td className={`px-4 ${cell}`}>
-                      <Pill tone={tone}>{statusLabel}</Pill>
-                    </td>
-                    <td className={`px-4 ${cell} text-right text-[12px] font-semibold text-ink-soft`}>
-                      {society.profileCompleteness}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="flex items-center justify-between border-t border-line-soft px-5 py-3 text-[11px] text-muted">
-        <p aria-live="polite" role="status">
-          Showing {filtered.length} of {societies.length} demonstration records
-        </p>
-        <nav aria-label="Pagination" className="flex items-center gap-1">
-          <button className="rounded-button px-2 py-1 text-ink-soft hover:bg-brand-mint-soft" type="button">←</button>
-          <span className="rounded-button bg-brand-mint px-2.5 py-1 font-semibold text-brand-forest">1</span>
-          <button className="rounded-button px-2 py-1 text-ink-soft hover:bg-brand-mint-soft" type="button">→</button>
-        </nav>
-      </div>
-      </div>
-    </section>
-  );
+    </div>
+    <div className="mt-3 overflow-hidden rounded-card border border-line bg-surface">
+      {error ? <ErrorState onRetry={() => setRetryKey((value) => value + 1)} title="Society results couldn&apos;t be loaded" /> : loading ? <TableSkeleton columns={8} label="Loading societies" rows={5} /> : societies.length === 0 ? <NoResultsState filters={[]} itemLabel="societies" onClearAll={clearAll} onRemoveFilter={() => undefined} /> : <div className="overflow-x-auto"><table className="w-full min-w-[930px] border-collapse text-left"><caption className="sr-only">Societies in your permitted scope</caption><thead className="bg-surface-muted text-[11px] font-medium text-ink-soft"><tr>{["S number", "Society", "District", "Grade", "Members", "SPC", "Society Officer · account", "Updated"].map((label) => <th className="px-3 py-3" key={label} scope="col">{label}</th>)}</tr></thead><tbody className="divide-y divide-line-soft">{societies.map((society) => <tr className="hover:bg-brand-mint-soft" key={society.id}><td className="whitespace-nowrap px-3 py-2.5 text-[11px] text-ink-soft">{society.societyCode}</td><td className="px-3 py-2.5"><Link className="text-[12px] text-[#2d5c88] underline underline-offset-2" href={`/societies/${society.id}`}>{society.nameEn.replace("Sarvodaya Shramadana Society", "SSS")}</Link>{society.hasOpenGradeRequest && <span className="ml-2 rounded-full bg-[#fff5d9] px-2 py-0.5 text-[10px] font-semibold text-[#7a5a00]">Grade request</span>}</td><td className="px-3 py-2.5 text-[12px] text-ink-soft">{society.district.nameEn}</td><td className="px-3 py-2.5"><Pill dot={false} tone="inactive">{society.grade ?? "—"}</Pill></td><td className="px-3 py-2.5 text-right text-[12px] text-ink-soft">{society.memberCount?.toLocaleString("en-GB") ?? "—"}</td><td className="px-3 py-2.5 text-[12px] text-ink-soft">{society.spcName ?? "Not assigned"}</td><td className="px-3 py-2.5 text-[12px] text-ink-soft">{society.societyOfficerName ?? "Not assigned"}<span className="ml-2 text-muted">— account data unavailable</span></td><td className="px-3 py-2.5 text-[12px] text-ink-soft">{dateFormatter.format(new Date(society.updatedAt))}</td></tr>)}</tbody></table></div>}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft px-4 py-3 text-[11px] text-muted"><p aria-live="polite" role="status">Showing {societies.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{(page - 1) * PAGE_SIZE + societies.length} of {total} societies</p><nav aria-label="Pagination" className="flex items-center gap-1"><button aria-label="Previous page" className="rounded-button border border-line px-2 py-1 disabled:opacity-40" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} type="button">←</button><span className="px-2">{page} / {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span><button aria-label="Next page" className="rounded-button border border-line px-2 py-1 disabled:opacity-40" disabled={page >= Math.ceil(total / PAGE_SIZE) || loading} onClick={() => setPage((current) => current + 1)} type="button">→</button></nav></div>
+    </div>
+  </section>;
 }
