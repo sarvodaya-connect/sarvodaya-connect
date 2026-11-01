@@ -72,7 +72,7 @@ flowchart LR
 
 ### Proposed cloud architecture — AWS Singapore
 
-This is the team's proposed target architecture for review with Sarvodaya IT and the project supervisor. It is not deployed. The diagram describes the planned components, environment separation and data flows; production setup remains subject to approval and security review.
+This is the approved testing-phase direction in the [hosting proposal](Sarvodaya-Connect-Hosting-Proposal.pdf). It is not deployed. The estimate is about USD 35 per month, with a recommended USD 60 monthly budget and alerts. It is sized for approximately 300 monthly users; actual charges depend on usage. This is a testing setup, not a claim that production is ready.
 
 ```mermaid
 flowchart TB
@@ -81,89 +81,63 @@ flowchart TB
         Staff[Sarvodaya staff] --> Browser[Web browser<br/>Next.js administration dashboard]
     end
 
-    subgraph Entry[2. Edge delivery and identity]
-        Cognito[Amazon Cognito<br/>OIDC and user groups]
-        Cloudflare[Cloudflare<br/>DNS, TLS and WAF]
-        Amplify[AWS Amplify Hosting<br/>Next.js 15 dashboard]
+    subgraph Entry[2. Website hosting and sign-in]
+        Cloudflare[Cloudflare Pages<br/>Public landing page]
+        Amplify[AWS Amplify Hosting<br/>HQ dashboard, Next.js 15]
+        Cognito[Amazon Cognito<br/>Staff sign-in and identity]
     end
+    Public[Public visitors] --> Cloudflare
     Mobile -->|Sign-in| Cognito
     Browser -->|Sign-in| Cognito
-    Mobile -->|HTTPS API requests| Cloudflare
-    Browser -->|Dashboard HTTPS| Cloudflare
-    Cloudflare -->|Dashboard origin| Amplify
+    Mobile -->|HTTPS| APIEntry
+    Browser -->|Dashboard HTTPS| Amplify
 
-    subgraph AWS[3. AWS account — Singapore region, ap-southeast-1]
-        subgraph Prod[Production — live user data]
-            ALB[Application Load Balancer<br/>public subnets, Multi-AZ]
-            ECR[Amazon ECR<br/>API container images]
-            API[Amazon ECS on Fargate<br/>NestJS API in private app subnets]
-            DB[(Amazon Aurora PostgreSQL<br/>private isolated subnets, Multi-AZ<br/>30-day point-in-time recovery)]
-            S3[(Amazon S3<br/>private production documents)]
-            OAC[CloudFront Origin Access Control]
-            CDN[Amazon CloudFront<br/>protected document downloads]
+    subgraph AWS[3. Sarvodaya AWS account — Singapore, ap-southeast-1]
+        APIEntry[Amazon API Gateway<br/>Protected API entry point]
+        API[AWS Lambda<br/>NestJS application services<br/>run when requested]
+        Queue[Amazon SQS<br/>Background work and retries]
+        DB[(Amazon RDS for PostgreSQL<br/>Private database, automated backups)]
+        S3[(Amazon S3<br/>Private society documents)]
+
+        subgraph Network[Private network and outbound access]
+            VPC[AWS VPC and IAM<br/>Private database networking and permissions]
+            NAT[EC2 NAT instance<br/>Required outbound connections]
         end
 
-        subgraph Staging[Staging — test-only fictional data]
-            StageIngress[Staging ingress]
-            StageAPI[Small staging API<br/>separate service and secrets]
-            StageS3[(Separate staging<br/>document storage)]
-            StageDB[(Separate staging database<br/>fictional data)]
-            StageIngress --> StageAPI
-            StageAPI --> StageS3
-            StageAPI --> StageDB
+        subgraph Ops[4. Security, monitoring and spending controls]
+            Parameters[AWS Systems Manager Parameter Store<br/>Application configuration and secrets]
+            CloudWatch[Amazon CloudWatch<br/>Logs, metrics and alarms]
+            CloudTrail[AWS CloudTrail<br/>AWS account activity]
+            Budgets[AWS Budgets<br/>USD 40 and USD 60 alerts]
         end
 
-        subgraph Ops[4. Security, monitoring and operations]
-            CloudTrail[AWS CloudTrail<br/>account activity audit]
-            CloudWatch[Amazon CloudWatch<br/>logs, metrics and alarms]
-            SES[Amazon SES<br/>email notifications]
-            KMS[AWS KMS<br/>encryption keys]
-            Secrets[AWS Secrets Manager<br/>runtime secrets]
-            CloudTrail --> CloudWatch
-            API --> CloudWatch
-            API --> SES
-            KMS -. encrypts .-> DB
-            KMS -. encrypts .-> S3
-            KMS -. encrypts .-> Secrets
-            Secrets --> API
-        end
+        APIEntry --> API
+        API --> DB
+        API --> S3
+        API --> Queue
+        Queue --> API
+        API --> Parameters
+        API --> CloudWatch
+        API -. runs within .-> VPC
+        DB -. kept private in .-> VPC
+        VPC --> NAT
+        CloudTrail --> CloudWatch
     end
 
-    Cloudflare -->|API origin over HTTPS| ALB
-    ALB --> API
-    ECR -->|Deploy approved image| API
-    API -->|Prisma over TLS| DB
-    API -->|Short-lived upload URL| Mobile
-    Mobile -->|Direct upload with short-lived URL| S3
-    S3 -->|Origin access control| OAC
-    OAC --> CDN
-    Mobile -->|Protected download| CDN
-    Browser -->|Protected download| CDN
-    Cognito -. JWT issuer and claims .-> API
-    Cognito -. restricted staging access .-> StageAPI
+    Browser -->|HTTPS API requests| APIEntry
+    Cognito -. provides identity tokens to .-> APIEntry
+    API -->|Short-lived authorised upload/download links| Mobile
+    API -->|Short-lived authorised upload/download links| Browser
+    Mobile -->|Upload/download with signed link| S3
+    Browser -->|Upload/download with signed link| S3
+    MapTiler[MapTiler<br/>External map tiles]
+    FCM[Firebase Cloud Messaging<br/>Mobile push notifications]
+    Mobile -. map tiles .-> MapTiler
+    API -. sends push notifications .-> FCM
 
-    subgraph Delivery[5. Source control and delivery]
-        GitHub[GitHub repository]
-        Actions[GitHub Actions<br/>CI, tests and OIDC]
-        Approval[Approved production deployment]
-        Promote[Promote approved changes]
-        GitHub --> Actions
-        Actions -->|Deploy frontend| Amplify
-        Actions -->|Build and push API image| ECR
-        Actions -->|Approved deployment| Approval
-        Approval -->|Deploy approved image| API
-        Actions -->|Promote approved changes| Promote
-        Promote -->|Update staging| StageAPI
-    end
-
-    Sentry[Sentry<br/>external error monitoring]
-    MapTiler[MapTiler<br/>external map tiles]
-    API -. error monitoring .-> Sentry
-    Mobile -. external map tiles .-> MapTiler
-    Browser -. external map tiles .-> MapTiler
 ```
 
-Production and staging are separate environments: staging uses fictional test data, its own API configuration, secrets, database and document storage; production holds live data. Access to staging is restricted. The API runs privately behind the load balancer, the production database is isolated, and document uploads use short-lived URLs with protected downloads through CloudFront. GitHub Actions uses OIDC for deployment rather than long-lived AWS access keys. MapTiler and Sentry are external services; map tiles are only needed for interactive map features.
+The testing environment uses fictional data. API requests enter through API Gateway and are processed by Lambda; records are stored in a private RDS PostgreSQL database, while files are kept in a private S3 bucket. Cognito handles staff identity, and role and society permissions are enforced by the API. The VPC and NAT instance provide private database networking and required outbound access. Parameter Store holds application configuration and secrets; CloudWatch, CloudTrail and AWS Budgets support monitoring and cost alerts. MapTiler and Firebase Cloud Messaging are external services. Before real staff data or production use, the team must complete security, privacy, backup and recovery reviews.
 
 ## 3. Core modules, personas and user roles
 
@@ -200,7 +174,7 @@ Each application has a detailed guide: [API](apps/api/README.md), [dashboard](ap
 | Technology | Purpose |
 | --- | --- |
 | Flutter and Dart | iOS and Android mobile app |
-| Next.js 15, React and TypeScript | Administration dashboard (pinned to the Next.js major version supported by AWS Amplify Hosting) |
+| Next.js 15, React and TypeScript | HQ administration dashboard (planned for AWS Amplify Hosting) |
 | NestJS and TypeScript | REST API and application services |
 | PostgreSQL and Prisma ORM | Relational database and schema/migrations |
 | Docker Compose | Local PostgreSQL development environment |
@@ -597,7 +571,7 @@ These demo identities are not production authentication. Cognito integration and
 
 ## 11. Deployment status
 
-The API, dashboard and mobile app are currently used for local development and demonstration. No production AWS environment is configured by this repository. The cloud diagram above is a proposed direction only; account setup, staging/production separation, security review, backups, monitoring and a cost estimate must be approved before deployment. See [infrastructure/docker](infrastructure/docker/README.md) for the local PostgreSQL environment.
+The API, dashboard and mobile app are currently used for local development and demonstration. No AWS testing environment is configured by this repository. The diagram above records the testing-phase direction from the hosting proposal; AWS resources, deployment, production data and credentials are not configured here. Complete the AWS setup, security review, backups, monitoring and cost checks before testing with staff. See [infrastructure/docker](infrastructure/docker/README.md) for the local PostgreSQL environment.
 
 ## 12. Security and privacy
 
