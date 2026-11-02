@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { SocietyRecord, WorkPlanOverview } from "@sarvodaya-connect/api-contracts";
 
+import { secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { Pill } from "../ui/pill";
 import {
@@ -77,7 +78,16 @@ function MapPreview({ hasLocation }: { hasLocation: boolean }) {
 }
 
 /** D05 society record overview below the yearly summary. */
-export function RecordOverview({ record, workPlan }: { record: SocietyRecord; workPlan: WorkPlanOverview | null }) {
+export function RecordOverview({
+  canAssign = false,
+  record,
+  workPlan,
+}: {
+  /** HQ only (D05a). The API refuses everyone else as well. */
+  canAssign?: boolean;
+  record: SocietyRecord;
+  workPlan: WorkPlanOverview | null;
+}) {
   const base = `/societies/${record.id}`;
   const address = [record.address.addressLine, record.address.dsDivision && `${record.address.dsDivision} DS`, record.address.gnDivision && `${record.address.gnDivision} GN`]
     .filter(Boolean)
@@ -200,6 +210,12 @@ export function RecordOverview({ record, workPlan }: { record: SocietyRecord; wo
             )}
             {!staff.some((member) => member.role === "SOCIETY_OFFICER") && (
               <p className="mt-2 text-[10px] text-muted">No Society Officer is assigned.</p>
+            )}
+            {canAssign && (
+              <Link className={`${secondaryButtonClass} mt-3`} href={`${base}?panel=assign`}>
+                <Icon className="size-4" name="user" strokeWidth={2} />
+                Change assignments
+              </Link>
             )}
           </Card>
 

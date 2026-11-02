@@ -41,6 +41,8 @@ export const SOCIETY_CHANGE_ACTIONS = [
   'AUDIT_REPORT_UPLOADED',
   'DOCUMENT_UPLOADED',
   'WORK_PLAN_UPDATED',
+  'SOCIETY_CREATED',
+  'SOCIETY_STAFF_ASSIGNED',
 ] as const;
 
 /** A direct grade change made by HQ while editing the record (D05e). */

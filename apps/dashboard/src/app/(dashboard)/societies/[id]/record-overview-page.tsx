@@ -1,14 +1,20 @@
+import { AssignStaffPanel } from "@/components/dashboard/society-record/assign-staff-panel";
 import { EditSocietyPanel } from "@/components/dashboard/society-record/edit-society-panel";
 import { RecordOverview } from "@/components/dashboard/society-record/record-overview";
 import { getCurrentViewer } from "@/lib/current-viewer";
-import { getSocietyRecord, getWorkPlan } from "@/lib/society-record-api";
+import { getSocietyRecord, getStaffOptions, getWorkPlan } from "@/lib/society-record-api";
 
-import { updateSocietyRecord } from "./record-actions";
+import { assignStaff, updateSocietyRecord } from "./record-actions";
 
-/** D05 / D05m overview, with the D05e edit panel when `?panel=edit`. */
+/** D05 / D05m overview, with the D05e edit panel (`?panel=edit`) and the D05a staff panel (`?panel=assign`, HQ). */
 export async function RecordOverviewPage({ id, panel, saved }: { id: string; panel?: string; saved?: boolean }) {
   const viewer = await getCurrentViewer();
-  const [record, plan] = await Promise.all([getSocietyRecord(id), getWorkPlan(id).catch(() => null)]);
+  const isHq = viewer.role === "HQ_ADMIN";
+  const [record, plan, staffOptions] = await Promise.all([
+    getSocietyRecord(id),
+    getWorkPlan(id).catch(() => null),
+    panel === "assign" && isHq ? getStaffOptions(id) : null,
+  ]);
   return (
     <>
       {saved && (
@@ -16,10 +22,11 @@ export async function RecordOverviewPage({ id, panel, saved }: { id: string; pan
           Changes saved. They are in the society history with your name and the time.
         </p>
       )}
-      <RecordOverview record={record} workPlan={plan} />
+      <RecordOverview canAssign={isHq} record={record} workPlan={plan} />
       {panel === "edit" && record.permissions.canEdit && (
         <EditSocietyPanel action={updateSocietyRecord.bind(null, id)} hqName={viewer.displayName} record={record} />
       )}
+      {staffOptions && <AssignStaffPanel action={assignStaff.bind(null, id)} options={staffOptions} record={record} />}
     </>
   );
 }

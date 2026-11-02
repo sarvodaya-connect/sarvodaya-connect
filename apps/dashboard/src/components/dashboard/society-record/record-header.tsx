@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { SocietyRecord } from "@sarvodaya-connect/api-contracts";
 
+import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { Pill } from "../ui/pill";
 import { formatDate, gradeBadgeClass } from "@/lib/society-record-format";
@@ -13,7 +14,16 @@ function isToday(value: string) {
 }
 
 /** D05 breadcrumb, society header and actions shared by every record tab. */
-export function RecordHeader({ record, tabs }: { record: SocietyRecord; tabs: RecordTab[] }) {
+export function RecordHeader({
+  isHq = false,
+  record,
+  tabs,
+}: {
+  /** HQ sees Change assignments and Review grade request (V5 D05). The API checks again. */
+  isHq?: boolean;
+  record: SocietyRecord;
+  tabs: RecordTab[];
+}) {
   const base = `/societies/${record.id}`;
   const location = [record.societyCode, record.district.nameEn, record.address.dsDivision && `${record.address.dsDivision} DS`]
     .filter(Boolean)
@@ -63,15 +73,26 @@ export function RecordHeader({ record, tabs }: { record: SocietyRecord; tabs: Re
               )}
             </div>
           </div>
-          {record.permissions.canEdit && (
-            <Link
-              className="inline-flex items-center gap-2 self-start rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft lg:self-center"
-              href={`${base}?panel=edit`}
-            >
-              <Icon className="size-3.5" name="clipboard" />
-              Edit society
-            </Link>
-          )}
+          <div className="flex flex-wrap gap-2.5 self-start lg:self-center">
+            {record.permissions.canEdit && (
+              <Link className={secondaryButtonClass} href={`${base}?panel=edit`}>
+                <Icon className="size-4" name="clipboard" strokeWidth={2} />
+                Edit society
+              </Link>
+            )}
+            {isHq && (
+              <Link className={secondaryButtonClass} href={`${base}?panel=assign`}>
+                <Icon className="size-4" name="user" strokeWidth={2} />
+                Change assignments
+              </Link>
+            )}
+            {isHq && record.openGradeRequest && (
+              <Link className={primaryButtonClass} href={`/reviews/${record.openGradeRequest.id}`}>
+                <Icon className="size-4" name="flag" strokeWidth={2} />
+                Review grade request
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 

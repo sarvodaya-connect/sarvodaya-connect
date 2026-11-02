@@ -176,7 +176,7 @@ describe("D05x Exco", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reveal = vi.fn().mockResolvedValue({ nic: "198400000012" });
-    render(<ExcoTable members={record.committee} revealNic={reveal} />);
+    render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} />);
     expect(screen.getByText("2 of 25 Exco members")).toBeInTheDocument();
     expect(screen.getByText("23 missing")).toBeInTheDocument();
     expect(screen.getByText("•••• •••• 0047")).toBeInTheDocument();

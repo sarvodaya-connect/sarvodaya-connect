@@ -20,12 +20,14 @@ import {
   type Principal,
   type UserRole,
 } from '../auth/principal.js';
+import type { AuditType } from './identity.dto.js';
 import type {
   AccountDetailsDto,
   CreateAccountDto,
   GrantDistrictAccessDto,
   LoginDto,
   SetAccountPasswordDto,
+  AuditQueryDto,
   UpdateAccountDto,
 } from './identity.dto.js';
 
@@ -50,6 +52,55 @@ export const SIGN_IN_FAILED =
 export const SIGN_IN_LOCKED =
   'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.';
 const MAX_FAILED_SIGN_INS = 5;
+
+const SHORT_ROLE: Record<string, string> = {
+  SOCIETY_OFFICER: 'Society Officer',
+  PROGRAMME_COORDINATOR: 'SPC',
+  DEPUTY_DISTRICT_MANAGER: 'DDM',
+  DISTRICT_MANAGER: 'DM',
+  HQ_ADMIN: 'HQ',
+};
+
+/** V5 D24 "Type" filter: which audit actions each group covers. */
+const AUDIT_ACTIONS: Record<AuditType, readonly string[]> = {
+  SOCIETY: [
+    'SOCIETY_CREATED',
+    'SOCIETY_PROFILE_UPDATED',
+    'SOCIETY_MEMBERSHIP_UPDATED',
+    'SOCIETY_STAFF_ASSIGNED',
+  ],
+  EXCO: ['SOCIETY_COUNCIL_UPDATED', 'MEMBER_NIC_UPDATED'],
+  GRADE: [
+    'GRADE_CHANGE_REQUESTED',
+    'GRADE_CHANGE_APPROVED',
+    'GRADE_CHANGE_REJECTED',
+    'SOCIETY_GRADE_CHANGED',
+  ],
+  ACCOUNTS: [
+    'ACCOUNT_CREATED',
+    'ACCOUNT_SCOPE_UPDATED',
+    'ACCOUNT_PASSWORD_CHANGED',
+    'ACCOUNT_DISABLED',
+    'LOCAL_HQ_BOOTSTRAPPED',
+  ],
+  ACCESS: [
+    'DISTRICT_ACCESS_GRANTED',
+    'DISTRICT_ACCESS_REVOKED',
+    'MEMBER_NIC_REVEALED',
+  ],
+  RECORDS: [
+    'ANNUAL_SUMMARY_UPDATED',
+    'AUDIT_REPORT_UPLOADED',
+    'DOCUMENT_UPLOADED',
+    'WORK_PLAN_UPDATED',
+  ],
+  ASSISTANT: ['SARVOAI_QUESTION'],
+};
+const AUDIT_TYPE_OF: Record<string, AuditType> = Object.fromEntries(
+  Object.entries(AUDIT_ACTIONS).flatMap(([type, actions]) =>
+    actions.map((action) => [action, type as AuditType]),
+  ),
+);
 const LOCKOUT_MS = 15 * 60_000;
 
 @Injectable()
@@ -189,7 +240,11 @@ export class IdentityService {
           detail: `Role ${created.role}; initial password set by HQ`,
         },
       });
-      return { id: created.id, username: created.username, status: created.status };
+      return {
+        id: created.id,
+        username: created.username,
+        status: created.status,
+      };
     });
     return { account, delivery: 'MANUAL_HANDOVER' };
   }
@@ -488,9 +543,18 @@ export class IdentityService {
       return { revoked: true };
     });
   }
-  async audit(principal: Principal) {
+  /**
+   * V5 D24 change & access log, within the viewer's scope (HQ national).
+   * Entries name the person, their role and the society or account changed;
+   * details never contain NICs, passwords or credentials.
+   */
+  async audit(
+    principal: Principal,
+    query: AuditQueryDto = {},
+    now = new Date(),
+  ) {
     const districts = readableDistrictIds(principal);
-    const where = hasRole(principal, 'HQ_ADMIN')
+    const scope = hasRole(principal, 'HQ_ADMIN')
       ? {}
       : {
           OR: [
@@ -498,11 +562,148 @@ export class IdentityService {
             ...(districts.length ? [{ districtId: { in: districts } }] : []),
           ],
         };
+    const q = query.q?.trim();
+    const [societyMatches, accountMatches] = q
+      ? await Promise.all([
+          this.db.society.findMany({
+            where: {
+              OR: [
+                { nameEn: { contains: q, mode: 'insensitive' } },
+                { societyCode: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+            select: { id: true },
+            take: 200,
+          }),
+          this.db.platformAccount.findMany({
+            where: {
+              OR: [
+                { displayName: { contains: q, mode: 'insensitive' } },
+                { username: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+            select: { id: true },
+            take: 200,
+          }),
+        ])
+      : [[], []];
+    const rows = await this.db.platformAuditEvent.findMany({
+      where: {
+        AND: [
+          scope,
+          query.districtId ? { districtId: query.districtId } : {},
+          query.type ? { action: { in: [...AUDIT_ACTIONS[query.type]] } } : {},
+          query.role ? { actorRole: query.role } : {},
+          query.days
+            ? {
+                createdAt: {
+                  gte: new Date(now.getTime() - query.days * 24 * 3600_000),
+                },
+              }
+            : {},
+          q
+            ? {
+                OR: [
+                  { societyId: { in: societyMatches.map((row) => row.id) } },
+                  { actorId: { in: accountMatches.map((row) => row.id) } },
+                  { targetId: { in: accountMatches.map((row) => row.id) } },
+                  { actorName: { contains: q, mode: 'insensitive' as const } },
+                ],
+              }
+            : {},
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    const ids = (pick: (row: (typeof rows)[number]) => string | null) => [
+      ...new Set(rows.map(pick).filter((id): id is string => Boolean(id))),
+    ];
+    const uuid = /^[0-9a-f-]{36}$/i;
+    const [accounts, societies, districtRows, requests] = await Promise.all([
+      this.db.platformAccount.findMany({
+        where: {
+          id: {
+            in: [
+              ...ids((row) => row.actorId),
+              ...ids((row) => row.targetId),
+            ].filter((id) => uuid.test(id)),
+          },
+        },
+        select: { id: true, displayName: true, role: true },
+      }),
+      this.db.society.findMany({
+        where: { id: { in: ids((row) => row.societyId) } },
+        select: { id: true, nameEn: true, societyCode: true },
+      }),
+      this.db.district.findMany({
+        where: { id: { in: ids((row) => row.districtId) } },
+        select: { id: true, nameEn: true },
+      }),
+      this.db.gradeChangeRequest.findMany({
+        where: {
+          id: {
+            in: rows
+              .filter(
+                (row) =>
+                  row.action === 'GRADE_CHANGE_REQUESTED' &&
+                  uuid.test(row.targetId),
+              )
+              .map((row) => row.targetId),
+          },
+        },
+        select: { id: true, status: true, decidedByName: true },
+      }),
+    ]);
+    const account = new Map(accounts.map((row) => [row.id, row]));
+    const society = new Map(societies.map((row) => [row.id, row]));
+    const district = new Map(districtRows.map((row) => [row.id, row.nameEn]));
+    const request = new Map(requests.map((row) => [row.id, row]));
     return {
-      data: await this.db.platformAuditEvent.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: 200,
+      data: rows.map((row) => {
+        const actor = account.get(row.actorId);
+        const target = account.get(row.targetId);
+        const place = row.societyId ? society.get(row.societyId) : undefined;
+        const decision =
+          row.action === 'GRADE_CHANGE_REQUESTED'
+            ? request.get(row.targetId)
+            : undefined;
+        return {
+          id: row.id,
+          createdAt: row.createdAt.toISOString(),
+          action: row.action,
+          type: AUDIT_TYPE_OF[row.action] ?? null,
+          actor: {
+            displayName: row.actorName ?? actor?.displayName ?? 'Unknown user',
+            role: row.actorRole ?? actor?.role ?? null,
+          },
+          // The society, or for account changes the person and role, or the district.
+          scope: place
+            ? place.nameEn
+            : row.societyId
+              ? 'Removed record'
+              : target && row.action.startsWith('ACCOUNT_')
+                ? `${target.displayName} · ${SHORT_ROLE[target.role] ?? target.role}`
+                : row.districtId
+                  ? district.has(row.districtId)
+                    ? `${district.get(row.districtId)} District`
+                    : 'Removed record'
+                  : 'National',
+          // Only link to societies that still exist.
+          societyId: place ? row.societyId : null,
+          detail: row.detail,
+          approvedBy: [
+            'GRADE_CHANGE_APPROVED',
+            'GRADE_CHANGE_REJECTED',
+            'SOCIETY_GRADE_CHANGED',
+          ].includes(row.action)
+            ? (row.actorName ?? actor?.displayName ?? null)
+            : decision
+              ? decision.status === 'PENDING'
+                ? 'Waiting'
+                : decision.decidedByName
+              : null,
+        };
       }),
     };
   }

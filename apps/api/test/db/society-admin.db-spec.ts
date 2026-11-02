@@ -419,4 +419,51 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       members: future,
     }).expect(400);
   });
+
+  it('D24: the log is scoped, filterable, names people and never shows NICs', async () => {
+    const all = await call('get', '/identity/audit?days=30', tokens.hq).expect(
+      200,
+    );
+    const created = all.body.data.find(
+      (row: { action: string; detail: string }) =>
+        row.action === 'SOCIETY_CREATED' && row.detail.includes(`SN-${suffix}`),
+    );
+    expect(created).toMatchObject({
+      type: 'SOCIETY',
+      actor: { displayName: 'Test HQ_ADMIN', role: 'HQ_ADMIN' },
+      scope: 'Fictional New Society',
+    });
+    expect(JSON.stringify(all.body)).not.toContain('199012345678');
+
+    const grades = await call(
+      'get',
+      '/identity/audit?type=GRADE',
+      tokens.hq,
+    ).expect(200);
+    expect(grades.body.data.length).toBeGreaterThan(0);
+    expect(
+      grades.body.data.every((row: { type: string }) => row.type === 'GRADE'),
+    ).toBe(true);
+
+    const search = await call(
+      'get',
+      `/identity/audit?q=SN-${suffix}`,
+      tokens.hq,
+    ).expect(200);
+    expect(search.body.data.length).toBeGreaterThan(0);
+    expect(
+      search.body.data.every(
+        (row: { scope: string }) => row.scope === 'Fictional New Society',
+      ),
+    ).toBe(true);
+
+    // A DM sees only their district: never the far district's society.
+    const dm = await call('get', '/identity/audit', tokens.dm).expect(200);
+    expect(
+      dm.body.data.some(
+        (row: { scope: string }) => row.scope === 'Fictional Far Society',
+      ),
+    ).toBe(false);
+    await call('get', '/identity/audit?type=NOPE', tokens.hq).expect(400);
+  });
 });

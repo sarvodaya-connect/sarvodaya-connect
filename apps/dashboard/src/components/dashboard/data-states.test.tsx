@@ -102,10 +102,10 @@ describe("NoAccessState", () => {
 
 describe("SuccessState", () => {
   it("announces the result with its follow-up action", () => {
-    render(<SuccessState action={<a href="/reviews">Back to queue</a>} description="Everyone has been told." title="Grade decision saved" />);
+    render(<SuccessState action={<button type="button">Back to queue</button>} description="Everyone has been told." title="Grade decision saved" />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Grade decision saved");
-    expect(screen.getByRole("link", { name: "Back to queue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to queue" })).toBeInTheDocument();
   });
 });
 
