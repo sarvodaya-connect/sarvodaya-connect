@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../data/demo_data.dart';
 import '../models/user.dart';
+import '../society_record/activity_screens.dart';
 import '../state/demo_store.dart';
 import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
@@ -148,7 +149,17 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
                   ),
                 ),
               ),
-            if (_loading) const LinearProgressIndicator(),
+            if (_loading)
+              const Row(
+                children: [
+                  SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text('Loading…'),
+                ],
+              ),
             if (_error != null) ...[
               Text(_error!),
               TextButton(onPressed: _load, child: const Text('Try again')),
@@ -163,6 +174,25 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
                 onTap: () => store.selectTab(HomeShell.societyTab),
               ),
             ),
+            // V5 M50: the SPC approves activities and chooses their UN SDGs.
+            // The full SPC home (M05s) arrives in PR 6.
+            if (widget.role == UserRole.programmeCoordinator)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: const Text('Activities to approve'),
+                  subtitle: const Text(
+                    'Choose the UN SDGs and approve activities from your societies',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ActivitiesToApproveScreen(),
+                    ),
+                  ),
+                ),
+              ),
             ListTile(
               leading: const Icon(Icons.holiday_village_outlined),
               title: const Text('Open societies'),

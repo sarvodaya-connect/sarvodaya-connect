@@ -1,4 +1,9 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rename, rm, stat } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
@@ -34,11 +39,16 @@ export interface LocalUrlPayload {
   sz?: number;
   /** Download filename. */
   fn?: string;
+  /** SHA-256 the upload must have, base64. */
+  cs?: string;
   /** Expiry, in seconds since the epoch. */
   exp: number;
 }
 
 export class UploadSizeMismatchError extends Error {}
+
+/** Like S3 with x-amz-checksum-sha256: the bytes are not the declared file. */
+export class UploadChecksumMismatchError extends Error {}
 
 /**
  * Development storage on the local disk. It imitates S3 pre-signed URLs with
@@ -59,6 +69,7 @@ export class LocalDocumentStorage implements DocumentStorage {
     key: string;
     contentType: string;
     sizeBytes: number;
+    checksumSha256?: string;
   }): Promise<PresignedRequest> {
     assertSafeStorageKey(input.key);
     const exp = this.expiry();
@@ -67,6 +78,7 @@ export class LocalDocumentStorage implements DocumentStorage {
       m: 'PUT',
       ct: input.contentType,
       sz: input.sizeBytes,
+      ...(input.checksumSha256 ? { cs: input.checksumSha256 } : {}),
       exp,
     });
     return {
@@ -143,14 +155,17 @@ export class LocalDocumentStorage implements DocumentStorage {
     key: string,
     source: Readable,
     expectedSize: number,
+    expectedChecksum?: string,
   ): Promise<void> {
     const target = this.pathFor(key);
     await mkdir(dirname(target), { recursive: true });
     const temporary = `${target}.upload-${randomUUID()}`;
     let received = 0;
+    const hash = createHash('sha256');
     const limit = new Transform({
       transform(chunk: Buffer, _encoding, callback) {
         received += chunk.length;
+        hash.update(chunk);
         if (received > expectedSize) {
           callback(
             new UploadSizeMismatchError('Upload is larger than declared'),
@@ -168,6 +183,10 @@ export class LocalDocumentStorage implements DocumentStorage {
       );
       if (received !== expectedSize)
         throw new UploadSizeMismatchError('Upload is smaller than declared');
+      if (expectedChecksum && hash.digest('base64') !== expectedChecksum)
+        throw new UploadChecksumMismatchError(
+          'Upload does not match its checksum',
+        );
       await rename(temporary, target);
     } catch (error) {
       await rm(temporary, { force: true });

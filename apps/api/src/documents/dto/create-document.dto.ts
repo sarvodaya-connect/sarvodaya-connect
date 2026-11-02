@@ -17,7 +17,8 @@ import {
   type AllowedContentType,
   DOCUMENT_TYPES,
   type DocumentTypeValue,
-  MAX_DOCUMENT_BYTES,
+  SHA256_BASE64,
+  UPLOAD_SIZE_CEILING,
 } from '../upload-rules.js';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -49,12 +50,20 @@ export class CreateDocumentDto {
   @IsIn(Object.keys(ALLOWED_CONTENT_TYPES))
   contentType: AllowedContentType;
 
+  /** Checked against DOCUMENT_MAX_UPLOAD_BYTES by the service. */
   @IsInt()
   @Min(1)
-  @Max(MAX_DOCUMENT_BYTES)
+  @Max(UPLOAD_SIZE_CEILING)
   sizeBytes: number;
 
-  /** SC-65: required for audit reports. 2025 means FY 2025/26. */
+  /** SHA-256 of the file in base64; storage refuses an upload that does not match. */
+  @IsOptional()
+  @Matches(SHA256_BASE64, {
+    message: 'checksumSha256 must be the SHA-256 of the file in base64',
+  })
+  checksumSha256?: string;
+
+  /** Required for the four Registrar documents. 2025 means FY 2025/26. */
   @IsOptional()
   @IsInt()
   @Min(2000)

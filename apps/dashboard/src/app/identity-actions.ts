@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { platformApi, SESSION_COOKIE } from "@/lib/platform-api";
-import { getCurrentViewer } from "@/lib/current-viewer";
+import { getCurrentViewer, SPC_DESKTOP_HOME } from "@/lib/current-viewer";
 import { NOT_HQ_ON_DESKTOP, SOCIETY_OFFICER_ON_DESKTOP } from "@/lib/sign-in-messages";
 export type FormResult = {
   error?: string;
@@ -23,7 +23,10 @@ export async function login(
       method: "POST",
       body: JSON.stringify({ username, password: form.get("password") }),
     });
-    if (!result.user?.roles.includes("HQ_ADMIN")) {
+    const isHq = result.user?.roles.includes("HQ_ADMIN");
+    // V5 SP06–SP08: SPCs approve activities on the desktop. Their other pages open in PR 6.
+    const isSpc = result.user?.roles.includes("PROGRAMME_COORDINATOR");
+    if (!isHq && !isSpc) {
       // Not for this dashboard yet: end the session the API just opened.
       await platformApi("/identity/logout", {
         method: "POST",
@@ -45,7 +48,7 @@ export async function login(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not sign in", username };
   }
-  redirect("/dashboard");
+  redirect(result.user?.roles.includes("HQ_ADMIN") ? "/dashboard" : SPC_DESKTOP_HOME);
 }
 export async function signOut() {
   try {

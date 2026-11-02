@@ -39,6 +39,7 @@ export interface NewDocument {
   uploadedByName: string;
   uploadedByRole?: string | null;
   financialYear?: number | null;
+  checksumSha256?: string | null;
 }
 
 /** Who confirmed the upload, for the society change history. */
@@ -78,10 +79,14 @@ export class DocumentsRepository {
       ...(scope.kind === 'societies'
         ? { societyId: { in: scope.societyIds } }
         : {}),
-      ...(scope.kind === 'mixed' ? { OR: [
-        { societyId: { in: scope.societyIds } },
-        { society: { districtId: { in: scope.districtIds } } },
-      ] } : {}),
+      ...(scope.kind === 'mixed'
+        ? {
+            OR: [
+              { societyId: { in: scope.societyIds } },
+              { society: { districtId: { in: scope.districtIds } } },
+            ],
+          }
+        : {}),
       ...(filters.societyId ? { AND: [{ societyId: filters.societyId }] } : {}),
       society: {
         ...(scope.kind === 'districts'
@@ -159,7 +164,9 @@ export class DocumentsRepository {
               actorId: actor.id,
               actorName: actor.displayName,
               actorRole: actor.role,
-              action: isAuditReport ? 'AUDIT_REPORT_UPLOADED' : 'DOCUMENT_UPLOADED',
+              action: isAuditReport
+                ? 'AUDIT_REPORT_UPLOADED'
+                : 'DOCUMENT_UPLOADED',
               targetId: record.id,
               societyId: record.societyId,
               districtId: record.society.districtId,

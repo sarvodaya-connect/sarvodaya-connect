@@ -5,7 +5,9 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { latestCompletedFinancialYear } from '../societies/financial-year.js';
 
 import { findDemoPrincipal } from '../auth/demo-principals.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
@@ -71,6 +73,10 @@ describe('DocumentsService', () => {
     getObjectInfo: vi.fn(),
   };
   const notifications = { notifyReviewers: vi.fn() };
+  const settings: Record<string, string | undefined> = {};
+  const config = { get: (name: string) => settings[name] };
+  const fy = latestCompletedFinancialYear();
+  const fyPath = `${fy}-${String((fy + 1) % 100).padStart(2, '0')}`;
   let service: DocumentsService;
 
   beforeEach(() => {
@@ -79,7 +85,9 @@ describe('DocumentsService', () => {
       repository as unknown as DocumentsRepository,
       storage as DocumentStorage,
       notifications as unknown as NotificationsService,
+      config as unknown as ConfigService,
     );
+    delete settings['DOCUMENT_MAX_UPLOAD_BYTES'];
     storage.createUploadRequest.mockResolvedValue({
       method: 'PUT',
       url: 'http://upload',
@@ -99,9 +107,10 @@ describe('DocumentsService', () => {
       societyId: SUNRISE_ID,
       documentType: 'MEMBERS_LIST' as const,
       title: 'Members list 2026 (signed)',
-      fileName: 'members-list.pdf',
+      fileName: 'signed-by-nimal.pdf',
       contentType: 'application/pdf' as const,
       sizeBytes: 960_000,
+      financialYear: fy,
     };
 
     it('records the metadata with an API-generated storage key and returns an upload URL', async () => {
@@ -128,9 +137,10 @@ describe('DocumentsService', () => {
         uploadedById: 'demo-officer-sunrise',
       });
       expect(created['storageKey']).toBe(
-        `societies/${SUNRISE_ID}/documents/${created['id']}.pdf`,
+        `societies/${SUNRISE_ID}/members-list/${fyPath}/${created['id']}.pdf`,
       );
-      expect(created['storageKey']).not.toContain('members-list');
+      // No user-supplied name or personal data in the key.
+      expect(created['storageKey']).not.toContain('nimal');
       expect(storage.createUploadRequest).toHaveBeenCalledWith({
         key: created['storageKey'],
         contentType: 'application/pdf',
@@ -156,6 +166,103 @@ describe('DocumentsService', () => {
       expect(repository.create).not.toHaveBeenCalled();
     });
 
+    it('keeps Registrar documents per financial year and other files under "general"', async () => {
+      repository.findSociety.mockResolvedValue({
+        id: SUNRISE_ID,
+        nameEn: 'Example Sunrise Society',
+        districtId: NORTH,
+      });
+      repository.create.mockImplementation(
+        async (data: Record<string, unknown>) =>
+          record({ ...data, version: 1 } as never),
+      );
+
+      await expect(
+        service.create(officer, { ...input, financialYear: undefined }),
+      ).rejects.toThrow('Choose the financial year of the members list');
+
+      await service.create(officer, {
+        ...input,
+        documentType: 'ACTIVITY_EVIDENCE',
+        title: 'Tank cleaning photos',
+        fileName: 'tank.jpg',
+        contentType: 'image/jpeg',
+        financialYear: undefined,
+      });
+      const created = repository.create.mock.calls[0]![0] as Record<
+        string,
+        string
+      >;
+      expect(created['storageKey']).toBe(
+        `societies/${SUNRISE_ID}/activity-evidence/general/${created['id']}.jpg`,
+      );
+      await expect(
+        service.create(officer, {
+          ...input,
+          documentType: 'ACTIVITY_EVIDENCE',
+          fileName: 'tank.jpg',
+          contentType: 'image/jpeg',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('titles a Registrar document by its type and year', async () => {
+      repository.findSociety.mockResolvedValue({
+        id: SUNRISE_ID,
+        nameEn: 'Example Sunrise Society',
+        districtId: NORTH,
+      });
+      repository.create.mockImplementation(
+        async (data: Record<string, unknown>) =>
+          record({ ...data, version: 1 } as never),
+      );
+      await service.create(officer, {
+        ...input,
+        documentType: 'AGM_MINUTES',
+        fileName: 'agm.pdf',
+      });
+      expect(repository.create.mock.calls[0]![0]).toMatchObject({
+        title: `AGM minutes FY ${fy}/${String((fy + 1) % 100).padStart(2, '0')}`,
+        financialYear: fy,
+      });
+    });
+
+    it('passes the file checksum to storage so a different file is refused', async () => {
+      repository.findSociety.mockResolvedValue({
+        id: SUNRISE_ID,
+        nameEn: 'Example Sunrise Society',
+        districtId: NORTH,
+      });
+      repository.create.mockImplementation(
+        async (data: Record<string, unknown>) =>
+          record({ ...data, version: 1 } as never),
+      );
+      const checksumSha256 = `${'A'.repeat(43)}=`;
+      await service.create(officer, { ...input, checksumSha256 });
+      expect(repository.create.mock.calls[0]![0]).toMatchObject({
+        checksumSha256,
+      });
+      expect(storage.createUploadRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ checksumSha256 }),
+      );
+    });
+
+    it('refuses files over the configured upload limit (10 MB by default)', async () => {
+      repository.findSociety.mockResolvedValue({
+        id: SUNRISE_ID,
+        nameEn: 'Example Sunrise Society',
+        districtId: NORTH,
+      });
+      await expect(
+        service.create(officer, { ...input, sizeBytes: 10_000_001 }),
+      ).rejects.toThrow('The file is larger than 10 MB');
+      settings['DOCUMENT_MAX_UPLOAD_BYTES'] = '2000000';
+      await expect(
+        service.create(officer, { ...input, sizeBytes: 2_000_001 }),
+      ).rejects.toThrow('The file is larger than 2 MB');
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
     it('rejects a file name that does not match the content type', async () => {
       repository.findSociety.mockResolvedValue({
         id: SUNRISE_ID,
@@ -164,7 +271,7 @@ describe('DocumentsService', () => {
       });
 
       await expect(
-        service.create(officer, { ...input, fileName: 'members-list.docx' }),
+        service.create(officer, { ...input, fileName: 'signed-by-nimal.docx' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });

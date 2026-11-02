@@ -72,12 +72,12 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D05m, M06f, M06fx | `annual-summary-cards.tsx` | `annual_summary_screen.dart` | rework | 4 |
-| D05w, M09, M09c | `/societies/[id]/work-plan` | `society_record_screen.dart` | rework | 4 |
-| M09a, M09b, M09d, M09r, M09s | — | `activity_form_screen.dart` | rework | 4 |
-| M50, M51, M51b, M52, SP06, SP07, SP08 | — | — | new | 4 |
-| D11 Audits and AGM | `/compliance` | `audit_screen.dart` | rework | 4 |
-| D12, M13, M13a | `/documents`, `/societies/[id]/documents` | `documents_screen.dart`, `audit_report_upload_screen.dart` | rework | 4 |
+| D05m, M06f, M06fx | `annual-summary-cards.tsx` | `annual_summary_screen.dart` | match (PR 4); summary tiles above it are To Confirm | 4 |
+| D05w, M09, M09c | `/societies/[id]/work-plan`, `/work-plan/new` | `work_plan_view.dart` | match (PR 4) | 4 |
+| M09a, M09b, M09d, M09r, M09s | — | `activity_screens.dart` (`ActivityWizardScreen`, `ActivityDetailScreen`) | match (PR 4) | 4 |
+| M50, M51, M51b, M52, SP06, SP07, SP08 | `/activities-to-approve`, `/activities-to-approve/[id]` | `activity_screens.dart` | match (PR 4) | 4 |
+| D11 Audits and AGM | `/compliance` (API) | `audit_screen.dart` (demo only) | match (PR 4) | 4 |
+| D12, M13, M13a | `/documents`, `/societies/[id]/documents` (API) | `society_record_screen.dart`, `document_upload_screen.dart` | match (PR 4) | 4 |
 
 ### HQ dashboard and directory
 
@@ -146,7 +146,7 @@ PR 1 applies the V5 bar style to the existing tabs. The V5 tab sets below change
 The sidebar lists only pages that exist, so nobody lands on an empty page. These V5 items are added by the PR that builds them:
 
 - HQ: Map View (PR 5), Requests & Tasks (PR 5), Reports (PR 5), Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
-- SPC: Activities to approve (PR 4), Help (not assigned).
+- SPC: Activities to approve (added in PR 4, with SPC desktop sign-in limited to those pages until PR 6), Help (not assigned).
 - DM: Temporary DDM access (PR 7).
 - SPC, DDM and DM desktop sign-in: the dashboard still allows HQ only (`current-viewer.ts`, `identity-actions.ts`). PR 6 opens it with server-side scope on every request.
 

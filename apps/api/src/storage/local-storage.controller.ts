@@ -20,6 +20,7 @@ import {
 } from './document-storage.js';
 import {
   LocalDocumentStorage,
+  UploadChecksumMismatchError,
   UploadSizeMismatchError,
 } from './local-document-storage.js';
 
@@ -57,8 +58,13 @@ export class LocalStorageController {
       );
     }
     try {
-      await storage.writeObject(link.k, request, link.sz);
+      await storage.writeObject(link.k, request, link.sz, link.cs);
     } catch (error) {
+      if (error instanceof UploadChecksumMismatchError) {
+        throw new BadRequestException(
+          'The file does not match the checksum of the upload request',
+        );
+      }
       if (error instanceof UploadSizeMismatchError) {
         throw new BadRequestException(
           'The file size does not match the upload request',

@@ -9,7 +9,8 @@ export async function platformApi(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  else if (isDemoMode()) headers.set("X-Demo-User", "demo-hq-admin");
+  // Demonstration mode only: pages for another role name their demo user.
+  else if (isDemoMode() && !headers.has("X-Demo-User")) headers.set("X-Demo-User", "demo-hq-admin");
   const base = process.env.API_BASE_URL ?? "http://localhost:3001/api/v1";
   let response: Response;
   try {

@@ -4,7 +4,7 @@ import '../format.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
-import 'audit_report_upload_screen.dart';
+import 'document_upload_screen.dart';
 import 'record_widgets.dart';
 import 'society_record_api.dart';
 import 'society_record_models.dart';
@@ -329,8 +329,10 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                                               .push<bool>(
                                                 MaterialPageRoute(
                                                   builder: (_) =>
-                                                      AuditReportUploadScreen(
+                                                      DocumentUploadScreen(
                                                         record: record,
+                                                        documentType:
+                                                            'AUDIT_REPORT',
                                                         financialYear: _year,
                                                       ),
                                                 ),

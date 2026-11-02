@@ -1,3 +1,4 @@
+import type { ActivityDimension, ActivityParticipants, ActivityReview, ActivityStatus } from "./activities.js";
 import type { IsoDate, IsoDateTime } from "./common.js";
 import type { UserRole } from "./identity.js";
 import type { SocietyDetails } from "./registry.js";
@@ -193,7 +194,7 @@ export interface SocietyHistoryEvent {
 }
 
 /** Planning allocation for one activity. Not a payment or spending record. */
-export interface WorkPlanActivity {
+export interface WorkPlanActivity extends ActivityParticipants {
   id: string;
   year: number;
   month: number;
@@ -202,6 +203,16 @@ export interface WorkPlanActivity {
   sector?: string;
   datesLabel?: string;
   allocatedCost: number;
+  /** V5 PR 4. Activities planned before review existed are APPROVED. */
+  status: ActivityStatus;
+  dimension?: ActivityDimension;
+  sdgs: number[];
+  partners?: string;
+  resourcesNeeded?: string;
+  volunteerHours?: number;
+  createdBy?: ActorReference;
+  submittedAt?: IsoDateTime;
+  review?: ActivityReview;
 }
 
 export interface WorkPlanOverview {
@@ -209,6 +220,9 @@ export interface WorkPlanOverview {
   year: number;
   activities: WorkPlanActivity[];
   totalAllocated: number;
+  /** V5 M09: "9 planned · 8 approved · 1 waiting". */
+  counts: { planned: number; approved: number; waiting: number; sentBack: number };
+  permissions: { canAddActivities: boolean };
   lastChange?: { at: IsoDateTime; by: ActorReference };
 }
 

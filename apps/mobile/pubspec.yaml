@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.5
 
 dependencies:
+  crypto: ^3.0.6
   file_picker: ^13.3.0
   flutter:
     sdk: flutter
@@ -25,6 +26,7 @@ flutter:
     - assets/branding/sarvodaya_connect_logo.jpg
     - assets/branding/sarvodaya_connect_logo_white.png
     - assets/branding/sarvodaya_connect_wordmark.png
+    - assets/sdg/
 
 flutter_launcher_icons:
   android: true

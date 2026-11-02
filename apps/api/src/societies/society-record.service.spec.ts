@@ -438,6 +438,8 @@ describe('SocietyRecordService', () => {
           sector: '10 · Environment',
           datesLabel: null,
           allocatedCost: 25000,
+          status: 'APPROVED',
+          sdgs: [{ sdg: 6 }, { sdg: 15 }],
           updatedAt: new Date('2026-10-18T04:00:00.000Z'),
           updatedByName: spc.displayName,
           updatedByRole: 'PROGRAMME_COORDINATOR',
@@ -451,6 +453,8 @@ describe('SocietyRecordService', () => {
           sector: null,
           datesLabel: '12–14 Sep',
           allocatedCost: 55000.5,
+          status: 'WAITING_FOR_SPC',
+          sdgs: [],
           updatedAt: new Date('2026-10-17T04:00:00.000Z'),
           updatedByName: spc.displayName,
           updatedByRole: 'PROGRAMME_COORDINATOR',
@@ -466,6 +470,18 @@ describe('SocietyRecordService', () => {
         expect.objectContaining({ datesLabel: '12–14 Sep' }),
       );
       expect(result.activities[1]).not.toHaveProperty('sector');
+      expect(result.activities[0]).toMatchObject({
+        status: 'APPROVED',
+        sdgs: [6, 15],
+      });
+      expect(result.counts).toEqual({
+        planned: 2,
+        approved: 1,
+        waiting: 1,
+        sentBack: 0,
+      });
+      // HQ may change the plan (V5 D05w "Edit plan"); a DM only views it.
+      expect(result.permissions.canAddActivities).toBe(true);
     });
   });
 });

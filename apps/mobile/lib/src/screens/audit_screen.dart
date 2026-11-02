@@ -145,19 +145,12 @@ class _CurrentAuditCard extends StatelessWidget {
               'Required steps',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
+            // Numbers, not a bar (V5).
             subtitle: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Semantics(
-                label: '${audit.completedCount} of $total audit steps complete',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: audit.completedCount / total,
-                    minHeight: 6,
-                    backgroundColor: AppColors.mint,
-                    color: AppColors.leaf,
-                  ),
-                ),
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${audit.completedCount} of $total audit steps complete',
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
             ),
             trailing: Text(

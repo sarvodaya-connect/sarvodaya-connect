@@ -765,13 +765,20 @@ class _UploadSheetState extends State<_UploadSheet> {
               ],
               if (uploading) ...[
                 const SizedBox(height: 12),
-                Text('Uploading ${_file!.name}…'),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: _progress,
-                  minHeight: 6,
-                  color: AppColors.leaf,
-                  backgroundColor: AppColors.mint,
+                // A spinner and text, not a bar (V5: no horizontal progress bars).
+                Row(
+                  children: [
+                    const SizedBox.square(
+                      dimension: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Uploading… ${_file!.name} · ${((_progress ?? 0) * 100).round()}%',
+                      ),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: 16),
