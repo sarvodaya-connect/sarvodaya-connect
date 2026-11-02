@@ -1,0 +1,40 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SarvoAIGlobalInferenceProfile",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1"
+        }
+      }
+    },
+    {
+      "Sid": "SarvoAIRegionalModel",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-haiku-5-5",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-southeast-1",
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5"
+        }
+      }
+    },
+    {
+      "Sid": "SarvoAIGlobalModel",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": "arn:aws:bedrock:::foundation-model/anthropic.claude-haiku-5-5",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "unspecified",
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5"
+        }
+      }
+    }
+  ]
+}

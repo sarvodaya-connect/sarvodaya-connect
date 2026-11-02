@@ -1,4 +1,4 @@
-import { AnthropicBedrockMantle } from '@anthropic-ai/bedrock-sdk';
+import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import type Anthropic from '@anthropic-ai/sdk';
 import { ConfigService } from '@nestjs/config';
 
@@ -23,15 +23,20 @@ export class DisabledAssistantModel implements AssistantModel {
   }
 }
 
-/** Claude on Amazon Bedrock. AWS credentials come from the default chain (the task's IAM role in AWS). */
+/**
+ * Claude on Amazon Bedrock through the bedrock-runtime endpoint (InvokeModel). In Singapore,
+ * Claude Haiku 5.5 is served only through the global inference profile on this endpoint, not on
+ * bedrock-mantle. Requests are signed with the default AWS credential chain (the task's IAM role).
+ */
 export class BedrockAssistantModel implements AssistantModel {
-  private readonly client: AnthropicBedrockMantle;
+  private readonly client: AnthropicBedrock;
 
   constructor(
     readonly modelId: string,
     awsRegion: string,
   ) {
-    this.client = new AnthropicBedrockMantle({ awsRegion });
+    // apiKey null: never pick up a stray AWS_BEARER_TOKEN_BEDROCK; sign with IAM instead.
+    this.client = new AnthropicBedrock({ awsRegion, apiKey: null });
   }
 
   createMessage(request: ModelRequest): Promise<Anthropic.Message> {
@@ -42,7 +47,7 @@ export class BedrockAssistantModel implements AssistantModel {
 export function assistantModelFromConfig(config: ConfigService): AssistantModel {
   if (config.get<string>('SARVOAI_ENABLED') !== 'true') return new DisabledAssistantModel();
   return new BedrockAssistantModel(
-    config.get<string>('SARVOAI_MODEL_ID') ?? 'anthropic.claude-haiku-5-5',
+    config.get<string>('SARVOAI_MODEL_ID') ?? 'global.anthropic.claude-haiku-5-5',
     config.get<string>('SARVOAI_AWS_REGION') ?? 'ap-southeast-1',
   );
 }

@@ -1,4 +1,5 @@
 import { ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +8,7 @@ import { REQUIRED_ROLES } from '../auth/require-roles.decorator.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type Anthropic from '@anthropic-ai/sdk';
 
-import { type AssistantModel, DisabledAssistantModel } from './assistant-model.js';
+import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel } from './assistant-model.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
 import { AssistantService } from './assistant.service.js';
@@ -99,5 +100,20 @@ describe('AssistantService', () => {
     const { service, createMessage } = setup(Array.from({ length: 10 }, () => toolUse('list_districts', {})));
     await expect(service.ask(hq, 'Loop forever', [], now)).rejects.toThrow(ServiceUnavailableException);
     expect(createMessage).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('assistantModelFromConfig', () => {
+  const config = (values: Record<string, string>) => ({ get: (key: string) => values[key] }) as unknown as ConfigService;
+
+  it('stays off unless SARVOAI_ENABLED is "true"', () => {
+    expect(assistantModelFromConfig(config({}))).toBeInstanceOf(DisabledAssistantModel);
+    expect(assistantModelFromConfig(config({ SARVOAI_ENABLED: 'yes' }))).toBeInstanceOf(DisabledAssistantModel);
+  });
+
+  it('defaults to Claude Haiku 5.5 through the global profile from Singapore', () => {
+    const model = assistantModelFromConfig(config({ SARVOAI_ENABLED: 'true' }));
+    expect(model).toBeInstanceOf(BedrockAssistantModel);
+    expect(model.modelId).toBe('global.anthropic.claude-haiku-5-5');
   });
 });
