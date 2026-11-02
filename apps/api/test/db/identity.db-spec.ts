@@ -331,12 +331,12 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     const username = so.username;
     const unknown = await post('/identity/login', { username: `nobody.${suffix}`, password: 'x' }, '').expect(401);
     const wrong = await post('/identity/login', { username, password: 'wrong-pass-000' }, '').expect(401);
-    expect(unknown.body.message).toBe(SIGN_IN_FAILED);
-    expect(wrong.body.message).toBe(SIGN_IN_FAILED);
+    expect(unknown.body.error.message).toBe(SIGN_IN_FAILED);
+    expect(wrong.body.error.message).toBe(SIGN_IN_FAILED);
     for (let i = 0; i < 4; i++)
       await post('/identity/login', { username, password: 'wrong-pass-000' }, '').expect(401);
     const locked = await post('/identity/login', { username, password: 'test-password-123' }, '').expect(401);
-    expect(locked.body.message).toBe(SIGN_IN_LOCKED);
+    expect(locked.body.error.message).toBe(SIGN_IN_LOCKED);
     // HQ setting a new password clears the lockout.
     await post(`/identity/accounts/${so.id}/password`, { password: 'fresh-pass-321' }).expect(201);
     await post('/identity/login', { username, password: 'test-password-123' }, '').expect(401);
