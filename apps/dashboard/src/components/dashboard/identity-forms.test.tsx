@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SIGN_IN_FAILED } from "@/lib/sign-in-messages";
 
-import { CreateAccountDrawer, SetPasswordDialog, SignInForm } from "./identity-forms";
+import { ChangeRoleDialog, CreateAccountDrawer, DisableAccountDialog, SetPasswordDialog, SignInForm } from "./identity-forms";
 
 const actions = vi.hoisted(() => ({
   createAccount: vi.fn(async () => ({})),
+  disableAccount: vi.fn(async () => ({})),
   login: vi.fn(async () => ({})),
   setAccountPassword: vi.fn(async () => ({})),
+  updateAccount: vi.fn(async () => ({})),
 }));
 vi.mock("@/app/identity-actions", () => actions);
 
@@ -109,5 +111,52 @@ describe("V5 D16t set a new password", () => {
 
     expect(screen.getByRole("heading", { name: "Set a new password for M. Herath" })).toBeInTheDocument();
     expect(screen.getByText(/The old password stops working straight away/)).toBeInTheDocument();
+  });
+});
+
+describe("change role and disable (added to D16)", () => {
+  const spc = {
+    id: "a2",
+    displayName: "S. Karunaratne",
+    username: "s.karunaratne",
+    phone: "+94000000002",
+    email: null,
+    role: "PROGRAMME_COORDINATOR" as const,
+    districtId: "d1",
+    societyIds: ["s2"],
+    scopeLabel: "SPC · 1 society · Kurunegala",
+  };
+
+  it("opens with the person's current role and societies, and sends their details", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ChangeRoleDialog account={spc} options={options} />);
+    await user.click(screen.getByRole("button", { name: "Change role for S. Karunaratne" }));
+
+    expect(screen.getByLabelText(/^Role/)).toHaveValue("PROGRAMME_COORDINATOR");
+    expect(screen.getByLabelText(/^District/)).toHaveValue("d1");
+    expect(screen.getByRole("checkbox", { name: "Wellawa SSS · S-2" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Pahala Kosgama SSS · S-1" })).not.toBeChecked();
+    expect(screen.getByText(/The person is signed out\./)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/^Role/), "DISTRICT_MANAGER");
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Save role" }));
+    const sent = (actions.updateAccount.mock.calls[0] as unknown as [unknown, FormData])[1];
+    expect(sent.get("role")).toBe("DISTRICT_MANAGER");
+    expect(sent.get("username")).toBe("s.karunaratne");
+    expect(sent.get("phone")).toBe("+94000000002");
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+  });
+
+  it("asks before disabling and explains how to undo it", async () => {
+    const user = userEvent.setup();
+    render(<DisableAccountDialog account={spc} />);
+    await user.click(screen.getByRole("button", { name: "Disable account for S. Karunaratne" }));
+
+    expect(screen.getByRole("heading", { name: "Disable S. Karunaratne?" })).toBeInTheDocument();
+    expect(screen.getByText(/To let them back in, set a new password for them\./)).toBeInTheDocument();
+    expect(actions.disableAccount).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Disable account" }));
+    expect(actions.disableAccount).toHaveBeenCalledOnce();
   });
 });

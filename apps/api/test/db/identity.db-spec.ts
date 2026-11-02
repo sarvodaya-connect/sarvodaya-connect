@@ -342,4 +342,59 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     await post('/identity/login', { username, password: 'test-password-123' }, '').expect(401);
     await post('/identity/login', { username, password: 'fresh-pass-321' }, '').expect(201);
   });
+
+  it('HQ changes a role or disables an account; both sign the person out', async () => {
+    const ddm = await create('DEPUTY_DISTRICT_MANAGER', [societyId]);
+    const dm = await create('DISTRICT_MANAGER', []);
+    const spc = await create('PROGRAMME_COORDINATOR', [societyId]);
+    await post(
+      '/identity/district-access',
+      {
+        deputyId: ddm.id,
+        districtId,
+        startsAt: new Date(Date.now() - 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        reason: 'Leave cover',
+      },
+      dm.token,
+    ).expect(201);
+    const details = {
+      displayName: 'Test DDM',
+      username: ddm.username,
+      phone: '+94000000001',
+      role: 'PROGRAMME_COORDINATOR',
+      districtId,
+      societyIds: [societyId, neighbourId],
+    };
+    const put = (id: string, body: object, token = hqToken) =>
+      request(app.getHttpServer())
+        .put(`/api/v1/identity/accounts/${id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(body);
+    // Only HQ, and only valid scopes.
+    await put(ddm.id, details, spc.token).expect(403);
+    await post(`/identity/accounts/${ddm.id}/disable`, {}, spc.token).expect(403);
+    await put(ddm.id, { ...details, societyIds: [outsiderId] }).expect(400);
+    await put(ddm.id, { ...details, role: 'DISTRICT_MANAGER' }).expect(400);
+    // HQ cannot demote or disable itself.
+    await put(hqId, { ...details, username: `hq.${suffix}` }).expect(400);
+    await post(`/identity/accounts/${hqId}/disable`, {}).expect(400);
+
+    await put(ddm.id, details).expect(200);
+    await request(app.getHttpServer())
+      .get('/api/v1/identity/me')
+      .set('Authorization', `Bearer ${ddm.token}`)
+      .expect(401);
+    const changed = await db.platformAccount.findUniqueOrThrow({ where: { id: ddm.id } });
+    expect(changed.role).toBe('PROGRAMME_COORDINATOR');
+    expect(changed.societyIds.sort()).toEqual([societyId, neighbourId].sort());
+    const grant = await db.districtAccessGrant.findFirstOrThrow({ where: { deputyId: ddm.id } });
+    expect(grant.revokedAt).not.toBeNull();
+
+    await post(`/identity/accounts/${spc.id}/disable`, {}).expect(201);
+    await post('/identity/login', { username: spc.username, password: 'test-password-123' }, '').expect(401);
+    // Setting a new password lets a disabled person back in.
+    await post(`/identity/accounts/${spc.id}/password`, { password: 'welcome-back-123' }).expect(201);
+    await post('/identity/login', { username: spc.username, password: 'welcome-back-123' }, '').expect(201);
+  });
 });

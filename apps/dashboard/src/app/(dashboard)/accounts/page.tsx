@@ -5,12 +5,14 @@ import { AdministrationTabs } from "@/components/dashboard/accounts/administrati
 import { EmptyState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
 import {
+  ChangeRoleDialog,
   CreateAccountDrawer,
-  ROLE_LABELS,
+  DisableAccountDialog,
   SetPasswordDialog,
 } from "@/components/dashboard/identity-forms";
 import {
   ACCOUNT_TABS,
+  ROLE_LABELS,
   filterAccounts,
   parseAccountFilters,
   passwordLabel,
@@ -33,7 +35,7 @@ const selectClass =
 /** V5 D16 Accounts, with D16i (create) and D16t (set a new password). HQ only. */
 export default async function AccountsPage({ searchParams }: PageProps<"/accounts">) {
   // Non-HQ viewers are sent away here; the API refuses them as well.
-  await getCurrentViewer();
+  const viewer = await getCurrentViewer();
   const filters = parseAccountFilters(await searchParams);
   const [accounts, options]: [{ data: AccountSummary[] }, ScopeOptions] = await Promise.all([
     platformApi("/identity/accounts"),
@@ -125,7 +127,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       <section className="overflow-hidden rounded-card border border-line bg-surface">
         {rows.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-[13px]">
+            <table className="w-full min-w-[1120px] text-left text-[13px]">
               <caption className="sr-only">Accounts</caption>
               <thead className="bg-surface-muted text-[11.5px] font-semibold text-ink-soft">
                 <tr>
@@ -160,15 +162,27 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                         </span>
                       </td>
                       <td className="px-3 py-3 text-ink-soft">{passwordLabel(account)}</td>
-                      <td className="py-3 pl-3 pr-4 text-right">
-                        <SetPasswordDialog
-                          account={{
-                            id: account.id,
-                            displayName: account.displayName,
-                            username: account.username,
-                            scopeLabel: `${ROLE_LABELS[account.role]} · ${scope}`,
-                          }}
-                        />
+                      <td className="py-3 pl-3 pr-4">
+                        <div className="flex justify-end gap-2">
+                          <SetPasswordDialog
+                            account={{
+                              id: account.id,
+                              displayName: account.displayName,
+                              username: account.username,
+                              scopeLabel: `${ROLE_LABELS[account.role]} · ${scope}`,
+                            }}
+                          />
+                          {/* HQ cannot demote or disable itself; the API refuses both too. */}
+                          {account.id !== viewer.id && (
+                            <ChangeRoleDialog
+                              account={{ ...account, scopeLabel: `${ROLE_LABELS[account.role]} · ${scope}` }}
+                              options={options}
+                            />
+                          )}
+                          {account.id !== viewer.id && account.status !== "INACTIVE" && (
+                            <DisableAccountDialog account={account} />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

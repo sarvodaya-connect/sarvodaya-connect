@@ -1,5 +1,17 @@
 import type { AccountSummary, ScopeOptions, UserRole } from "@sarvodaya-connect/api-contracts";
 
+/**
+ * Role names on D16. Kept here, not in the client form module, so server
+ * pages get the values and not a client reference.
+ */
+export const ROLE_LABELS: Record<UserRole, string> = {
+  SOCIETY_OFFICER: "Society Officer",
+  PROGRAMME_COORDINATOR: "SPC",
+  DEPUTY_DISTRICT_MANAGER: "DDM",
+  DISTRICT_MANAGER: "DM",
+  HQ_ADMIN: "HQ",
+};
+
 /** V5 D16 role tabs. */
 export const ACCOUNT_TABS = [
   { key: "all", label: "All", roles: null },

@@ -3,10 +3,13 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import type { ScopeOptions, UserRole } from "@sarvodaya-connect/api-contracts";
 import {
   createAccount,
+  disableAccount,
   login,
   setAccountPassword,
+  updateAccount,
   type FormResult,
 } from "@/app/identity-actions";
+import { ROLE_LABELS } from "@/lib/accounts";
 import { SIGN_IN_COPY, suggestUsername, type SignInLanguage } from "@/lib/sign-in-messages";
 
 import { primaryButtonClass, secondaryButtonClass } from "./data-states";
@@ -120,6 +123,8 @@ export function SignInForm() {
               autoComplete="username"
               autoCapitalize="none"
               className={`${inputClass} pr-10`}
+              defaultValue={state.username}
+              key={state.username}
               name="username"
               required
             />
@@ -161,13 +166,6 @@ export function SignInForm() {
   );
 }
 
-export const ROLE_LABELS: Record<UserRole, string> = {
-  SOCIETY_OFFICER: "Society Officer",
-  PROGRAMME_COORDINATOR: "SPC",
-  DEPUTY_DISTRICT_MANAGER: "DDM",
-  DISTRICT_MANAGER: "DM",
-  HQ_ADMIN: "HQ",
-};
 
 /** What the Scope field asks for, by role (V5 D16i hint under Scope). */
 const SCOPE_HINTS: Record<UserRole, string> = {
@@ -178,26 +176,123 @@ const SCOPE_HINTS: Record<UserRole, string> = {
   HQ_ADMIN: "HQ has national access.",
 };
 
+/**
+ * Role and its scope (V5 D16i): a Society Officer has one society, an SPC or
+ * DDM has societies in one district, a DM has a district and HQ is national.
+ * The API checks the same rules.
+ */
+function RoleScopeFields({
+  initial,
+  options,
+}: {
+  initial?: { role: UserRole; districtId: string | null; societyIds: string[] };
+  options: ScopeOptions;
+}) {
+  const [role, setRole] = useState<UserRole>(initial?.role ?? "SOCIETY_OFFICER");
+  const [districtId, setDistrictId] = useState(initial?.districtId ?? "");
+  const societies = options.societies.filter((society) => society.districtId === districtId);
+  const assigned = new Set(initial?.societyIds ?? []);
+  return (
+    <>
+      <label className={labelClass}>
+        Role<Required />
+        <select
+          className={`${inputClass} mt-1.5`}
+          name="role"
+          onChange={(event) => setRole(event.target.value as UserRole)}
+          value={role}
+        >
+          {(Object.keys(ROLE_LABELS) as UserRole[]).map((value) => (
+            <option key={value} value={value}>{ROLE_LABELS[value]}</option>
+          ))}
+        </select>
+      </label>
+      <div className="text-xs font-semibold text-ink">
+        {role === "HQ_ADMIN" ? (
+          <>
+            <span>Scope</span>
+            <p className="mt-1.5 flex h-10 items-center rounded-[10px] border border-line bg-surface-muted px-3 text-[13px] font-normal">National</p>
+          </>
+        ) : (
+          <label className="block">
+            {role === "DISTRICT_MANAGER" ? "Scope" : "District"}<Required />
+            <select
+              className={`${inputClass} mt-1.5`}
+              name="districtId"
+              onChange={(event) => setDistrictId(event.target.value)}
+              required
+              value={districtId}
+            >
+              <option value="">Choose a district</option>
+              {options.districts.map((district) => (
+                <option key={district.id} value={district.id}>
+                  {district.nameEn}{role === "DISTRICT_MANAGER" ? " District" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <p className="mt-1 text-[11px] font-normal text-ink-soft">{SCOPE_HINTS[role]}</p>
+      </div>
+      {role === "SOCIETY_OFFICER" && (
+        <label className={`${labelClass} sm:col-span-2`}>
+          Society<Required />
+          <select
+            className={`${inputClass} mt-1.5`}
+            defaultValue={initial?.role === "SOCIETY_OFFICER" ? initial.societyIds[0] : ""}
+            disabled={!districtId}
+            name="societyIds"
+            required
+          >
+            <option value="">{districtId ? "Choose the society" : "Choose a district first"}</option>
+            {societies.map((society) => (
+              <option key={society.id} value={society.id}>{society.nameEn} · {society.societyCode}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {(role === "PROGRAMME_COORDINATOR" || role === "DEPUTY_DISTRICT_MANAGER") && (
+        <fieldset className="sm:col-span-2">
+          <legend className={labelClass}>Assigned societies<Required /></legend>
+          {districtId ? (
+            <div className="mt-1.5 grid max-h-44 gap-1 overflow-y-auto rounded-[10px] border border-line p-2 sm:grid-cols-2">
+              {societies.length ? (
+                societies.map((society) => (
+                  <label className="flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] hover:bg-brand-mint-soft" key={society.id}>
+                    <input defaultChecked={assigned.has(society.id)} name="societyIds" type="checkbox" value={society.id} />
+                    {society.nameEn} · {society.societyCode}
+                  </label>
+                ))
+              ) : (
+                <p className="px-2 py-1 text-xs text-ink-soft">No societies in this district.</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-1.5 text-xs text-ink-soft">Choose a district first.</p>
+          )}
+        </fieldset>
+      )}
+    </>
+  );
+}
+
 /** V5 D16i: side panel where HQ creates an account with a permanent password. */
 export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const titleId = useId();
   const [state, action, pending] = useActionState(createAccount, {});
-  const [role, setRole] = useState<UserRole>("SOCIETY_OFFICER");
-  const [districtId, setDistrictId] = useState("");
+  const [formVersion, setFormVersion] = useState(0);
   const [username, setUsername] = useState("");
   const [usernameEdited, setUsernameEdited] = useState(false);
   const [mismatch, setMismatch] = useState(false);
-  const societies = options.societies.filter((society) => society.districtId === districtId);
-
   useEffect(() => {
     if (!state.success) return;
     // Never leave a typed password in the page after the account is created.
     form.current?.reset();
     setUsername("");
     setUsernameEdited(false);
-    setDistrictId("");
+    setFormVersion((version) => version + 1);
   }, [state]);
 
   const close = () => dialog.current?.close();
@@ -271,78 +366,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             Email (optional)
             <input autoComplete="off" className={`${inputClass} mt-1.5`} name="email" type="email" />
           </label>
-          <label className={labelClass}>
-            Role<Required />
-            <select
-              className={`${inputClass} mt-1.5`}
-              name="role"
-              onChange={(event) => setRole(event.target.value as UserRole)}
-              value={role}
-            >
-              {(Object.keys(ROLE_LABELS) as UserRole[]).map((value) => (
-                <option key={value} value={value}>{ROLE_LABELS[value]}</option>
-              ))}
-            </select>
-          </label>
-          <div className="text-xs font-semibold text-ink">
-            {role === "HQ_ADMIN" ? (
-              <>
-                <span>Scope</span>
-                <p className="mt-1.5 flex h-10 items-center rounded-[10px] border border-line bg-surface-muted px-3 text-[13px] font-normal">National</p>
-              </>
-            ) : (
-              <label className="block">
-                {role === "DISTRICT_MANAGER" ? "Scope" : "District"}<Required />
-                <select
-                  className={`${inputClass} mt-1.5`}
-                  name="districtId"
-                  onChange={(event) => setDistrictId(event.target.value)}
-                  required
-                  value={districtId}
-                >
-                  <option value="">Choose a district</option>
-                  {options.districts.map((district) => (
-                    <option key={district.id} value={district.id}>
-                      {district.nameEn}{role === "DISTRICT_MANAGER" ? " District" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <p className="mt-1 text-[11px] font-normal text-ink-soft">{SCOPE_HINTS[role]}</p>
-          </div>
-          {role === "SOCIETY_OFFICER" && (
-            <label className={`${labelClass} sm:col-span-2`}>
-              Society<Required />
-              <select className={`${inputClass} mt-1.5`} disabled={!districtId} name="societyIds" required>
-                <option value="">{districtId ? "Choose the society" : "Choose a district first"}</option>
-                {societies.map((society) => (
-                  <option key={society.id} value={society.id}>{society.nameEn} · {society.societyCode}</option>
-                ))}
-              </select>
-            </label>
-          )}
-          {(role === "PROGRAMME_COORDINATOR" || role === "DEPUTY_DISTRICT_MANAGER") && (
-            <fieldset className="sm:col-span-2">
-              <legend className={labelClass}>Assigned societies<Required /></legend>
-              {districtId ? (
-                <div className="mt-1.5 grid max-h-44 gap-1 overflow-y-auto rounded-[10px] border border-line p-2 sm:grid-cols-2">
-                  {societies.length ? (
-                    societies.map((society) => (
-                      <label className="flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] hover:bg-brand-mint-soft" key={society.id}>
-                        <input name="societyIds" type="checkbox" value={society.id} />
-                        {society.nameEn} · {society.societyCode}
-                      </label>
-                    ))
-                  ) : (
-                    <p className="px-2 py-1 text-xs text-ink-soft">No societies in this district.</p>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-1.5 text-xs text-ink-soft">Choose a district first.</p>
-              )}
-            </fieldset>
-          )}
+          <RoleScopeFields key={formVersion} options={options} />
           <label className={labelClass}>
             Password<Required />
             <span className="mt-1.5 block">
@@ -462,6 +486,141 @@ export function SetPasswordDialog({
               <button className={primaryButtonClass} disabled={pending} type="submit">
                 <Icon className="size-4" name="key" strokeWidth={2} />
                 {pending ? "Setting…" : "Set password"}
+              </button>
+            )}
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+type ManagedAccount = {
+  id: string;
+  displayName: string;
+  username: string;
+  phone: string;
+  email?: string | null;
+  role: UserRole;
+  districtId: string | null;
+  societyIds: string[];
+  scopeLabel: string;
+};
+
+/** HQ changes a person's role or scope. Not a V5 frame; added at Sarvodaya's request. */
+export function ChangeRoleDialog({
+  account,
+  options,
+}: {
+  account: ManagedAccount;
+  options: ScopeOptions;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [state, action, pending] = useActionState(updateAccount, {});
+  return (
+    <>
+      <button
+        aria-label={`Change role for ${account.displayName}`}
+        className={`${secondaryButtonClass} px-3.5`}
+        onClick={() => dialog.current?.showModal()}
+        type="button"
+      >
+        Change role
+      </button>
+      <dialog
+        aria-labelledby={titleId}
+        className="m-auto w-[min(620px,calc(100vw-32px))] rounded-2xl bg-surface p-0 text-left shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop:bg-[rgba(28,42,33,0.35)]"
+        ref={dialog}
+      >
+        <form action={action} className="grid grid-cols-1 gap-x-3.5 gap-y-4 p-6 sm:grid-cols-2">
+          <input name="id" type="hidden" value={account.id} />
+          <input name="displayName" type="hidden" value={account.displayName} />
+          <input name="username" type="hidden" value={account.username} />
+          <input name="phone" type="hidden" value={account.phone} />
+          <input name="email" type="hidden" value={account.email ?? ""} />
+          <div className="sm:col-span-2">
+            <h2 className="text-lg font-bold text-ink" id={titleId}>Change role for {account.displayName}</h2>
+            <p className="text-xs text-ink-soft">
+              Now: {account.scopeLabel} · username <strong className="text-ink">{account.username}</strong>
+            </p>
+          </div>
+          <RoleScopeFields
+            initial={{ role: account.role, districtId: account.districtId, societyIds: account.societyIds }}
+            // Redrawn from the saved account after a change, so the fields never show stale values.
+            key={`${account.role}:${account.districtId}:${account.societyIds.join(",")}:${String(state.success)}`}
+            options={options}
+          />
+          <p className="flex gap-2.5 rounded-xl border border-[#efdda5] bg-[#fff8e1] px-3.5 py-2.5 text-xs text-[#5c4300] sm:col-span-2">
+            <Icon className="mt-0.5 size-4 shrink-0" name="alert" strokeWidth={2} />
+            <span>
+              <strong className="block">The person is signed out.</strong>
+              They sign in again to see their new role. Any temporary district view they had ends. The change is recorded in the Change &amp; access log.
+            </span>
+          </p>
+          <div className="sm:col-span-2">
+            <Message result={state} />
+          </div>
+          <div className="flex justify-end gap-2.5 sm:col-span-2">
+            <button className={secondaryButtonClass} onClick={() => dialog.current?.close()} type="button">
+              {state.success ? "Close" : "Cancel"}
+            </button>
+            {!state.success && (
+              <button className={primaryButtonClass} disabled={pending} type="submit">
+                {pending ? "Saving…" : "Save role"}
+              </button>
+            )}
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+/** HQ disables an account. Not a V5 frame; added at Sarvodaya's request. */
+export function DisableAccountDialog({ account }: { account: Pick<ManagedAccount, "id" | "displayName" | "username"> }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [state, action, pending] = useActionState(disableAccount, {});
+  return (
+    <>
+      <button
+        aria-label={`Disable account for ${account.displayName}`}
+        className={`${secondaryButtonClass} px-3.5 text-danger-text`}
+        onClick={() => dialog.current?.showModal()}
+        type="button"
+      >
+        Disable
+      </button>
+      <dialog
+        aria-labelledby={titleId}
+        className="m-auto w-[min(480px,calc(100vw-32px))] rounded-2xl bg-surface p-0 text-left shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop:bg-[rgba(28,42,33,0.35)]"
+        ref={dialog}
+      >
+        <form action={action} className="space-y-4 p-6">
+          <input name="id" type="hidden" value={account.id} />
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-state-danger text-danger-dot">
+              <Icon className="size-5" name="lock" strokeWidth={2} />
+            </span>
+            <h2 className="text-lg font-bold text-ink" id={titleId}>Disable {account.displayName}?</h2>
+            <p className="text-xs text-ink-soft">username <strong className="text-ink">{account.username}</strong></p>
+          </div>
+          <p className="rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-3.5 py-2.5 text-xs text-[var(--banner-incident-text)]">
+            They are signed out straight away and can no longer sign in on the phone or dashboard. Their records stay. To let them back in, set a new password for them.
+          </p>
+          <Message result={state} />
+          <div className="flex justify-end gap-2.5">
+            <button className={secondaryButtonClass} onClick={() => dialog.current?.close()} type="button">
+              {state.success ? "Close" : "Cancel"}
+            </button>
+            {!state.success && (
+              <button
+                className={`${primaryButtonClass} border-danger-dot bg-danger-dot hover:bg-[#8a241d]`}
+                disabled={pending}
+                type="submit"
+              >
+                {pending ? "Disabling…" : "Disable account"}
               </button>
             )}
           </div>
