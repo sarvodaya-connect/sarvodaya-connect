@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { platformApi, SESSION_COOKIE } from "@/lib/platform-api";
-import { getCurrentViewer, SPC_DESKTOP_HOME } from "@/lib/current-viewer";
+import { DESKTOP_ROLES, getCurrentViewer, ROLE_COOKIE } from "@/lib/current-viewer";
 import { NOT_HQ_ON_DESKTOP, SOCIETY_OFFICER_ON_DESKTOP } from "@/lib/sign-in-messages";
 export type FormResult = {
   error?: string;
@@ -17,24 +17,24 @@ export async function login(
   form: FormData,
 ): Promise<FormResult> {
   const username = String(form.get("username") ?? "").slice(0, 100);
-  let result;
+  let result: { token: string; user?: { roles: string[] } };
+  let role: (typeof DESKTOP_ROLES)[number] | undefined;
   try {
     result = await platformApi("/identity/login", {
       method: "POST",
       body: JSON.stringify({ username, password: form.get("password") }),
     });
-    const isHq = result.user?.roles.includes("HQ_ADMIN");
-    // V5 SP06–SP08: SPCs approve activities on the desktop. Their other pages open in PR 6.
-    const isSpc = result.user?.roles.includes("PROGRAMME_COORDINATOR");
-    if (!isHq && !isSpc) {
-      // Not for this dashboard yet: end the session the API just opened.
+    // V5: HQ, DMs, DDMs and SPCs use the desktop; Society Officers use the phone app.
+    const roles = result.user?.roles ?? [];
+    role = DESKTOP_ROLES.find((candidate) => roles.includes(candidate));
+    if (!role) {
+      // Not a desktop role: end the session the API just opened.
       await platformApi("/identity/logout", {
         method: "POST",
         headers: { Authorization: `Bearer ${result.token}` },
       }).catch(() => undefined);
-      // SPC, DDM and DM desktop dashboards open in PR 6 of the V5 plan.
       return {
-        error: result.user?.roles.includes("SOCIETY_OFFICER") ? SOCIETY_OFFICER_ON_DESKTOP : NOT_HQ_ON_DESKTOP,
+        error: roles.includes("SOCIETY_OFFICER") ? SOCIETY_OFFICER_ON_DESKTOP : NOT_HQ_ON_DESKTOP,
         username,
       };
     }
@@ -45,10 +45,17 @@ export async function login(
       path: "/",
       maxAge: 8 * 3600,
     });
+    (await cookies()).set(ROLE_COOKIE, role, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 8 * 3600,
+    });
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not sign in", username };
   }
-  redirect(result.user?.roles.includes("HQ_ADMIN") ? "/dashboard" : SPC_DESKTOP_HOME);
+  redirect("/dashboard");
 }
 export async function signOut() {
   try {
@@ -57,6 +64,7 @@ export async function signOut() {
     /* Remove browser credentials even if the API is unavailable. */
   }
   (await cookies()).delete(SESSION_COOKIE);
+  (await cookies()).delete(ROLE_COOKIE);
   redirect("/");
 }
 export async function createAccount(

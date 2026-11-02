@@ -1,0 +1,21 @@
+/**
+ * V5 PR 6: the desktop pages SPCs, DDMs and DMs may open. HQ (and anyone not
+ * yet signed in) is not limited here; HQ pages check the role themselves and
+ * the API decides what data each request may see.
+ */
+export const ROLE_COOKIE = "sc_role";
+
+const FIELD_ROLES = new Set(["PROGRAMME_COORDINATOR", "DEPUTY_DISTRICT_MANAGER", "DISTRICT_MANAGER"]);
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const FIELD_PATHS = [
+  /^\/$/,
+  /^\/dashboard$/,
+  /^\/my-societies$/,
+  new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
+  /^\/activities-to-approve(\/.*)?$/,
+];
+
+export function canOpen(role: string | undefined, pathname: string): boolean {
+  if (!role || !FIELD_ROLES.has(role)) return true;
+  return FIELD_PATHS.some((pattern) => pattern.test(pathname));
+}

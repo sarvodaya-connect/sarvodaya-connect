@@ -1,0 +1,61 @@
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+/** SP02 / DD03 / DM02 filters. */
+export class HomeSocietyQueryDto {
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => Number(value))
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize = 20;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  q?: string;
+
+  @IsOptional()
+  @IsIn(['A', 'B', 'C'])
+  grade?: 'A' | 'B' | 'C';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  dsDivision?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  needsUpdate?: boolean;
+
+  @IsOptional()
+  @IsIn(['PENDING', 'NONE'])
+  gradeRequest?: 'PENDING' | 'NONE';
+
+  @IsOptional()
+  @IsUUID()
+  spcId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  ddmId?: string;
+}

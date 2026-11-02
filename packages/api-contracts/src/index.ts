@@ -7,3 +7,4 @@ export * from './platform.js';
 export * from "./society-record.js";
 export * from "./assistant.js";
 export * from "./activities.js";
+export * from "./home.js";

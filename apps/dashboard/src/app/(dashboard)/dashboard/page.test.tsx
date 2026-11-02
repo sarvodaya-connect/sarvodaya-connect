@@ -1,50 +1,54 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getCurrentViewer, redirect } = vi.hoisted(() => ({
-  getCurrentViewer: vi.fn(),
+const { getDesktopViewer, getHome, redirect } = vi.hoisted(() => ({
+  getDesktopViewer: vi.fn(),
+  getHome: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error(`REDIRECT:${path}`); }),
 }));
 
 vi.mock("next/navigation", () => ({ redirect }));
-vi.mock("@/lib/current-viewer", () => ({ getCurrentViewer }));
+vi.mock("@/lib/current-viewer", () => ({ getDesktopViewer }));
+vi.mock("@/lib/home-api", () => ({ getHome }));
 
 import DashboardHome from "./page";
-import { DistrictOverview, NationalOverview } from "@/components/dashboard/role-overviews";
+import { RoleHome } from "@/components/dashboard/role-home/role-home";
+import { NationalOverview } from "@/components/dashboard/role-overviews";
 import { getViewer } from "@/lib/access";
 
 describe("dashboard role home routing", () => {
   beforeEach(() => {
-    getCurrentViewer.mockReset();
+    getDesktopViewer.mockReset();
+    getHome.mockReset();
     redirect.mockClear();
   });
 
   it("shows the national overview to HQ administrators", async () => {
-    getCurrentViewer.mockResolvedValue(getViewer("hq-admin"));
+    getDesktopViewer.mockResolvedValue(getViewer("hq-admin"));
 
     const page = await DashboardHome();
 
     expect(page.type).toBe(NationalOverview);
+    expect(getHome).not.toHaveBeenCalled();
   });
 
-  it("shows the district overview to district managers", async () => {
-    getCurrentViewer.mockResolvedValue(getViewer("district-manager"));
+  it("gives district managers and coordinators their own home from the API (DM01, SP01)", async () => {
+    for (const id of ["district-manager", "programme-coordinator"]) {
+      const viewer = getViewer(id);
+      getDesktopViewer.mockResolvedValue(viewer);
+      getHome.mockResolvedValue({ role: viewer.role });
 
-    const page = await DashboardHome();
+      const page = await DashboardHome();
 
-    expect(page.type).toBe(DistrictOverview);
+      expect(page.type).toBe(RoleHome);
+      expect(page.props).toMatchObject({ home: { role: viewer.role }, viewer });
+    }
+    expect(getHome).toHaveBeenCalledTimes(2);
   });
 
   it("sends platform administrators to administration", async () => {
-    getCurrentViewer.mockResolvedValue(getViewer("system-admin"));
+    getDesktopViewer.mockResolvedValue(getViewer("system-admin"));
 
     await expect(DashboardHome()).rejects.toThrow("REDIRECT:/admin");
     expect(redirect).toHaveBeenCalledWith("/admin");
-  });
-
-  it("keeps programme coordinators in their assigned-societies scope", async () => {
-    getCurrentViewer.mockResolvedValue(getViewer("programme-coordinator"));
-
-    await expect(DashboardHome()).rejects.toThrow("REDIRECT:/societies");
-    expect(redirect).toHaveBeenCalledWith("/societies");
   });
 });

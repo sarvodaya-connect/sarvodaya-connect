@@ -2,12 +2,15 @@ import { Icon } from "./icon";
 
 /** V5 header search box. The search page applies the viewer's scope on the server. */
 export function GlobalSearchForm({
+  action = "/search",
   placeholder = "Search societies, people and records",
 }: {
+  /** HQ searches nationally; SPCs, DDMs and DMs search their own society list. */
+  action?: string;
   placeholder?: string;
 }) {
   return (
-    <form action="/search" className="relative w-full" role="search">
+    <form action={action} className="relative w-full" role="search">
       <label className="sr-only" htmlFor="global-search">Search all permitted records</label>
       <Icon className="absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
       <input

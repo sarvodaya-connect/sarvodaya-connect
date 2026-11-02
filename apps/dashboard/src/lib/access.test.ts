@@ -93,10 +93,10 @@ describe("provisional role-based visibility", () => {
       "Documents",
       "Administration",
     ]);
-    expect(labels(districtManager)).toEqual(["District overview", "Societies", "Disaster response"]);
-    // V5 PR 4 opens only the SPC approval pages; PR 6 adds Home, My societies and Disaster response.
-    expect(labels(coordinator)).toEqual(["Activities to approve"]);
-    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster response"]);
+    // V5 PR 6 (SP01, DD01, DM01). Disaster response joins in PR 8 and temporary DDM access in PR 7.
+    expect(labels(districtManager)).toEqual(["District overview", "Societies"]);
+    expect(labels(coordinator)).toEqual(["Home", "My societies", "Activities to approve"]);
+    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies"]);
     expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);
   });
 

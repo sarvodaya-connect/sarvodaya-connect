@@ -31,7 +31,10 @@ export function RecordHeader({
   return (
     <>
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
-        <Link className="text-[#2d5c88] underline underline-offset-2" href="/societies">Societies</Link>
+        {/* SPCs, DDMs and DMs go back to their own list (V5 SP02, DD03, DM02). */}
+        <Link className="text-[#2d5c88] underline underline-offset-2" href={isHq ? "/societies" : "/my-societies"}>
+          Societies
+        </Link>
         <span aria-hidden="true">›</span>
         <span>{record.district.nameEn}</span>
         <span aria-hidden="true">›</span>

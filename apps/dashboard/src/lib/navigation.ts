@@ -40,19 +40,22 @@ export function navigationFor(viewer: DemoViewer): Navigation {
           { href: "/accounts", icon: "key", label: "Administration", alsoActiveOn: ["/audit"] },
         ],
       };
+    // V5 SP01, DD01 and DM01 sidebars. "Disaster response" joins with the role
+    // incident pages (PR 8) and "Temporary DDM access" with PR 7.
     case "PROGRAMME_COORDINATOR":
-      // V5 SP01 order. Home, My societies and Disaster response join in PR 6
-      // when the SPC desktop opens; only the PR 4 approval pages exist today.
       return {
-        main: [{ href: "/activities-to-approve", icon: "check", label: "Activities to approve" }],
+        main: [
+          { href: "/dashboard", icon: "home", label: "Home" },
+          { href: "/my-societies", icon: "list", label: "My societies", alsoActiveOn: ["/societies"] },
+          { href: "/activities-to-approve", icon: "check", label: "Activities to approve" },
+        ],
         secondary: [],
       };
     case "DEPUTY_DISTRICT_MANAGER":
       return {
         main: [
           { href: "/dashboard", icon: "home", label: "Home" },
-          { href: "/societies", icon: "list", label: "Societies" },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
+          { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
         ],
         secondary: [],
       };
@@ -60,8 +63,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
       return {
         main: [
           { href: "/dashboard", icon: "home", label: "District overview" },
-          { href: "/societies", icon: "list", label: "Societies" },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
+          { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
         ],
         secondary: [],
       };
@@ -99,6 +101,7 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/reviews", "Grade requests", "HQ approval queue"],
   ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
   ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
+  ["/my-societies", "My societies"],
   ["/documents", "Documents", "Every certificate, minute and report in one place"],
   ["/search", "Search"],
   ["/notifications", "Alerts"],
@@ -114,18 +117,40 @@ export function headingFor(pathname: string, viewer: DemoViewer): { title: strin
         subtitle: pageSubtitle ?? "Sarvodaya societies across Sri Lanka",
       };
     case "DISTRICT_MANAGER":
-      return { title: page ?? "District overview", subtitle: `${viewer.scopeLabel} · view only` };
+      // V5 DM02 calls the list "Societies": the DM sees the whole district.
+      return {
+        title: page === "My societies" ? "Societies" : (page ?? "District overview"),
+        subtitle: `${viewer.scopeLabel.endsWith("District") ? viewer.scopeLabel : `${viewer.scopeLabel} District`} · view only`,
+      };
     case "DEPUTY_DISTRICT_MANAGER":
     case "PROGRAMME_COORDINATOR":
-      return { title: page ?? "Home", subtitle: "Your assigned societies" };
+      return {
+        title: page ?? "Home",
+        subtitle: page === "My societies" ? "Assigned societies · view and edit" : "Your assigned societies",
+      };
     case "SYSTEM_ADMIN":
       return { title: page ?? "Administration", subtitle: "Technical settings only" };
   }
 }
 
-/** V5 header search placeholder: national for HQ, scoped for the other roles. */
+/** V5 header search placeholder: national for HQ, scoped for the other roles (SP01, DD01, DM01). */
 export function searchPlaceholderFor(viewer: DemoViewer): string {
-  return viewer.role === "HQ_ADMIN"
-    ? "Search societies by name, S number or district…"
-    : "Search your societies…";
+  switch (viewer.role) {
+    case "HQ_ADMIN":
+      return "Search societies by name, S number or district…";
+    case "DISTRICT_MANAGER":
+      return `Search ${viewer.scopeLabel} societies…`;
+    case "DEPUTY_DISTRICT_MANAGER":
+    case "PROGRAMME_COORDINATOR": {
+      const count = viewer.societyIds?.length ?? 0;
+      return count ? `Search your ${count} ${count === 1 ? "society" : "societies"}…` : "Search your societies…";
+    }
+    default:
+      return "Search your societies…";
+  }
+}
+
+/** Where the header search goes: HQ's national search, or the role's own society list. */
+export function searchActionFor(viewer: DemoViewer): string {
+  return viewer.role === "HQ_ADMIN" ? "/search" : "/my-societies";
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ExcoTable } from "@/components/dashboard/society-record/exco-table";
-import { getCurrentViewer } from "@/lib/current-viewer";
+import { getDesktopViewer } from "@/lib/current-viewer";
 import { getSocietyRecord } from "@/lib/society-record-api";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
@@ -11,7 +11,7 @@ import { revealMemberNic } from "../record-actions";
 export default async function SocietyExcoPage({ params }: PageProps<"/societies/[id]/exco">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) notFound();
-  const [viewer, record] = await Promise.all([getCurrentViewer(), getSocietyRecord(id)]);
+  const [viewer, record] = await Promise.all([getDesktopViewer(), getSocietyRecord(id)]);
   const accessNote =
     viewer.role === "HQ_ADMIN"
       ? "HQ has national access"

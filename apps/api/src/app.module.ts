@@ -25,6 +25,7 @@ import { DistrictsService } from './districts/districts.service.js';
 import { EmergenciesModule } from './emergencies/emergencies.module.js';
 import { AssistantModule } from './assistant/assistant.module.js';
 import { ActivitiesModule } from './activities/activities.module.js';
+import { HomeModule } from './home/home.module.js';
 
 const repositoryEnvironmentFile = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -45,6 +46,7 @@ const repositoryEnvironmentFile = resolve(
     EmergenciesModule,
     AssistantModule,
     ActivitiesModule,
+    HomeModule,
   ],
   controllers: [
     AppController,

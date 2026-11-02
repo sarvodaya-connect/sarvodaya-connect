@@ -148,7 +148,7 @@ The sidebar lists only pages that exist, so nobody lands on an empty page. These
 - HQ: Map View (PR 5), Requests & Tasks (PR 5), Reports (PR 5), Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
 - SPC: Activities to approve (added in PR 4, with SPC desktop sign-in limited to those pages until PR 6), Help (not assigned).
 - DM: Temporary DDM access (PR 7).
-- SPC, DDM and DM desktop sign-in: the dashboard still allows HQ only (`current-viewer.ts`, `identity-actions.ts`). PR 6 opens it with server-side scope on every request.
+- SPC, DDM and DM desktop sign-in: opened in PR 6. `GET /home` and `GET /home/societies` work out SP01/DD01/DM01 and SP02/DD03/DM02 from the user's own societies (the DM's district, view only). `middleware.ts` keeps these roles on `/dashboard`, `/my-societies`, `/societies/<id>` and `/activities-to-approve`; it steers screens only, the API decides what data each request returns. No new environment variables or migrations; Next.js middleware is supported on Amplify Hosting.
 
 ## Access rules
 
