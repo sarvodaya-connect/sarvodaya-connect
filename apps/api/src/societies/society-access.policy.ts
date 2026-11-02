@@ -19,10 +19,11 @@ export function assertCanEditSociety(
 export function canViewSociety(
   principal: Principal,
   society: { id: string; districtId: string },
+  now = new Date(),
 ) {
   if (principal.roles.includes('HQ_ADMIN')) return true;
   return (
-    readableDistrictIds(principal).includes(society.districtId) ||
+    readableDistrictIds(principal, now).includes(society.districtId) ||
     principal.societyIds.includes(society.id)
   );
 }
