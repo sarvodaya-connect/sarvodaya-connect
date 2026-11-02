@@ -19,7 +19,7 @@ describe("ReviewQueue", () => {
 
     await user.type(screen.getByRole("searchbox", { name: "Search submissions" }), "SUB-9999");
 
-    expect(screen.getByRole("heading", { name: "No submissions match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No submissions match" })).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Active filters" })).getByText("“SUB-9999”")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Clear all filters" }));

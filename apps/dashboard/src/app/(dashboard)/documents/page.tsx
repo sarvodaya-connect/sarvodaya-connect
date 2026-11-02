@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { NoPermissionState, secondaryButtonClass } from "@/components/dashboard/data-states";
+import { NoAccessState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { DocumentLibrary } from "@/components/dashboard/document-library";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { canSeeSociety, canViewCompliance, canViewDocument, canViewDocumentLibrary } from "@/lib/access";
@@ -34,11 +34,9 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
     return (
       <>
         {heading}
-        <section className="mt-6 rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
-          <NoPermissionState
+        <section className="mt-6 rounded-card border border-line bg-surface">
+          <NoAccessState
             action={<Link className={secondaryButtonClass} href="/notifications">Go to notifications</Link>}
-            description="System Administrators manage technical settings and do not see society documents."
-            title="Documents are not available for your role"
           />
         </section>
       </>

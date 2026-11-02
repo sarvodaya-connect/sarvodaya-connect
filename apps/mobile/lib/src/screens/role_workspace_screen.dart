@@ -73,11 +73,10 @@ class RoleWorkspaceScreen extends StatelessWidget {
         ],
       ),
       body: !_permitted
-          ? const StateMessage(
-              icon: Icons.lock_outline,
-              title: 'No permission',
-              message: 'Your role does not have access to this area.',
-              tone: StateTone.error,
+          ? const NoAccessView(
+              title: "You don't have access to this page",
+              message:
+                  'Your role cannot open it. Ask HQ if you think you need it.',
             )
           : DemoLoader(
               loadingLabel: 'Loading $_title',

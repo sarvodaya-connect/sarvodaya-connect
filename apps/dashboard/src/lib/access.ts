@@ -17,8 +17,18 @@
 export type DashboardRole =
   | "HQ_ADMIN"
   | "DISTRICT_MANAGER"
+  | "DEPUTY_DISTRICT_MANAGER"
   | "PROGRAMME_COORDINATOR"
   | "SYSTEM_ADMIN";
+
+/** Short role names used in the V5 shell, for example "DDM · Kurunegala". */
+export const SHORT_ROLE_LABELS: Record<DashboardRole, string> = {
+  HQ_ADMIN: "HQ",
+  DISTRICT_MANAGER: "DM",
+  DEPUTY_DISTRICT_MANAGER: "DDM",
+  PROGRAMME_COORDINATOR: "SPC",
+  SYSTEM_ADMIN: "System admin",
+};
 
 export type DemoViewer = {
   id: string;
@@ -96,6 +106,8 @@ export function canSeeSociety(viewer: DemoViewer, record: ScopedRecord): boolean
     case "DISTRICT_MANAGER":
       return viewer.districtIds === "ALL" || viewer.districtIds.includes(record.districtId);
     case "PROGRAMME_COORDINATOR":
+    case "DEPUTY_DISTRICT_MANAGER":
+      // Temporary district-wide DDM view is checked by the API (PR 7).
       return viewer.societyIds?.includes(record.societyId) ?? false;
     case "SYSTEM_ADMIN":
       return false;

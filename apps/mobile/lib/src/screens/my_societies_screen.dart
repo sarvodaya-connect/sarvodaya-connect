@@ -77,11 +77,9 @@ class _MySocietiesScreenState extends State<MySocietiesScreen> {
             const OfflineBanner(message: 'Offline · showing saved information'),
           Expanded(
             child: !permitted
-                ? const StateMessage(
-                    icon: Icons.lock_outline,
-                    title: 'No permission',
-                    message: 'Your signed-in role cannot access the society directory.',
-                    tone: StateTone.error,
+                ? const NoAccessView(
+                    title: "You don't have access to this page",
+                    message: 'Your role cannot open it. Ask HQ if you think you need it.',
                   )
                 : DemoLoader(
                     loadingLabel: 'Loading your societies',

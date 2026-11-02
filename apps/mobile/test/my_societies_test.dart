@@ -62,7 +62,7 @@ void main() {
 
   testWidgets('M20 denies access without an authorized user', (tester) async {
     await _show(tester, testStore());
-    expect(find.text('No permission'), findsOneWidget);
+    expect(find.text("You don't have access to this page"), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsNothing);
   });
 }

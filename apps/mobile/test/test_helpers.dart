@@ -51,3 +51,10 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
   await tester.pumpAndSettle();
 }
+
+/// A bottom-bar tab. The V5 bar shows icons only, so tabs are found by their
+/// tooltip, which is also their screen-reader name.
+Finder navTab(String label) => find.descendant(
+  of: find.byType(NavigationBar),
+  matching: find.byTooltip(label),
+);

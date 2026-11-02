@@ -126,16 +126,16 @@ class HomeShell extends StatelessWidget {
         index: store.selectedTab,
         children: configuration.pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        // The v4 officer bar shows icons only; labels stay as tooltips and
-        // screen-reader names.
-        labelBehavior: officerSocietyId == null
-            ? null
-            : NavigationDestinationLabelBehavior.alwaysHide,
-        height: officerSocietyId == null ? null : 60,
-        selectedIndex: store.selectedTab,
-        onDestinationSelected: store.selectTab,
-        destinations: configuration.destinations,
+      // V5 bottom bar (Nav): icon-only, styled by the theme, with a hairline above.
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.headerLine)),
+        ),
+        child: NavigationBar(
+          selectedIndex: store.selectedTab,
+          onDestinationSelected: store.selectTab,
+          destinations: configuration.destinations,
+        ),
       ),
     );
   }
