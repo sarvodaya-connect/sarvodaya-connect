@@ -28,6 +28,7 @@ import { DemoUserDirectory, USER_DIRECTORY } from './user-directory.js';
     { provide: USER_DIRECTORY, useClass: DemoUserDirectory },
   ],
   exports: [
+    NicVaultService,
     AuthenticationGuard,
     RolesGuard,
     AUTHENTICATION_PROVIDER,

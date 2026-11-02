@@ -92,6 +92,9 @@ export class CouncilMemberDto {
   @IsOptional() @IsString() @MaxLength(30) phone?: string;
   @IsOptional() @IsEmail() @MaxLength(254) email?: string;
   @IsOptional() @IsInt() @Min(1) @Max(120) age?: number;
+  @IsOptional() @IsISO8601({ strict: true }) dateOfBirth?: string;
+  @IsOptional() @IsString() @MaxLength(100) profession?: string;
+  @IsOptional() @IsString() @MaxLength(255) addressLine?: string;
   @IsOptional() @IsISO8601({ strict: true }) appointedOn?: string;
   @IsOptional() @IsISO8601({ strict: true }) endedOn?: string;
   @IsBoolean() isActive!: boolean;

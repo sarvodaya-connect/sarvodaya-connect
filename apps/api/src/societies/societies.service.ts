@@ -97,6 +97,28 @@ function summary(record: SocietySummaryRecord) {
   };
 }
 
+const STAFF_ORDER = [
+  'DISTRICT_MANAGER',
+  'DEPUTY_DISTRICT_MANAGER',
+  'PROGRAMME_COORDINATOR',
+  'SOCIETY_OFFICER',
+];
+function staffOrder(role: string) {
+  const index = STAFF_ORDER.indexOf(role);
+  return index === -1 ? STAFF_ORDER.length : index;
+}
+
+/** Whole years between a date of birth and a day (V5: age comes from the date of birth). */
+export function ageOn(dateOfBirth: Date, day: Date) {
+  let age = day.getUTCFullYear() - dateOfBirth.getUTCFullYear();
+  const beforeBirthday =
+    day.getUTCMonth() < dateOfBirth.getUTCMonth() ||
+    (day.getUTCMonth() === dateOfBirth.getUTCMonth() &&
+      day.getUTCDate() < dateOfBirth.getUTCDate());
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
 const expectedCouncilSeats: Record<MembershipCategory, number> = {
   CHILDREN: 3,
   YOUTH: 3,
@@ -104,6 +126,57 @@ const expectedCouncilSeats: Record<MembershipCategory, number> = {
   ORDINARY: 9,
   ELDERS_COUNCIL: 7,
 };
+
+/**
+ * The 25 Exco seats: every seat filled, the agreed number in each category,
+ * and children's and youth seats within their age range. Used when HQ creates
+ * a society (D05c) and whenever the Exco is edited.
+ */
+export function assertValidCouncil(
+  members: SocietyCouncilUpdateDto['members'],
+) {
+  const totals = new Map<MembershipCategory, number>();
+  const today = new Date();
+  for (const member of members) {
+    totals.set(member.seatType, (totals.get(member.seatType) ?? 0) + 1);
+    if (
+      member.dateOfBirth &&
+      new Date(`${member.dateOfBirth}T00:00:00.000Z`) > today
+    ) {
+      throw new BadRequestException(
+        `Council seat ${member.seatNumber} has a date of birth in the future`,
+      );
+    }
+    const age = member.dateOfBirth
+      ? ageOn(new Date(`${member.dateOfBirth}T00:00:00.000Z`), today)
+      : member.age;
+    if (
+      member.appointedOn &&
+      member.endedOn &&
+      member.endedOn < member.appointedOn
+    ) {
+      throw new BadRequestException(
+        `Council seat ${member.seatNumber} has an invalid date range`,
+      );
+    }
+    if (
+      age != null &&
+      ((member.seatType === 'CHILDREN' && (age < 7 || age > 14)) ||
+        (member.seatType === 'YOUTH' && (age < 15 || age > 25)))
+    ) {
+      throw new BadRequestException(
+        `Council seat ${member.seatNumber} age does not match its category`,
+      );
+    }
+  }
+  for (const [category, expected] of Object.entries(expectedCouncilSeats)) {
+    if (totals.get(category as MembershipCategory) !== expected) {
+      throw new BadRequestException(
+        `Council must contain ${expected} ${category.toLowerCase().replaceAll('_', ' ')} seats`,
+      );
+    }
+  }
+}
 
 /** M06e: 10 digits such as 037 000 0000, or +94 and 9 digits. */
 export function normaliseLandline(value: string): string | null {
@@ -267,7 +340,17 @@ export class SocietiesService {
         seatType: member.seatType,
         ...(member.phone ? { phone: member.phone } : {}),
         ...(member.email ? { email: member.email } : {}),
-        ...(member.age != null ? { age: member.age } : {}),
+        ...(() => {
+          const age = member.dateOfBirth
+            ? ageOn(member.dateOfBirth, new Date())
+            : member.age;
+          return age != null ? { age } : {};
+        })(),
+        ...(member.dateOfBirth
+          ? { dateOfBirth: member.dateOfBirth.toISOString().slice(0, 10) }
+          : {}),
+        ...(member.profession ? { profession: member.profession } : {}),
+        ...(member.addressLine ? { addressLine: member.addressLine } : {}),
         ...(member.appointedOn
           ? { appointedOn: member.appointedOn.toISOString().slice(0, 10) }
           : {}),
@@ -303,11 +386,14 @@ export class SocietiesService {
           }
         : {}),
       openGradeRequest: pending ? toGradeRequest(pending) : null,
-      staff: context.staff.map((account) => ({
-        role: account.role,
-        displayName: account.displayName,
-        accountStatus: account.status,
-      })),
+      // V5 D05 order: DM, DDM, SPC, Society Officer.
+      staff: [...context.staff]
+        .sort((a, b) => staffOrder(a.role) - staffOrder(b.role))
+        .map((account) => ({
+          role: account.role,
+          displayName: account.displayName,
+          accountStatus: account.status,
+        })),
       annualSummary: toAnnualSummary(
         record.id,
         year,
@@ -402,36 +488,7 @@ export class SocietiesService {
     const current = await this.repository.findById(id);
     if (!current) throw new NotFoundException('Society not found');
     assertCanEditSociety(principal, current);
-    const totals = new Map<MembershipCategory, number>();
-    for (const member of input.members) {
-      totals.set(member.seatType, (totals.get(member.seatType) ?? 0) + 1);
-      if (
-        member.appointedOn &&
-        member.endedOn &&
-        member.endedOn < member.appointedOn
-      ) {
-        throw new BadRequestException(
-          `Council seat ${member.seatNumber} has an invalid date range`,
-        );
-      }
-      if (
-        member.age != null &&
-        ((member.seatType === 'CHILDREN' &&
-          (member.age < 7 || member.age > 14)) ||
-          (member.seatType === 'YOUTH' && (member.age < 15 || member.age > 25)))
-      ) {
-        throw new BadRequestException(
-          `Council seat ${member.seatNumber} age does not match its category`,
-        );
-      }
-    }
-    for (const [category, expected] of Object.entries(expectedCouncilSeats)) {
-      if (totals.get(category as MembershipCategory) !== expected) {
-        throw new BadRequestException(
-          `Council must contain ${expected} ${category.toLowerCase().replaceAll('_', ' ')} seats`,
-        );
-      }
-    }
+    assertValidCouncil(input.members);
     await this.repository.replaceCouncil(id, input, principal);
     return this.getById(id, principal);
   }

@@ -211,3 +211,78 @@ export interface WorkPlanOverview {
   totalAllocated: number;
   lastChange?: { at: IsoDateTime; by: ActorReference };
 }
+
+/** V5 D22: the national grade-change queue (HQ only). */
+export const GRADE_QUEUE_FILTERS = ["WAITING", "APPROVED", "REJECTED", "ALL"] as const;
+export type GradeQueueFilter = (typeof GRADE_QUEUE_FILTERS)[number];
+
+export interface GradeQueueSummary {
+  waiting: number;
+  oldestWaitingDays: number | null;
+  approvedThisMonth: number;
+  rejectedThisMonth: number;
+  /** Average over decisions in the last 90 days; null when there were none. */
+  averageDecisionDays: number | null;
+}
+
+export interface GradeQueueItem extends GradeChangeRequest {
+  society: { id: string; name: string; societyCode: string; district: string };
+}
+
+export interface GradeQueue {
+  summary: GradeQueueSummary;
+  data: GradeQueueItem[];
+}
+
+/** V5 D22r grade history: requests, HQ decisions and direct HQ changes. */
+export interface GradeHistoryEvent {
+  id: string;
+  kind: "REQUESTED" | "APPROVED" | "REJECTED" | "CHANGED_BY_HQ";
+  fromGrade?: SocietyGrade | null;
+  toGrade?: SocietyGrade;
+  actor: ActorReference;
+  at: IsoDateTime;
+  note?: string;
+}
+
+/** V5 D22r. */
+export interface GradeRequestDetail extends GradeChangeRequest {
+  society: {
+    id: string;
+    name: string;
+    societyCode: string;
+    district: string;
+    grade: SocietyGrade | null;
+    gradeChangedAt: IsoDateTime | null;
+    memberCount: number | null;
+    excoMembers: number;
+    planYear: number | null;
+    planActivities: number;
+    updatedAt: IsoDateTime;
+  };
+  history: GradeHistoryEvent[];
+}
+
+/** V5 D05a choices for one role in the society's district. */
+export interface StaffOption {
+  id: string;
+  displayName: string;
+  username: string;
+  assignedHere: boolean;
+  /** Other societies this person looks after. A Society Officer choosing here moves. */
+  otherSocieties: number;
+}
+
+export interface StaffOptions {
+  districtManagers: StaffOption[];
+  deputies: StaffOption[];
+  coordinators: StaffOption[];
+  officers: StaffOption[];
+}
+
+/** V5 D05a. null leaves the role without anyone. */
+export interface AssignStaffInput {
+  deputyId: string | null;
+  coordinatorId: string | null;
+  officerId: string | null;
+}
