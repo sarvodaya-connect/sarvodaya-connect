@@ -165,4 +165,4 @@ All commands must pass before the pull request is submitted.
 
 ## V4 HQ access and accounts
 
-See [V4 HQ access and accounts](../../docs/platform-v4-foundation.md) for the five-role access rules, API-backed local account activation, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.
+See [V4 HQ access and accounts](../../docs/platform-v4-foundation.md) for the five-role access rules, HQ-created accounts and passwords, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.

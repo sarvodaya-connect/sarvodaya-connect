@@ -67,7 +67,6 @@ class DemoStore extends ChangeNotifier {
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
-    this.firstTimeSetupComplete = false,
   }) : _clock = clock ?? DateTime.now {
     identityApi.onUnauthorized = signOut;
     _authService =
@@ -141,10 +140,7 @@ class DemoStore extends ChangeNotifier {
   // M01-M04 first-run and authentication state.
   bool showSplash;
   bool languageChosen;
-  bool firstTimeSetupComplete;
-  bool notificationsEnabled = true;
   AppLanguage selectedLanguage = AppLanguage.english;
-  bool _accountRequiresSetup = false;
 
   void finishSplash() {
     showSplash = false;
@@ -154,15 +150,6 @@ class DemoStore extends ChangeNotifier {
   void chooseLanguage(AppLanguage language) {
     selectedLanguage = language;
     languageChosen = true;
-    notifyListeners();
-  }
-
-  bool get needsFirstTimeSetup =>
-      _user != null && _accountRequiresSetup && !firstTimeSetupComplete;
-
-  void completeFirstTimeSetup({required bool notificationsEnabled}) {
-    this.notificationsEnabled = notificationsEnabled;
-    firstTimeSetupComplete = true;
     notifyListeners();
   }
 
@@ -191,8 +178,6 @@ class DemoStore extends ChangeNotifier {
       UserRole.districtManager => demoDistrictManager,
       UserRole.hqAdmin => demoHqAdmin,
     };
-    _accountRequiresSetup = false;
-    firstTimeSetupComplete = true;
     _selectedTab = 0;
     notifyListeners();
   }
@@ -297,7 +282,6 @@ class DemoStore extends ChangeNotifier {
       );
       if (session == null) return false;
       _user = session.user;
-      _accountRequiresSetup = session.requiresSetup;
       notifyListeners();
       return true;
     } on AuthNetworkException {
@@ -323,7 +307,6 @@ class DemoStore extends ChangeNotifier {
     }
     identityApi.token = null;
     _user = null;
-    _accountRequiresSetup = false;
     _selectedTab = 0;
     notifyListeners();
   }

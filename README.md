@@ -598,4 +598,4 @@ Sarvodaya Connect is developed by **Group CS-10** as a STAMPx university project
 
 ## V4 platform foundation
 
-See [V4 platform foundation](docs/platform-v4-foundation.md) for the five-role access rules, API-backed local account activation, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.
+See [V4 platform foundation](docs/platform-v4-foundation.md) for the five-role access rules, HQ-created accounts and passwords, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.

@@ -23,6 +23,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/branding/sarvodaya_connect_logo.jpg
+    - assets/branding/sarvodaya_connect_logo_white.png
+    - assets/branding/sarvodaya_connect_wordmark.png
 
 flutter_launcher_icons:
   android: true

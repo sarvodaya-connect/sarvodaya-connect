@@ -3,11 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/app.dart';
 import 'package:sarvodaya_connect_mobile/src/models/app_language.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
+import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
 
 import 'test_helpers.dart';
 
 void main() {
-  testWidgets('first run completes M01 to M04 and opens the assigned home', (
+  testWidgets('first run goes M01 to M03 and opens the assigned home', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(412 * 3, 1000 * 3);
@@ -18,8 +19,9 @@ void main() {
     await tester.pumpWidget(SarvodayaConnectApp(store: store));
 
     expect(find.bySemanticsLabel('Sarvodaya Connect'), findsOneWidget);
+    expect(find.text('Village societies, connected.'), findsOneWidget);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, Colors.white);
+    expect(scaffold.backgroundColor, AppColors.splash);
 
     await tester.pump(const Duration(milliseconds: 901));
     await tester.pumpAndSettle();
@@ -30,14 +32,16 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
     expect(store.selectedLanguage, AppLanguage.english);
-    expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
+    expect(
+      find.text(
+        'Use the username and password for your Sarvodaya Connect account.',
+      ),
+      findsOneWidget,
+    );
 
+    // V5 has no activation or setup step: HQ already set the password.
     await signInWithDemoAccount(tester);
-    expect(find.text('Your account is ready'), findsOneWidget);
-    expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
-    expect(find.text('Society Officer'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Continue to home'));
-    await tester.pumpAndSettle();
+    expect(find.text('Your account is ready'), findsNothing);
     expect(find.textContaining('Nimali'), findsOneWidget);
     expect(find.text('Profile completeness'), findsOneWidget);
   });

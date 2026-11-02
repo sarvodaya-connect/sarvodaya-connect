@@ -1,3 +1,4 @@
+import { AdministrationTabs } from "@/components/dashboard/accounts/administration-tabs";
 import { platformApi } from "@/lib/platform-api";
 import { getCurrentViewer } from "@/lib/current-viewer";
 export default async function AuditPage() {
@@ -5,6 +6,7 @@ export default async function AuditPage() {
   const { data } = await platformApi("/identity/audit");
   return (
     <section className="space-y-4">
+      <AdministrationTabs current="log" />
       <h1 className="text-2xl font-semibold">Change & access log</h1>
       <p>
         Latest 200 recorded events. Full NICs, credentials and passwords are

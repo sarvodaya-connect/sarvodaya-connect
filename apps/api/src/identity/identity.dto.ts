@@ -8,7 +8,6 @@ import {
   IsUUID,
   Length,
   Matches,
-  MaxLength,
   ArrayUnique,
 } from 'class-validator';
 import { USER_ROLES } from '../auth/principal.js';
@@ -28,19 +27,9 @@ export class UpdateAccountDto extends AccountDetailsDto {}
 export class SetAccountPasswordDto {
   @IsString() @Length(10, 128) @Matches(/\d/) password: string;
 }
-export class IssueInvitationDto {
-  @IsIn(['LINK', 'TEMPORARY_PASSWORD']) method: 'LINK' | 'TEMPORARY_PASSWORD';
-}
 export class LoginDto {
   @IsString() @Length(1, 100) username: string;
   @IsString() @Length(1, 200) password: string;
-}
-export class ActivationCheckDto {
-  @IsString() @Length(1, 200) credential: string;
-  @IsOptional() @IsString() @MaxLength(100) username?: string;
-}
-export class ActivateAccountDto extends ActivationCheckDto {
-  @IsString() @Length(10, 128) password: string;
 }
 export class GrantDistrictAccessDto {
   @IsUUID() deputyId: string;

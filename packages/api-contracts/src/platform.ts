@@ -13,8 +13,8 @@ export interface SessionPrincipal {
     expiresAt: IsoDateTime;
   }[];
 }
-export type ActivationMethod = "LINK" | "TEMPORARY_PASSWORD";
-export type ActivationStatus = "PENDING" | "ACTIVE" | "INACTIVE";
+/** PENDING remains only on accounts created before V5; HQ setting a password activates them. */
+export type PlatformAccountStatus = "PENDING" | "ACTIVE" | "INACTIVE";
 export interface AccountSummary {
   id: string;
   username: string;
@@ -24,12 +24,17 @@ export interface AccountSummary {
   role: UserRole;
   districtId: string | null;
   societyIds: string[];
-  status: ActivationStatus;
-  invitations: {
-    method: ActivationMethod;
-    expiresAt: IsoDateTime;
-    usedAt: IsoDateTime | null;
-  }[];
+  status: PlatformAccountStatus;
+  /** When HQ last set the password (V5 D16 "Set by HQ"); null if never set. */
+  passwordSetAt: IsoDateTime | null;
+  /** More than one means HQ has set a replacement ("Set again by HQ"). */
+  passwordSetCount: number;
+  /** A DDM whose temporary district-wide view is active now. */
+  temporaryDistrictView: boolean;
+}
+export interface ScopeOptions {
+  districts: { id: string; nameEn: string; code: string }[];
+  societies: { id: string; nameEn: string; societyCode: string; districtId: string }[];
 }
 export interface CreateAccountInput {
   username: string;
@@ -44,14 +49,6 @@ export interface CreateAccountInput {
 export type UpdateAccountInput = Omit<CreateAccountInput, "password">;
 export interface SetAccountPasswordInput {
   password: string;
-}
-export interface ActivationIssueResult {
-  account: { id: string; username: string };
-  method: ActivationMethod;
-  credential: string;
-  expiresAt: IsoDateTime;
-  activationUrl: string;
-  delivery: "MANUAL_HANDOVER";
 }
 export interface LoginResult {
   token: string;

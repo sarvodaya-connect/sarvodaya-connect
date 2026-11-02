@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  GoneException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -22,8 +21,6 @@ import {
   type UserRole,
 } from '../auth/principal.js';
 import type {
-  ActivateAccountDto,
-  ActivationCheckDto,
   AccountDetailsDto,
   CreateAccountDto,
   GrantDistrictAccessDto,
@@ -46,12 +43,17 @@ export function passwordMatches(password: string, hash: string) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+/** V5 D01 / M03e: one message for every failed sign-in, so it never reveals
+ * whether the username exists. */
+export const SIGN_IN_FAILED =
+  'The username or password is not correct. Check them and try again.';
+export const SIGN_IN_LOCKED =
+  'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.';
+const MAX_FAILED_SIGN_INS = 5;
+const LOCKOUT_MS = 15 * 60_000;
+
 @Injectable()
 export class IdentityService {
-  private readonly attempts = new Map<
-    string,
-    { count: number; until: number }
-  >();
   constructor(
     private readonly db: PrismaService,
     private readonly config: ConfigService,
@@ -63,14 +65,6 @@ export class IdentityService {
         'Local credentials are disabled. Configure the production identity provider.',
       );
     }
-  }
-  private activationUrl(credential: string, username: string) {
-    const base =
-      this.config.get<string>('DASHBOARD_PUBLIC_URL') ??
-      'http://localhost:3000';
-    const url = new URL('/activate', base);
-    url.hash = new URLSearchParams({ credential, username }).toString();
-    return url.toString();
   }
   private hq(principal: Principal) {
     if (!hasRole(principal, 'HQ_ADMIN'))
@@ -113,7 +107,7 @@ export class IdentityService {
     this.hq(principal);
     const [districts, societies] = await Promise.all([
       this.db.district.findMany({
-        select: { id: true, nameEn: true },
+        select: { id: true, nameEn: true, code: true },
         orderBy: { nameEn: 'asc' },
       }),
       this.db.society.findMany({
@@ -123,7 +117,7 @@ export class IdentityService {
     ]);
     return { districts, societies };
   }
-  async accounts(principal: Principal) {
+  async accounts(principal: Principal, now = new Date()) {
     this.hq(principal);
     const rows = await this.db.platformAccount.findMany({
       orderBy: { displayName: 'asc' },
@@ -137,14 +131,27 @@ export class IdentityService {
         districtId: true,
         societyIds: true,
         status: true,
-        invitations: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { method: true, expiresAt: true, usedAt: true },
-        },
+        passwordSetAt: true,
+        passwordSetCount: true,
       },
     });
-    return { data: rows };
+    // V5 D16 marks a DDM whose temporary district-wide view is active now.
+    const grants = await this.db.districtAccessGrant.findMany({
+      where: {
+        deputyId: { in: rows.map((row) => row.id) },
+        revokedAt: null,
+        startsAt: { lte: now },
+        expiresAt: { gt: now },
+      },
+      select: { deputyId: true },
+    });
+    const temporary = new Set(grants.map((grant) => grant.deputyId));
+    return {
+      data: rows.map((row) => ({
+        ...row,
+        temporaryDistrictView: temporary.has(row.id),
+      })),
+    };
   }
   async createAccount(input: CreateAccountDto, principal: Principal) {
     this.localOnly();
@@ -168,6 +175,8 @@ export class IdentityService {
           districtId: input.districtId,
           societyIds: input.societyIds,
           passwordHash: passwordHash(input.password),
+          passwordSetAt: new Date(),
+          passwordSetCount: 1,
           status: 'ACTIVE',
         },
       });
@@ -241,6 +250,7 @@ export class IdentityService {
     input: SetAccountPasswordDto,
     principal: Principal,
   ) {
+    this.localOnly();
     this.hq(principal);
     const account = await this.db.platformAccount.findUnique({ where: { id } });
     if (!account) throw new NotFoundException('Account not found');
@@ -248,11 +258,14 @@ export class IdentityService {
     await this.db.$transaction(async (tx) => {
       await tx.platformAccount.update({
         where: { id },
-        data: { passwordHash: passwordHash(input.password), status: 'ACTIVE' },
-      });
-      await tx.accountInvitation.updateMany({
-        where: { accountId: id, usedAt: null },
-        data: { usedAt: new Date() },
+        data: {
+          passwordHash: passwordHash(input.password),
+          passwordSetAt: new Date(),
+          passwordSetCount: { increment: 1 },
+          failedLoginCount: 0,
+          lockedUntil: null,
+          status: 'ACTIVE',
+        },
       });
       await tx.accountSession.deleteMany({ where: { accountId: id } });
       await tx.platformAuditEvent.create({
@@ -289,191 +302,46 @@ export class IdentityService {
       return { status: 'INACTIVE' };
     });
   }
-  async reissue(id: string, method: string, principal: Principal) {
-    this.localOnly();
-    this.hq(principal);
-    const account = await this.db.platformAccount.findUnique({ where: { id } });
-    if (!account) throw new NotFoundException('Account not found');
-    if (account.status === 'INACTIVE')
-      throw new ConflictException('Account is inactive');
-    const credential = randomBytes(32).toString('base64url');
-    const expiresAt = new Date(Date.now() + 72 * 3600_000);
-    await this.db.$transaction(async (tx) => {
-      await tx.accountInvitation.updateMany({
-        where: { accountId: id, usedAt: null },
-        data: { usedAt: new Date() },
-      });
-      await tx.accountSession.deleteMany({ where: { accountId: id } });
-      await tx.platformAccount.update({
-        where: { id },
-        data: { status: 'PENDING' },
-      });
-      await tx.accountInvitation.create({
-        data: {
-          accountId: id,
-          tokenHash: digest(credential),
-          method,
-          expiresAt,
-        },
-      });
-      await tx.platformAuditEvent.create({
-        data: {
-          actorId: principal.id,
-          action: 'ACTIVATION_REISSUED',
-          targetId: id,
-          districtId: account.districtId,
-        },
-      });
-    });
-    return {
-      account: { id, username: account.username },
-      activationUrl: this.activationUrl(credential, account.username),
-      method,
-      credential,
-      expiresAt,
-      delivery: 'MANUAL_HANDOVER',
-    };
-  }
-  private async invitation(input: ActivationCheckDto) {
-    this.localOnly();
-    const invitation = await this.db.accountInvitation.findUnique({
-      where: { tokenHash: digest(input.credential) },
-      include: { account: true },
-    });
-    if (!invitation && input.username)
-      throw new UnauthorizedException(
-        'The username or temporary password is incorrect',
-      );
-    if (
-      !invitation ||
-      invitation.usedAt ||
-      invitation.expiresAt <= new Date() ||
-      invitation.account.status === 'INACTIVE' ||
-      (invitation.method === 'TEMPORARY_PASSWORD' &&
-        invitation.account.username !== input.username?.trim().toLowerCase())
-    ) {
-      throw new GoneException(
-        'Activation expired, already used, or incorrect. Ask HQ for a new invitation.',
-      );
-    }
-    return invitation;
-  }
-  async checkActivation(input: ActivationCheckDto) {
-    const { account, expiresAt } = await this.invitation(input);
-    const [district, societies] = await Promise.all([
-      account.districtId
-        ? this.db.district.findUnique({
-            where: { id: account.districtId },
-            select: { nameEn: true },
-          })
-        : null,
-      this.db.society.findMany({
-        where: { id: { in: account.societyIds } },
-        select: { id: true, nameEn: true, societyCode: true },
-      }),
-    ]);
-    const labels: Record<UserRole, string> = {
-      SOCIETY_OFFICER: 'Society Officer',
-      PROGRAMME_COORDINATOR: 'SPC',
-      DEPUTY_DISTRICT_MANAGER: 'Deputy District Manager',
-      DISTRICT_MANAGER: 'District Manager',
-      HQ_ADMIN: 'HQ',
-    };
-    const scopeLabel =
-      account.role === 'HQ_ADMIN'
-        ? 'National access'
-        : account.role === 'DISTRICT_MANAGER'
-          ? `${district?.nameEn ?? 'Assigned district'} district`
-          : societies.map((s) => `${s.nameEn} · ${s.societyCode}`).join('; ');
-    return {
-      id: account.id,
-      username: account.username,
-      displayName: account.displayName,
-      role: account.role,
-      roleLabel: labels[account.role as UserRole],
-      scopeLabel,
-      districtId: account.districtId,
-      societyIds: account.societyIds,
-      expiresAt,
-    };
-  }
-  async activate(input: ActivateAccountDto) {
-    const invitation = await this.invitation(input);
-    if (
-      !/\d/.test(input.password) ||
-      input.password.toLowerCase() === invitation.account.username.toLowerCase()
-    )
-      throw new BadRequestException(
-        'Use at least 10 characters with a number, different from your username',
-      );
-    const encoded = passwordHash(input.password);
-    await this.db.$transaction(async (tx) => {
-      const consumed = await tx.accountInvitation.updateMany({
-        where: {
-          id: invitation.id,
-          usedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-        data: { usedAt: new Date() },
-      });
-      if (consumed.count !== 1)
-        throw new GoneException('This invitation has already been used');
-      await tx.accountInvitation.updateMany({
-        where: { accountId: invitation.accountId, usedAt: null },
-        data: { usedAt: new Date() },
-      });
-      await tx.platformAccount.update({
-        where: { id: invitation.accountId },
-        data: { passwordHash: encoded, status: 'ACTIVE' },
-      });
-      await tx.accountSession.deleteMany({
-        where: { accountId: invitation.accountId },
-      });
-      await tx.platformAuditEvent.create({
-        data: {
-          actorId: invitation.accountId,
-          action: 'ACCOUNT_ACTIVATED',
-          targetId: invitation.accountId,
-          districtId: invitation.account.districtId,
-        },
-      });
-    });
-    return { status: 'ACTIVE' };
-  }
-  async login(input: LoginDto) {
+  async login(input: LoginDto, now = new Date()) {
     this.localOnly();
     const username = input.username.trim().toLowerCase();
-    const attempt = this.attempts.get(username);
-    if (attempt && attempt.until > Date.now() && attempt.count >= 5)
-      throw new UnauthorizedException(
-        'Too many attempts. Try again in 15 minutes.',
-      );
     const account = await this.db.platformAccount.findUnique({
       where: { username },
     });
-    if (
-      !account ||
-      account.status !== 'ACTIVE' ||
-      !passwordMatches(
-        input.password,
-        account.passwordHash ?? passwordHash('unused-dummy-password'),
-      )
-    ) {
-      this.attempts.set(username, {
-        count: attempt && attempt.until > Date.now() ? attempt.count + 1 : 1,
-        until: Date.now() + 15 * 60_000,
-      });
-      throw new UnauthorizedException(
-        'Username or password is incorrect, or the account requires activation',
-      );
+    if (account?.lockedUntil && account.lockedUntil > now)
+      throw new UnauthorizedException(SIGN_IN_LOCKED);
+    // A dummy hash keeps the timing the same when the username is unknown.
+    const matches = passwordMatches(
+      input.password,
+      account?.passwordHash ?? passwordHash('unused-dummy-password'),
+    );
+    if (!account || account.status !== 'ACTIVE' || !matches) {
+      if (account) {
+        const failed = account.failedLoginCount + 1;
+        await this.db.platformAccount.update({
+          where: { id: account.id },
+          data:
+            failed >= MAX_FAILED_SIGN_INS
+              ? {
+                  failedLoginCount: 0,
+                  lockedUntil: new Date(now.getTime() + LOCKOUT_MS),
+                }
+              : { failedLoginCount: failed },
+        });
+      }
+      throw new UnauthorizedException(SIGN_IN_FAILED);
     }
-    this.attempts.delete(username);
+    if (account.failedLoginCount || account.lockedUntil)
+      await this.db.platformAccount.update({
+        where: { id: account.id },
+        data: { failedLoginCount: 0, lockedUntil: null },
+      });
     const token = randomBytes(32).toString('base64url');
     await this.db.accountSession.create({
       data: {
         accountId: account.id,
         tokenHash: digest(token),
-        expiresAt: new Date(Date.now() + 8 * 3600_000),
+        expiresAt: new Date(now.getTime() + 8 * 3600_000),
       },
     });
     return { token, user: await this.principalFor(account.id) };

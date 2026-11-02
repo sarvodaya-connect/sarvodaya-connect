@@ -52,9 +52,9 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D01, D01e | `/` `app/page.tsx` | — | rework | 2 |
-| M01, M02, M03, M03e | — | `splash_screen.dart`, `language_screen.dart`, `sign_in_screen.dart` | rework | 2 |
-| D16, D16i, D16t | `/accounts` | — | rework (V4 invitations/activation differ from V5 permanent passwords) | 2 |
+| D01, D01e | `/` `app/page.tsx` | — | match (PR 2) | 2 |
+| M01, M02, M03, M03e | — | `splash_screen.dart`, `language_screen.dart`, `sign_in_screen.dart` | match (PR 2) | 2 |
+| D16, D16i, D16t | `/accounts` | — | match (PR 2) | 2 |
 | D24 Change & access log | `/audit` | — | rework | 3 |
 
 ### Society record, ExCo and grades

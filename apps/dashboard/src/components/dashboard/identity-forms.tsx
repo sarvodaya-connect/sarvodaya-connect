@@ -1,563 +1,472 @@
 "use client";
-import { useActionState, useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import type { AccountSummary } from "@sarvodaya-connect/api-contracts";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
+import type { ScopeOptions, UserRole } from "@sarvodaya-connect/api-contracts";
 import {
-  activate,
   createAccount,
   login,
-  reissueAccount,
   setAccountPassword,
-  updateAccount,
-  disableAccount,
   type FormResult,
 } from "@/app/identity-actions";
-const field = "w-full rounded border border-line bg-white px-3 py-2 text-sm";
-const button =
-  "rounded bg-[#1a5c39] px-4 py-2 font-semibold text-white disabled:opacity-50";
-function Result({ result }: { result: FormResult }) {
+import { SIGN_IN_COPY, suggestUsername, type SignInLanguage } from "@/lib/sign-in-messages";
+
+import { primaryButtonClass, secondaryButtonClass } from "./data-states";
+import { Icon } from "./icon";
+
+const inputClass =
+  "h-10 w-full rounded-[10px] border border-line bg-surface px-3 text-[13px] text-ink outline-none focus:border-brand-leaf focus:ring-3 focus:ring-brand-mint aria-[invalid=true]:border-danger-dot";
+const labelClass = "block text-xs font-semibold text-ink";
+
+function Required() {
+  return <span aria-hidden="true" className="text-danger-dot"> *</span>;
+}
+
+/** Password box with a show/hide eye (V5 D01, D16i, D16t). */
+function PasswordInput({
+  autoComplete,
+  hideLabel = "Hide password",
+  invalid,
+  name,
+  showLabel = "Show password",
+  ...props
+}: {
+  autoComplete: string;
+  hideLabel?: string;
+  invalid?: boolean;
+  name: string;
+  showLabel?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
   return (
-    <>
-      {result.error && (
-        <p role="alert" className="my-3 rounded bg-red-50 p-3 text-red-800">
-          {result.error}
-        </p>
-      )}
-      {result.success && (
-        <p role="status" className="my-3 rounded bg-green-50 p-3">
-          {result.success}
-        </p>
-      )}
-      {result.credential && (
-        <div className="my-3 break-all rounded border p-3">
-          <p>Username: {result.username}</p>
+    <span className="relative block">
+      <input
+        {...props}
+        aria-invalid={invalid || undefined}
+        autoComplete={autoComplete}
+        className={`${inputClass} pr-10`}
+        name={name}
+        required
+        type={visible ? "text" : "password"}
+      />
+      <button
+        aria-label={visible ? hideLabel : showLabel}
+        aria-pressed={visible}
+        className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-ink-soft hover:bg-brand-mint-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
+        onClick={() => setVisible((value) => !value)}
+        type="button"
+      >
+        <Icon className="size-4" name={visible ? "close" : "eye"} strokeWidth={2} />
+      </button>
+    </span>
+  );
+}
+
+function Message({ result }: { result: FormResult }) {
+  if (result.error)
+    return (
+      <p className="flex gap-2.5 rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-3.5 py-2.5 text-[12.5px] text-[var(--banner-incident-text)]" role="alert">
+        <Icon className="mt-0.5 size-4 shrink-0" name="error" strokeWidth={2} />
+        {result.error}
+      </p>
+    );
+  if (result.success)
+    return (
+      <p className="flex gap-2.5 rounded-xl border border-[var(--banner-edit-line)] bg-[var(--banner-edit-bg)] px-3.5 py-2.5 text-[12.5px] text-[var(--banner-edit-text)]" role="status">
+        <Icon className="mt-0.5 size-4 shrink-0" name="success" strokeWidth={2} />
+        {result.success}
+      </p>
+    );
+  return null;
+}
+
+/** V5 D01 / D01e: dashboard sign-in. */
+export function SignInForm() {
+  const [state, action, pending] = useActionState(login, {});
+  const [language, setLanguage] = useState<SignInLanguage>("en");
+  const copy = SIGN_IN_COPY[language];
+  const error = state.error ? (copy.errors[state.error] ?? state.error) : undefined;
+  return (
+    <div className="w-full max-w-[400px]" lang={language}>
+      <div className="mb-6 flex justify-end">
+        <div className="inline-flex rounded-[10px] border border-line bg-surface p-1" role="group" aria-label="Choose language">
+          {([
+            ["si", "සිංහල"],
+            ["ta", "தமிழ்"],
+            ["en", "English"],
+          ] as const).map(([code, label]) => (
+            <button
+              aria-pressed={language === code}
+              className={`rounded-lg px-2.5 py-1 text-xs ${language === code ? "bg-brand-mint font-semibold text-brand-forest" : "text-ink-soft hover:bg-brand-mint-soft"}`}
+              key={code}
+              onClick={() => setLanguage(code)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <form action={action} className="space-y-4">
+        <div>
+          <h1 className="text-[26px] font-bold text-ink">{copy.title}</h1>
+          <p className="mt-1 text-[13px] leading-5 text-ink-soft">{copy.subtitle}</p>
+        </div>
+        {error && <Message result={{ error }} />}
+        <label className={labelClass}>
+          {copy.username}
+          <Required />
+          <span className="relative mt-1.5 block">
+            <input
+              aria-invalid={error ? true : undefined}
+              autoComplete="username"
+              autoCapitalize="none"
+              className={`${inputClass} pr-10`}
+              name="username"
+              required
+            />
+            <Icon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" name="user" strokeWidth={2} />
+          </span>
+        </label>
+        <label className={labelClass}>
+          {copy.password}
+          <Required />
+          <span className="mt-1.5 block">
+            <PasswordInput
+              autoComplete="current-password"
+              hideLabel={copy.hidePassword}
+              invalid={Boolean(error)}
+              name="password"
+              showLabel={copy.showPassword}
+            />
+          </span>
+        </label>
+        <button className={`${primaryButtonClass} h-11 w-full`} disabled={pending} type="submit">
+          {pending ? copy.waiting : copy.button}
+        </button>
+        <div className="flex gap-2.5 rounded-xl border border-[#c3d5ea] bg-[#e6eef8] px-3.5 py-2.5 text-xs text-[#24476b]">
+          <Icon className="mt-0.5 size-4 shrink-0" name="phone" strokeWidth={2} />
           <p>
-            Activation credential: <code>{result.credential}</code>
-          </p>
-          {result.method === "LINK" && result.activationUrl && (
-            <p>
-              One-time activation link:{" "}
-              <a href={result.activationUrl} className="underline">
-                {result.activationUrl}
-              </a>
-            </p>
-          )}
-          <p>
-            Valid until {result.expiresAt}. Hand over securely. No message has
-            been sent automatically.
+            <strong className="block">{copy.officerTitle}</strong>
+            {copy.officerBody}
           </p>
         </div>
-      )}
+        <div className="text-xs text-ink-soft">
+          {copy.forgot} ·{" "}
+          <details className="inline">
+            <summary className="inline cursor-pointer list-none text-brand-action underline underline-offset-2">{copy.privacy}</summary>
+            <p className="mt-2 leading-5 text-ink-body">{copy.privacyBody}</p>
+          </details>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  SOCIETY_OFFICER: "Society Officer",
+  PROGRAMME_COORDINATOR: "SPC",
+  DEPUTY_DISTRICT_MANAGER: "DDM",
+  DISTRICT_MANAGER: "DM",
+  HQ_ADMIN: "HQ",
+};
+
+/** What the Scope field asks for, by role (V5 D16i hint under Scope). */
+const SCOPE_HINTS: Record<UserRole, string> = {
+  SOCIETY_OFFICER: "A Society Officer has exactly one society.",
+  PROGRAMME_COORDINATOR: "Choose the district, then the societies this SPC looks after.",
+  DEPUTY_DISTRICT_MANAGER: "Choose the district, then the societies this DDM looks after.",
+  DISTRICT_MANAGER: "A DM sees every society in one district, view only.",
+  HQ_ADMIN: "HQ has national access.",
+};
+
+/** V5 D16i: side panel where HQ creates an account with a permanent password. */
+export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const titleId = useId();
+  const [state, action, pending] = useActionState(createAccount, {});
+  const [role, setRole] = useState<UserRole>("SOCIETY_OFFICER");
+  const [districtId, setDistrictId] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
+  const societies = options.societies.filter((society) => society.districtId === districtId);
+
+  useEffect(() => {
+    if (!state.success) return;
+    // Never leave a typed password in the page after the account is created.
+    form.current?.reset();
+    setUsername("");
+    setUsernameEdited(false);
+    setDistrictId("");
+  }, [state]);
+
+  const close = () => dialog.current?.close();
+
+  return (
+    <>
+      <button className={primaryButtonClass} onClick={() => dialog.current?.showModal()} type="button">
+        <Icon className="size-4" name="user" strokeWidth={2} />
+        Create account
+      </button>
+      <dialog
+        aria-labelledby={titleId}
+        className="fixed inset-y-0 right-0 m-0 ml-auto h-dvh max-h-none w-full max-w-[560px] overflow-y-auto bg-surface p-0 shadow-[-12px_0_40px_rgba(0,0,0,0.18)] backdrop:bg-[rgba(28,42,33,0.35)]"
+        ref={dialog}
+      >
+        <form
+          action={action}
+          className="grid grid-cols-1 gap-x-3.5 gap-y-4 p-6 sm:grid-cols-2"
+          onSubmit={(event) => {
+            const data = new FormData(event.currentTarget);
+            const differ = data.get("password") !== data.get("confirmPassword");
+            setMismatch(differ);
+            if (differ) event.preventDefault();
+          }}
+          ref={form}
+        >
+          <div className="flex items-start justify-between gap-4 sm:col-span-2">
+            <div>
+              <h2 className="text-lg font-bold text-ink" id={titleId}>Create an account</h2>
+              <p className="text-xs text-ink-soft">HQ enters the person, a role and its scope, a username and a password</p>
+            </div>
+            <button aria-label="Close" className="grid size-8 place-items-center rounded-lg text-ink hover:bg-brand-mint-soft" onClick={close} type="button">
+              <Icon className="size-4" name="close" strokeWidth={2} />
+            </button>
+          </div>
+          <label className={labelClass}>
+            Full name<Required />
+            <input
+              className={`${inputClass} mt-1.5`}
+              maxLength={150}
+              minLength={2}
+              name="displayName"
+              onChange={(event) => {
+                if (!usernameEdited) setUsername(suggestUsername(event.target.value));
+              }}
+              required
+            />
+          </label>
+          <label className={labelClass}>
+            Username<Required />
+            <input
+              aria-describedby={`${titleId}-username`}
+              autoCapitalize="none"
+              className={`${inputClass} mt-1.5`}
+              name="username"
+              onChange={(event) => {
+                setUsernameEdited(true);
+                setUsername(event.target.value.toLowerCase());
+              }}
+              pattern="[a-z0-9][a-z0-9._\-]{2,99}"
+              required
+              value={username}
+            />
+            <span className="mt-1 block text-[11px] font-normal text-ink-soft" id={`${titleId}-username`}>Suggested from the name. Must be unique.</span>
+          </label>
+          <label className={labelClass}>
+            Mobile number<Required />
+            <input autoComplete="off" className={`${inputClass} mt-1.5`} inputMode="tel" maxLength={30} minLength={7} name="phone" required />
+          </label>
+          <label className={labelClass}>
+            Email (optional)
+            <input autoComplete="off" className={`${inputClass} mt-1.5`} name="email" type="email" />
+          </label>
+          <label className={labelClass}>
+            Role<Required />
+            <select
+              className={`${inputClass} mt-1.5`}
+              name="role"
+              onChange={(event) => setRole(event.target.value as UserRole)}
+              value={role}
+            >
+              {(Object.keys(ROLE_LABELS) as UserRole[]).map((value) => (
+                <option key={value} value={value}>{ROLE_LABELS[value]}</option>
+              ))}
+            </select>
+          </label>
+          <div className="text-xs font-semibold text-ink">
+            {role === "HQ_ADMIN" ? (
+              <>
+                <span>Scope</span>
+                <p className="mt-1.5 flex h-10 items-center rounded-[10px] border border-line bg-surface-muted px-3 text-[13px] font-normal">National</p>
+              </>
+            ) : (
+              <label className="block">
+                {role === "DISTRICT_MANAGER" ? "Scope" : "District"}<Required />
+                <select
+                  className={`${inputClass} mt-1.5`}
+                  name="districtId"
+                  onChange={(event) => setDistrictId(event.target.value)}
+                  required
+                  value={districtId}
+                >
+                  <option value="">Choose a district</option>
+                  {options.districts.map((district) => (
+                    <option key={district.id} value={district.id}>
+                      {district.nameEn}{role === "DISTRICT_MANAGER" ? " District" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <p className="mt-1 text-[11px] font-normal text-ink-soft">{SCOPE_HINTS[role]}</p>
+          </div>
+          {role === "SOCIETY_OFFICER" && (
+            <label className={`${labelClass} sm:col-span-2`}>
+              Society<Required />
+              <select className={`${inputClass} mt-1.5`} disabled={!districtId} name="societyIds" required>
+                <option value="">{districtId ? "Choose the society" : "Choose a district first"}</option>
+                {societies.map((society) => (
+                  <option key={society.id} value={society.id}>{society.nameEn} · {society.societyCode}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {(role === "PROGRAMME_COORDINATOR" || role === "DEPUTY_DISTRICT_MANAGER") && (
+            <fieldset className="sm:col-span-2">
+              <legend className={labelClass}>Assigned societies<Required /></legend>
+              {districtId ? (
+                <div className="mt-1.5 grid max-h-44 gap-1 overflow-y-auto rounded-[10px] border border-line p-2 sm:grid-cols-2">
+                  {societies.length ? (
+                    societies.map((society) => (
+                      <label className="flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] hover:bg-brand-mint-soft" key={society.id}>
+                        <input name="societyIds" type="checkbox" value={society.id} />
+                        {society.nameEn} · {society.societyCode}
+                      </label>
+                    ))
+                  ) : (
+                    <p className="px-2 py-1 text-xs text-ink-soft">No societies in this district.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-1.5 text-xs text-ink-soft">Choose a district first.</p>
+              )}
+            </fieldset>
+          )}
+          <label className={labelClass}>
+            Password<Required />
+            <span className="mt-1.5 block">
+              <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="password" />
+            </span>
+            <span className="mt-1 block text-[11px] font-semibold">This is the person&apos;s permanent password.</span>
+          </label>
+          <label className={labelClass}>
+            Repeat password<Required />
+            <span className="mt-1.5 block">
+              <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
+            </span>
+            {mismatch && <span className="mt-1 block text-[11px] text-danger-dot" role="alert">The passwords do not match.</span>}
+          </label>
+          <p className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[#e2b33a] bg-[#fff8e1] px-3.5 py-2.5 text-xs text-[#5c4300] sm:col-span-2">
+            <span>Password rules (length, letters and numbers) are still to be agreed. For now: at least 10 characters, with a number, not the username.</span>
+            <strong className="shrink-0">To confirm</strong>
+          </p>
+          <p className="flex gap-2.5 rounded-xl border border-[var(--banner-edit-line)] bg-[var(--banner-edit-bg)] px-3.5 py-2.5 text-xs text-[var(--banner-edit-text)] sm:col-span-2">
+            <Icon className="mt-0.5 size-4 shrink-0" name="lock" strokeWidth={2} />
+            Give the username and password to the person yourself. They sign in with them straight away on the phone or dashboard.
+          </p>
+          <div className="sm:col-span-2">
+            <Message result={state} />
+          </div>
+          <div className="flex gap-2.5 sm:col-span-2">
+            <button className={secondaryButtonClass} onClick={close} type="button">Cancel</button>
+            <button className={primaryButtonClass} disabled={pending} type="submit">
+              <Icon className="size-4" name="user" strokeWidth={2} />
+              {pending ? "Creating…" : "Create account"}
+            </button>
+          </div>
+        </form>
+      </dialog>
     </>
   );
 }
-export function SignInForm() {
-  const [state, action, pending] = useActionState(login, {});
-  const [language, setLanguage] = useState<"si" | "ta" | "en">("en");
-  const copy = {
-    en: {
-      title: "Sign in",
-      subtitle: "HQ staff only. Use your Sarvodaya Connect username and password.",
-      username: "Username",
-      password: "Password",
-      button: "Sign in",
-      waiting: "Signing in…",
-      otherRoles: "Not HQ staff?",
-      phoneRoles: "Society Officers, SPCs, DDMs and DMs use the Sarvodaya Connect phone app.",
-      activate: "First time? Activate your account",
-      privacy: "Privacy notice",
-    },
-    si: {
-      title: "පිවිසෙන්න",
-      subtitle: "මූලස්ථාන කාර්ය මණ්ඩලය සඳහා පමණි. ඔබගේ Sarvodaya Connect පරිශීලක නාමය සහ මුරපදය භාවිත කරන්න.",
-      username: "පරිශීලක නාමය",
-      password: "මුරපදය",
-      button: "පිවිසෙන්න",
-      waiting: "පිවිසෙමින්…",
-      otherRoles: "ඔබ මූලස්ථාන කාර්ය මණ්ඩලය නොවේද?",
-      phoneRoles: "සමාජ නිලධාරීන්, SPC, DDM සහ DM සඳහා Sarvodaya Connect ජංගම යෙදුම භාවිත කරන්න.",
-      activate: "පළමු වරටද? ඔබගේ ගිණුම සක්‍රිය කරන්න",
-      privacy: "පෞද්ගලිකත්ව නිවේදනය",
-    },
-    ta: {
-      title: "உள்நுழைக",
-      subtitle: "தலைமையகப் பணியாளர்களுக்கு மட்டும். உங்கள் Sarvodaya Connect பயனர்பெயர் மற்றும் கடவுச்சொல்லைப் பயன்படுத்தவும்.",
-      username: "பயனர்பெயர்",
-      password: "கடவுச்சொல்",
-      button: "உள்நுழைக",
-      waiting: "உள்நுழைகிறது…",
-      otherRoles: "நீங்கள் தலைமையகப் பணியாளர் இல்லையா?",
-      phoneRoles: "சங்க அலுவலர்கள், SPC, DDM மற்றும் DM-கள் Sarvodaya Connect கைப்பேசி செயலியைப் பயன்படுத்தவும்.",
-      activate: "முதல் முறையா? உங்கள் கணக்கைச் செயல்படுத்தவும்",
-      privacy: "தனியுரிமை அறிவிப்பு",
-    },
-  }[language];
-  return (
-    <div className="w-full max-w-[430px]">
-      <div className="mb-10 flex justify-end" role="group" aria-label="Choose language">
-        {([
-          ["si", "සිංහල"],
-          ["ta", "தமிழ்"],
-          ["en", "English"],
-        ] as const).map(([code, label]) => (
-          <button
-            key={code}
-            type="button"
-            aria-pressed={language === code}
-            onClick={() => setLanguage(code)}
-            className={`border border-[#dfe5dc] px-3 py-1.5 text-xs first:rounded-l-md last:rounded-r-md ${language === code ? "bg-[#e6f0e7] font-semibold text-[#174a32]" : "bg-white text-[#3e4b43] hover:bg-[#f4f8f3]"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <form action={action} className="space-y-5">
-        <div className="mb-7">
-          <h1 className="text-2xl font-semibold text-[#17211b]">{copy.title}</h1>
-          <p className="mt-1 text-sm leading-5 text-[#68756c]">{copy.subtitle}</p>
-        </div>
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>{copy.username} <span className="text-red-700">*</span></span>
-          <input
-            required
-            name="username"
-            autoComplete="username"
-            className={`${field} h-11 rounded-md px-3 text-base`}
-          />
-        </label>
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>{copy.password} <span className="text-red-700">*</span></span>
-          <input
-            required
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            className={`${field} h-11 rounded-md px-3 text-base`}
-          />
-        </label>
-        <Result result={state} />
-        <button disabled={pending} className={`${button} w-full rounded-md py-3`}>
-          {pending ? copy.waiting : copy.button}
-        </button>
-        <div className="rounded-lg border border-[#b7cce2] bg-[#e5eef8] px-4 py-3.5 text-sm leading-5 text-[#244d75]">
-          <p className="font-semibold">{copy.otherRoles}</p>
-          <p className="mt-1">{copy.phoneRoles}</p>
-        </div>
-        <p className="flex flex-wrap gap-x-2 text-sm font-medium text-[#155b38]">
-          <Link href="/activate" className="underline underline-offset-2">{copy.activate}</Link>
-          <span aria-hidden="true">·</span>
-          <details id="privacy-notice" className="inline-block">
-            <summary className="list-none cursor-pointer underline underline-offset-2">{copy.privacy}</summary>
-            <p className="mt-3 max-w-[430px] leading-5 text-[#68756c]">
-              Access to society information is controlled by your assigned role and scope. Sensitive NIC details are revealed only after sign-in and the access is recorded.
-            </p>
-          </details>
-        </p>
-      </form>
-    </div>
-  );
-}
-export function ActivationForm() {
-  const [state, action, pending] = useActionState(activate, {});
-  const [details, setDetails] = useState<{
-    displayName: string;
-    role: string;
-    roleLabel?: string;
-    scopeLabel?: string;
-    societyIds: string[];
-    districtId?: string;
-  } | null>(null);
-  const [error, setError] = useState("");
-  const [credential, setCredential] = useState("");
-  const [username, setUsername] = useState("");
-  useEffect(() => {
-    const parameters = new URLSearchParams(window.location.hash.slice(1));
-    setCredential(parameters.get("credential") ?? "");
-    setUsername(parameters.get("username") ?? "");
-    if (window.location.hash)
-      window.history.replaceState(null, "", window.location.pathname);
-  }, []);
-  async function inspect(form: FormData) {
-    setError("");
-    try {
-      const response = await fetch("/api/activation-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          credential: form.get("credential"),
-          username: form.get("username") || undefined,
-        }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.message);
-      setDetails(body);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to check activation.");
-    }
-  }
-  return (
-    <div className="w-full max-w-[520px]">
-      <div className="mb-8 flex items-center gap-3" aria-label={`Activation step ${details ? "2" : "1"} of 2`}>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#1f6b43] text-sm font-semibold text-white">
-          {details ? "2" : "1"}
-        </span>
-        <span className="text-sm font-semibold text-[#174a32]">
-          {details ? "Set your password" : "Verify your invitation"}
-        </span>
-        <span className="h-px flex-1 bg-[#dfe5dc]" aria-hidden="true" />
-        <span className="text-xs text-[#68756c]">Step {details ? "2" : "1"} of 2</span>
-      </div>
-      <form action={details ? action : inspect} className="space-y-5">
-        {details && <input type="hidden" name="credential" value={credential} />}
-        <div className="mb-7">
-          <h1 className="text-3xl font-semibold tracking-tight text-[#17211b]">
-            {details ? "Set up your password" : "Activate your account"}
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-[#68756c]">
-            {details
-              ? "Check that the account details are yours, then finish setting up this pending account."
-              : "Use this only if HQ gave you a one-time activation credential. Most staff should sign in with the username and permanent password provided by HQ."}
-          </p>
-        </div>
-        {!details && (
-          <div className="rounded-lg border border-[#c8d9ea] bg-[#e5eef8] px-4 py-3 text-sm leading-5 text-[#315d88]">
-            Your invitation is private and can only be used once. If it has expired, ask HQ to issue a new one.
-          </div>
-        )}
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>Username</span>
-        <input
-          name="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-          className={`${field} h-11 rounded-md px-3 text-base`}
-          readOnly={!!details}
-        />
-      </label>
-      {!details && <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>One-time activation credential</span>
-        <input
-          required
-          name="credential"
-          value={credential}
-          onChange={(e) => setCredential(e.target.value)}
-          type="password"
-          autoComplete="one-time-code"
-          className={`${field} h-11 rounded-md px-3 text-base`}
-          readOnly={!!details}
-        />
-      </label>}
-      {error && (
-        <p role="alert" className="rounded-lg border border-[#f0c7c3] bg-[#fbe9e7] p-3 text-sm text-[#a8312a]">
-          {error} Ask HQ for a new invitation if this one has expired.
-        </p>
-      )}
-      {details && (
-        <>
-          <section className="space-y-3 rounded-xl border border-[#c6e2cd] bg-[#f4f8f3] p-5">
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[#68756c]">Account assigned to</h2>
-              <p className="mt-1 text-lg font-semibold text-[#17211b]">{details.displayName}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 border-t border-[#dfe5dc] pt-3 text-sm">
-              <p><span className="block text-xs text-[#68756c]">Role</span><span className="font-medium">{details.roleLabel ?? details.role}</span></p>
-              <p><span className="block text-xs text-[#68756c]">Assigned societies</span><span className="font-medium">{details.societyIds.length}</span></p>
-              <p className="col-span-2"><span className="block text-xs text-[#68756c]">Access area</span><span className="font-medium">{details.scopeLabel ?? details.districtId ?? "National"}</span></p>
-            </div>
-            <p className="border-t border-[#dfe5dc] pt-3 text-xs leading-5 text-[#3e4b43]">
-              HQ sets your role and assignments. Contact HQ if these details are incorrect.
-            </p>
-          </section>
-          <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-            <span>New password</span>
-            <input
-              required
-              minLength={10}
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              className={`${field} h-11 rounded-md px-3 text-base`}
-            />
-          </label>
-          <p className="-mt-3 text-xs leading-5 text-[#68756c]">
-            Use at least 10 characters and include a number. It must be different from your username.
-          </p>
-          <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-            <span>Confirm new password</span>
-            <input
-              required
-              name="confirm"
-              type="password"
-              autoComplete="new-password"
-              className={`${field} h-11 rounded-md px-3 text-base`}
-            />
-          </label>
-        </>
-      )}
-      <Result result={state} />
-      {!state.success && (
-        <button disabled={pending} className={`${button} w-full rounded-md py-3`}>
-          {pending ? "Please wait…" : details ? "Set password and activate" : "Check details and continue"}
-        </button>
-      )}
-      <p className="text-center text-sm">
-        <Link href="/" className="font-medium text-[#1f6b43] underline underline-offset-2">
-          ← Return to sign in
-        </Link>
-      </p>
-      </form>
-    </div>
-  );
-}
-export function InviteForm({
-  societies,
-  districts,
+
+/** V5 D16t: HQ sets a replacement password for one account. */
+export function SetPasswordDialog({
   account,
 }: {
-  account?: AccountSummary;
-  societies: {
-    id: string;
-    nameEn: string;
-    societyCode: string;
-    districtId?: string;
-  }[];
-  districts: { id: string; nameEn: string }[];
+  account: { id: string; displayName: string; username: string; scopeLabel: string };
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const [districtId, setDistrictId] = useState(account?.districtId ?? "");
-  const [role, setRole] = useState<string>(account?.role ?? "SOCIETY_OFFICER");
-  const [selectedSocietyIds, setSelectedSocietyIds] = useState<string[]>(
-    account?.societyIds ?? [],
-  );
-  const [state, action, pending] = useActionState(
-    account ? updateAccount : createAccount,
-    {},
-  );
-  useEffect(() => {
-    if (!account && state.success) {
-      formRef.current?.querySelectorAll<HTMLInputElement>('input[type="password"]').forEach((input) => {
-        input.value = "";
-      });
-    }
-  }, [account, state.success]);
-  return (
-    <form
-      ref={formRef}
-      action={action}
-      className={`rounded-card border border-line bg-white p-5 md:p-6 ${account ? "space-y-3" : "grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2"}`}
-    >
-      <input type="hidden" name="id" value={account?.id ?? ""} />
-      <div className={account ? "" : "md:col-span-2"}>
-        <h2 className="text-lg font-semibold text-ink">
-          {account ? "Update account assignments" : "Create a staff account"}
-        </h2>
-        {!account && <p className="mt-1 text-sm text-muted">Set the username and permanent password. Give both to the staff member securely.</p>}
-      </div>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Full name</span>
-        <input
-          required
-          name="displayName"
-          defaultValue={account?.displayName ?? ""}
-          className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-        />
-      </label>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Username</span>
-        <input
-          required
-          name="username"
-          defaultValue={account?.username ?? ""}
-          readOnly={!!account}
-          minLength={3}
-          maxLength={100}
-          pattern="[a-z0-9][a-z0-9._-]{2,99}"
-          title="Use at least 3 lowercase letters or numbers. Dots, underscores and hyphens are allowed; spaces are not."
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder="For example: dm.kandy01"
-          className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-        />
-        {!account && <span className="block text-xs font-normal text-muted">Use 3–100 characters: lowercase letters, numbers, dots, underscores or hyphens. No spaces.</span>}
-      </label>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Mobile number</span>
-        <input
-          required
-          name="phone"
-          defaultValue={account?.phone ?? ""}
-          className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-        />
-      </label>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Email <span className="font-normal text-muted">(optional)</span></span>
-        <input name="email" type="email" defaultValue={account?.email ?? ""} className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`} />
-      </label>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Role</span>
-        <select
-          name="role"
-          value={role}
-          onChange={(e) => {
-            setRole(e.target.value);
-            setSelectedSocietyIds([]);
-          }}
-          className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-        >
-          {[
-            ["SOCIETY_OFFICER", "Society Officer"],
-            ["PROGRAMME_COORDINATOR", "SPC"],
-            ["DEPUTY_DISTRICT_MANAGER", "DDM"],
-            ["DISTRICT_MANAGER", "DM"],
-            ["HQ_ADMIN", "HQ"],
-          ].map(([id, label]) => (
-            <option key={id} value={id}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {role !== "HQ_ADMIN" && (
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>District</span>
-          <select
-            name="districtId"
-            value={districtId}
-            onChange={(e) => {
-              setDistrictId(e.target.value);
-              setSelectedSocietyIds([]);
-            }}
-            required
-            className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-          >
-            <option value="">Choose district</option>
-            {districts.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nameEn}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {!["HQ_ADMIN", "DISTRICT_MANAGER"].includes(role) && (
-        <label className={`block space-y-1.5 text-sm font-medium text-[#3e4b43] ${account ? "" : "md:col-span-2"}`}>
-          <span>Assigned societies <span className="font-normal text-muted">({role === "SOCIETY_OFFICER" ? "exactly one" : "select all assigned"})</span></span>
-          <select
-            required
-            multiple={role !== "SOCIETY_OFFICER"}
-            name="societyIds"
-            value={role === "SOCIETY_OFFICER" ? selectedSocietyIds[0] ?? "" : selectedSocietyIds}
-            onChange={(e) =>
-              setSelectedSocietyIds(
-                role === "SOCIETY_OFFICER"
-                  ? e.target.value
-                    ? [e.target.value]
-                    : []
-                  : Array.from(e.target.selectedOptions, (option) => option.value),
-              )
-            }
-            className={`${field} ${role === "SOCIETY_OFFICER" ? "h-11" : "min-h-28"} rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`}
-          >
-            {role === "SOCIETY_OFFICER" && <option value="">Choose one society</option>}
-            {societies
-              .filter((s) => s.districtId === districtId)
-              .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nameEn} · {s.societyCode}
-                </option>
-              ))}
-          </select>
-        </label>
-      )}
-      {!account && <>
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>Permanent password</span>
-          <input required name="password" type="password" autoComplete="new-password" minLength={10} maxLength={128} className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`} />
-          <span className="block text-xs font-normal text-muted">At least 10 characters, including a number. It must differ from the username.</span>
-        </label>
-        <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-          <span>Confirm password</span>
-          <input required name="confirmPassword" type="password" autoComplete="new-password" minLength={10} maxLength={128} className={`${field} h-11 rounded-md text-base focus:border-[#26744b] focus:outline-none focus:ring-2 focus:ring-[#c6e2cd]`} />
-        </label>
-        <p className="text-sm leading-5 text-muted md:col-span-2">The password is stored as a secure hash. HQ can set a replacement password later, but cannot view the saved password.</p>
-      </>}
-      <div className={account ? "" : "md:col-span-2"}><Result result={state} /></div>
-      <div className={account ? "" : "flex flex-wrap items-center gap-3 md:col-span-2"}>
-      <button className={`${button} rounded-md px-5 py-2.5`} disabled={pending}>
-        {pending
-          ? "Saving…"
-          : account
-            ? "Update assignments"
-            : "Create account"}
-      </button>
-      </div>
-    </form>
-  );
-}
-export function ReissueForm({ id }: { id: string }) {
-  const [state, action, pending] = useActionState(reissueAccount, {});
-  return (
-    <form action={action} className="space-y-3">
-      <input type="hidden" name="id" value={id} />
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>New activation method</span>
-        <select name="method" className={`${field} h-10 rounded-md`}>
-          <option value="LINK">Activation credential</option>
-          <option value="TEMPORARY_PASSWORD">Temporary password</option>
-        </select>
-      </label>
-      <button disabled={pending} className={`${button} rounded-md px-4 py-2 text-sm`}>
-        Issue new invitation
-      </button>
-      <Result result={state} />
-    </form>
-  );
-}
-
-export function SetPasswordForm({ id, username }: { id: string; username: string }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const titleId = useId();
   const [state, action, pending] = useActionState(setAccountPassword, {});
-  useEffect(() => {
-    if (!state.success) return;
-    const form = document.getElementById(`password-form-${id}`) as HTMLFormElement | null;
-    form?.reset();
-  }, [id, state.success]);
-  return (
-    <form id={`password-form-${id}`} action={action} className="space-y-3">
-      <input type="hidden" name="id" value={id} />
-      <p className="text-sm text-muted">Set a permanent password for <strong className="text-ink">@{username}</strong>. This activates the account if it was pending or disabled, and signs out any current sessions.</p>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>New password</span>
-        <input required name="password" type="password" autoComplete="new-password" minLength={10} maxLength={128} className={`${field} h-10 rounded-md`} />
-      </label>
-      <label className="block space-y-1.5 text-sm font-medium text-[#3e4b43]">
-        <span>Confirm new password</span>
-        <input required name="confirmPassword" type="password" autoComplete="new-password" minLength={10} maxLength={128} className={`${field} h-10 rounded-md`} />
-      </label>
-      <p className="text-xs text-muted">Use at least 10 characters and include a number. The password must differ from the username.</p>
-      <button disabled={pending} className={`${button} rounded-md px-4 py-2 text-sm`}>
-        {pending ? "Saving…" : "Set new password"}
-      </button>
-      <Result result={state} />
-    </form>
-  );
-}
+  const [mismatch, setMismatch] = useState(false);
 
-export function DisableAccountForm({ id }: { id: string }) {
-  const [state, action, pending] = useActionState(disableAccount, {});
+  useEffect(() => {
+    if (state.success) form.current?.reset();
+  }, [state]);
+
   return (
-    <form
-      action={action}
-      onSubmit={(e) => {
-        if (!window.confirm("Disable this account and revoke its sessions?"))
-          e.preventDefault();
-      }}
-    >
-      <input type="hidden" name="id" value={id} />
-      <button disabled={pending} className="text-red-800 underline">
-        Disable account
+    <>
+      <button
+        aria-label={`Set new password for ${account.displayName}`}
+        className={`${secondaryButtonClass} px-3.5`}
+        onClick={() => dialog.current?.showModal()}
+        type="button"
+      >
+        Set new password
       </button>
-      <Result result={state} />
-    </form>
+      <dialog
+        aria-labelledby={titleId}
+        className="m-auto w-[min(520px,calc(100vw-32px))] rounded-2xl bg-surface p-0 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop:bg-[rgba(28,42,33,0.35)]"
+        ref={dialog}
+      >
+        <form
+          action={action}
+          className="space-y-4 p-6"
+          onSubmit={(event) => {
+            const data = new FormData(event.currentTarget);
+            const differ = data.get("password") !== data.get("confirmPassword");
+            setMismatch(differ);
+            if (differ) event.preventDefault();
+          }}
+          ref={form}
+        >
+          <input name="id" type="hidden" value={account.id} />
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-state-mint text-brand-forest">
+              <Icon className="size-5" name="key" strokeWidth={2} />
+            </span>
+            <h2 className="text-lg font-bold text-ink" id={titleId}>Set a new password for {account.displayName}</h2>
+            <p className="text-xs text-ink-soft">
+              {account.scopeLabel} · username <strong className="text-ink">{account.username}</strong>
+            </p>
+          </div>
+          <label className={labelClass}>
+            New password<Required />
+            <span className="mt-1.5 block">
+              <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="password" />
+            </span>
+          </label>
+          <label className={labelClass}>
+            Repeat new password<Required />
+            <span className="mt-1.5 block">
+              <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
+            </span>
+            {mismatch && <span className="mt-1 block text-[11px] text-danger-dot" role="alert">The passwords do not match.</span>}
+          </label>
+          <p className="flex gap-2.5 rounded-xl border border-[#efdda5] bg-[#fff8e1] px-3.5 py-2.5 text-xs text-[#5c4300]">
+            <Icon className="mt-0.5 size-4 shrink-0" name="alert" strokeWidth={2} />
+            <span>
+              <strong className="block">Replaces the current password.</strong>
+              The old password stops working straight away. Give the new one to {account.displayName} yourself. The change is recorded in the Change &amp; access log.
+            </span>
+          </p>
+          <Message result={state} />
+          <div className="flex justify-end gap-2.5">
+            <button className={secondaryButtonClass} onClick={() => dialog.current?.close()} type="button">
+              {state.success ? "Close" : "Cancel"}
+            </button>
+            {!state.success && (
+              <button className={primaryButtonClass} disabled={pending} type="submit">
+                <Icon className="size-4" name="key" strokeWidth={2} />
+                {pending ? "Setting…" : "Set password"}
+              </button>
+            )}
+          </div>
+        </form>
+      </dialog>
+    </>
   );
 }

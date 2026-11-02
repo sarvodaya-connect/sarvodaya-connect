@@ -11,7 +11,6 @@ DemoStore testStore() => DemoStore(
   clock: () => demoNow,
   showSplash: false,
   languageChosen: true,
-  firstTimeSetupComplete: true,
 );
 
 /// Pumps the app on a tall phone-width screen so long screens need less scrolling.

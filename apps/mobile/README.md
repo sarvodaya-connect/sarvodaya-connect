@@ -109,4 +109,4 @@ Do not commit passwords, API keys, access tokens, client information or local en
 
 ## V4 identity and roles
 
-See [V4 identity and roles](../../docs/platform-v4-foundation.md) for the five-role access rules, API-backed local account activation, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.
+See [V4 identity and roles](../../docs/platform-v4-foundation.md) for the five-role access rules, HQ-created accounts and passwords, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.
