@@ -19,6 +19,7 @@ import { SocietyRecordRepository } from './societies/society-record.repository.j
 import { SocietyRecordService } from './societies/society-record.service.js';
 import { DistrictsService } from './districts/districts.service.js';
 import { EmergenciesModule } from './emergencies/emergencies.module.js';
+import { AssistantModule } from './assistant/assistant.module.js';
 
 const repositoryEnvironmentFile = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -37,6 +38,7 @@ const repositoryEnvironmentFile = resolve(
     NotificationsModule,
     DocumentsModule,
     EmergenciesModule,
+    AssistantModule,
   ],
   controllers: [
     AppController,

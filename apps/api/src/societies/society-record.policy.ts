@@ -138,7 +138,7 @@ export function recordPermissions(
     canUploadAuditReport: canEditAnnualSummary(principal, society),
     canUploadDocuments: canEdit,
   };
-  if (canEdit || !canViewSociety(principal, society)) return permissions;
+  if (canEdit || !canViewSociety(principal, society, now)) return permissions;
   if (hasRole(principal, 'DISTRICT_MANAGER')) {
     permissions.viewOnlyReason = 'DISTRICT_MANAGER';
   } else if (readableDistrictIds(principal, now).includes(society.districtId)) {
