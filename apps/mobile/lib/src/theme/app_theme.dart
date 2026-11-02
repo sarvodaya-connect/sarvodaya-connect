@@ -26,6 +26,8 @@ class AppColors {
   // Catalogue "Changed in v2" annotation.
   static const orangeChanged = Color(0xFFD96A2C);
   static const orangeChangedSoft = Color(0xFFFDECE0);
+  // V5 M01 splash.
+  static const splash = Color(0xFFE8551F);
   // "AI" in the SarvoAI name.
   static const orangeAi = Color(0xFFF0A040);
 

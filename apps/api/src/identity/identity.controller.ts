@@ -16,11 +16,8 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { Principal } from '../auth/principal.js';
 import { IdentityService } from './identity.service.js';
 import {
-  ActivateAccountDto,
-  ActivationCheckDto,
   GrantDistrictAccessDto,
   CreateAccountDto,
-  IssueInvitationDto,
   LoginDto,
   SetAccountPasswordDto,
   UpdateAccountDto,
@@ -32,16 +29,6 @@ export class IdentityController {
   @Post('login')
   login(@Body() input: LoginDto) {
     return this.identity.login(input);
-  }
-  @Header('Cache-Control', 'no-store')
-  @Post('activation/check')
-  check(@Body() input: ActivationCheckDto) {
-    return this.identity.checkActivation(input);
-  }
-  @Header('Cache-Control', 'no-store')
-  @Post('activation/complete')
-  activate(@Body() input: ActivateAccountDto) {
-    return this.identity.activate(input);
   }
   @Header('Cache-Control', 'no-store')
   @Get('me')
@@ -63,6 +50,7 @@ export class IdentityController {
   scopeOptions(@CurrentPrincipal() principal: Principal) {
     return this.identity.scopeOptions(principal);
   }
+  @Header('Cache-Control', 'no-store')
   @Get('accounts')
   @UseGuards(AuthenticationGuard)
   accounts(@CurrentPrincipal() principal: Principal) {
@@ -102,16 +90,6 @@ export class IdentityController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.identity.disableAccount(id, principal);
-  }
-  @Header('Cache-Control', 'no-store')
-  @Post('accounts/:id/invitation')
-  @UseGuards(AuthenticationGuard)
-  reissue(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() input: IssueInvitationDto,
-    @CurrentPrincipal() principal: Principal,
-  ) {
-    return this.identity.reissue(id, input.method, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Get('district-deputies')

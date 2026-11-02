@@ -25,6 +25,7 @@ export type IconName =
   // Prototype V5 navigation and state icons.
   | "chart"
   | "error"
+  | "eye"
   | "flag"
   | "help"
   | "key"
@@ -34,6 +35,7 @@ export type IconName =
   | "map"
   | "people"
   | "personAdd"
+  | "phone"
   | "settings"
   | "sparkle"
   | "success"
@@ -65,6 +67,7 @@ const paths: Record<IconName, React.ReactNode> = {
   society: <><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 20v-2a5.5 5.5 0 0 1 11 0v2M13 13a5.5 5.5 0 0 1 8.5 4.6V20"/></>,
   chart: <path d="M4 4h16v16H4zM8 16v-4M12 16V8M16 16v-6" />,
   error: <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8v4M12 16h.01" />,
+  eye: <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6" />,
   flag: <path d="M5 21V4h11l-1.5 4L16 12H5" />,
   help: <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01" />,
   key: <path d="M15 4a5 5 0 1 1-4.6 7l-6.4 6.4V21H1v-3l7-7A5 5 0 0 1 15 4zM16 8h.01" />,
@@ -74,6 +77,7 @@ const paths: Record<IconName, React.ReactNode> = {
   map: <path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12M12 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4" />,
   people: <path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M21 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />,
   personAdd: <path d="M15 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M8.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19 8v6M16 11h6" />,
+  phone: <path d="M7 2h10v20H7zM11 18h2" />,
   settings: <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />,
   sparkle: <path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 14l.9 2.1 2.1.9-2.1.9L19 20l-.9-2.1-2.1-.9 2.1-.9z" />,
   success: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>,

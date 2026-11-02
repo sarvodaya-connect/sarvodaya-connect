@@ -6,7 +6,6 @@ import 'screens/emergency_response_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/documents_screen.dart';
-import 'screens/first_time_setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
@@ -79,7 +78,6 @@ class _Root extends StatelessWidget {
     if (store.showSplash) return const SplashScreen();
     if (!store.languageChosen) return const LanguageScreen();
     if (store.user == null) return const SignInScreen();
-    if (store.needsFirstTimeSetup) return const FirstTimeSetupScreen();
     return const HomeShell();
   }
 }

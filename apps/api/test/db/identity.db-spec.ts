@@ -5,7 +5,11 @@ import request from 'supertest';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { AppModule } from '../../src/app.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
-import { passwordHash } from '../../src/identity/identity.service.js';
+import {
+  passwordHash,
+  SIGN_IN_FAILED,
+  SIGN_IN_LOCKED,
+} from '../../src/identity/identity.service.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -27,9 +31,11 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .post(`/api/v1${path}`)
       .set('Authorization', `Bearer ${token ?? hqToken}`)
       .send(body);
+  let created = 0;
   async function create(role: string, assigned: string[]) {
-    const username = `test.${role.toLowerCase()}.${suffix}`;
-    const created = await post('/identity/accounts', {
+    // Unique per call, so several tests can each create the same role.
+    const username = `test.${role.toLowerCase()}.${suffix}.${++created}`;
+    const account = await post('/identity/accounts', {
       username,
       displayName: `Test ${role}`,
       phone: '+94000000001',
@@ -38,14 +44,15 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       societyIds: assigned,
       password: 'test-password-123',
     }).expect(201);
-    accounts.push(created.body.account.id);
+    accounts.push(account.body.account.id);
     const login = await post('/identity/login', {
       username,
       password: 'test-password-123',
     }).expect(201);
     return {
-      id: created.body.account.id,
+      id: account.body.account.id,
       token: login.body.token as string,
+      username,
     };
   }
   beforeAll(async () => {
@@ -245,8 +252,8 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     });
     expect(audit).toHaveLength(1);
     expect(JSON.stringify(audit)).not.toContain('199012345678');
-    await post(`/identity/accounts/${spc.id}/invitation`, {
-      method: 'LINK',
+    await post(`/identity/accounts/${spc.id}/password`, {
+      password: 'replacement-pass-456',
     }).expect(201);
     await request(app.getHttpServer())
       .get('/api/v1/identity/me')
@@ -257,5 +264,137 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .get('/api/v1/identity/me')
       .set('Authorization', `Bearer ${so.token}`)
       .expect(401);
+  });
+
+  it('V5 D16: lists when HQ set each password and marks temporary DDM views', async () => {
+    const ddm = await create('DEPUTY_DISTRICT_MANAGER', [societyId]);
+    const dm = await create('DISTRICT_MANAGER', []);
+    await post(
+      '/identity/district-access',
+      {
+        deputyId: ddm.id,
+        districtId,
+        startsAt: new Date(Date.now() - 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        reason: 'Leave cover',
+      },
+      dm.token,
+    ).expect(201);
+    await post(`/identity/accounts/${dm.id}/password`, {
+      password: 'replacement-pass-456',
+    }).expect(201);
+    const list = await request(app.getHttpServer())
+      .get('/api/v1/identity/accounts')
+      .set('Authorization', `Bearer ${hqToken}`)
+      .expect(200);
+    expect(list.headers['cache-control']).toBe('no-store');
+    const rows = list.body.data as Record<string, unknown>[];
+    const deputy = rows.find((row) => row.id === ddm.id)!;
+    const manager = rows.find((row) => row.id === dm.id)!;
+    expect(deputy).toMatchObject({ temporaryDistrictView: true, passwordSetCount: 1 });
+    expect(manager).toMatchObject({ temporaryDistrictView: false, passwordSetCount: 2 });
+    expect(typeof manager.passwordSetAt).toBe('string');
+    expect(JSON.stringify(rows)).not.toMatch(/passwordHash|password_hash|scrypt/);
+    expect(rows.every((row) => !('passwordHash' in row))).toBe(true);
+  });
+
+  it('V5 D16i/D16t: only HQ creates accounts or sets passwords, with validation', async () => {
+    const spc = await create('PROGRAMME_COORDINATOR', [societyId]);
+    const base = {
+      username: `v5.new.${suffix}`,
+      displayName: 'New Officer',
+      phone: '+94000000002',
+      role: 'SOCIETY_OFFICER',
+      districtId,
+      societyIds: [societyId],
+      password: 'starting-pass-789',
+    };
+    await post('/identity/accounts', base, spc.token).expect(403);
+    await post(`/identity/accounts/${spc.id}/password`, { password: 'another-pass-123' }, spc.token).expect(403);
+    // A Society Officer has exactly one society, inside the chosen district.
+    await post('/identity/accounts', { ...base, societyIds: [societyId, neighbourId] }).expect(400);
+    await post('/identity/accounts', { ...base, societyIds: [outsiderId] }).expect(400);
+    await post('/identity/accounts', { ...base, password: 'no-digits-here' }).expect(400);
+    await post('/identity/accounts', { ...base, password: base.username }).expect(400);
+    const created = await post('/identity/accounts', base).expect(201);
+    accounts.push(created.body.account.id);
+    await post('/identity/accounts', base).expect(409);
+    const stored = await db.platformAccount.findUniqueOrThrow({ where: { id: created.body.account.id } });
+    expect(stored.passwordHash).not.toContain('starting-pass-789');
+    expect(stored.passwordSetCount).toBe(1);
+    const audit = await db.platformAuditEvent.findMany({ where: { targetId: created.body.account.id } });
+    expect(JSON.stringify(audit)).not.toContain('starting-pass-789');
+  });
+
+  it('V5 D01e/M03e: one sign-in error, and a lockout kept in the database', async () => {
+    const so = await create('SOCIETY_OFFICER', [societyId]);
+    const username = so.username;
+    const unknown = await post('/identity/login', { username: `nobody.${suffix}`, password: 'x' }, '').expect(401);
+    const wrong = await post('/identity/login', { username, password: 'wrong-pass-000' }, '').expect(401);
+    expect(unknown.body.error.message).toBe(SIGN_IN_FAILED);
+    expect(wrong.body.error.message).toBe(SIGN_IN_FAILED);
+    for (let i = 0; i < 4; i++)
+      await post('/identity/login', { username, password: 'wrong-pass-000' }, '').expect(401);
+    const locked = await post('/identity/login', { username, password: 'test-password-123' }, '').expect(401);
+    expect(locked.body.error.message).toBe(SIGN_IN_LOCKED);
+    // HQ setting a new password clears the lockout.
+    await post(`/identity/accounts/${so.id}/password`, { password: 'fresh-pass-321' }).expect(201);
+    await post('/identity/login', { username, password: 'test-password-123' }, '').expect(401);
+    await post('/identity/login', { username, password: 'fresh-pass-321' }, '').expect(201);
+  });
+
+  it('HQ changes a role or disables an account; both sign the person out', async () => {
+    const ddm = await create('DEPUTY_DISTRICT_MANAGER', [societyId]);
+    const dm = await create('DISTRICT_MANAGER', []);
+    const spc = await create('PROGRAMME_COORDINATOR', [societyId]);
+    await post(
+      '/identity/district-access',
+      {
+        deputyId: ddm.id,
+        districtId,
+        startsAt: new Date(Date.now() - 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        reason: 'Leave cover',
+      },
+      dm.token,
+    ).expect(201);
+    const details = {
+      displayName: 'Test DDM',
+      username: ddm.username,
+      phone: '+94000000001',
+      role: 'PROGRAMME_COORDINATOR',
+      districtId,
+      societyIds: [societyId, neighbourId],
+    };
+    const put = (id: string, body: object, token = hqToken) =>
+      request(app.getHttpServer())
+        .put(`/api/v1/identity/accounts/${id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(body);
+    // Only HQ, and only valid scopes.
+    await put(ddm.id, details, spc.token).expect(403);
+    await post(`/identity/accounts/${ddm.id}/disable`, {}, spc.token).expect(403);
+    await put(ddm.id, { ...details, societyIds: [outsiderId] }).expect(400);
+    await put(ddm.id, { ...details, role: 'DISTRICT_MANAGER' }).expect(400);
+    // HQ cannot demote or disable itself.
+    await put(hqId, { ...details, username: `hq.${suffix}` }).expect(400);
+    await post(`/identity/accounts/${hqId}/disable`, {}).expect(400);
+
+    await put(ddm.id, details).expect(200);
+    await request(app.getHttpServer())
+      .get('/api/v1/identity/me')
+      .set('Authorization', `Bearer ${ddm.token}`)
+      .expect(401);
+    const changed = await db.platformAccount.findUniqueOrThrow({ where: { id: ddm.id } });
+    expect(changed.role).toBe('PROGRAMME_COORDINATOR');
+    expect(changed.societyIds.sort()).toEqual([societyId, neighbourId].sort());
+    const grant = await db.districtAccessGrant.findFirstOrThrow({ where: { deputyId: ddm.id } });
+    expect(grant.revokedAt).not.toBeNull();
+
+    await post(`/identity/accounts/${spc.id}/disable`, {}).expect(201);
+    await post('/identity/login', { username: spc.username, password: 'test-password-123' }, '').expect(401);
+    // Setting a new password lets a disabled person back in.
+    await post(`/identity/accounts/${spc.id}/password`, { password: 'welcome-back-123' }).expect(201);
+    await post('/identity/login', { username: spc.username, password: 'welcome-back-123' }, '').expect(201);
   });
 });

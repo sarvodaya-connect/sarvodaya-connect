@@ -2,10 +2,9 @@ import '../models/user.dart';
 
 /// Result returned by an identity provider after successful authentication.
 class AuthSession {
-  const AuthSession({required this.user, required this.requiresSetup});
+  const AuthSession({required this.user});
 
   final AuthenticatedUser user;
-  final bool requiresSetup;
 }
 
 /// Authentication boundary used by the UI.
@@ -25,4 +24,10 @@ class AuthNetworkException implements Exception {
 
 class AuthServiceException implements Exception {
   const AuthServiceException();
+}
+
+/// Too many wrong passwords: the API refuses sign-in for 15 minutes or until
+/// HQ sets a new password (V5 M03e).
+class AuthLockedException implements Exception {
+  const AuthLockedException();
 }

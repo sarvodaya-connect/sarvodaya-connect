@@ -72,7 +72,12 @@ void main() {
 
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
-    expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
+    expect(
+      find.text(
+        'Use the username and password for your Sarvodaya Connect account.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('role home exposes the M26 empty state', (tester) async {

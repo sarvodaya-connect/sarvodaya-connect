@@ -34,7 +34,6 @@ void main() {
           .signIn(username: 'test.ddm', password: 'fictional-password');
       expect(session!.user.primaryRole, UserRole.deputyDistrictManager);
       expect(api.token, 'fictional-token');
-      expect(session.requiresSetup, isFalse);
     },
   );
   test('expired session is cleared and calls the sign-out boundary', () async {
@@ -76,4 +75,35 @@ void main() {
       );
     },
   );
+  group('V5 M03e sign-in errors', () {
+    ApiAuthService serviceAnswering(String message) => ApiAuthService(
+      IdentityApi(
+        baseUrl: 'http://test.invalid',
+        client: MockClient(
+          (r) async => http.Response(
+            jsonEncode({
+              'error': {'message': message},
+            }),
+            401,
+          ),
+        ),
+      ),
+    );
+
+    test('a wrong username or password is a plain refusal', () async {
+      final session = await serviceAnswering(
+        'The username or password is not correct. Check them and try again.',
+      ).signIn(username: 'someone', password: 'wrong-pass-1');
+      expect(session, isNull);
+    });
+
+    test('a locked account is reported as locked', () async {
+      await expectLater(
+        serviceAnswering(
+          'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.',
+        ).signIn(username: 'someone', password: 'wrong-pass-1'),
+        throwsA(isA<AuthLockedException>()),
+      );
+    });
+  });
 }

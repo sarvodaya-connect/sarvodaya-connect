@@ -4,30 +4,37 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { platformApi, SESSION_COOKIE } from "@/lib/platform-api";
 import { getCurrentViewer } from "@/lib/current-viewer";
+import { NOT_HQ_ON_DESKTOP, SOCIETY_OFFICER_ON_DESKTOP } from "@/lib/sign-in-messages";
 export type FormResult = {
   error?: string;
   success?: string;
-  credential?: string;
+  /** D01e keeps the username after a failed sign-in. */
   username?: string;
-  expiresAt?: string;
-  activationUrl?: string;
-  method?: string;
 };
+
 export async function login(
   _previous: FormResult,
   form: FormData,
 ): Promise<FormResult> {
+  const username = String(form.get("username") ?? "").slice(0, 100);
   let result;
   try {
     result = await platformApi("/identity/login", {
       method: "POST",
-      body: JSON.stringify({
-        username: form.get("username"),
-        password: form.get("password"),
-      }),
+      body: JSON.stringify({ username, password: form.get("password") }),
     });
-    if (!result.user?.roles.includes("HQ_ADMIN"))
-      return { error: "This dashboard is for HQ. Please use the mobile app." };
+    if (!result.user?.roles.includes("HQ_ADMIN")) {
+      // Not for this dashboard yet: end the session the API just opened.
+      await platformApi("/identity/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${result.token}` },
+      }).catch(() => undefined);
+      // SPC, DDM and DM desktop dashboards open in PR 6 of the V5 plan.
+      return {
+        error: result.user?.roles.includes("SOCIETY_OFFICER") ? SOCIETY_OFFICER_ON_DESKTOP : NOT_HQ_ON_DESKTOP,
+        username,
+      };
+    }
     (await cookies()).set(SESSION_COOKIE, result.token, {
       httpOnly: true,
       sameSite: "lax",
@@ -36,7 +43,7 @@ export async function login(
       maxAge: 8 * 3600,
     });
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not sign in" };
+    return { error: e instanceof Error ? e.message : "Could not sign in", username };
   }
   redirect("/dashboard");
 }
@@ -48,29 +55,6 @@ export async function signOut() {
   }
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/");
-}
-export async function activate(
-  _previous: FormResult,
-  form: FormData,
-): Promise<FormResult> {
-  if (form.get("password") !== form.get("confirm"))
-    return { error: "The passwords do not match." };
-  try {
-    await platformApi("/identity/activation/complete", {
-      method: "POST",
-      body: JSON.stringify({
-        credential: form.get("credential"),
-        username: form.get("username") || undefined,
-        password: form.get("password"),
-      }),
-    });
-    return {
-      success:
-        "Your account is ready. Sign in with your username and new password.",
-    };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Activation failed" };
-  }
 }
 export async function createAccount(
   _previous: FormResult,
@@ -88,7 +72,7 @@ export async function createAccount(
     email: form.get("email") || undefined,
     role: form.get("role"),
     districtId: form.get("districtId") || undefined,
-    societyIds: form.getAll("societyIds"),
+    societyIds: form.getAll("societyIds").filter(Boolean),
     password,
   };
   try {
@@ -98,7 +82,7 @@ export async function createAccount(
     });
     revalidatePath("/accounts");
     return {
-      success: "Account created. Hand the username and password to the staff member securely.",
+      success: `Account created for ${input.username}. Give the username and password to the person yourself.`,
     };
   } catch (e) {
     return {
@@ -130,37 +114,9 @@ export async function setAccountPassword(
     (await cookies()).delete(SESSION_COOKIE);
     redirect("/");
   }
-  return { success: "Password replaced. Give the new password to the staff member securely." };
+  return { success: "Password set. The old password no longer works. Give the new one to the person yourself." };
 }
-export async function reissueAccount(
-  _previous: FormResult,
-  form: FormData,
-): Promise<FormResult> {
-  const viewer = await getCurrentViewer();
-  if (viewer.role !== "HQ_ADMIN") return { error: "HQ access required" };
-  const id = String(form.get("id"));
-  if (!/^[a-f0-9-]{36}$/i.test(id)) return { error: "Invalid account" };
-  try {
-    const result = await platformApi(`/identity/accounts/${id}/invitation`, {
-      method: "POST",
-      body: JSON.stringify({ method: form.get("method") }),
-    });
-    revalidatePath("/accounts");
-    return {
-      activationUrl: result.activationUrl,
-      credential: result.credential,
-      username: result.account.username,
-      expiresAt: result.expiresAt,
-      method: result.method,
-      success:
-        "New activation details issued. Previous invitations and sessions are invalid.",
-    };
-  } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : "Could not reissue invitation",
-    };
-  }
-}
+/** D16: HQ changes a person's role or scope. The API signs them out and ends any temporary district view. */
 export async function updateAccount(
   _previous: FormResult,
   form: FormData,
@@ -176,21 +132,20 @@ export async function updateAccount(
     email: form.get("email") || undefined,
     role: form.get("role"),
     districtId: form.get("districtId") || undefined,
-    societyIds: form.getAll("societyIds"),
+    societyIds: form.getAll("societyIds").filter(Boolean),
   };
   try {
     await platformApi(`/identity/accounts/${id}`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
-    revalidatePath("/accounts");
-    return { success: "Assignments updated. The person must sign in again." };
   } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : "Unable to update account",
-    };
+    return { error: e instanceof Error ? e.message : "Could not change the role" };
   }
+  revalidatePath("/accounts");
+  return { success: "Role and scope changed. The person has been signed out and signs in again to see the change." };
 }
+/** D16: HQ disables an account. The API signs the person out straight away. */
 export async function disableAccount(
   _previous: FormResult,
   form: FormData,
@@ -201,13 +156,9 @@ export async function disableAccount(
   if (!/^[a-f0-9-]{36}$/i.test(id)) return { error: "Invalid account" };
   try {
     await platformApi(`/identity/accounts/${id}/disable`, { method: "POST" });
-    revalidatePath("/accounts");
-    return {
-      success: "Account disabled. Existing sessions have been revoked.",
-    };
   } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : "Unable to disable account",
-    };
+    return { error: e instanceof Error ? e.message : "Could not disable the account" };
   }
+  revalidatePath("/accounts");
+  return { success: "Account disabled. The person has been signed out and can no longer sign in." };
 }

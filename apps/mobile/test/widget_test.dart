@@ -8,7 +8,17 @@ void main() {
   testWidgets('opens on the demo sign-in screen', (tester) async {
     await pumpApp(tester);
 
-    expect(find.text('Sign in with your Sarvodaya account'), findsOneWidget);
+    expect(
+      find.text(
+        'Use the username and password for your Sarvodaya Connect account.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Forgot your password? Ask HQ to set a new one.'),
+      findsOneWidget,
+    );
+    expect(find.text('Activate my account'), findsNothing);
     expect(find.textContaining('Amazon Cognito'), findsOneWidget);
   });
 
@@ -18,7 +28,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enter the username or email.'), findsOneWidget);
+    expect(find.text('Enter the username.'), findsOneWidget);
     expect(find.text('Enter the password.'), findsOneWidget);
   });
 
@@ -26,7 +36,7 @@ void main() {
     await pumpApp(tester);
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Username or email'),
+      find.widgetWithText(TextFormField, 'Username'),
       DemoAccount.username,
     );
     await tester.enterText(
@@ -73,6 +83,6 @@ void main() {
       find.textContaining('Authentication is temporarily unavailable'),
       findsOneWidget,
     );
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
   });
 }

@@ -485,6 +485,12 @@ model PlatformAccount {
   societyIds String[] @default([]) @map("society_ids") @db.Uuid
   status String @default("PENDING") @db.VarChar(20)
   passwordHash String? @map("password_hash")
+  // V5 D16: when HQ last set the password and how many times it has been set.
+  passwordSetAt DateTime? @map("password_set_at") @db.Timestamptz(3)
+  passwordSetCount Int @default(0) @map("password_set_count")
+  // Sign-in lockout is kept in the database so it holds across API instances.
+  failedLoginCount Int @default(0) @map("failed_login_count")
+  lockedUntil DateTime? @map("locked_until") @db.Timestamptz(3)
   providerSubject String? @unique @map("provider_subject")
   invitations AccountInvitation[]
   sessions AccountSession[]

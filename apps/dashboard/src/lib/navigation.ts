@@ -86,10 +86,10 @@ export function isActiveItem(item: NavigationItem, pathname: string): boolean {
   });
 }
 
-const PAGE_TITLES: [prefix: string, title: string][] = [
+const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/admin", "Administration"],
-  ["/accounts", "Administration"],
-  ["/audit", "Change & access log"],
+  ["/accounts", "Accounts", "Users, roles, scopes and passwords"],
+  ["/audit", "Change & access log", "Who changed or opened what, and when"],
   ["/states", "Page states"],
   ["/societies/", "Society record"],
   ["/societies", "Societies"],
@@ -106,10 +106,13 @@ const PAGE_TITLES: [prefix: string, title: string][] = [
 
 /** Header title and subtitle (V5 HQTop and the role headers). */
 export function headingFor(pathname: string, viewer: DemoViewer): { title: string; subtitle: string } {
-  const page = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1];
+  const [, page, pageSubtitle] = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix)) ?? [];
   switch (viewer.role) {
     case "HQ_ADMIN":
-      return { title: page ?? "National overview", subtitle: "Sarvodaya societies across Sri Lanka" };
+      return {
+        title: page ?? "National overview",
+        subtitle: pageSubtitle ?? "Sarvodaya societies across Sri Lanka",
+      };
     case "DISTRICT_MANAGER":
       return { title: page ?? "District overview", subtitle: `${viewer.scopeLabel} · view only` };
     case "DEPUTY_DISTRICT_MANAGER":

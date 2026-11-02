@@ -23,6 +23,6 @@ class DemoAuthService implements AuthService {
         password == DemoAccount.password;
     if (!matches) return null;
 
-    return const AuthSession(user: demoOfficer, requiresSetup: true);
+    return const AuthSession(user: demoOfficer);
   }
 }

@@ -1,21 +1,31 @@
 import { config } from 'dotenv';
 import { ConfigService } from '@nestjs/config';
-import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { passwordHash } from '../src/identity/identity.service.js';
 config({ path: '../../.env', quiet: true });
 if (!['development', 'test'].includes(process.env.NODE_ENV ?? ''))
   throw new Error('Local bootstrap is disabled outside development/test');
 const username = process.env.BOOTSTRAP_HQ_USERNAME;
 if (!username || !/^[a-z0-9][a-z0-9._-]{2,99}$/.test(username))
   throw new Error('Set BOOTSTRAP_HQ_USERNAME to a lowercase username');
+// V5: HQ accounts have a permanent password. It is read from the environment
+// (for example with `read -rs BOOTSTRAP_HQ_PASSWORD`) and never printed.
+const password = process.env.BOOTSTRAP_HQ_PASSWORD ?? '';
+if (
+  password.length < 10 ||
+  password.length > 128 ||
+  !/\d/.test(password) ||
+  password.toLowerCase() === username
+)
+  throw new Error(
+    'Set BOOTSTRAP_HQ_PASSWORD: at least 10 characters with a number, different from the username',
+  );
 const db = new PrismaService(new ConfigService());
 try {
-  const credential = randomBytes(32).toString('base64url');
-  const expiresAt = new Date(Date.now() + 72 * 3600_000);
   await db.$transaction(
     async (tx) => {
       if (await tx.platformAccount.count({ where: { role: 'HQ_ADMIN' } }))
-        throw new Error('HQ already exists. Use the HQ invitation screen.');
+        throw new Error('HQ already exists. Create other accounts from the dashboard.');
       const account = await tx.platformAccount.create({
         data: {
           username,
@@ -23,14 +33,10 @@ try {
             process.env.BOOTSTRAP_HQ_NAME ?? 'Local HQ Administrator',
           phone: process.env.BOOTSTRAP_HQ_PHONE ?? '+94000000000',
           role: 'HQ_ADMIN',
-        },
-      });
-      await tx.accountInvitation.create({
-        data: {
-          accountId: account.id,
-          tokenHash: createHash('sha256').update(credential).digest('hex'),
-          method: 'LINK',
-          expiresAt,
+          status: 'ACTIVE',
+          passwordHash: passwordHash(password),
+          passwordSetAt: new Date(),
+          passwordSetCount: 1,
         },
       });
       await tx.platformAuditEvent.create({
@@ -44,7 +50,7 @@ try {
     { isolationLevel: 'Serializable' },
   );
   process.stdout.write(
-    `HQ account created. Username: ${username}\nOne-time activation credential (shown once): ${credential}\nExpires: ${expiresAt.toISOString()}\nOpen the dashboard /activate page and enter this credential.\n`,
+    `HQ account created. Username: ${username}\nSign in on the dashboard with this username and the password you set.\n`,
   );
 } finally {
   await db.$disconnect();

@@ -1,5 +1,3 @@
-import 'account_activation_screen.dart';
-
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
@@ -7,10 +5,10 @@ import '../data/demo_data.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
-import '../widgets/brand.dart';
 import '../widgets/state_views.dart';
 
-/// M03 - sign-in through an injected authentication service.
+/// V5 M03 / M03e - sign-in with the username and password HQ created, through
+/// an injected authentication service.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -48,6 +46,12 @@ class _SignInScreenState extends State<SignInScreen> {
           () => _error = 'The username or password is not correct. Check them and try again.',
         );
       }
+    } on AuthLockedException {
+      if (!mounted) return;
+      _password.clear();
+      setState(
+        () => _error = 'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.',
+      );
     } on OfflineException {
       if (!mounted) return;
       setState(
@@ -70,192 +74,137 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _error = null);
   }
 
+  InputDecoration _field({required String hint, Widget? suffix}) =>
+      InputDecoration(
+        hintText: hint,
+        suffixIcon: suffix,
+        errorBorder: _error == null ? null : _errorBorder,
+        enabledBorder: _error == null ? null : _errorBorder,
+      );
+
+  static final _errorBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(10),
+    borderSide: const BorderSide(color: AppColors.forest, width: 1.5),
+  );
+
   @override
   Widget build(BuildContext context) {
-    final offline = DemoScope.of(context).offline;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            if (offline) const OfflineBanner(message: 'No connection'),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: BrandMark(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: AutofillGroup(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Semantics(
+                      label: 'Sarvodaya Connect',
+                      image: true,
+                      child: Image.asset(
+                        'assets/branding/sarvodaya_connect_wordmark.png',
+                        height: 52,
                       ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Sign in with your Sarvodaya account',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Use the username and password for the account HQ assigned to you.',
-                        style: TextStyle(color: AppColors.muted, height: 1.4),
-                      ),
-                      const SizedBox(height: 20),
-                      if (offline) ...[
-                        const _OfflineHint(),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_error != null) ...[
-                        NoticeBanner(
-                          icon: Icons.error_outline,
-                          title: 'Could not sign in',
-                          message: _error,
-                          tone: NoticeTone.error,
-                          action: Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed: _busy ? null : _submit,
-                              child: const Text('Try again'),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      TextFormField(
-                        controller: _username,
-                        decoration: const InputDecoration(
-                          labelText: 'Username or email',
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.username],
-                        validator: (value) =>
-                            Validators.required(value, 'username or email'),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: _obscure,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.password],
-                        onFieldSubmitted: (_) => _submit(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          suffixIcon: IconButton(
-                            tooltip: _obscure
-                                ? 'Show password'
-                                : 'Hide password',
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                        ),
-                        validator: (value) =>
-                            Validators.required(value, 'password'),
-                      ),
-                      const SizedBox(height: 24),
-                      TextButton(
-                        onPressed: _busy
-                            ? null
-                            : () => Navigator.push(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      const AccountActivationScreen(),
-                                ),
-                              ),
-                        child: const Text('Activate my account'),
-                      ),
-                      if (DemoStore.demoMode)
-                        NoticeBanner(
-                          icon: Icons.info_outline,
-                          title: 'Demonstration sign-in',
-                          message:
-                              'This build uses a fictional account. Production authentication will '
-                              'be connected securely through Amazon Cognito.',
-                          action: Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed: _useDemoAccount,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: const Text('Use demo account'),
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Material(
-        color: AppColors.surface,
-        child: SafeArea(
-          top: false,
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.line)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: _busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Sign in'),
-                ),
-                if (offline) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Sign in',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Use the username and password for your Sarvodaya Connect account.',
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  const _FieldLabel('Username'),
+                  TextFormField(
+                    controller: _username,
+                    decoration: _field(
+                      hint: 'Username',
+                      suffix: const Icon(Icons.person_outline, size: 20),
+                    ),
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.username],
+                    validator: (value) =>
+                        Validators.required(value, 'username'),
+                  ),
+                  const SizedBox(height: 14),
+                  const _FieldLabel('Password'),
+                  TextFormField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    onFieldSubmitted: (_) => _submit(),
+                    decoration: _field(
+                      hint: 'Password',
+                      suffix: IconButton(
+                        tooltip: _obscure ? 'Show password' : 'Hide password',
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    validator: (value) =>
+                        Validators.required(value, 'password'),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    _SignInError(_error!),
+                  ],
+                  const SizedBox(height: 14),
+                  FilledButton(
                     onPressed: _busy ? null : _submit,
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Try again'),
+                    child: _busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                              semanticsLabel: 'Signing in',
+                            ),
+                          )
+                        : const Text('Sign in'),
                   ),
-                ],
-                TextButton(
-                  onPressed: () => showDialog<void>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Can’t sign in?'),
-                      content: const Text(
-                        'Forgot your password or assigned to the wrong society? Contact your District Centre.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Close'),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Forgot your password? Ask HQ to set a new one.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                  ),
+                  if (DemoStore.demoMode) ...[
+                    const SizedBox(height: 24),
+                    NoticeBanner(
+                      icon: Icons.info_outline,
+                      title: 'Demonstration sign-in',
+                      message:
+                          'This build uses a fictional account. Production authentication will '
+                          'be connected securely through Amazon Cognito.',
+                      action: Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: _useDemoAccount,
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                          child: const Text('Use demo account'),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  style: TextButton.styleFrom(
-                    textStyle: const TextStyle(
-                      decoration: TextDecoration.underline,
-                      fontSize: 13,
-                    ),
-                  ),
-                  child: const Text('I can’t sign in — get help'),
-                ),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -264,53 +213,67 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
-class _OfflineHint extends StatelessWidget {
-  const _OfflineHint();
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.label);
+
+  final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text.rich(
+      TextSpan(
+        text: label,
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(color: AppColors.danger),
+          ),
+        ],
+      ),
+      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+    ),
+  );
+}
+
+/// V5 M03e: the error sits under the password, in red, and is announced.
+class _SignInError extends StatelessWidget {
+  const _SignInError(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    container: true,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4E5),
-        border: Border.all(color: const Color(0xFFF2C38B)),
+        color: AppColors.bannerIncidentBg,
+        border: Border.all(color: AppColors.bannerIncidentLine),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
-            Icons.warning_amber_rounded,
-            size: 18,
-            color: Color(0xFFB4650F),
+            Icons.error_outline,
+            size: 16,
+            color: AppColors.bannerIncidentText,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'You need internet to sign in the first time',
-                  style: TextStyle(
-                    color: AppColors.ink,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'After that, you can work without a connection and send later.',
-                  style: TextStyle(
-                    color: AppColors.inkSoft,
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.bannerIncidentText,
+                fontSize: 12.5,
+                height: 1.35,
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }

@@ -88,9 +88,11 @@ class ApiAuthService implements AuthService {
       api.token = data['token'] as String;
       return AuthSession(
         user: AuthenticatedUser.fromJson(data['user'] as Map<String, dynamic>),
-        requiresSetup: false,
       );
     } on IdentityError catch (e) {
+      if (e.status == 401 && e.message.startsWith('Too many attempts')) {
+        throw const AuthLockedException();
+      }
       if (e.status == 401) return null;
       throw const AuthServiceException();
     }
