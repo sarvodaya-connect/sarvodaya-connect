@@ -219,8 +219,6 @@ const stampxMembers: Person[] = [
     photo: "/team/stampx-kumaresan-piragatheesan.png",
     linkedin: "https://www.linkedin.com/in/piragatheesan/",
   },
-  // Placeholder until the remaining member sends their photo.
-  { name: "Name", role: "Member, STAMPx" },
 ];
 
 /** Stagger helper: sets the animation delay offset (ms) used by the motion classes. */
