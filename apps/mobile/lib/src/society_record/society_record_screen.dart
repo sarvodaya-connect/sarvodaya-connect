@@ -12,7 +12,7 @@ import 'audit_report_upload_screen.dart';
 import 'edit_society_screen.dart';
 import 'grade_change_request_screen.dart';
 import 'grade_requests_screen.dart';
-import 'nic_reveal_button.dart';
+import 'exco_screens.dart';
 import 'record_widgets.dart';
 import 'society_record_api.dart';
 import 'society_record_models.dart';
@@ -189,7 +189,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                           onRefresh: _load,
                           child: _OverviewTab(record: record, open: _open),
                         ),
-                        _ExcoTab(record: record),
+                        _ExcoTab(record: record, open: _open),
                         _WorkPlanTab(societyId: record.id),
                         _DocumentsTab(record: record, open: _open),
                         _HistoryTab(societyId: record.id),
@@ -791,22 +791,27 @@ class _AnnualSummaryCard extends StatelessWidget {
   }
 }
 
-class _ExcoTab extends StatelessWidget {
-  const _ExcoTab({required this.record});
+/// V5 M07 / M07s: the 25 Exco members, office bearers first. Tapping a
+/// member opens M07v; people who may edit can change an office (M07o).
+class _ExcoTab extends StatefulWidget {
+  const _ExcoTab({required this.record, required this.open});
 
   final SocietyRecord record;
+  final Future<void> Function(Widget screen) open;
+
+  @override
+  State<_ExcoTab> createState() => _ExcoTabState();
+}
+
+class _ExcoTabState extends State<_ExcoTab> {
+  String _query = '';
+  bool _showAll = false;
 
   @override
   Widget build(BuildContext context) {
+    final record = widget.record;
     final members = [...record.exco]
-      ..sort((a, b) {
-        int rank(ExcoMember m) => m.isOfficeBearer
-            ? const ['President', 'Secretary', 'Treasurer'].indexOf(m.position)
-            : 9;
-        return rank(a).compareTo(rank(b)) != 0
-            ? rank(a).compareTo(rank(b))
-            : a.seatNumber.compareTo(b.seatNumber);
-      });
+      ..sort((a, b) => a.seatNumber.compareTo(b.seatNumber));
     if (members.isEmpty) {
       return const StateMessage(
         icon: Icons.groups_outlined,
@@ -814,76 +819,167 @@ class _ExcoTab extends StatelessWidget {
         message: 'The 25 Exco members will appear here once they are entered.',
       );
     }
-    final bearers = members.where((m) => m.isOfficeBearer).toList();
-    final others = members.where((m) => !m.isOfficeBearer).toList();
-    Widget row(ExcoMember member) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 15,
-            backgroundColor: AppColors.mint,
-            child: Text(
-              member.fullName
-                  .split(RegExp(r'[ .]+'))
-                  .where((part) => part.isNotEmpty)
-                  .take(2)
-                  .map((part) => part[0])
-                  .join(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.forest,
+    final query = _query.trim().toLowerCase();
+    bool matches(ExcoMember m) =>
+        query.isEmpty ||
+        m.fullName.toLowerCase().contains(query) ||
+        (m.profession ?? '').toLowerCase().contains(query);
+    final others = members
+        .where((m) => !m.isOfficeBearer && matches(m))
+        .toList();
+    final shownOthers = _showAll || query.isNotEmpty
+        ? others
+        : others.take(8).toList();
+    final complete = members.length == 25;
+    final canEdit = record.permissions.canEdit;
+
+    Widget row(ExcoMember member, {String? office}) => InkWell(
+      onTap: () =>
+          widget.open(ExcoMemberScreen(record: record, member: member)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: AppColors.mint,
+              child: Text(
+                initialsOf(member.fullName),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.forest,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(member.fullName, style: RecordStyle.value),
-                Text(
-                  [
-                    if (member.age != null) '${member.age} yrs',
-                    if (member.isOfficeBearer) member.position,
-                  ].join(' · '),
-                  style: RecordStyle.caption,
-                ),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(member.fullName, style: RecordStyle.value),
+                  Text(
+                    [
+                      if (member.dateOfBirth != null)
+                        '${ageFrom(member.dateOfBirth!, DateTime.now())} yrs'
+                      else if (member.age != null)
+                        '${member.age} yrs',
+                      if (member.profession != null) member.profession!,
+                    ].join(' · '),
+                    style: RecordStyle.caption,
+                  ),
+                ],
+              ),
             ),
-          ),
-          NicRevealButton(
-            societyId: record.id,
-            memberId: member.id,
-            masked: member.nicMasked,
-          ),
-        ],
+            if (office != null) ...[
+              RecordChip(office, tone: ChipTone.info),
+              if (canEdit)
+                TextButton(
+                  onPressed: () => widget.open(
+                    ChooseOfficeBearerScreen(record: record, office: office),
+                  ),
+                  child: const Text('Change'),
+                ),
+            ] else
+              const Icon(Icons.chevron_right, color: AppColors.muted),
+          ],
+        ),
       ),
     );
+
+    List<Widget> officeRow(String office) {
+      final holder = members.where((m) => m.position == office).firstOrNull;
+      if (holder != null) {
+        return matches(holder) ? [row(holder, office: office)] : [];
+      }
+      return [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('$office not chosen', style: RecordStyle.value),
+          trailing: canEdit
+              ? TextButton(
+                  onPressed: () => widget.open(
+                    ChooseOfficeBearerScreen(record: record, office: office),
+                  ),
+                  child: const Text('Choose'),
+                )
+              : null,
+        ),
+      ];
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                complete
+                    ? 'All 25 positions filled'
+                    : '${members.length} of 25 members entered',
+                style: RecordStyle.cardTitle,
+              ),
+            ),
+            RecordChip(
+              complete ? '✓ 25 / 25' : '${25 - members.length} missing',
+              tone: complete ? ChipTone.success : ChipTone.danger,
+            ),
+          ],
+        ),
+        if (!complete) ...[
+          const SizedBox(height: 8),
+          const RecordNote(
+            icon: Icons.error_outline,
+            tone: NoteTone.error,
+            title: 'All 25 are required',
+            message: 'Every society must have exactly 25 Exco members. Ask HQ to complete the Exco.',
+          ),
+        ],
+        const SizedBox(height: 10),
         RecordNote(
           icon: Icons.shield_outlined,
           tone: NoteTone.success,
           message:
-              'Personal details · ${record.nameEn} · you can see them because this society is in your scope.',
+              'Personal details · ${record.nameEn} · ${accessNote(record)}',
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          decoration: const InputDecoration(
+            hintText: 'Search name or profession',
+            prefixIcon: Icon(Icons.search),
+          ),
+          onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 12),
-        const Text('OFFICE BEARERS', style: RecordStyle.sectionLabel),
+        const Text(
+          'OFFICE BEARERS · CHOSEN FROM THE 25',
+          style: RecordStyle.sectionLabel,
+        ),
         const SizedBox(height: 6),
         RecordCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          children: [for (final member in bearers) row(member)],
+          children: [for (final office in officeBearers) ...officeRow(office)],
         ),
         const SizedBox(height: 12),
         Text('MEMBERS · ${others.length}', style: RecordStyle.sectionLabel),
         const SizedBox(height: 6),
         RecordCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          children: [for (final member in others) row(member)],
+          children: [
+            if (others.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text('No members match.', style: RecordStyle.caption),
+              ),
+            for (final member in shownOthers) row(member),
+          ],
         ),
+        if (shownOthers.length < others.length)
+          TextButton(
+            onPressed: () => setState(() => _showAll = true),
+            child: Text('Show all ${others.length} members'),
+          ),
       ],
     );
   }

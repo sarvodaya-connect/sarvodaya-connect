@@ -205,6 +205,20 @@ export class SocietyAdminService {
     )
       throw new BadRequestException('Select a valid district');
     assertValidCouncil(input.council);
+    // V5 D05c / M07e: a new society's 25 seats are complete records.
+    for (const member of input.council) {
+      const missing = [
+        !member.nic && 'NIC',
+        !member.dateOfBirth && 'date of birth',
+        !member.addressLine && 'address',
+        !member.profession && 'profession',
+        !member.phone && 'phone number',
+      ].filter(Boolean);
+      if (missing.length)
+        throw new BadRequestException(
+          `Exco member ${member.seatNumber}: enter the ${missing.join(', ')}`,
+        );
+    }
     for (const office of OFFICE_BEARERS) {
       if (
         !input.council.some(

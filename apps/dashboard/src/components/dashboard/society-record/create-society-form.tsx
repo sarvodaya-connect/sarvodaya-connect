@@ -78,7 +78,7 @@ export function CreateSocietyForm({
   const [rows, setRows] = useState(emptyExco);
   const [state, submit, pending] = useActionState(action, {});
   const problems = detailProblems(details);
-  const excoIssues = excoProblems(rows);
+  const excoIssues = excoProblems(rows, "create");
   const codeError =
     state.field === "societyCode" && details.societyCode.trim() && state.error?.includes(details.societyCode.trim().toUpperCase())
       ? state.error
@@ -220,7 +220,7 @@ export function CreateSocietyForm({
               </div>
             </div>
           )}
-          <ExcoEditor rows={rows} setRows={setRows} />
+          <ExcoEditor mode="create" rows={rows} setRows={setRows} />
         </>
       )}
     </form>

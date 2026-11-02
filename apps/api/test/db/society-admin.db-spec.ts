@@ -42,6 +42,8 @@ function council() {
           : '1970-05-01',
     profession: 'Farmer',
     addressLine: 'Fictional Lane',
+    phone: '+94000000100',
+    nic: `19900000${String(index + 1).padStart(4, '0')}`,
     isActive: true,
     isPrimaryContact: index === 0,
   }));
@@ -350,6 +352,16 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       council: council().slice(0, 24),
     }).expect(400);
     expect(JSON.stringify(short.body)).toContain('exactly 25 Exco members');
+    const noPhone = council().map((member, index) =>
+      index === 6 ? { ...member, phone: undefined } : member,
+    );
+    const incomplete = await call('post', '/societies', tokens.hq, {
+      ...base,
+      council: noPhone,
+    }).expect(400);
+    expect(incomplete.body.error.message).toBe(
+      'Exco member 7: enter the phone number',
+    );
     const noPresident = council().map((member) =>
       member.position === 'President'
         ? { ...member, position: 'Member' }
@@ -412,12 +424,23 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
   });
 
   it('Exco dates of birth must not be in the future', async () => {
-    const future = council().map((member, index) =>
+    // The council update has no NIC field; NICs go through the NIC vault.
+    const seats = council().map(({ nic: _nic, ...member }) => member);
+    const future = seats.map((member, index) =>
       index === 10 ? { ...member, dateOfBirth: '2999-01-01' } : member,
     );
+    const refused = await call(
+      'put',
+      `/societies/${societyId}/council`,
+      tokens.hq,
+      {
+        members: future,
+      },
+    ).expect(400);
+    expect(refused.body.error.message).toContain('date of birth in the future');
     await call('put', `/societies/${societyId}/council`, tokens.hq, {
-      members: future,
-    }).expect(400);
+      members: seats,
+    }).expect(200);
   });
 
   it('D24: the log is scoped, filterable, names people and never shows NICs', async () => {

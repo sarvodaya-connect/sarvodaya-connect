@@ -162,7 +162,7 @@ export function RecordOverview({
                     <th className="px-2 py-1.5 font-medium">Office</th>
                     <th className="px-2 py-1.5 font-medium">Name</th>
                     <th className="px-2 py-1.5 font-medium">Age</th>
-                    <th className="px-2 py-1.5 font-medium">Phone</th>
+                    <th className="px-2 py-1.5 font-medium">Profession</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line-soft">
@@ -171,7 +171,7 @@ export function RecordOverview({
                       <td className="px-2 py-2 text-ink-soft">{OFFICES.includes(member.position) ? member.position : "Member"}</td>
                       <td className="px-2 py-2 font-semibold text-ink">{member.fullName}</td>
                       <td className="px-2 py-2 text-ink-soft">{member.age ?? "—"}</td>
-                      <td className="px-2 py-2 text-ink-soft">{member.phone ?? "—"}</td>
+                      <td className="px-2 py-2 text-ink-soft">{member.profession ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -80,14 +80,29 @@ export function excoFromCommittee(members: CommitteeMember[]): ExcoRow[] {
 
 const NIC = /^(?:[0-9]{9}[vVxX]|[0-9]{12})$/;
 
-export function rowComplete(row: ExcoRow) {
-  return row.fullName.trim().length >= 2 && Boolean(row.dateOfBirth);
+/**
+ * "create": a new society's seats must be complete records (V5 D05c, M07e).
+ * "edit": older societies may lack some details, so a name and date of birth
+ * are enough to save.
+ */
+export type ExcoMode = "create" | "edit";
+
+export function rowComplete(row: ExcoRow, mode: ExcoMode = "edit") {
+  const basic = row.fullName.trim().length >= 2 && Boolean(row.dateOfBirth);
+  if (mode === "edit") return basic;
+  return (
+    basic &&
+    Boolean(row.nic.trim() || row.nicMasked) &&
+    Boolean(row.profession.trim()) &&
+    Boolean(row.addressLine.trim()) &&
+    Boolean(row.phone.trim())
+  );
 }
 
 /** Problems that stop saving, in plain words (V5 D05c error banner). */
-export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().slice(0, 10)) {
+export function excoProblems(rows: ExcoRow[], mode: ExcoMode = "edit", today = new Date().toISOString().slice(0, 10)) {
   const problems: string[] = [];
-  const filled = rows.filter(rowComplete).length;
+  const filled = rows.filter((row) => rowComplete(row, mode)).length;
   if (filled < 25)
     problems.push(`Every society must have exactly 25 Exco members. ${filled} are entered — enter the rest to continue.`);
   for (const office of OFFICE_BEARERS) {
@@ -138,18 +153,20 @@ const cell = "w-full rounded-md border border-line bg-surface px-2 py-1.5 text-[
  */
 export function ExcoEditor({
   focusOffices = false,
+  mode = "edit",
   name = "council",
   rows,
   setRows,
 }: {
   focusOffices?: boolean;
+  mode?: ExcoMode;
   /** The hidden form field that carries the seats as JSON. */
   name?: string;
   rows: ExcoRow[];
   setRows: (rows: ExcoRow[]) => void;
 }) {
   const [showAll, setShowAll] = useState(true);
-  const filled = rows.filter(rowComplete).length;
+  const filled = rows.filter((row) => rowComplete(row, mode)).length;
   const payload = useMemo(() => JSON.stringify(excoPayload(rows)), [rows]);
   const update = (seat: number, key: keyof ExcoRow, value: string) =>
     setRows(rows.map((row) => (row.seatNumber === seat ? { ...row, [key]: value } : row)));
@@ -164,7 +181,7 @@ export function ExcoEditor({
             : row,
       ),
     );
-  const visible = showAll ? rows : rows.filter((row) => !rowComplete(row) || OFFICE_BEARERS.includes(row.position as never));
+  const visible = showAll ? rows : rows.filter((row) => !rowComplete(row, mode) || OFFICE_BEARERS.includes(row.position as never));
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -187,7 +204,7 @@ export function ExcoEditor({
             </thead>
             <tbody className="divide-y divide-line-soft">
               {visible.map((row) => {
-                const complete = rowComplete(row);
+                const complete = rowComplete(row, mode);
                 const label = (field: string) => `Seat ${row.seatNumber} ${field}`;
                 return (
                   <tr className={complete ? "" : "bg-[var(--banner-incident-bg)]"} key={row.seatNumber}>
@@ -250,7 +267,10 @@ export function ExcoEditor({
           </table>
         </div>
         <p className="border-t border-line-soft px-4 py-2 text-[11px] text-ink-soft">
-          A full name and date of birth are needed for each seat. The age is worked out from the date of birth. NICs are stored encrypted and shown only on request.
+          {mode === "create"
+            ? "Every seat needs a full name, NIC, date of birth, profession, phone and address."
+            : "A full name and date of birth are needed for each seat."}{" "}
+          The age is worked out from the date of birth. NICs are stored encrypted and shown only on request.
         </p>
       </section>
       <aside className="flex flex-col gap-4">
