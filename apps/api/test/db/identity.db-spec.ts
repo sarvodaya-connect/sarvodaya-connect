@@ -31,9 +31,11 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .post(`/api/v1${path}`)
       .set('Authorization', `Bearer ${token ?? hqToken}`)
       .send(body);
+  let created = 0;
   async function create(role: string, assigned: string[]) {
-    const username = `test.${role.toLowerCase()}.${suffix}`;
-    const created = await post('/identity/accounts', {
+    // Unique per call, so several tests can each create the same role.
+    const username = `test.${role.toLowerCase()}.${suffix}.${++created}`;
+    const account = await post('/identity/accounts', {
       username,
       displayName: `Test ${role}`,
       phone: '+94000000001',
@@ -42,14 +44,15 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       societyIds: assigned,
       password: 'test-password-123',
     }).expect(201);
-    accounts.push(created.body.account.id);
+    accounts.push(account.body.account.id);
     const login = await post('/identity/login', {
       username,
       password: 'test-password-123',
     }).expect(201);
     return {
-      id: created.body.account.id,
+      id: account.body.account.id,
       token: login.body.token as string,
+      username,
     };
   }
   beforeAll(async () => {
@@ -325,7 +328,7 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
 
   it('V5 D01e/M03e: one sign-in error, and a lockout kept in the database', async () => {
     const so = await create('SOCIETY_OFFICER', [societyId]);
-    const username = `test.society_officer.${suffix}`;
+    const username = so.username;
     const unknown = await post('/identity/login', { username: `nobody.${suffix}`, password: 'x' }, '').expect(401);
     const wrong = await post('/identity/login', { username, password: 'wrong-pass-000' }, '').expect(401);
     expect(unknown.body.message).toBe(SIGN_IN_FAILED);
