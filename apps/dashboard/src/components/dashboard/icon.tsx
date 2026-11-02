@@ -11,7 +11,6 @@ export type IconName =
   | "close"
   | "district"
   | "document"
-  | "offline"
   | "conflict"
   | "home"
   | "inbox"
@@ -22,7 +21,23 @@ export type IconName =
   | "search"
   | "shield"
   | "society"
-  | "undo";
+  | "undo"
+  // Prototype V5 navigation and state icons.
+  | "chart"
+  | "error"
+  | "flag"
+  | "help"
+  | "key"
+  | "leaf"
+  | "list"
+  | "mail"
+  | "map"
+  | "people"
+  | "personAdd"
+  | "settings"
+  | "sparkle"
+  | "success"
+  | "user";
 
 type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
 
@@ -45,10 +60,24 @@ const paths: Record<IconName, React.ReactNode> = {
   document: <><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></>,
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></>,
   logout: <><path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/></>,
-  offline: <><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01"/><path d="m3 3 18 18"/></>,
   review: <><path d="M4 4h16v13H8l-4 4z"/><path d="M8 9h8M8 13h5"/></>,
   search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
   society: <><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 20v-2a5.5 5.5 0 0 1 11 0v2M13 13a5.5 5.5 0 0 1 8.5 4.6V20"/></>,
+  chart: <path d="M4 4h16v16H4zM8 16v-4M12 16V8M16 16v-6" />,
+  error: <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8v4M12 16h.01" />,
+  flag: <path d="M5 21V4h11l-1.5 4L16 12H5" />,
+  help: <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01" />,
+  key: <path d="M15 4a5 5 0 1 1-4.6 7l-6.4 6.4V21H1v-3l7-7A5 5 0 0 1 15 4zM16 8h.01" />,
+  leaf: <path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l7-7" />,
+  list: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
+  mail: <path d="M3 6h18v12H3zM3 7l9 6 9-6" />,
+  map: <path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12M12 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4" />,
+  people: <path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M21 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />,
+  personAdd: <path d="M15 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M8.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19 8v6M16 11h6" />,
+  settings: <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />,
+  sparkle: <path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 14l.9 2.1 2.1.9-2.1.9L19 20l-.9-2.1-2.1-.9 2.1-.9z" />,
+  success: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>,
+  user: <path d="M20 21v-1a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" />,
 };
 
 export function Icon({ name, ...props }: IconProps) {

@@ -162,19 +162,23 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
         body: _loading && record == null
             ? const LoadingSkeleton(label: 'Loading the society record')
             : _error != null && record == null
-            ? StateMessage(
-                icon: Icons.error_outline,
-                tone: StateTone.error,
-                isAlert: true,
-                title: _error!.status == 404
-                    ? 'Society not found'
-                    : "Couldn't load the society record",
-                message: _error!.status == 404
-                    ? 'This society is not in your assigned scope.'
-                    : '${_error!.message} Nothing you entered has been lost.',
-                primaryLabel: _error!.status == 404 ? null : 'Try again',
-                onPrimary: _load,
-              )
+            // The API answers 403 or 404 for a society outside the user's
+            // scope; neither is shown as an error, and nothing is named.
+            ? (_error!.status == 403 || _error!.status == 404)
+                  ? NoAccessView(
+                      title: "You don't have access to this society",
+                      onBack: () => Navigator.maybePop(context),
+                    )
+                  : StateMessage(
+                      icon: Icons.error_outline,
+                      tone: StateTone.error,
+                      isAlert: true,
+                      title: "Couldn't load the society record",
+                      message:
+                          '${_error!.message} Nothing you entered has been lost.',
+                      primaryLabel: 'Try again',
+                      onPrimary: _load,
+                    )
             : Column(
                 children: [
                   ScopeBanner(record: record!, user: user),

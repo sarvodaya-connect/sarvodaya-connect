@@ -3,22 +3,22 @@ import Link from "next/link";
 
 import { Icon, type IconName } from "./icon";
 
-/** Shared button styles so every state action looks and focuses the same way. */
+/** V5 buttons: 38px high, 9px corners, 13px semibold. */
 export const primaryButtonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#1f6b43] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#174f34] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]";
+  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-brand-action bg-brand-action px-4 text-[13px] font-semibold text-white transition hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]";
 
 export const secondaryButtonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-[#ccd6ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#26362c] transition hover:bg-[#f4f8f3] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]";
+  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-button-line bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-brand-mint-soft focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]";
 
 /**
- * Placeholder rows shown while registry data is loading. The visual rows are
+ * Placeholder rows shown while data is loading (V5 ST01). The visual rows are
  * hidden from assistive technology; a single status message is announced instead.
  */
 export function TableSkeleton({
-  columns = 5,
   label = "Loading societies",
   rows = 5,
 }: {
+  /** Kept for existing callers; V5 skeleton rows have one fixed layout. */
   columns?: number;
   label?: string;
   rows?: number;
@@ -27,55 +27,74 @@ export function TableSkeleton({
     <div
       aria-busy="true"
       aria-live="polite"
-      className="overflow-hidden rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]"
+      className="rounded-card border border-line bg-surface p-4"
       role="status"
     >
       <span className="sr-only">{label}…</span>
-      <div aria-hidden="true">
-        <div className="grid gap-3 border-b border-[#e4e8e2] p-4 md:grid-cols-[minmax(240px,1fr)_180px_170px]">
-          {[0, 1, 2].map((item) => (
-            <div className="h-10 rounded-lg bg-[#eef1ec] motion-safe:animate-pulse" key={item} />
-          ))}
-        </div>
-        <div className="h-10 bg-[#f7f8f5]" />
-        <div className="divide-y divide-[#edf0eb]">
-          {Array.from({ length: rows }, (_, row) => (
-            <div className="flex items-center gap-6 px-5 py-4" key={row}>
-              {Array.from({ length: columns }, (_, column) => (
-                <div
-                  className={`h-3 rounded-full bg-[#e9ede6] motion-safe:animate-pulse ${column === 0 ? "w-2/5" : "w-1/6"}`}
-                  key={column}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+      <div aria-hidden="true" className="flex flex-col gap-3">
+        {Array.from({ length: rows }, (_, row) => (
+          <div className="flex items-center gap-2.5" key={row}>
+            <span className="size-[22px] rounded-[5px] bg-state-grey motion-safe:animate-pulse" />
+            <span className="flex flex-1 flex-col gap-[5px]">
+              <span className="h-2 w-3/5 rounded bg-[#e5e8e1] motion-safe:animate-pulse" />
+              <span className="h-1.5 w-[35%] rounded bg-state-grey motion-safe:animate-pulse" />
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function StateIcon({ name, tone = "neutral" }: { name: IconName; tone?: "neutral" | "error" | "warning" }) {
+type StateTone = "mint" | "grey" | "danger";
+
+function StateIcon({ name, tone = "mint" }: { name: IconName; tone?: StateTone }) {
   const toneClass = {
-    error: "bg-[#fbe9e4] text-[#a8402c]",
-    neutral: "bg-[#e6f0e7] text-[#26744b]",
-    warning: "bg-[#fff5d9] text-[#7a5a00]",
+    danger: "bg-state-danger text-danger-dot",
+    grey: "bg-state-grey text-ink-soft",
+    mint: "bg-state-mint text-brand-forest",
   }[tone];
   return (
-    <span
-      aria-hidden="true"
-      className={`grid size-12 place-items-center rounded-full ${toneClass}`}
-    >
-      <Icon className="size-6" name={name} />
+    <span aria-hidden="true" className={`grid size-[52px] place-items-center rounded-full ${toneClass}`}>
+      <Icon className="size-6" name={name} strokeWidth={2} />
     </span>
   );
 }
 
-/** Shown when a list has no records at all (not caused by filters). */
+/** V5 state layout: icon circle, bold title, short message and actions, centred. */
+function StateLayout({
+  actions,
+  children,
+  heading = "h2",
+  icon,
+  role,
+  title,
+  tone,
+}: {
+  actions?: ReactNode;
+  children: ReactNode;
+  heading?: "h1" | "h2";
+  icon: IconName;
+  role?: "alert" | "status";
+  title: string;
+  tone?: StateTone;
+}) {
+  const Heading = heading;
+  return (
+    <div className="flex flex-col items-center gap-2.5 px-6 py-10 text-center" role={role}>
+      <StateIcon name={icon} tone={tone} />
+      <Heading className="text-base font-bold text-ink">{title}</Heading>
+      <div className="max-w-[460px] text-[13px] leading-5 text-ink-body">{children}</div>
+      {actions && <div className="mt-1.5 flex flex-wrap justify-center gap-2.5">{actions}</div>}
+    </div>
+  );
+}
+
+/** Shown when a list has no records at all, not because of filters (V5 D21 "Empty"). */
 export function EmptyState({
   action,
   description,
-  icon = "inbox",
+  icon = "flag",
   title,
 }: {
   action?: ReactNode;
@@ -84,26 +103,24 @@ export function EmptyState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      <StateIcon name={icon} />
-      <h2 className="mt-4 text-base font-semibold text-[#223329]">{title}</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
-      {action && <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div>}
-    </div>
+    <StateLayout actions={action} icon={icon} title={title}>
+      <p>{description}</p>
+    </StateLayout>
   );
 }
 
 /**
- * Shown when data could not be loaded. Technical error details are never shown;
- * only the optional reference (Next.js error digest) so staff can report it.
+ * Shown when data could not be loaded (V5 ST03, D21 "Error · retry"). Technical
+ * details are never shown; only the optional reference (Next.js error digest)
+ * so staff can report it.
  */
 export function ErrorState({
-  description = "The dashboard could not load this information. Your data has not been changed. Please try again.",
+  description = "The connection to the server dropped. Nothing you entered was lost.",
   onRetry,
   reference,
   retryLabel = "Try again",
   secondaryAction,
-  title = "Something went wrong",
+  title = "We couldn’t load this page",
 }: {
   description?: string;
   onRetry: () => void;
@@ -113,54 +130,33 @@ export function ErrorState({
   title?: string;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center" role="alert">
-      <StateIcon name="alert" tone="error" />
-      <h2 className="mt-4 text-base font-semibold text-[#223329]">{title}</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
+    <StateLayout
+      actions={
+        <>
+          <button className={primaryButtonClass} onClick={onRetry} type="button">
+            <Icon className="size-4" name="refresh" strokeWidth={2} />
+            {retryLabel}
+          </button>
+          {secondaryAction}
+        </>
+      }
+      icon="error"
+      role="alert"
+      title={title}
+      tone="danger"
+    >
+      <p>{description}</p>
       {reference && (
-        <p className="mt-2 text-xs text-[#7b877f]">
+        <p className="mt-1 text-xs text-muted">
           Reference: <code className="font-mono">{reference}</code>
         </p>
       )}
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <button className={primaryButtonClass} onClick={onRetry} type="button">
-          <Icon className="size-4" name="refresh" />
-          {retryLabel}
-        </button>
-        {secondaryAction}
-      </div>
-    </div>
+    </StateLayout>
   );
 }
 
-/** Dashboard-wide offline state (Screen Catalogue v3, D21). */
-export function OfflineState({ lastUpdated = "09 Oct 2026, 19:30" }: { lastUpdated?: string }) {
-  return (
-    <div className="flex flex-col items-center px-5 py-7 text-center" role="status">
-      <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-[#182b22] text-white"><Icon className="size-5" name="offline" /></span>
-      <h3 className="mt-3 text-sm font-semibold text-[#223329]">You&apos;re offline</h3>
-      <p className="mt-1 max-w-[240px] text-[11px] leading-4 text-[#68756c]">Showing data from {lastUpdated}. Approvals are paused until you reconnect.</p>
-    </div>
-  );
-}
-
-/** Conflict state shown when a record changed after it was opened. */
-export function ConflictState({ onReload }: { onReload: () => void }) {
-  return (
-    <div className="flex flex-col items-center px-5 py-7 text-center" role="alert">
-      <StateIcon name="conflict" tone="warning" />
-      <h3 className="mt-3 text-sm font-semibold text-[#223329]">This record was updated elsewhere</h3>
-      <p className="mt-1 max-w-[240px] text-[11px] leading-4 text-[#68756c]">Your changes have not been submitted. Reload the latest version before continuing.</p>
-      <button className={`${secondaryButtonClass} mt-4 px-3 py-2 text-xs`} onClick={onReload} type="button">Reload record</button>
-    </div>
-  );
-}
-
-/**
- * Shown when the signed-in role is not allowed to see a page or a record
- * (Screen Catalogue v3, D21 "No permission").
- */
-export function NoPermissionState({
+/** Shown after an action succeeds (V5 D21 "Success"). */
+export function SuccessState({
   action,
   description,
   title,
@@ -170,31 +166,48 @@ export function NoPermissionState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      <StateIcon name="lock" tone="warning" />
-      <h2 className="mt-4 text-base font-semibold text-[#223329]">{title}</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
-      {action && <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div>}
-    </div>
+    <StateLayout actions={action} icon="success" role="status" title={title}>
+      <p>{description}</p>
+    </StateLayout>
   );
 }
 
-/** Explains that the current demonstration role cannot open a workspace area. */
-export function AccessDeniedState({
-  description = "Your current demonstration role does not include access to this area.",
-  role,
+/** Conflict state shown when a record changed after it was opened. */
+export function ConflictState({ onReload }: { onReload: () => void }) {
+  return (
+    <StateLayout
+      actions={<button className={secondaryButtonClass} onClick={onReload} type="button">Reload record</button>}
+      icon="conflict"
+      role="alert"
+      title="This record was updated elsewhere"
+      tone="grey"
+    >
+      <p>Your changes have not been saved. Reload the latest version before continuing.</p>
+    </StateLayout>
+  );
+}
+
+/**
+ * Shown when the signed-in role cannot open a page or record (V5 ST04, D21
+ * "No access", M26 No access). It never names the restricted society, incident
+ * or person, so a stale or guessed link reveals nothing. The API refuses the
+ * data as well; this is only what the viewer sees.
+ */
+export function NoAccessState({
+  action = <Link className={secondaryButtonClass} href="/dashboard">Back to overview</Link>,
+  description = "Your role cannot open it. Ask HQ if you think you need it.",
+  heading = "h2",
+  title = "You don’t have access to this page",
 }: {
+  action?: ReactNode;
   description?: string;
-  role: string;
+  heading?: "h1" | "h2";
+  title?: string;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center" role="status">
-      <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-[#fff4d6] text-xl font-semibold text-[#806718]">!</span>
-      <h1 className="mt-4 text-base font-semibold text-[#223329]">You do not have access to this area</h1>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">{description}</p>
-      <p className="mt-3 text-xs text-[#7b877f]">Current preview role: <strong className="font-semibold">{role}</strong></p>
-      <Link className={`${secondaryButtonClass} mt-6`} href="/dashboard">Return to overview</Link>
-    </div>
+    <StateLayout actions={action} heading={heading} icon="lock" role="status" title={title} tone="grey">
+      <p>{description}</p>
+    </StateLayout>
   );
 }
 
@@ -204,7 +217,7 @@ export type ActiveFilter = {
   value: string;
 };
 
-/** Shown when records exist but the current search or filters match none of them. */
+/** Shown when records exist but the current search or filters match none of them (V5 ST02). */
 export function NoResultsState({
   filters,
   itemLabel,
@@ -217,24 +230,24 @@ export function NoResultsState({
   onRemoveFilter: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      <StateIcon name="search" />
-      <h2 className="mt-4 text-base font-semibold text-[#223329]">No {itemLabel} match your filters</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#68756c]">
-        Try a different search term, or remove one of the filters below.
-      </p>
+    <StateLayout
+      actions={<button className={primaryButtonClass} onClick={onClearAll} type="button">Clear all filters</button>}
+      icon="search"
+      title={`No ${itemLabel} match`}
+    >
+      <p>Try a different search term, or remove one of the filters below.</p>
       {filters.length > 0 && (
-        <ul aria-label="Active filters" className="mt-5 flex flex-wrap justify-center gap-2">
+        <ul aria-label="Active filters" className="mt-3 flex flex-wrap justify-center gap-2">
           {filters.map((filter) => (
             <li
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0d1] bg-[#f4f8f3] py-1 pl-3 pr-1 text-xs text-[#2f4a39]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0d1] bg-brand-mint-soft py-1 pl-3 pr-1 text-xs text-[#2f4a39]"
               key={filter.id}
             >
               <span className="font-semibold">{filter.label}:</span>
               <span>{filter.value}</span>
               <button
                 aria-label={`Remove ${filter.label} filter`}
-                className="grid size-6 place-items-center rounded-full text-[#4d6455] transition hover:bg-[#e1ece2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#26744b]"
+                className="grid size-6 place-items-center rounded-full text-[#4d6455] transition hover:bg-[#e1ece2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
                 onClick={() => onRemoveFilter(filter.id)}
                 type="button"
               >
@@ -244,9 +257,6 @@ export function NoResultsState({
           ))}
         </ul>
       )}
-      <button className={`${secondaryButtonClass} mt-6`} onClick={onClearAll} type="button">
-        Clear all filters
-      </button>
-    </div>
+    </StateLayout>
   );
 }

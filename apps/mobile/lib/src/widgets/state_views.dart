@@ -104,10 +104,11 @@ class StateMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (foreground, background) = switch (tone) {
-      StateTone.neutral => (AppColors.leaf, AppColors.mint),
+      StateTone.neutral => (AppColors.forest, AppColors.navIndicator),
       StateTone.error => (AppColors.danger, AppColors.dangerSoft),
-      StateTone.offline => (AppColors.inkSoft, const Color(0xFFE8EAE6)),
-      StateTone.success => (AppColors.leaf, AppColors.mint),
+      StateTone.offline => (AppColors.inkSoft, AppColors.stateGrey),
+      StateTone.success => (AppColors.forest, AppColors.navIndicator),
+      StateTone.noAccess => (AppColors.inkSoft, AppColors.stateGrey),
     };
     return Center(
       child: SingleChildScrollView(
@@ -141,7 +142,7 @@ class StateMessage extends StatelessWidget {
                 message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.inkSoft,
+                  color: AppColors.inkBody,
                   fontSize: 12.5,
                   height: 1.4,
                 ),
@@ -177,11 +178,108 @@ final _compact = ButtonStyle(
     TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
   ),
   shape: WidgetStatePropertyAll(
-    RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
   ),
 );
 
-enum StateTone { neutral, error, offline, success }
+enum StateTone { neutral, error, offline, success, noAccess }
+
+/// V5 M26 No access. It never names the society, incident or person that was
+/// refused, so a stale link or notification reveals nothing. The API refuses
+/// the data as well; this is only what the user sees.
+class NoAccessView extends StatelessWidget {
+  const NoAccessView({
+    super.key,
+    this.title = "You don't have access to this",
+    this.message =
+        'It is outside your assigned access, so it cannot be opened. '
+        'Ask your DM or HQ if you need it.',
+    this.backLabel = 'Back to my societies',
+    this.onBack,
+  });
+
+  final String title;
+  final String message;
+  final String backLabel;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) => StateMessage(
+    icon: Icons.lock_outline,
+    title: title,
+    message: message,
+    tone: StateTone.noAccess,
+    primaryLabel: onBack == null ? null : backLabel,
+    onPrimary: onBack,
+  );
+}
+
+/// What the viewer may do here, for example "Your access: 12 assigned
+/// societies · view and edit" or a temporary district-wide view (V5 SP01,
+/// DD02, DM03). It only describes access; the API decides each request.
+enum AccessBannerTone { edit, viewOnly, temporary, incident }
+
+class AccessBanner extends StatelessWidget {
+  const AccessBanner({super.key, required this.tone, required this.child});
+
+  final AccessBannerTone tone;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, border, foreground, icon) = switch (tone) {
+      AccessBannerTone.edit => (
+        AppColors.bannerEditBg,
+        AppColors.bannerEditLine,
+        AppColors.bannerEditText,
+        Icons.shield_outlined,
+      ),
+      AccessBannerTone.viewOnly => (
+        AppColors.bannerViewBg,
+        AppColors.bannerViewLine,
+        AppColors.bannerViewText,
+        Icons.lock_outline,
+      ),
+      AccessBannerTone.temporary => (
+        AppColors.bannerTemporaryBg,
+        AppColors.bannerTemporaryLine,
+        AppColors.bannerTemporaryText,
+        Icons.schedule,
+      ),
+      AccessBannerTone.incident => (
+        AppColors.bannerIncidentBg,
+        AppColors.bannerIncidentLine,
+        AppColors.bannerIncidentText,
+        Icons.warning_amber_rounded,
+      ),
+    };
+    return Semantics(
+      container: true,
+      liveRegion: tone == AccessBannerTone.incident,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          border: Border.all(color: border),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 16, color: foreground),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: foreground, fontSize: 12, height: 1.35),
+                child: child,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Dark strip shown at the top of a screen while the demo is offline.
 class OfflineBanner extends StatelessWidget {

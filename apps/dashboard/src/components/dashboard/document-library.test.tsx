@@ -81,7 +81,7 @@ describe("DocumentLibrary", () => {
 
     await user.type(screen.getByRole("searchbox", { name: "Search documents" }), "cyclone");
 
-    expect(screen.getByRole("heading", { name: "No documents match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No documents match" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Clear all filters" }));
     expect(previewButtons()).toHaveLength(libraryDocuments.length);
   });
@@ -117,7 +117,7 @@ describe("DocumentLibrary", () => {
     expect(screen.queryByText(/District Manager and HQ only/)).not.toBeInTheDocument();
 
     await user.type(screen.getByRole("searchbox", { name: "Search documents" }), "members");
-    expect(screen.getByRole("heading", { name: "No documents match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No documents match" })).toBeInTheDocument();
   });
 
   it("marks the signed members list as District Manager and HQ only for reviewers", () => {

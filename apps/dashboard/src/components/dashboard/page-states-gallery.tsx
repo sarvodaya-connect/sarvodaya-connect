@@ -1,104 +1,79 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
-import { EmptyState, ErrorState, NoPermissionState, NoResultsState, OfflineState } from "./data-states";
+import {
+  EmptyState,
+  ErrorState,
+  NoAccessState,
+  NoResultsState,
+  SuccessState,
+  TableSkeleton,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "./data-states";
 
 function StateCard({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <section className="overflow-hidden rounded-card border border-line bg-surface">
-      <p className="border-b border-line-soft px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-        {label}
-      </p>
-      <div className="[&>div]:!py-5 [&>div]:min-h-[200px]">{children}</div>
+    <section className="flex min-h-[230px] flex-col rounded-card border border-line bg-surface p-4">
+      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-muted">{label}</h3>
+      <div className="flex flex-1 flex-col justify-center [&>div]:!px-2 [&>div]:!py-3 [&_[role=status][aria-busy]]:border-0 [&_[role=status][aria-busy]]:p-0">
+        {children}
+      </div>
     </section>
   );
 }
 
+/** V5 D21: how every page behaves when data is not normal. */
 export function PageStatesGallery() {
   const [message, setMessage] = useState("");
 
   return (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold tracking-[-0.015em] text-ink md:text-2xl">Page states</h2>
-        <p className="mt-1 text-[13px] text-muted">
-          How every page behaves when data isn&apos;t normal.
-        </p>
+        <h2 className="text-xl font-bold text-ink">Page states</h2>
+        <p className="mt-0.5 text-xs text-muted">How every page behaves when data is not normal</p>
       </div>
       {message && (
-        <p
-          aria-live="polite"
-          className="mb-3 rounded-button border border-[#d7e7d6] bg-brand-mint-soft px-4 py-3 text-[12px] text-brand-forest"
-        >
+        <p aria-live="polite" className="mb-3 rounded-button border border-[#d7e7d6] bg-brand-mint-soft px-4 py-3 text-xs text-brand-forest">
           {message}
         </p>
       )}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StateCard label="Loading">
-          <div aria-busy="true" aria-live="polite" className="space-y-2 p-4" role="status">
-            <span className="sr-only">Loading dashboard data…</span>
-            <div aria-hidden="true" className="flex items-center gap-3">
-              <span className="size-9 animate-pulse rounded-full bg-[#eef1ec]" />
-              <span className="h-4 w-1/2 animate-pulse rounded bg-[#eef1ec]" />
-            </div>
-            <div aria-hidden="true" className="h-3 w-full animate-pulse rounded bg-[#eef1ec]" />
-            <div aria-hidden="true" className="h-3 w-4/5 animate-pulse rounded bg-[#eef1ec]" />
-            <div aria-hidden="true" className="h-16 animate-pulse rounded bg-[#eef1ec]" />
-          </div>
+          <TableSkeleton label="Loading page" />
         </StateCard>
         <StateCard label="Empty">
           <EmptyState
-            action={
-              <button
-                className="rounded-button border border-line px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
-                onClick={() => setMessage("Returned to the district home preview.")}
-                type="button"
-              >
-                Back to district home
-              </button>
-            }
-            description="All submissions from your district have been dealt with. New ones will appear here."
-            icon="inbox"
-            title="Nothing to review"
+            action={<Link className={secondaryButtonClass} href="/reviews">See decided requests</Link>}
+            description="New requests from Society Officers, SPCs and DDMs will appear here."
+            title="No grade requests waiting"
           />
         </StateCard>
         <StateCard label="No results for these filters">
           <NoResultsState
             filters={[
-              { id: "status", label: "Status", value: "Suspended" },
-              { id: "district", label: "District", value: "Jaffna" },
-              { id: "audit", label: "Audit", value: "Overdue" },
+              { id: "grade", label: "Grade", value: "A" },
+              { id: "division", label: "DS division", value: "Wariyapola" },
             ]}
             itemLabel="societies"
-            onClearAll={() => setMessage("All preview filters have been cleared.")}
-            onRemoveFilter={(id) => setMessage(`Removed the ${id} preview filter.`)}
+            onClearAll={() => setMessage("All example filters have been cleared.")}
+            onRemoveFilter={(id) => setMessage(`Removed the ${id} example filter.`)}
           />
         </StateCard>
-        <StateCard label="No permission">
-          <NoPermissionState
-            action={
-              <button
-                className="rounded-button border border-line px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
-                onClick={() => setMessage("Your access request has been noted in this preview.")}
-                type="button"
-              >
-                Request access
-              </button>
-            }
-            description="You can see Kurunegala societies only. Ask HQ if you need access to Batticaloa records."
-            title="This society is outside your district"
+        <StateCard label="Error · retry">
+          <ErrorState onRetry={() => setMessage("Retry requested. This page shows examples only.")} />
+        </StateCard>
+        <StateCard label="Success">
+          <SuccessState
+            action={<Link className={primaryButtonClass} href="/reviews">Back to queue</Link>}
+            description="The request has been decided and the people who asked have been told."
+            title="Grade decision saved"
           />
         </StateCard>
-        <StateCard label="Error">
-          <ErrorState
-            description="The connection to the server dropped. Nothing you entered was lost."
-            onRetry={() => setMessage("Retry requested. This screen is using demonstration data.")}
-            title="We couldn’t load this page"
-          />
-        </StateCard>
-        <StateCard label="Offline (dashboard)">
-          <OfflineState />
+        <StateCard label="No access">
+          <NoAccessState />
         </StateCard>
       </div>
     </>

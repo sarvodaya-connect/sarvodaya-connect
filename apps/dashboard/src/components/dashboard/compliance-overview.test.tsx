@@ -7,7 +7,7 @@ import { type ComplianceFilters, complianceRecords, EMPTY_COMPLIANCE_FILTERS } f
 import { districts } from "@/lib/demo-registry";
 
 import { ComplianceOverview } from "./compliance-overview";
-import { NoPermissionState } from "./data-states";
+import { NoAccessState } from "./data-states";
 
 function renderOverview(records = complianceRecords, initialFilters?: ComplianceFilters) {
   const user = userEvent.setup();
@@ -79,7 +79,7 @@ describe("ComplianceOverview", () => {
     await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "Kundasale");
     await user.click(screen.getByRole("button", { name: /Missing\s*0/ }));
 
-    expect(screen.getByRole("heading", { name: "No societies match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No societies match" })).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Active filters" })).getByText("Missing")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Clear all filters" }));
@@ -120,8 +120,8 @@ describe("ComplianceOverview", () => {
   });
 
   it("explains when a role has no permission", () => {
-    render(<NoPermissionState description="Only District Managers and HQ can see this." title="Not available for your role" />);
+    render(<NoAccessState />);
 
-    expect(screen.getByRole("heading", { name: "Not available for your role" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You don’t have access to this page" })).toBeInTheDocument();
   });
 });

@@ -14,7 +14,7 @@ Future<DemoStore> _openVillageTab(
 }) async {
   final demoStore = await pumpApp(tester, store: store);
   await signInWithDemoAccount(tester);
-  await tester.tap(find.text('Society'));
+  await tester.tap(navTab('Society'));
   await tester.pumpAndSettle();
   await tester.tap(find.text('Village'));
   await tester.pumpAndSettle();
@@ -64,7 +64,7 @@ void main() {
     await pumpApp(tester);
     await signInWithDemoAccount(tester);
 
-    await tester.tap(find.text('Society'));
+    await tester.tap(navTab('Society'));
     await tester.pumpAndSettle();
 
     expect(find.text('Basic information'), findsOneWidget);
@@ -152,7 +152,7 @@ void main() {
   ) async {
     final store = await pumpApp(tester);
     await signInWithDemoAccount(tester);
-    await tester.tap(find.text('Society'));
+    await tester.tap(navTab('Society'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Request update').first);

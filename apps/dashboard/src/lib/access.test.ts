@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { navigationFor } from "@/components/dashboard/dashboard-shell";
+import { navigationFor } from "@/lib/navigation";
 
 import {
   canSeeSociety,
@@ -76,18 +76,40 @@ describe("provisional role-based visibility", () => {
     expect(notificationsFor(systemAdmin).map((notification) => notification.category)).toEqual(["SYSTEM", "SYSTEM"]);
   });
 
-  it("leaves pages a role cannot open out of the navigation", () => {
-    const labels = (viewer: ReturnType<typeof getViewer>) => navigationFor(viewer).map((item) => item.label);
-    expect(labels(hq)).toEqual(expect.arrayContaining(["Audits", "Documents", "Notifications"]));
-    expect(labels(hq)).toContain("Membership");
-    expect(labels(districtManager)).toEqual(expect.arrayContaining(["Audits", "Documents"]));
-    expect(labels(districtManager)[0]).toBe("District Home");
-    expect(labels(coordinator)).not.toContain("Audits");
-    expect(labels(coordinator)).toContain("Documents");
-    expect(labels(systemAdmin)).not.toContain("Documents");
-    expect(labels(systemAdmin)).not.toContain("Membership");
-    expect(labels(systemAdmin)).toContain("Notifications");
-    expect(labels(hq)[0]).toBe("National Overview");
+  it("gives each role its V5 sidebar and leaves out pages it cannot open", () => {
+    const labels = (viewer: ReturnType<typeof getViewer>) => {
+      const { main, secondary } = navigationFor(viewer);
+      return [...main, ...secondary].map((item) => item.label);
+    };
+    expect(labels(hq)).toEqual([
+      "National Overview",
+      "District View",
+      "Societies",
+      "Review Queue",
+      "Programmes",
+      "Membership",
+      "Audits",
+      "Disaster & Emergency",
+      "Documents",
+      "Administration",
+    ]);
+    expect(labels(districtManager)).toEqual(["District overview", "Societies", "Disaster response"]);
+    expect(labels(coordinator)).toEqual(["Home", "My societies", "Disaster response"]);
+    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster response"]);
     expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);
   });
+
+  it("only gives HQ the administration pages", () => {
+    for (const viewer of [districtManager, coordinator, systemAdmin]) {
+      const hrefs = [...navigationFor(viewer).main, ...navigationFor(viewer).secondary].map((item) => item.href);
+      expect(hrefs).not.toContain("/accounts");
+    }
+  });
+
+  it("keeps Deputy District Managers to their assigned societies", () => {
+    const ddm = { ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" as const };
+    expect(canSeeSociety(ddm, { societyId: "society-wellawa", districtId: "district-kurunegala" })).toBe(true);
+    expect(canSeeSociety(ddm, { societyId: "society-thalawa", districtId: "district-kurunegala" })).toBe(false);
+  });
+
 });

@@ -53,7 +53,7 @@ void main() {
         if (role == UserRole.districtManager) {
           expect(find.text('Access'), findsOneWidget);
         }
-        await tester.tap(find.text('Societies'));
+        await tester.tap(navTab('Societies'));
         await tester.pumpAndSettle();
         expect(find.text('My societies'), findsOneWidget);
       },

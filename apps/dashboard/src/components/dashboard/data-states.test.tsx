@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { AccessDeniedState, ConflictState, EmptyState, ErrorState, NoResultsState, OfflineState, TableSkeleton } from "./data-states";
+import { ConflictState, EmptyState, ErrorState, NoAccessState, NoResultsState, SuccessState, TableSkeleton } from "./data-states";
 
 describe("TableSkeleton", () => {
   it("announces a single busy loading status", () => {
@@ -36,7 +36,7 @@ describe("ErrorState", () => {
     const onRetry = vi.fn();
     render(<ErrorState onRetry={onRetry} reference="digest-123" />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn’t load this page");
     expect(screen.getByText("digest-123")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
@@ -72,7 +72,7 @@ describe("NoResultsState", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "No societies match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No societies match" })).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "Remove Status filter" }));
@@ -83,30 +83,39 @@ describe("NoResultsState", () => {
   });
 });
 
-describe("AccessDeniedState", () => {
-  it("explains the blocked area and provides a return path", () => {
-    render(<AccessDeniedState role="National Administrator" />);
+describe("NoAccessState", () => {
+  it("uses the V5 wording and never needs the restricted record", () => {
+    render(<NoAccessState />);
 
-    expect(screen.getByRole("heading", { name: "You do not have access to this area" })).toBeInTheDocument();
-    expect(screen.getByText(/Current preview role:/)).toHaveTextContent("National Administrator");
-    expect(screen.getByRole("link", { name: "Return to overview" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("heading", { name: "You don’t have access to this page" })).toBeInTheDocument();
+    expect(screen.getByText("Your role cannot open it. Ask HQ if you think you need it.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to overview" })).toHaveAttribute("href", "/dashboard");
+  });
+
+  it("can be the page heading with a custom way back", () => {
+    render(<NoAccessState action={<button type="button">Back to my societies</button>} heading="h1" />);
+
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to my societies" })).toBeInTheDocument();
   });
 });
 
-describe("offline and conflicting update states", () => {
-  it("shows cached-data guidance while offline", () => {
-    render(<OfflineState lastUpdated="09 Oct 2026, 19:30" />);
+describe("SuccessState", () => {
+  it("announces the result with its follow-up action", () => {
+    render(<SuccessState action={<a href="/reviews">Back to queue</a>} description="Everyone has been told." title="Grade decision saved" />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("You're offline");
-    expect(screen.getByText(/Approvals are paused until you reconnect/)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Grade decision saved");
+    expect(screen.getByRole("link", { name: "Back to queue" })).toBeInTheDocument();
   });
+});
 
+describe("ConflictState", () => {
   it("asks staff to reload a conflicting record without submitting stale changes", async () => {
     const user = userEvent.setup();
     const onReload = vi.fn();
     render(<ConflictState onReload={onReload} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Your changes have not been submitted");
+    expect(screen.getByRole("alert")).toHaveTextContent("Your changes have not been saved");
     await user.click(screen.getByRole("button", { name: "Reload record" }));
     expect(onReload).toHaveBeenCalledOnce();
   });

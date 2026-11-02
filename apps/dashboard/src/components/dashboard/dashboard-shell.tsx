@@ -1,92 +1,62 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { signOut } from "@/app/identity-actions";
+import { SHORT_ROLE_LABELS, type DemoViewer } from "@/lib/access";
 import {
-  canViewCompliance,
-  canViewDocumentLibrary,
-  type DemoViewer,
-} from "@/lib/access";
+  headingFor,
+  isActiveItem,
+  navigationFor,
+  searchPlaceholderFor,
+  type NavigationItem,
+} from "@/lib/navigation";
 
-import { Brand } from "./brand";
 import { GlobalSearchForm } from "./global-search-form";
-import { Icon, type IconName } from "./icon";
+import { Icon } from "./icon";
 import { useNotifications } from "./notifications-context";
 
-type NavigationItem = { href: string; icon: IconName; label: string };
-
-/** Primary navigation (catalogue D02 sidebar). Pages the viewer's role cannot open are left out. */
-export function navigationFor(viewer: DemoViewer): NavigationItem[] {
-  if (viewer.role === "SYSTEM_ADMIN") {
-    // Technical settings only: no society registry, district or review pages.
-    return [
-      { href: "/admin", icon: "building", label: "Platform access" },
-      { href: "/notifications", icon: "bell", label: "Notifications" },
-    ];
-  }
-  return [
-    {
-      href: "/dashboard",
-      icon: "home",
-      label: viewer.role === "DISTRICT_MANAGER" ? "District Home" : "National Overview",
-    },
-    { href: "/districts/kurunegala", icon: "district", label: "District View" },
-    { href: "/accounts", icon: "building", label: "Accounts & invitations" },
-    { href: "/audit", icon: "shield", label: "Change & access log" },
-    { href: "/societies", icon: "society", label: "Societies" },
-    { href: "/reviews", icon: "review", label: "Review Queue" },
-    { href: "/activities", icon: "clipboard", label: "Activities" },
-    { href: "/emergencies", icon: "alert", label: "Emergency response" },
-    { href: "/membership", icon: "clipboard", label: "Membership" },
-    ...(canViewCompliance(viewer)
-      ? [{ href: "/compliance", icon: "shield", label: "Audits" } satisfies NavigationItem]
-      : []),
-    ...(canViewDocumentLibrary(viewer)
-      ? [{ href: "/documents", icon: "document", label: "Documents" } satisfies NavigationItem]
-      : []),
-    { href: "/notifications", icon: "bell", label: "Notifications" },
-  ];
+/** Hills along the bottom of the V5 header (HQTop). */
+function HeaderHills() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute bottom-0 right-0 h-[46px] w-[62%]"
+      preserveAspectRatio="none"
+      viewBox="0 0 900 60"
+    >
+      <path d="M0 60 L380 30 L520 8 L640 26 L900 18 L900 60 Z" fill="var(--hill-header-back)" />
+      <path d="M0 60 L300 52 L900 44 L900 60 Z" fill="var(--hill-header-front)" />
+    </svg>
+  );
 }
 
-function headingFor(pathname: string, viewer: DemoViewer): { title: string; subtitle: string } {
-  const page = pathname.startsWith("/admin")
-    ? "Administration"
-    : pathname.startsWith("/states")
-      ? "Page states"
-      : /^\/societies\/[^/]+/.test(pathname)
-        ? "Society record"
-        : pathname.startsWith("/societies")
-        ? "Societies"
-        : pathname.startsWith("/membership")
-          ? "Membership"
-          : pathname.startsWith("/activities")
-            ? "Activities"
-            : pathname.startsWith("/emergencies")
-              ? "Emergency response"
-          : pathname.startsWith("/districts")
-            ? "District View"
-            : pathname.startsWith("/reviews")
-              ? "Review Queue"
-              : pathname.startsWith("/compliance")
-                ? "Audits & compliance"
-                : pathname.startsWith("/documents")
-                  ? "Documents"
-                  : pathname.startsWith("/search")
-                    ? "Global search"
-                    : pathname.startsWith("/notifications")
-                      ? "Notification centre"
-                      : viewer.role === "DISTRICT_MANAGER"
-                        ? "District Dashboard"
-                        : "National Dashboard";
-  const subtitle =
-    viewer.role === "DISTRICT_MANAGER"
-      ? "Kurunegala District Centre · 106 societies"
-      : "Shramadana Societies Across Sri Lanka";
-  return { title: page, subtitle };
+function SidebarLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
+  const active = isActiveItem(item, pathname);
+  return (
+    <Link
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-[11px] rounded-lg px-3 py-2 text-[12.5px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+        active
+          ? "bg-brand-mint font-semibold text-brand-forest"
+          : "text-sidebar-text hover:bg-white/8 hover:text-white"
+      }`}
+      href={item.href}
+    >
+      <Icon className="size-4 shrink-0" name={item.icon} strokeWidth={2} />
+      <span className="flex-1">{item.label}</span>
+    </Link>
+  );
 }
 
+/**
+ * Prototype V5 desktop shell: 112px header with the logo column, page title,
+ * search, alerts and account; 240px green sidebar with role navigation and the
+ * signed-in user. Below the large breakpoint the sidebar becomes a scrolling
+ * row of links under the header.
+ */
 export function DashboardShell({
   children,
   viewer,
@@ -98,120 +68,123 @@ export function DashboardShell({
   const { unreadCount } = useNotifications();
   const navigation = navigationFor(viewer);
   const { title, subtitle } = headingFor(pathname, viewer);
-  const isActive = (href: string) => {
-    const hrefPath = href.split("?")[0];
-    return pathname === hrefPath || (hrefPath !== "/dashboard" && pathname.startsWith(`${hrefPath}/`));
-  };
+  const scope = `${SHORT_ROLE_LABELS[viewer.role]} · ${viewer.scopeLabel}`;
+  const homeHref = navigation.main[0]?.href ?? "/dashboard";
 
   return (
-    <div className="min-h-screen bg-[#f4f5ef]">
-      <header className="relative isolate z-20 flex overflow-hidden border-b border-[#dfe5dc] bg-[#fcfcf8]">
-        <svg aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 120">
-          <path d="M560 104 700 50l110 34 90-30 110 38 190-40v68H560Z" fill="#d9e8d2" />
-          <path d="M470 120c170-46 352-48 520-34 95 8 150 0 210-24v58Z" fill="#a9ce9d" />
-          <g fill="#286a43"><circle cx="1050" cy="98" r="15" /><circle cx="1090" cy="82" r="22" /><circle cx="1135" cy="100" r="16" /><circle cx="1180" cy="80" r="28" /></g>
-          <g fill="#174a32"><circle cx="1082" cy="104" r="15" /><circle cx="1165" cy="106" r="18" /></g>
-        </svg>
-        <div className="relative z-10 hidden w-[248px] shrink-0 items-center justify-center border-r border-[#dfe5dc] bg-white px-5 py-3 lg:flex">
-          <Brand sidebar />
-        </div>
-        <div className="relative z-10 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-4 px-4 py-4 md:px-8">
+    <div className="flex min-h-screen flex-col bg-canvas text-ink">
+      <header className="relative isolate flex min-h-[112px] shrink-0 items-center overflow-hidden border-b border-header-line bg-surface-wash">
+        <HeaderHills />
+        <Link
+          aria-label="Sarvodaya Connect home"
+          className="relative z-10 hidden w-[240px] shrink-0 justify-center lg:flex"
+          href={homeHref}
+        >
+          <Image
+            alt="Sarvodaya Connect"
+            className="h-11 w-auto"
+            height={180}
+            priority
+            src="/brand/sarvodaya-connect-wordmark.png"
+            width={472}
+          />
+        </Link>
+        <div className="relative z-10 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-4 md:px-7 lg:border-l lg:border-line lg:py-0 lg:pl-[22px]">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-[-0.02em] text-[#173b2a] md:text-[26px]">{title}</h1>
-            <p className="mt-0.5 text-[13px] text-[#26362c] md:text-[15px]">{subtitle}</p>
-            <p className="mt-1 text-[11px] text-[#526057]">People&nbsp; | &nbsp;Communities&nbsp; | &nbsp;A Just and Compassionate Society</p>
+            <h1 className="text-[20px] font-bold leading-tight md:text-[22px]">{title}</h1>
+            <p className="mt-0.5 text-[13px] text-ink-soft">{subtitle}</p>
+            <p className="mt-1.5 text-[10.5px] text-muted">People | Communities | A Just and Compassionate Society</p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden w-[min(32vw,360px)] md:block"><GlobalSearchForm /></div>
+          <div className="flex items-center gap-4">
+            <div className="hidden w-[300px] md:block">
+              <GlobalSearchForm placeholder={searchPlaceholderFor(viewer)} />
+            </div>
             <Link
-              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-              className="relative grid size-10 place-items-center rounded-full border border-white/70 bg-white/90 text-[#26362c] shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]"
+              aria-label={unreadCount > 0 ? `Alerts, ${unreadCount} new` : "Alerts"}
+              className="relative rounded-full p-1 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
               href="/notifications"
             >
-              <Icon className="size-[19px]" name="bell" />
-              {unreadCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-bold leading-[18px] text-white">{unreadCount}</span>}
+              <Icon className="size-5" name="bell" strokeWidth={2} />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-1 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger-dot px-0.5 text-[9px] font-bold text-white"
+                >
+                  {unreadCount}
+                </span>
+              )}
             </Link>
-            <span aria-label={viewer.displayName} className="hidden size-10 place-items-center rounded-full bg-[#123d29] text-xs font-bold text-white sm:grid">{viewer.initials}</span>
+            <form action={signOut}>
+              <button
+                aria-label={`Account: ${viewer.displayName} · sign out`}
+                className="grid size-10 place-items-center rounded-full bg-brand-forest text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--brand-mint-ring)]"
+                type="submit"
+              >
+                <Icon className="size-[18px]" name="user" strokeWidth={2} />
+              </button>
+            </form>
           </div>
-          <div className="w-full md:hidden"><GlobalSearchForm /></div>
+          <div className="w-full md:hidden">
+            <GlobalSearchForm placeholder={searchPlaceholderFor(viewer)} />
+          </div>
         </div>
       </header>
 
-      <div className="lg:grid lg:grid-cols-[248px_1fr]">
-        <aside className="hidden flex-col bg-[#123d29] text-white lg:sticky lg:top-0 lg:flex lg:h-screen">
-          <nav className="mt-3 space-y-0.5 px-2.5" aria-label="Primary navigation">
-            {navigation.map((item) => {
-              const active = isActive(item.href);
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <nav
+          aria-label="Main navigation"
+          className="hidden w-[240px] shrink-0 flex-col gap-0.5 bg-brand-forest px-3 py-4 text-sidebar-text lg:flex"
+        >
+          {navigation.main.map((item) => (
+            <SidebarLink item={item} key={item.href} pathname={pathname} />
+          ))}
+          {navigation.secondary.length > 0 && (
+            <>
+              <span aria-hidden="true" className="mx-1 my-2.5 h-px bg-white/14" />
+              {navigation.secondary.map((item) => (
+                <SidebarLink item={item} key={item.href} pathname={pathname} />
+              ))}
+            </>
+          )}
+          <span className="flex-1" />
+          <div className="sticky bottom-4 flex items-center gap-2.5 rounded-[10px] bg-white/8 p-2.5">
+            <span
+              aria-hidden="true"
+              className="grid size-[30px] shrink-0 place-items-center rounded-full bg-white text-[10.5px] font-bold text-brand-forest"
+            >
+              {viewer.initials}
+            </span>
+            <span className="min-w-0">
+              <strong className="block truncate text-xs text-white">{viewer.displayName}</strong>
+              <span className="block truncate text-[10.5px]">{scope}</span>
+            </span>
+          </div>
+        </nav>
+
+        <nav aria-label="Main navigation" className="bg-brand-forest px-4 py-2 lg:hidden">
+          <div className="flex gap-1.5 overflow-x-auto">
+            {[...navigation.main, ...navigation.secondary].map((item) => {
+              const active = isActiveItem(item, pathname);
               return (
                 <Link
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-[13px] font-medium transition ${
-                    active
-                      ? "bg-[#e6f0e7] text-[#123d29]"
-                      : "text-[#dce9de] hover:bg-white/8 hover:text-white"
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs ${
+                    active ? "bg-brand-mint font-semibold text-brand-forest" : "text-sidebar-text"
                   }`}
                   href={item.href}
                   key={item.href}
                 >
-                  <Icon className="size-[17px]" name={item.icon} />
                   {item.label}
-                  {item.href === "/reviews" && (
-                    <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
-                      2
-                    </span>
-                  )}
-                  {item.href === "/notifications" && unreadCount > 0 && (
-                    <span className="ml-auto rounded-full bg-[#f3c44e] px-2 py-0.5 text-[10px] font-bold text-[#503b00]">
-                      {unreadCount}
-                      <span className="sr-only"> unread</span>
-                    </span>
-                  )}
                 </Link>
               );
             })}
-          </nav>
-          <div className="mt-auto border-t border-white/10 p-3">
-            <div className="rounded-lg bg-white/6 p-3">
-              <div className="flex items-center gap-3">
-                <span className="grid size-8 place-items-center rounded-full bg-[#dce9de] text-[11px] font-bold text-[#123d29]">
-                  {viewer.initials}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <strong className="block truncate text-xs">{viewer.displayName}</strong>
-                  <span className="block truncate text-[10px] text-[#a8c7b1]">
-                    {viewer.roleLabel} · {viewer.scopeLabel}
-                  </span>
-                </span>
-                <form action={signOut}><button aria-label="Sign out" type="submit">
-                  <Icon className="size-4 text-[#a8c7b1]" name="logout" />
-                </button></form>
-              </div>
-              <div className="mt-3 border-t border-white/10 pt-3">
-                <span className="text-xs">HQ · National access</span>
-              </div>
-            </div>
           </div>
-        </aside>
+          <p className="mt-1.5 text-[11px] text-sidebar-text">
+            {viewer.displayName} · {scope}
+          </p>
+        </nav>
 
-        <div className="min-w-0">
-          <div className="border-b border-[#dfe5dc] bg-[#123d29] px-4 py-2 lg:hidden">
-            <nav className="flex gap-2 overflow-x-auto" aria-label="Mobile navigation">
-              {navigation.map((item) => (
-                <Link
-                  className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${
-                    isActive(item.href) ? "bg-white text-[#123d29]" : "text-white/80"
-                  }`}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-            <div className="mt-2"><span className="text-xs">HQ · National access</span></div>
-          </div>
-          <main className="px-5 py-6 md:px-7 md:py-7 xl:px-8">{children}</main>
-        </div>
+        <main className="min-w-0 flex-1 px-4 pb-8 pt-[18px] md:px-7">{children}</main>
       </div>
     </div>
   );

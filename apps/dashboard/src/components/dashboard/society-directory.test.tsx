@@ -58,7 +58,7 @@ describe("SocietyDirectory", () => {
     await user.type(screen.getByRole("searchbox", { name: "Search societies" }), "zzz");
     await user.selectOptions(screen.getByRole("combobox", { name: "Filter by district" }), "district-kandy");
 
-    expect(screen.getByRole("heading", { name: "No societies match your filters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No societies match" })).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
 
     const filters = within(screen.getByRole("list", { name: "Active filters" }));

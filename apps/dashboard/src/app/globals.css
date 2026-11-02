@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 /*
- * Design tokens from the Screen Catalogue v3.
+ * Design tokens from Prototype V5 (Figma "Sarvodaya Prototype").
  * CSS variables are the source of truth; the `@theme inline` block below
  * exposes them as Tailwind utilities (e.g. `bg-brand-forest`, `text-ink`).
  */
 :root {
   /* Brand green ramp */
-  --brand-forest: #123d29;    /* sidebar, deepest green */
-  --brand-pine: #174a32;      /* brand dark */
+  --brand-forest: #1f3c2a;    /* sidebar, deepest green */
+  --brand-pine: #24573b;      /* brand dark, Ask SarvoAI button */
   --brand-leaf: #26744b;      /* primary accent */
-  --brand-action: #1f6b43;    /* filled button */
-  --brand-action-pressed: #174f34;
-  --brand-mint: #e6f0e7;      /* active sidebar row, success bg */
+  --brand-action: #2f6b45;    /* filled button */
+  --brand-action-pressed: #24573b;
+  --brand-mint: #e3eee2;      /* active sidebar row */
   --brand-mint-soft: #f4f8f3; /* hover row, chip bg */
   --brand-mint-ring: #c6e2cd;
 
@@ -24,10 +24,10 @@
   --hill-900: #174a32;
 
   /* Surfaces */
-  --canvas: #f4f5ef;          /* page background */
+  --canvas: #f3f4ee;          /* page background */
   --background: var(--canvas);
   --surface: #ffffff;         /* cards */
-  --surface-wash: #fcfcf8;    /* header behind wave */
+  --surface-wash: #f7f7f1;    /* header behind the hills */
   --surface-muted: #f7f8f5;   /* table hover alt */
 
   /* Lines */
@@ -35,21 +35,21 @@
   --line-soft: #edf0eb;
 
   /* Ink */
-  --ink: #17211b;
+  --ink: #1c2a21;
   --foreground: var(--ink);
   --ink-soft: #3e4b43;
-  --muted: #68756c;
+  --muted: #5b675f;
   --muted-ring: #8db39a;      /* eyebrow label */
 
   /* Status tones (chip bg / chip text / chip ring) */
   --warn-bg: #fff4d6;
   --warn-text: #7a5a00;
   --warn-ring: #efdda5;
-  --review-bg: #f3c44e;       /* solid review badge */
-  --review-text: #503b00;
+  --review-bg: #e2b33a;       /* solid count badge */
+  --review-text: #1f3c2a;
   --danger-bg: #fbe9e7;
   --danger-text: #a8312a;
-  --danger-dot: #c0392b;
+  --danger-dot: #b3322b;
   --info-bg: #e5eef8;
   --info-text: #315d88;
   --info-ring: #c8d9ea;
@@ -61,6 +61,32 @@
   --orange-changed: #d96a2c;  /* "Changed in v2" annotation */
   --orange-changed-soft: #fdece0;
   --orange-splash: #f26b1f;   /* Sarvodaya splash */
+  --orange-ai: #f0a040;       /* "AI" in the SarvoAI name */
+
+  /* V5 shell */
+  --sidebar-text: #d7e3d9;
+  --header-line: #e3e7e0;
+  --hill-header-back: #dfe8da;
+  --hill-header-front: #a9c79f;
+  --ink-body: #4f5d54;        /* state and helper text */
+  --button-line: #cfd7cd;     /* secondary button border */
+  --state-mint: #dbe8db;      /* empty, no-results and success icon circle */
+  --state-grey: #eceee9;      /* no-access icon circle, skeleton */
+  --state-danger: #fbe4e1;    /* error icon circle */
+
+  /* V5 access banners: background / border / text */
+  --banner-edit-bg: #e3f0e3;
+  --banner-edit-line: #bcd8be;
+  --banner-edit-text: #1f5c38;
+  --banner-view-bg: #eceee9;
+  --banner-view-line: #d6ddd4;
+  --banner-view-text: #3e4b43;
+  --banner-temporary-bg: #e6eef8;
+  --banner-temporary-line: #c3d5ea;
+  --banner-temporary-text: #24476b;
+  --banner-incident-bg: #fbe9e7;
+  --banner-incident-line: #efc2bd;
+  --banner-incident-text: #8a241d;
 
 }
 
@@ -111,10 +137,20 @@
   --color-orange-changed: var(--orange-changed);
   --color-orange-changed-soft: var(--orange-changed-soft);
   --color-orange-splash: var(--orange-splash);
+  --color-orange-ai: var(--orange-ai);
+
+  --color-sidebar-text: var(--sidebar-text);
+  --color-header-line: var(--header-line);
+  --color-ink-body: var(--ink-body);
+  --color-button-line: var(--button-line);
+  --color-state-mint: var(--state-mint);
+  --color-state-grey: var(--state-grey);
+  --color-state-danger: var(--state-danger);
+  --color-danger-dot: var(--danger-dot);
 
   --radius-card: 14px;
   --radius-tile: 16px;
-  --radius-button: 10px;
+  --radius-button: 9px;
   --radius-input: 10px;
   --radius-pill: 999px;
 }

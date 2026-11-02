@@ -18,7 +18,7 @@ Future<DemoStore> _openEditProfile(
 }) async {
   final demoStore = await pumpApp(tester, store: store);
   await signInWithDemoAccount(tester);
-  await tester.tap(find.text('Society'));
+  await tester.tap(navTab('Society'));
   await tester.pumpAndSettle();
   await tapVisible(tester, find.text('Request update').first);
   return demoStore;

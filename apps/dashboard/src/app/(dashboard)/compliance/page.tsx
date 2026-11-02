@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { ComplianceOverview } from "@/components/dashboard/compliance-overview";
-import { NoPermissionState, secondaryButtonClass } from "@/components/dashboard/data-states";
+import { NoAccessState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { canSeeSociety, canViewCompliance } from "@/lib/access";
 import { getCurrentViewer } from "@/lib/current-viewer";
@@ -34,11 +34,9 @@ export default async function CompliancePage({ searchParams }: PageProps<"/compl
     return (
       <>
         {heading}
-        <section className="mt-6 rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
-          <NoPermissionState
+        <section className="mt-6 rounded-card border border-line bg-surface">
+          <NoAccessState
             action={<Link className={secondaryButtonClass} href="/notifications">Go to notifications</Link>}
-            description={`${viewer.roleLabel}s cannot see audit and Registrar records. District Managers and HQ monitor document compliance.`}
-            title="Compliance is not available for your role"
           />
         </section>
       </>

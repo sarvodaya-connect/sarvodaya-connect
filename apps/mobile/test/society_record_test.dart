@@ -112,7 +112,11 @@ void main() {
         role: UserRole.societyOfficer,
         societyId: 'society-wariyapola',
       );
-      expect(find.text('Society not found'), findsOneWidget);
+      expect(
+        find.text("You don't have access to this society"),
+        findsOneWidget,
+      );
+      expect(find.text('Wariyapola SSS'), findsNothing);
       expect(find.text('Try again'), findsNothing);
     });
 
