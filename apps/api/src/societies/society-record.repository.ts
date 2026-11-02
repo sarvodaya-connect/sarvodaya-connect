@@ -306,6 +306,7 @@ export class SocietyRecordRepository {
     return executeDatabaseOperation(() =>
       this.prisma.workPlanActivity.findMany({
         where: { societyId, year },
+        include: { sdgs: { select: { sdg: true }, orderBy: { sdg: 'asc' } } },
         orderBy: [{ month: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       }),
     );

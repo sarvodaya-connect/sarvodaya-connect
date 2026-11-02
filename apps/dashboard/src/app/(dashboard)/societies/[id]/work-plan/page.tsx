@@ -8,5 +8,5 @@ import { isSocietyRecordId } from "@/lib/society-record-format";
 export default async function SocietyWorkPlanPage({ params }: PageProps<"/societies/[id]/work-plan">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) notFound();
-  return <WorkPlanOverview plan={await getWorkPlan(id)} />;
+  return <WorkPlanOverview plan={await getWorkPlan(id)} societyId={id} />;
 }

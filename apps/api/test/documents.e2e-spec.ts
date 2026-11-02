@@ -392,6 +392,8 @@ describe('Documents and notifications (e2e)', () => {
     const body = {
       societyId: SUNRISE,
       documentType: 'AGM_MINUTES',
+      // V5 PR 4: the four Registrar documents are kept per financial year.
+      financialYear: AUDIT_YEAR,
       title: 'AGM minutes 2026',
       fileName: 'agm.pdf',
     };
@@ -407,12 +409,16 @@ describe('Documents and notifications (e2e)', () => {
     const sunrise = await uploadDocument('demo-officer-sunrise', {
       societyId: SUNRISE,
       documentType: 'AGM_MINUTES',
+      // V5 PR 4: the four Registrar documents are kept per financial year.
+      financialYear: AUDIT_YEAR,
       title: 'AGM minutes 2026',
       fileName: 'agm.pdf',
     });
     await uploadDocument('demo-officer-lotus', {
       societyId: LOTUS,
       documentType: 'AGM_MINUTES',
+      // V5 PR 4: the four Registrar documents are kept per financial year.
+      financialYear: AUDIT_YEAR,
       title: 'AGM minutes 2026',
       fileName: 'agm.pdf',
     });
@@ -476,6 +482,7 @@ describe('Documents and notifications (e2e)', () => {
     const membersList = await uploadDocument('demo-officer-sunrise', {
       societyId: SUNRISE,
       documentType: 'MEMBERS_LIST',
+      financialYear: AUDIT_YEAR,
       title: 'Members list 2026 (signed)',
       fileName: 'members-list-2026.pdf',
     });
@@ -542,10 +549,17 @@ describe('Documents and notifications (e2e)', () => {
     await send(withoutYear).expect(400);
     await send({ ...valid, financialYear: AUDIT_YEAR + 1 }).expect(400);
     await send({ ...valid, financialYear: AUDIT_YEAR - 5 }).expect(400);
+    // Only the four Registrar documents have a financial year.
+    await send({
+      ...valid,
+      documentType: 'OTHER',
+      title: 'Village map',
+    }).expect(400);
     await send({
       ...valid,
       documentType: 'AGM_MINUTES',
       title: 'AGM minutes',
+      financialYear: undefined,
     }).expect(400);
     expect(documents.rows).toHaveLength(0);
   });

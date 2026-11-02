@@ -213,3 +213,99 @@ export async function createSociety(_previous: CreateSocietyResult, form: FormDa
   // Step 3 · Assign staff opens on the new record.
   redirect(`/societies/${created.id}?panel=assign`);
 }
+
+export type StartUploadResult = {
+  error?: string;
+  documentId?: string;
+  upload?: { url: string; method: "PUT"; headers: Record<string, string> };
+};
+
+/**
+ * V5 PR 4 documents: the API checks permission, records the metadata and
+ * returns a short-lived pre-signed upload URL. The browser then sends the file
+ * straight to storage, so it never passes through the dashboard or the API.
+ */
+export async function startDocumentUpload(
+  societyId: string,
+  input: {
+    documentType: string;
+    financialYear?: number;
+    title: string;
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+    checksumSha256: string;
+  },
+): Promise<StartUploadResult> {
+  await getCurrentViewer();
+  try {
+    const result = await platformApi("/documents", {
+      method: "POST",
+      body: JSON.stringify({ societyId, ...input }),
+    });
+    return { documentId: result.document.id, upload: result.upload };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The upload could not be started. Try again." };
+  }
+}
+
+/** Confirms the file reached storage; the API checks its size before recording it. */
+export async function completeDocumentUpload(societyId: string, documentId: string): Promise<{ error?: string }> {
+  await getCurrentViewer();
+  try {
+    await platformApi(`/documents/${documentId}/complete`, { method: "POST" });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The upload could not be confirmed. Try again." };
+  }
+  revalidatePath(`/societies/${societyId}`, "layout");
+  return {};
+}
+
+const ACTIVITY_COUNTS = [
+  "femaleParticipants",
+  "maleParticipants",
+  "youthParticipants",
+  "householdsBenefited",
+  "womenHeadedHouseholds",
+  "volunteerHours",
+] as const;
+
+/**
+ * V5 D05w "Add activity": the activity is saved as waiting for the society's
+ * SPC, who chooses the UN SDGs. The API checks who may add it and the numbers.
+ */
+export async function createActivity(
+  societyId: string,
+  _previous: RecordFormResult,
+  form: FormData,
+): Promise<RecordFormResult> {
+  await getCurrentViewer();
+  const text = (name: string) => String(form.get(name) ?? "").trim();
+  const body: Record<string, string | number> = {
+    year: Number(form.get("year")),
+    month: Number(form.get("month")),
+    name: text("name"),
+    description: text("description"),
+    sector: text("sector"),
+    dimension: text("dimension"),
+  };
+  const cost = text("allocatedCost").replaceAll(",", "");
+  if (!/^\d+(\.\d{1,2})?$/.test(cost)) return { error: "Enter the allocated cost in LKR using numbers only, for example 55000." };
+  body.allocatedCost = Number(cost);
+  for (const field of ACTIVITY_COUNTS) {
+    const value = text(field);
+    if (!value) continue;
+    if (!/^\d+$/.test(value)) return { error: "Enter the participant counts and volunteer hours as whole numbers." };
+    body[field] = Number(value);
+  }
+  for (const field of ["datesLabel", "partners", "resourcesNeeded"] as const) {
+    if (text(field)) body[field] = text(field);
+  }
+  try {
+    await platformApi(`/societies/${societyId}/activities`, { method: "POST", body: JSON.stringify(body) });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The activity could not be saved. Try again." };
+  }
+  revalidatePath(`/societies/${societyId}`, "layout");
+  redirect(`/societies/${societyId}/work-plan?year=${body.year}&added=1`);
+}

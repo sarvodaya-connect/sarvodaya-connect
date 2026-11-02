@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 import '../auth/api_auth_service.dart';
@@ -47,7 +49,30 @@ abstract interface class SocietyRecordApi {
   });
   Future<List<HistoryEvent>> fetchHistory(String id, {String? category});
   Future<List<RecordDocument>> fetchDocuments(String id);
-  Future<WorkPlan> fetchWorkPlan(String id);
+  Future<WorkPlan> fetchWorkPlan(String id, {int? year});
+
+  /// M09a–M09d: the new activity waits for the society's SPC.
+  Future<ActivityDetail> createActivity(String societyId, ActivityInput input);
+
+  /// Changes an activity that is waiting or was sent back, and sends it again.
+  Future<ActivityDetail> updateActivity(
+    String societyId,
+    String activityId,
+    ActivityInput input,
+  );
+  Future<ActivityDetail> fetchActivity(String activityId);
+
+  /// M50: SPC only; the server refuses other roles.
+  Future<ActivityQueue> fetchActivityQueue();
+
+  /// M51: the assigned SPC approves with at least one UN SDG (1–17).
+  Future<ActivityDetail> approveActivity(String activityId, List<int> sdgs);
+
+  /// M51b: the assigned SPC sends it back, with an optional note.
+  Future<ActivityDetail> sendBackActivity(String activityId, {String? comment});
+
+  /// M13: the four Registrar documents for the year.
+  Future<RegistrarDocuments> fetchRegistrarDocuments(String id, {int? year});
 
   /// The member's full NIC. The server checks scope and records the reveal.
   Future<String> revealNic(String societyId, String memberId);
@@ -62,14 +87,21 @@ abstract interface class SocietyRecordApi {
   Future<void> setNic(String societyId, String memberId, String nic);
 
   /// M13a: records the metadata, sends the file to private storage through a
-  /// short-lived link, then confirms it.
-  Future<RecordDocument> uploadAuditReport(
+  /// short-lived link (with its SHA-256, which storage checks), then confirms
+  /// it. The four Registrar documents need their [financialYear].
+  Future<RecordDocument> uploadDocument(
     String id, {
-    required int financialYear,
+    required String documentType,
     required PickedDocument file,
+    int? financialYear,
+    String? title,
     void Function(double progress)? onProgress,
   });
 }
+
+/// SHA-256 of the file in base64, as storage expects it.
+String sha256Base64(List<int> bytes) =>
+    base64Encode(sha256.convert(bytes).bytes);
 
 class HttpSocietyRecordApi implements SocietyRecordApi {
   HttpSocietyRecordApi(this.api, {http.Client? uploadClient})
@@ -192,8 +224,83 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
           .toList();
 
   @override
-  Future<WorkPlan> fetchWorkPlan(String id) async => WorkPlan.fromJson(
-    await _call('/societies/$id/work-plan') as Map<String, dynamic>,
+  Future<WorkPlan> fetchWorkPlan(String id, {int? year}) async =>
+      WorkPlan.fromJson(
+        await _call(
+          '/societies/$id/work-plan${year == null ? '' : '?year=$year'}',
+        ) as Map<String, dynamic>,
+      );
+
+  @override
+  Future<ActivityDetail> createActivity(
+    String societyId,
+    ActivityInput input,
+  ) async => ActivityDetail.fromJson(
+    await _call(
+      '/societies/$societyId/activities',
+      method: 'POST',
+      body: input.toJson(),
+    ) as Map<String, dynamic>,
+  );
+
+  @override
+  Future<ActivityDetail> updateActivity(
+    String societyId,
+    String activityId,
+    ActivityInput input,
+  ) async => ActivityDetail.fromJson(
+    await _call(
+      '/societies/$societyId/activities/$activityId',
+      method: 'PUT',
+      body: input.toJson(),
+    ) as Map<String, dynamic>,
+  );
+
+  @override
+  Future<ActivityDetail> fetchActivity(String activityId) async =>
+      ActivityDetail.fromJson(
+        await _call('/activities/$activityId') as Map<String, dynamic>,
+      );
+
+  @override
+  Future<ActivityQueue> fetchActivityQueue() async => ActivityQueue.fromJson(
+    await _call('/activity-reviews') as Map<String, dynamic>,
+  );
+
+  @override
+  Future<ActivityDetail> approveActivity(
+    String activityId,
+    List<int> sdgs,
+  ) async => ActivityDetail.fromJson(
+    await _call(
+      '/activities/$activityId/approve',
+      method: 'POST',
+      body: {'sdgs': sdgs},
+    ) as Map<String, dynamic>,
+  );
+
+  @override
+  Future<ActivityDetail> sendBackActivity(
+    String activityId, {
+    String? comment,
+  }) async => ActivityDetail.fromJson(
+    await _call(
+      '/activities/$activityId/send-back',
+      method: 'POST',
+      body: {
+        if (comment?.trim().isNotEmpty ?? false) 'comment': comment!.trim(),
+      },
+    ) as Map<String, dynamic>,
+  );
+
+  @override
+  Future<RegistrarDocuments> fetchRegistrarDocuments(
+    String id, {
+    int? year,
+  }) async => RegistrarDocuments.fromJson(
+    await _call(
+      '/societies/$id/registrar-documents${year == null ? '' : '?year=$year'}',
+    ) as Map<String, dynamic>,
   );
 
   @override
@@ -226,10 +333,12 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
   }
 
   @override
-  Future<RecordDocument> uploadAuditReport(
+  Future<RecordDocument> uploadDocument(
     String id, {
-    required int financialYear,
+    required String documentType,
     required PickedDocument file,
+    int? financialYear,
+    String? title,
     void Function(double progress)? onProgress,
   }) async {
     final created = await _call(
@@ -237,12 +346,13 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
       method: 'POST',
       body: {
         'societyId': id,
-        'documentType': 'AUDIT_REPORT',
-        'financialYear': financialYear,
-        'title': 'Audit report',
+        'documentType': documentType,
+        'financialYear': ?financialYear,
+        'title': title ?? documentTypeLabels[documentType] ?? 'Document',
         'fileName': file.name,
         'contentType': file.contentType,
         'sizeBytes': file.sizeBytes,
+        'checksumSha256': sha256Base64(file.bytes),
       },
     );
     final document = created['document'] as Map<String, dynamic>;

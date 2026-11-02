@@ -26,6 +26,8 @@ export interface DocumentStorage {
     key: string;
     contentType: string;
     sizeBytes: number;
+    /** SHA-256 of the file, base64. Storage refuses an upload that does not match. */
+    checksumSha256?: string;
   }): Promise<PresignedRequest>;
 
   /** A URL the client uses to download the file directly from storage. */

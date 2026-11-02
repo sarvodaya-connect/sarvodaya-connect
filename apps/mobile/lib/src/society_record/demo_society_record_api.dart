@@ -178,31 +178,44 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
         DateTime(2025, 3, 12, 11, 20),
       ),
     ]);
+    final planYear = now.year + 1;
     pahala.workPlan = [
-      const WorkPlanActivity(
-        month: 1,
-        name: 'Tank cleaning shramadana',
-        allocatedCost: 25000,
-        sector: 'Environment',
+      _activity(
+        planYear,
+        1,
+        'Tank cleaning shramadana',
+        25000,
+        'Environment',
+        sdgs: [6, 15],
+        people: [40, 35, 18, 120, 22],
       ),
-      const WorkPlanActivity(
-        month: 2,
-        name: "Pre-school parents' meeting",
-        allocatedCost: 8000,
-        sector: 'Child wellbeing',
+      _activity(
+        planYear,
+        2,
+        "Pre-school parents' meeting",
+        8000,
+        'Child wellbeing',
+        sdgs: [4],
+        people: [26, 9, 0, 30, 8],
       ),
-      const WorkPlanActivity(
-        month: 3,
-        name: 'Clean-water awareness day',
-        allocatedCost: 15000,
-        sector: 'Health and nutrition',
+      _activity(
+        planYear,
+        3,
+        'Clean-water awareness day',
+        15000,
+        'Health and nutrition',
+        sdgs: [3, 6],
+        people: [52, 31, 20, 95, 17],
       ),
-      const WorkPlanActivity(
-        month: 9,
-        name: 'Youth leadership camp',
-        allocatedCost: 55000,
-        sector: 'Community education',
+      _activity(
+        planYear,
+        9,
+        'Youth leadership camp',
+        55000,
+        'Community education',
         datesLabel: '12–14 Sep',
+        people: [24, 14, 12, 146, 31],
+        submittedAt: now,
       ),
     ];
     pahala.exco = _exco(['A. Jayasekara', 'N. Wijesinghe', 'S. Tharmalingam']);
@@ -291,20 +304,65 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       ),
   ];
 
+  WorkPlanActivity _activity(
+    int year,
+    int month,
+    String name,
+    double cost,
+    String sector, {
+    List<int> sdgs = const [],
+    List<int> people = const [0, 0, 0, 0, 0],
+    String? datesLabel,
+    DateTime? submittedAt,
+  }) {
+    const officer = ActorRef('Nimali Wijesinghe', UserRole.societyOfficer);
+    const spc = ActorRef('S. Karunaratne', UserRole.programmeCoordinator);
+    final approved = sdgs.isNotEmpty;
+    return WorkPlanActivity(
+      id: 'demo-activity-${_nextId++}',
+      year: year,
+      month: month,
+      name: name,
+      description: '$name with the village.',
+      allocatedCost: cost,
+      sector: sector,
+      datesLabel: datesLabel,
+      dimension: ActivityDimension.social,
+      status: approved ? ActivityStatus.approved : ActivityStatus.waitingForSpc,
+      sdgs: sdgs,
+      femaleParticipants: people[0],
+      maleParticipants: people[1],
+      youthParticipants: people[2],
+      householdsBenefited: people[3],
+      womenHeadedHouseholds: people[4],
+      createdBy: officer,
+      submittedAt: submittedAt ?? clock().subtract(const Duration(days: 20)),
+      reviewedBy: approved ? spc : null,
+      reviewedAt: approved ? clock().subtract(const Duration(days: 10)) : null,
+    );
+  }
+
   RecordDocument _document(
     String type,
     String title,
     ActorRef by,
-    DateTime at,
-  ) => RecordDocument(
+    DateTime at, {
+    int? financialYear,
+    String? fileName,
+    int sizeBytes = 640000,
+  }) => RecordDocument(
     id: 'demo-document-${_nextId++}',
     documentType: type,
     title: title,
-    fileName: '${title.replaceAll(' ', '_')}.pdf',
-    sizeBytes: 640000,
+    fileName: fileName ?? '${title.replaceAll(' ', '_')}.pdf',
+    sizeBytes: sizeBytes,
     uploadedBy: by.displayName,
     uploadedByRole: by.role,
     uploadedAt: at,
+    // The four Registrar documents are kept per financial year.
+    financialYearLabel: registrarDocumentTypes.contains(type)
+        ? FinancialYear.starting(financialYear ?? latestYear).label
+        : null,
   );
 
   RecordDocument _auditReport(
@@ -719,14 +777,355 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     return List.unmodifiable(_visible(id).documents);
   }
 
+  bool _canAddActivities(_DemoSociety society) =>
+      _signedIn.canEditSociety(society.id);
+
+  bool _canReviewActivities(_DemoSociety society) =>
+      _hasRole(UserRole.programmeCoordinator) &&
+      _signedIn.societyIds.contains(society.id);
+
   @override
-  Future<WorkPlan> fetchWorkPlan(String id) async {
+  Future<WorkPlan> fetchWorkPlan(String id, {int? year}) async {
     await _wait();
-    final plan = _visible(id).workPlan;
+    final society = _visible(id);
+    final planYear = year ?? clock().year + 1;
+    final plan =
+        society.workPlan.where((activity) => activity.year == planYear).toList()
+          ..sort((a, b) => a.month.compareTo(b.month));
     return WorkPlan(
-      clock().year + 1,
+      planYear,
       plan,
       plan.fold(0, (sum, activity) => sum + activity.allocatedCost),
+      canAddActivities: _canAddActivities(society),
+    );
+  }
+
+  ({_DemoSociety society, int index}) _findActivity(String activityId) {
+    for (final society in _societies.values) {
+      final index = society.workPlan.indexWhere((a) => a.id == activityId);
+      if (index >= 0 &&
+          _signedIn.canViewSociety(society.id, society.districtId, clock())) {
+        return (society: society, index: index);
+      }
+    }
+    throw const SocietyRecordException('Activity not found', status: 404);
+  }
+
+  ActivityDetail _detail(_DemoSociety society, WorkPlanActivity activity) =>
+      ActivityDetail(
+        activity: activity,
+        societyId: society.id,
+        societyName: society.name,
+        canEdit:
+            activity.status != ActivityStatus.approved &&
+            _canAddActivities(society),
+        canReview:
+            activity.status == ActivityStatus.waitingForSpc &&
+            _canReviewActivities(society),
+      );
+
+  WorkPlanActivity _fromInput(
+    String id,
+    ActivityInput input, {
+    ActorRef? createdBy,
+  }) => WorkPlanActivity(
+    id: id,
+    year: input.year,
+    month: input.month,
+    name: input.name,
+    description: input.description,
+    allocatedCost: input.allocatedCost,
+    sector: input.sector,
+    datesLabel: input.datesLabel,
+    dimension: input.dimension,
+    status: ActivityStatus.waitingForSpc,
+    femaleParticipants: input.femaleParticipants,
+    maleParticipants: input.maleParticipants,
+    youthParticipants: input.youthParticipants,
+    householdsBenefited: input.householdsBenefited,
+    womenHeadedHouseholds: input.womenHeadedHouseholds,
+    partners: input.partners,
+    resourcesNeeded: input.resourcesNeeded,
+    volunteerHours: input.volunteerHours,
+    createdBy: createdBy ?? _actor,
+    submittedAt: clock(),
+  );
+
+  void _checkActivity(ActivityInput input) {
+    if ((input.youthParticipants ?? 0) > input.totalParticipants) {
+      throw const SocietyRecordException(
+        'Youth are counted inside the female and male participants, so they cannot be more than both together',
+        status: 400,
+      );
+    }
+    if ((input.womenHeadedHouseholds ?? 0) > (input.householdsBenefited ?? 0)) {
+      throw const SocietyRecordException(
+        'Women-headed households are part of the households benefited, so they cannot be more',
+        status: 400,
+      );
+    }
+  }
+
+  @override
+  Future<ActivityDetail> createActivity(
+    String societyId,
+    ActivityInput input,
+  ) async {
+    await _wait();
+    final society = _visible(societyId);
+    if (!_canAddActivities(society)) {
+      throw const SocietyRecordException(
+        'You can view this work plan but cannot add or change its activities',
+        status: 403,
+      );
+    }
+    _checkActivity(input);
+    final activity = _fromInput('demo-activity-${_nextId++}', input);
+    society.workPlan = [...society.workPlan, activity];
+    society.history.insert(
+      0,
+      _event(
+        'WORK_PLAN',
+        'Activity “${input.name}” added to the ${input.year} work plan and sent to the SPC',
+        _actor,
+        clock(),
+      ),
+    );
+    return _detail(society, activity);
+  }
+
+  @override
+  Future<ActivityDetail> updateActivity(
+    String societyId,
+    String activityId,
+    ActivityInput input,
+  ) async {
+    await _wait();
+    final society = _visible(societyId);
+    final index = society.workPlan.indexWhere((a) => a.id == activityId);
+    if (index < 0) {
+      throw const SocietyRecordException('Activity not found', status: 404);
+    }
+    if (!_canAddActivities(society)) {
+      throw const SocietyRecordException(
+        'You can view this work plan but cannot add or change its activities',
+        status: 403,
+      );
+    }
+    final existing = society.workPlan[index];
+    if (existing.status == ActivityStatus.approved) {
+      throw const SocietyRecordException(
+        'This activity is already approved and can no longer be changed',
+        status: 409,
+      );
+    }
+    _checkActivity(input);
+    final activity = _fromInput(
+      activityId,
+      input,
+      createdBy: existing.createdBy,
+    );
+    society.workPlan = [...society.workPlan]..[index] = activity;
+    return _detail(society, activity);
+  }
+
+  @override
+  Future<ActivityDetail> fetchActivity(String activityId) async {
+    await _wait();
+    final found = _findActivity(activityId);
+    return _detail(found.society, found.society.workPlan[found.index]);
+  }
+
+  @override
+  Future<ActivityQueue> fetchActivityQueue() async {
+    await _wait();
+    if (!_hasRole(UserRole.programmeCoordinator)) {
+      throw const SocietyRecordException(
+        'Only SPCs approve activities',
+        status: 403,
+      );
+    }
+    final since = clock().subtract(const Duration(days: 30));
+    ActivityQueueItem item(_DemoSociety society, WorkPlanActivity a) =>
+        ActivityQueueItem(
+          id: a.id,
+          name: a.name,
+          status: a.status,
+          year: a.year,
+          month: a.month,
+          societyId: society.id,
+          societyName: society.name,
+          totalParticipants: a.totalParticipants,
+          householdsBenefited: a.householdsBenefited,
+          sentBy: a.createdBy,
+          submittedAt: a.submittedAt,
+          sdgs: a.sdgs,
+          approvedAt: a.status == ActivityStatus.approved ? a.reviewedAt : null,
+        );
+    final mine = [for (final id in _signedIn.societyIds) ?_societies[id]];
+    final waiting =
+        [
+          for (final society in mine)
+            for (final a in society.workPlan)
+              if (a.status == ActivityStatus.waitingForSpc) item(society, a),
+        ]..sort(
+          (a, b) =>
+              (a.submittedAt ?? clock()).compareTo(b.submittedAt ?? clock()),
+        );
+    final approved = [
+      for (final society in mine)
+        for (final a in society.workPlan)
+          if (a.status == ActivityStatus.approved &&
+              (a.reviewedAt?.isAfter(since) ?? false))
+            item(society, a),
+    ]..sort((a, b) => b.approvedAt!.compareTo(a.approvedAt!));
+    return ActivityQueue(
+      waiting: waiting,
+      approvedRecently: approved.take(20).toList(),
+      societyCount: _signedIn.societyIds.length,
+    );
+  }
+
+  WorkPlanActivity _decide(
+    WorkPlanActivity a, {
+    required ActivityStatus status,
+    List<int> sdgs = const [],
+    String? comment,
+  }) => WorkPlanActivity(
+    id: a.id,
+    year: a.year,
+    month: a.month,
+    name: a.name,
+    description: a.description,
+    allocatedCost: a.allocatedCost,
+    sector: a.sector,
+    datesLabel: a.datesLabel,
+    status: status,
+    dimension: a.dimension,
+    sdgs: sdgs,
+    femaleParticipants: a.femaleParticipants,
+    maleParticipants: a.maleParticipants,
+    youthParticipants: a.youthParticipants,
+    householdsBenefited: a.householdsBenefited,
+    womenHeadedHouseholds: a.womenHeadedHouseholds,
+    partners: a.partners,
+    resourcesNeeded: a.resourcesNeeded,
+    volunteerHours: a.volunteerHours,
+    createdBy: a.createdBy,
+    submittedAt: a.submittedAt,
+    reviewedBy: _actor,
+    reviewedAt: clock(),
+    reviewComment: comment,
+  );
+
+  ({_DemoSociety society, int index}) _reviewable(String activityId) {
+    final found = _findActivity(activityId);
+    if (!_canReviewActivities(found.society)) {
+      throw const SocietyRecordException(
+        "Only the society's SPC can approve activities and choose their UN SDGs",
+        status: 403,
+      );
+    }
+    if (found.society.workPlan[found.index].status !=
+        ActivityStatus.waitingForSpc) {
+      throw const SocietyRecordException(
+        'This activity is no longer waiting for approval',
+        status: 409,
+      );
+    }
+    return found;
+  }
+
+  @override
+  Future<ActivityDetail> approveActivity(
+    String activityId,
+    List<int> sdgs,
+  ) async {
+    await _wait();
+    if (sdgs.isEmpty) {
+      throw const SocietyRecordException(
+        'Choose at least one UN SDG to approve',
+        status: 400,
+      );
+    }
+    if (sdgs.any((sdg) => sdg < 1 || sdg > 17)) {
+      throw const SocietyRecordException(
+        'Each UN SDG is a number from 1 to 17',
+        status: 400,
+      );
+    }
+    final found = _reviewable(activityId);
+    final sorted = sdgs.toSet().toList()..sort();
+    final activity = _decide(
+      found.society.workPlan[found.index],
+      status: ActivityStatus.approved,
+      sdgs: sorted,
+    );
+    found.society.workPlan = [...found.society.workPlan]
+      ..[found.index] = activity;
+    found.society.history.insert(
+      0,
+      _event(
+        'WORK_PLAN',
+        'Activity “${activity.name}” approved by the SPC · UN SDG ${sorted.join(', ')}',
+        _actor,
+        clock(),
+      ),
+    );
+    return _detail(found.society, activity);
+  }
+
+  @override
+  Future<ActivityDetail> sendBackActivity(
+    String activityId, {
+    String? comment,
+  }) async {
+    await _wait();
+    final found = _reviewable(activityId);
+    final note = comment?.trim();
+    final activity = _decide(
+      found.society.workPlan[found.index],
+      status: ActivityStatus.sentBack,
+      comment: (note?.isEmpty ?? true) ? null : note,
+    );
+    found.society.workPlan = [...found.society.workPlan]
+      ..[found.index] = activity;
+    return _detail(found.society, activity);
+  }
+
+  @override
+  Future<RegistrarDocuments> fetchRegistrarDocuments(
+    String id, {
+    int? year,
+  }) async {
+    await _wait();
+    final society = _visible(id);
+    final startYear = year ?? latestYear;
+    final label = FinancialYear.starting(startYear).label;
+    final reviewer =
+        _hasRole(UserRole.hqAdmin) || _hasRole(UserRole.districtManager);
+    RegistrarDocument? latest(String type) {
+      final doc = society.documents
+          .where((d) => d.documentType == type && d.financialYearLabel == label)
+          .firstOrNull;
+      if (doc == null) return null;
+      return RegistrarDocument(
+        id: doc.id,
+        fileName: doc.fileName,
+        sizeBytes: doc.sizeBytes,
+        version: 1,
+        uploadedAt: doc.uploadedAt ?? clock(),
+        uploadedBy: ActorRef(doc.uploadedBy, doc.uploadedByRole),
+        canOpen: type != 'MEMBERS_LIST' || reviewer,
+      );
+    }
+
+    return RegistrarDocuments(
+      startYear: startYear,
+      yearLabel: label,
+      documents: {
+        for (final type in registrarDocumentTypes) type: latest(type),
+      },
     );
   }
 
@@ -814,18 +1213,30 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
   }
 
   @override
-  Future<RecordDocument> uploadAuditReport(
+  Future<RecordDocument> uploadDocument(
     String id, {
-    required int financialYear,
+    required String documentType,
     required PickedDocument file,
+    int? financialYear,
+    String? title,
     void Function(double progress)? onProgress,
   }) async {
     await _wait();
     final society = _visible(id);
-    if (!_canEditSummary(society)) {
-      throw const SocietyRecordException(
-        "Only the society's Society Officer or assigned SPC can upload the audit report",
+    final isAudit = documentType == 'AUDIT_REPORT';
+    if (isAudit ? !_canEditSummary(society) : !_signedIn.canEditSociety(id)) {
+      throw SocietyRecordException(
+        isAudit
+            ? "Only the society's Society Officer or assigned SPC can upload the audit report"
+            : 'You can view this society but cannot add documents to it',
         status: 403,
+      );
+    }
+    final yearly = registrarDocumentTypes.contains(documentType);
+    if (yearly && financialYear == null) {
+      throw const SocietyRecordException(
+        'Choose the financial year',
+        status: 400,
       );
     }
     for (var step = 1; step <= 10; step++) {
@@ -836,17 +1247,36 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       }
       onProgress?.call(step / 10);
     }
-    final document = _auditReport(financialYear, file.name, _actor, clock());
+    final label = documentTypeLabels[documentType] ?? 'Document';
+    final document = isAudit
+        ? _auditReport(financialYear!, file.name, _actor, clock())
+        : _document(
+            documentType,
+            yearly
+                ? '$label ${FinancialYear.starting(financialYear!).label}'
+                : (title ?? label),
+            _actor,
+            clock(),
+            financialYear: financialYear,
+            fileName: file.name,
+            sizeBytes: file.sizeBytes,
+          );
     society.documents
       ..removeWhere(
         (existing) =>
-            existing.documentType == 'AUDIT_REPORT' &&
+            yearly &&
+            existing.documentType == documentType &&
             existing.financialYearLabel == document.financialYearLabel,
       )
       ..insert(0, document);
     society.history.insert(
       0,
-      _event('ANNUAL_SUMMARY', '${document.title} uploaded', _actor, clock()),
+      _event(
+        isAudit ? 'ANNUAL_SUMMARY' : 'DOCUMENTS',
+        '${document.title} uploaded',
+        _actor,
+        clock(),
+      ),
     );
     return document;
   }

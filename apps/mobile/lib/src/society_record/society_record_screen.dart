@@ -8,7 +8,8 @@ import '../theme/app_theme.dart';
 import '../widgets/map_preview.dart';
 import '../widgets/state_views.dart';
 import 'annual_summary_screen.dart';
-import 'audit_report_upload_screen.dart';
+import 'document_upload_screen.dart';
+import 'work_plan_view.dart';
 import 'edit_society_screen.dart';
 import 'grade_change_request_screen.dart';
 import 'grade_requests_screen.dart';
@@ -190,7 +191,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                           child: _OverviewTab(record: record, open: _open),
                         ),
                         _ExcoTab(record: record, open: _open),
-                        _WorkPlanTab(societyId: record.id),
+                        _WorkPlanTab(record: record),
                         _DocumentsTab(record: record, open: _open),
                         _HistoryTab(societyId: record.id),
                       ],
@@ -769,8 +770,12 @@ class _AnnualSummaryCard extends StatelessWidget {
               if (report == null && permissions.canUploadAuditReport)
                 OutlinedButton.icon(
                   style: compactOutlinedStyle,
-                  onPressed: () =>
-                      open(AuditReportUploadScreen(record: record)),
+                  onPressed: () => open(
+                    DocumentUploadScreen(
+                      record: record,
+                      documentType: 'AUDIT_REPORT',
+                    ),
+                  ),
                   icon: const Icon(Icons.upload_outlined, size: 15),
                   label: const Text('Upload audit report'),
                 ),
@@ -1052,153 +1057,31 @@ class _AsyncTabState<T> extends State<_AsyncTab<T>>
   }
 }
 
-const _months = [
-  'January', 'February', 'March', 'April', 'May', 'June', 'July', //
-  'August', 'September', 'October', 'November', 'December',
-];
-
 class _WorkPlanTab extends StatelessWidget {
-  const _WorkPlanTab({required this.societyId});
+  const _WorkPlanTab({required this.record});
 
-  final String societyId;
+  final SocietyRecord record;
 
   @override
   Widget build(BuildContext context) => _AsyncTab<WorkPlan>(
-    load: (api) => api.fetchWorkPlan(societyId),
+    load: (api) => api.fetchWorkPlan(record.id),
     loadingLabel: 'Loading the work plan',
     errorTitle: "Couldn't load the work plan",
-    builder: (context, plan, _) => ListView(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-      children: [
-        const RecordNote(
-          icon: Icons.info_outline,
-          tone: NoteTone.warning,
-          dashed: true,
-          title: 'Activity planning only',
-          message: 'Costs are planned allocations for each activity. They are not payments or accounts — no loans, savings or transactions are kept.',
-        ),
-        const SizedBox(height: 10),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: RecordCard(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    const Text('Activities planned', style: RecordStyle.label),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${plan.activities.length}',
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.pine,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: RecordCard(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    const Text(
-                      'Allocated (planning)',
-                      style: RecordStyle.label,
-                    ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        formatLkr(plan.totalAllocated),
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.pine,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (plan.activities.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: Text(
-              'No activities planned for ${plan.year} yet.',
-              textAlign: TextAlign.center,
-              style: RecordStyle.body,
-            ),
-          )
-        else
-          for (final month in {for (final a in plan.activities) a.month}) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(2, 10, 2, 6),
-              child: Text(
-                _months[month - 1].toUpperCase(),
-                style: RecordStyle.sectionLabel,
-              ),
-            ),
-            for (final activity in plan.activities.where(
-              (a) => a.month == month,
-            ))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: RecordCard(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(activity.name, style: RecordStyle.value),
-                              if (activity.datesLabel != null ||
-                                  activity.sector != null)
-                                Text(
-                                  [
-                                    ?activity.datesLabel,
-                                    ?activity.sector,
-                                  ].join(' · '),
-                                  style: RecordStyle.caption,
-                                ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          formatLkr(activity.allocatedCost),
-                          style: RecordStyle.value,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-          ],
-      ],
+    builder: (context, plan, reload) => WorkPlanView(
+      plan: plan,
+      societyId: record.id,
+      societyName: record.nameEn,
+      spcName: record.staff
+          .where((member) => member.role == UserRole.programmeCoordinator)
+          .firstOrNull
+          ?.displayName,
+      reload: reload,
     ),
   );
 }
 
-const _annualTypes = [
-  ('AGM_MINUTES', 'AGM minutes'),
-  ('OFFICE_BEARER_LIST', 'Office-bearer list'),
-  ('MEMBERS_LIST', 'Signed members list'),
-];
-
-/// M13 documents: the audit report with its year and uploader, the other
-/// annual documents, then every society file.
+/// M13 documents: the four annual Registrar documents for the year, then
+/// every society file.
 class _DocumentsTab extends StatelessWidget {
   const _DocumentsTab({required this.record, required this.open});
 
@@ -1208,129 +1091,73 @@ class _DocumentsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DemoScope.of(context).now;
-    return _AsyncTab<List<RecordDocument>>(
-      load: (api) => api.fetchDocuments(record.id),
+    final canUpload = uploadableDocumentTypes(record.permissions).isNotEmpty;
+    return _AsyncTab<(RegistrarDocuments, List<RecordDocument>)>(
+      load: (api) async => (
+        await api.fetchRegistrarDocuments(record.id),
+        await api.fetchDocuments(record.id),
+      ),
       loadingLabel: 'Loading documents',
       errorTitle: "Couldn't load documents",
-      builder: (context, documents, reload) {
-        final year = record.annualSummary.financialYear;
-        final audit = documents
-            .where(
-              (d) =>
-                  d.documentType == 'AUDIT_REPORT' &&
-                  d.financialYearLabel == year.label,
-            )
-            .firstOrNull;
-        RecordDocument? latest(String type) => documents
-            .where(
-              (d) => d.documentType == type && d.uploadedAt?.year == now.year,
-            )
-            .firstOrNull;
-        String uploader(RecordDocument document) =>
-            '${document.uploadedBy}${document.uploadedByRole == null ? '' : ' (${document.uploadedByRole!.recordLabel})'}';
-        final annual = [
-          (
-            'Audit report · ${year.label}',
-            audit,
-            audit == null
-                ? 'Not uploaded yet'
-                : '${audit.fileName} · ${formatFileSize(audit.sizeBytes)}\nUploaded ${formatDate(audit.uploadedAt!)} by ${uploader(audit)}',
-          ),
-          for (final (type, label) in _annualTypes)
-            (
-              '$label ${now.year}',
-              latest(type),
-              latest(type) == null
-                  ? (type == 'MEMBERS_LIST'
-                        ? 'Only the DM and HQ can open this file'
-                        : 'Not uploaded yet')
-                  : 'Uploaded ${formatWhen(latest(type)!.uploadedAt!, now)} by ${latest(type)!.uploadedBy}',
-            ),
-        ];
-        final uploaded = annual.where((row) => row.$2 != null).length;
+      builder: (context, data, reload) {
+        final (registrar, documents) = data;
+        final annualIds = {
+          for (final document in registrar.documents.values) ?document?.id,
+        };
         final others = documents
-            .where((d) => !annual.any((row) => row.$2?.id == d.id))
+            .where((d) => !annualIds.contains(d.id))
             .toList();
         return ListView(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
           children: [
-            if (record.permissions.canUploadAuditReport)
+            if (canUpload) ...[
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
                   style: compactFilledStyle,
                   onPressed: () async {
-                    await open(AuditReportUploadScreen(record: record));
+                    await open(DocumentUploadScreen(record: record));
                     reload();
                   },
                   icon: const Icon(Icons.upload_outlined, size: 15),
                   label: const Text('Upload'),
                 ),
               ),
-            if (record.permissions.canUploadAuditReport)
               const SizedBox(height: 8),
+            ],
             RecordCard(
               color: const Color(0xFFF3F8F3),
               children: [
                 Text(
-                  'Annual documents · ${now.year}',
+                  'Annual documents · ${registrar.yearLabel}',
                   style: RecordStyle.cardTitle,
                 ),
                 Text(
-                  '$uploaded of ${annual.length} uploaded',
+                  '${registrar.submitted} of ${registrarDocumentTypes.length} uploaded',
                   style: RecordStyle.caption,
                 ),
                 const SizedBox(height: 8),
-                for (final (index, row) in annual.indexed)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: index == 0 && row.$2 != null
-                          ? const Color(0xFFE4F1E6)
-                          : AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.line),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundColor: AppColors.mint,
-                          child: Text(
-                            '${index + 1}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.forest,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(row.$1, style: RecordStyle.value),
-                              Text(row.$3, style: RecordStyle.caption),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        row.$2 != null
-                            ? const RecordChip(
-                                'Uploaded',
-                                tone: ChipTone.success,
-                              )
-                            : row.$3.startsWith('Only the DM')
-                            ? const RecordChip('Restricted')
-                            : const RecordChip(
-                                'Missing',
-                                tone: ChipTone.danger,
+                for (final (index, type) in registrarDocumentTypes.indexed)
+                  _RegistrarRow(
+                    number: index + 1,
+                    type: type,
+                    document: registrar.documents[type],
+                    now: now,
+                    onUpload:
+                        canUpload &&
+                            uploadableDocumentTypes(record.permissions)
+                                .contains(type)
+                        ? () async {
+                            await open(
+                              DocumentUploadScreen(
+                                record: record,
+                                documentType: type,
+                                financialYear: registrar.startYear,
                               ),
-                      ],
-                    ),
+                            );
+                            reload();
+                          }
+                        : null,
                   ),
               ],
             ),
@@ -1349,8 +1176,10 @@ class _DocumentsTab extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.insert_drive_file_outlined,
+                          Icon(
+                            document.documentType == 'ACTIVITY_EVIDENCE'
+                                ? Icons.photo_outlined
+                                : Icons.insert_drive_file_outlined,
                             size: 18,
                             color: AppColors.inkSoft,
                           ),
@@ -1362,7 +1191,10 @@ class _DocumentsTab extends StatelessWidget {
                                 Text(document.title, style: RecordStyle.value),
                                 Text(
                                   [
-                                    document.financialYearLabel ?? 'PDF',
+                                    document.financialYearLabel ??
+                                        documentTypeLabels[document
+                                            .documentType] ??
+                                        'Document',
                                     if (document.uploadedAt != null)
                                       formatDate(document.uploadedAt!),
                                   ].join(' · '),
@@ -1370,11 +1202,6 @@ class _DocumentsTab extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: AppColors.muted,
                           ),
                         ],
                       ),
@@ -1391,6 +1218,83 @@ class _DocumentsTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// One of the four Registrar documents: uploaded with who and when, or
+/// "Not submitted".
+class _RegistrarRow extends StatelessWidget {
+  const _RegistrarRow({
+    required this.number,
+    required this.type,
+    required this.document,
+    required this.now,
+    this.onUpload,
+  });
+
+  final int number;
+  final String type;
+  final RegistrarDocument? document;
+  final DateTime now;
+  final VoidCallback? onUpload;
+
+  @override
+  Widget build(BuildContext context) {
+    final document = this.document;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: document != null ? const Color(0xFFE4F1E6) : AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 10,
+            backgroundColor: AppColors.mint,
+            child: Text(
+              '$number',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.forest,
+              ),
+            ),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(documentTypeLabels[type]!, style: RecordStyle.value),
+                Text(
+                  document == null
+                      ? 'Not submitted'
+                      : '${document.fileName} · ${formatFileSize(document.sizeBytes)}\nUploaded ${formatWhen(document.uploadedAt, now)} by ${document.uploadedBy.label}${document.canOpen ? '' : '\nOnly the DM and HQ can open this file'}',
+                  style: RecordStyle.caption,
+                ),
+                if (document == null && onUpload != null)
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                    ),
+                    onPressed: onUpload,
+                    child: const Text('Upload'),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          document != null
+              ? const RecordChip('Uploaded', tone: ChipTone.success)
+              : const RecordChip('Not submitted', tone: ChipTone.danger),
+        ],
+      ),
     );
   }
 }

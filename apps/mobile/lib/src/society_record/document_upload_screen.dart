@@ -9,36 +9,52 @@ import 'society_record_api.dart';
 import 'society_record_models.dart';
 
 /// Matches the API upload rules: PDF, JPG or PNG, up to 10 MB.
-const maxAuditReportBytes = 10000000;
+const maxDocumentBytes = 10000000;
 const _allowedTypes = {'application/pdf', 'image/jpeg', 'image/png'};
 
 /// Plain-language problem with a chosen file, or null when it can be sent.
-String? validateAuditReport(PickedDocument file) {
+String? validateDocument(PickedDocument file) {
   if (!_allowedTypes.contains(file.contentType)) {
     return 'Choose a PDF or a photo (JPG or PNG).';
   }
   if (file.sizeBytes == 0) return 'This file is empty. Choose another file.';
-  if (file.sizeBytes > maxAuditReportBytes) {
+  if (file.sizeBytes > maxDocumentBytes) {
     return 'This file is ${formatFileSize(file.sizeBytes)}. Choose a file up to 10 MB.';
   }
   return null;
 }
 
-/// M13a: choose the financial year and the file. The uploader and upload
-/// date are recorded; the file is kept privately with the society record.
-class AuditReportUploadScreen extends StatefulWidget {
-  const AuditReportUploadScreen({
+/// The document types the signed-in person may upload, in V5 order: the
+/// audit report only for the Society Officer or assigned SPC.
+List<String> uploadableDocumentTypes(RecordPermissions permissions) => [
+  if (permissions.canUploadAuditReport) 'AUDIT_REPORT',
+  if (permissions.canUploadDocuments) ...[
+    'AGM_MINUTES',
+    'OFFICE_BEARER_LIST',
+    'MEMBERS_LIST',
+    'REGISTRATION',
+    'ACTIVITY_EVIDENCE',
+    'OTHER',
+  ],
+];
+
+/// M13a: choose the document type, the financial year (for the four
+/// Registrar documents) and the file. The uploader and date are recorded;
+/// the file goes to private storage with its checksum.
+class DocumentUploadScreen extends StatefulWidget {
+  const DocumentUploadScreen({
     super.key,
     required this.record,
+    this.documentType,
     this.financialYear,
   });
 
   final SocietyRecord record;
+  final String? documentType;
   final int? financialYear;
 
   @override
-  State<AuditReportUploadScreen> createState() =>
-      _AuditReportUploadScreenState();
+  State<DocumentUploadScreen> createState() => _DocumentUploadScreenState();
 }
 
 const _dense = InputDecoration(
@@ -46,10 +62,25 @@ const _dense = InputDecoration(
   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
 );
 
-class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
+class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
+  late final _types = uploadableDocumentTypes(widget.record.permissions);
+  late String _type = _types.contains(widget.documentType)
+      ? widget.documentType!
+      : _types.first;
   late int _year =
       widget.financialYear ??
       widget.record.annualSummary.financialYear.startYear;
+  final _title = TextEditingController();
+
+  bool get _yearly => registrarDocumentTypes.contains(_type);
+  String get _label => documentTypeLabels[_type] ?? 'Document';
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
   PickedDocument? _file;
   String? _fileError;
   String? _uploadError;
@@ -67,7 +98,7 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
     if (!mounted || file == null) return;
     setState(() {
       _file = file;
-      _fileError = validateAuditReport(file);
+      _fileError = validateDocument(file);
       _uploadError = null;
     });
   }
@@ -79,11 +110,14 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
     });
     final file = _file;
     if (file == null || _fileError != null) return;
+    if (!_yearly && _title.text.trim().isEmpty) return;
     setState(() => _progress = 0);
     try {
-      await DemoScope.read(context).societyRecords.uploadAuditReport(
+      await DemoScope.read(context).societyRecords.uploadDocument(
         widget.record.id,
-        financialYear: _year,
+        documentType: _type,
+        financialYear: _yearly ? _year : null,
+        title: _yearly ? null : _title.text.trim(),
         file: file,
         onProgress: (progress) {
           if (mounted) setState(() => _progress = progress);
@@ -91,9 +125,9 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Audit report uploaded. HQ can open it from the society record.',
+            '$_label uploaded. HQ can open it from the society record.',
           ),
         ),
       );
@@ -118,7 +152,9 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
     return Scaffold(
       appBar: recordFormAppBar(
         context,
-        title: 'Upload audit report',
+        title: _type == 'AUDIT_REPORT'
+            ? 'Upload audit report'
+            : 'Upload document',
         subtitle: '${widget.record.nameEn} · Documents',
         onClose: uploading ? () {} : null,
       ),
@@ -127,37 +163,61 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
         children: [
           const FieldLabel('Document type', required: true),
           DropdownButtonFormField<String>(
-            initialValue: 'AUDIT_REPORT',
-            isExpanded: true,
-            style: recordInputStyle,
-            decoration: _dense,
-            // Only audit reports are uploaded here (M13a).
-            items: const [
-              DropdownMenuItem(
-                value: 'AUDIT_REPORT',
-                child: Text('Audit report', style: recordInputStyle),
-              ),
-            ],
-            onChanged: (_) {},
-          ),
-          const SizedBox(height: 12),
-          const FieldLabel('Financial year', required: true),
-          DropdownButtonFormField<int>(
-            initialValue: _year,
+            initialValue: _type,
             isExpanded: true,
             style: recordInputStyle,
             decoration: _dense,
             items: [
-              for (final year in _years)
+              for (final type in _types)
                 DropdownMenuItem(
-                  value: year.startYear,
-                  child: Text(year.label),
+                  value: type,
+                  child: Text(
+                    documentTypeLabels[type] ?? type,
+                    style: recordInputStyle,
+                  ),
                 ),
             ],
             onChanged: uploading
                 ? null
-                : (year) => setState(() => _year = year ?? _year),
+                : (type) => setState(() => _type = type ?? _type),
           ),
+          const SizedBox(height: 12),
+          if (!_yearly) ...[
+            const FieldLabel('Name', required: true),
+            TextField(
+              controller: _title,
+              enabled: !uploading,
+              maxLength: 150,
+              style: recordInputStyle,
+              decoration: _dense.copyWith(
+                hintText: 'For example Registration certificate',
+                counterText: '',
+                errorText: _submitted && _title.text.trim().isEmpty
+                    ? 'Give the document a name.'
+                    : null,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (_yearly) const FieldLabel('Financial year', required: true),
+          if (_yearly)
+            DropdownButtonFormField<int>(
+              initialValue: _year,
+              isExpanded: true,
+              style: recordInputStyle,
+              decoration: _dense,
+              items: [
+                for (final year in _years)
+                  DropdownMenuItem(
+                    value: year.startYear,
+                    child: Text(year.label),
+                  ),
+              ],
+              onChanged: uploading
+                  ? null
+                  : (year) => setState(() => _year = year ?? _year),
+            ),
           const SizedBox(height: 12),
           const FieldLabel('File', required: true),
           Semantics(
@@ -195,14 +255,22 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
                               ),
                             if (uploading) ...[
                               const SizedBox(height: 7),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(3),
-                                child: LinearProgressIndicator(
-                                  value: _progress,
-                                  minHeight: 5,
-                                  color: AppColors.forest,
-                                  backgroundColor: AppColors.mint,
-                                ),
+                              // A real loading state: a small spinner and text, no bar.
+                              const Row(
+                                children: [
+                                  SizedBox.square(
+                                    dimension: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.forest,
+                                    ),
+                                  ),
+                                  SizedBox(width: 7),
+                                  Text(
+                                    'Uploading…',
+                                    style: RecordStyle.caption,
+                                  ),
+                                ],
                               ),
                             ],
                           ],
@@ -229,7 +297,7 @@ class _AuditReportUploadScreenState extends State<AuditReportUploadScreen> {
           Text(
             _fileError ??
                 (_submitted && file == null
-                    ? 'Choose the audit report file.'
+                    ? 'Choose the file to upload.'
                     : 'PDF or photo, up to 10 MB. You need a connection to upload.'),
             style: _fileError != null || (_submitted && file == null)
                 ? RecordStyle.caption.copyWith(

@@ -135,7 +135,17 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
+          if (_loading)
+            const Row(
+              children: [
+                SizedBox.square(
+                  dimension: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('Refreshing…'),
+              ],
+            ),
           _SocietySummaryCard(
             record: record,
             plan: plan,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/annual_summary_screen.dart';
-import 'package:sarvodaya_connect_mobile/src/society_record/audit_report_upload_screen.dart';
+import 'package:sarvodaya_connect_mobile/src/society_record/document_upload_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/document_picker.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/record_widgets.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/society_record_models.dart';
@@ -320,11 +320,14 @@ void main() {
       await _openRecord(tester, role: UserRole.districtManager);
       await _tapText(tester, 'Documents');
 
-      expect(find.text('Audit report · FY 2025/26'), findsOneWidget);
+      expect(find.text('Annual documents · FY 2025/26'), findsOneWidget);
+      expect(find.text('Audit report'), findsOneWidget);
       expect(
         find.textContaining('Nimali Wijesinghe (Society Officer)'),
         findsWidgets,
       );
+      // The members list was not uploaded for the year.
+      expect(find.text('Not submitted'), findsWidgets);
       // The District Manager views documents but cannot upload.
       expect(find.widgetWithText(FilledButton, 'Upload'), findsNothing);
     });
@@ -344,7 +347,7 @@ void main() {
 
       await tester.tap(find.widgetWithText(FilledButton, 'Upload'));
       await tester.pumpAndSettle();
-      expect(find.text('Choose the audit report file.'), findsOneWidget);
+      expect(find.text('Choose the file to upload.'), findsOneWidget);
 
       await tester.tap(find.text('Choose a PDF or photo'));
       await tester.pumpAndSettle();
@@ -370,7 +373,7 @@ void main() {
         picker: _FixedPicker(
           PickedDocument(
             name: 'scan.pdf',
-            bytes: List<int>.filled(maxAuditReportBytes + 1, 0),
+            bytes: List<int>.filled(maxDocumentBytes + 1, 0),
             contentType: 'application/pdf',
           ),
         ),
@@ -383,7 +386,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        validateAuditReport(
+        validateDocument(
           const PickedDocument(
             name: 'notes.docx',
             bytes: [1],

@@ -194,26 +194,52 @@ describe("D05x Exco", () => {
 });
 
 describe("D05w work plan", () => {
+  const plan: WorkPlan = {
+    societyId: SOCIETY_ID,
+    year: 2027,
+    totalAllocated: 80000,
+    counts: { planned: 2, approved: 1, waiting: 1, sentBack: 0 },
+    permissions: { canAddActivities: true },
+    activities: [
+      { id: "a", year: 2027, month: 1, name: "Tank cleaning shramadana", description: "Clear the tank.", sector: "Environment", allocatedCost: 25000, status: "APPROVED", sdgs: [6, 15] },
+      { id: "b", year: 2027, month: 9, name: "Youth leadership camp", description: "Three-day camp.", datesLabel: "12–14 Sep", allocatedCost: 55000, status: "WAITING_FOR_SPC", sdgs: [] },
+    ],
+    lastChange: { at: "2026-10-18T04:00:00.000Z", by: { displayName: "S. Karunaratne", role: "PROGRAMME_COORDINATOR" } },
+  };
+
   it("lists activities by month with the planning-only notice and total", () => {
-    const plan: WorkPlan = {
-      societyId: SOCIETY_ID,
-      year: 2027,
-      totalAllocated: 80000,
-      activities: [
-        { id: "a", year: 2027, month: 1, name: "Tank cleaning shramadana", description: "Clear the tank.", sector: "10 · Environment", allocatedCost: 25000 },
-        { id: "b", year: 2027, month: 9, name: "Youth leadership camp", description: "Three-day camp.", datesLabel: "12–14 Sep", allocatedCost: 55000 },
-      ],
-      lastChange: { at: "2026-10-18T04:00:00.000Z", by: { displayName: "S. Karunaratne", role: "PROGRAMME_COORDINATOR" } },
-    };
-    render(<WorkPlanOverview plan={plan} />);
+    render(<WorkPlanOverview plan={plan} societyId={SOCIETY_ID} />);
     expect(screen.getByText("Activity planning only")).toBeInTheDocument();
     expect(screen.getByText("Total allocated for planning: LKR 80,000")).toBeInTheDocument();
     expect(screen.getByText("Last changed by S. Karunaratne (SPC) · 18 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText("12–14 Sep")).toBeInTheDocument();
   });
 
+  it("shows each activity's SPC status and UN SDGs, and counts only approved ones", () => {
+    render(<WorkPlanOverview plan={plan} societyId={SOCIETY_ID} />);
+    expect(screen.getByText("Approved")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for SPC")).toBeInTheDocument();
+    expect(screen.getByText("Clean water and sanitation")).toBeInTheDocument();
+    expect(screen.getByText("Life on land")).toBeInTheDocument();
+    expect(screen.getByText(/1 approved by the SPC · 1 waiting/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "+ Add activity" })).toHaveAttribute(
+      "href",
+      `/societies/${SOCIETY_ID}/work-plan/new?year=2027`,
+    );
+  });
+
+  it("hides Add activity from people who only view", () => {
+    render(<WorkPlanOverview plan={{ ...plan, permissions: { canAddActivities: false } }} societyId={SOCIETY_ID} />);
+    expect(screen.queryByRole("link", { name: "+ Add activity" })).not.toBeInTheDocument();
+  });
+
   it("shows an empty plan plainly", () => {
-    render(<WorkPlanOverview plan={{ societyId: SOCIETY_ID, year: 2027, totalAllocated: 0, activities: [] }} />);
+    render(
+      <WorkPlanOverview
+        plan={{ societyId: SOCIETY_ID, year: 2027, totalAllocated: 0, activities: [], counts: { planned: 0, approved: 0, waiting: 0, sentBack: 0 }, permissions: { canAddActivities: false } }}
+        societyId={SOCIETY_ID}
+      />,
+    );
     expect(screen.getByText(/No activities are planned for 2027 yet/)).toBeInTheDocument();
   });
 });

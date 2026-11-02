@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   LocalDocumentStorage,
+  UploadChecksumMismatchError,
   UploadSizeMismatchError,
 } from './local-document-storage.js';
 
@@ -102,6 +104,22 @@ describe('LocalDocumentStorage', () => {
       'societies/29000000-0000-4000-8000-000000000101/documents',
     );
     expect(await readdir(folder)).toEqual([]);
+  });
+
+  it('refuses an upload whose SHA-256 does not match, like S3 does', async () => {
+    const body = Buffer.from('%PDF-');
+    const checksum = createHash('sha256').update(body).digest('base64');
+    await expect(
+      storage.writeObject(
+        KEY,
+        Readable.from([Buffer.from('%PDX-')]),
+        5,
+        checksum,
+      ),
+    ).rejects.toBeInstanceOf(UploadChecksumMismatchError);
+    expect(await storage.getObjectInfo(KEY)).toBeNull();
+    await storage.writeObject(KEY, Readable.from([body]), 5, checksum);
+    expect(await storage.getObjectInfo(KEY)).toEqual({ sizeBytes: 5 });
   });
 
   it('refuses keys that could escape the storage folder', async () => {

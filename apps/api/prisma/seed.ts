@@ -100,26 +100,52 @@ const demoGradeRequest = {
   requestedByRole: 'PROGRAMME_COORDINATOR',
   requestedAt: new Date('2026-10-24T10:10:00.000Z'),
 } as const;
+// V5 PR 4: five approved activities with the SPC's UN SDGs and one waiting for the SPC.
 const demoWorkPlan = [
-  [1, 'Tank cleaning shramadana', 'Clear the village tank before the Yala season, with all households.', '10 · Environment', null, 25000],
-  [2, "Pre-school parents' meeting", 'Meeting with parents about the pre-school timetable and meals.', '2 · Child wellbeing', null, 8000],
-  [3, 'Clean-water awareness day', 'Session on boiling water and keeping wells clean.', '6 · Health', null, 15000],
-  [3, 'Home-garden seed sharing', 'Members share seeds and plant home gardens together.', '9 · Agriculture', null, 12000],
-  [4, 'New Year community festival', 'Traditional games and a shared meal for the whole village.', '1 · Community', null, 30000],
-  [9, 'Youth leadership camp', 'Three-day camp for 40 young people.', '1 · Community', '12–14 Sep', 55000],
-].map(([month, name, description, sector, datesLabel, allocatedCost], index) => ({
-  id: `29000000-0000-4000-8000-${String(621 + index).padStart(12, '0')}`,
-  societyId: societyData[0].id,
-  year: 2027,
-  month: month as number,
-  name: name as string,
-  description: description as string,
-  sector: sector as string,
-  datesLabel: datesLabel as string | null,
-  allocatedCost: allocatedCost as number,
-  updatedByName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
-  updatedByRole: 'PROGRAMME_COORDINATOR',
-}));
+  [1, 'Tank cleaning shramadana', 'Clear the village tank before the Yala season, with all households.', 'Environment', 'SOCIAL', null, 25000, [6, 15], [40, 35, 18, 120, 22]],
+  [2, "Pre-school parents' meeting", 'Meeting with parents about the pre-school timetable and meals.', 'Child wellbeing', 'SOCIAL', null, 8000, [4], [26, 9, 0, 30, 8]],
+  [3, 'Clean-water awareness day', 'Session on boiling water and keeping wells clean.', 'Health and nutrition', 'SOCIAL', null, 15000, [3, 6], [52, 31, 20, 95, 17]],
+  [3, 'Home-garden seed sharing', 'Members share seeds and plant home gardens together.', 'Agriculture', 'ECONOMIC', null, 12000, [2], [33, 12, 6, 45, 14]],
+  [4, 'New Year community festival', 'Traditional games and a shared meal for the whole village.', 'Culture', 'SOCIAL', null, 30000, [11], [120, 104, 60, 210, 41]],
+  [9, 'Youth leadership camp', 'Three-day camp for 40 young people.', 'Community education', 'SOCIAL', '12–14 Sep', 55000, [], [24, 14, 12, 146, 31]],
+].map(([month, name, description, sector, dimension, datesLabel, allocatedCost, sdgs, people], index) => {
+  const [female, male, youth, households, womenHeaded] = people as number[];
+  const waiting = (sdgs as number[]).length === 0;
+  return {
+    sdgs: sdgs as number[],
+    row: {
+      id: `29000000-0000-4000-8000-${String(621 + index).padStart(12, '0')}`,
+      societyId: societyData[0].id,
+      year: 2027,
+      month: month as number,
+      name: name as string,
+      description: description as string,
+      sector: sector as string,
+      dimension: dimension as 'SOCIAL' | 'ECONOMIC',
+      datesLabel: datesLabel as string | null,
+      allocatedCost: allocatedCost as number,
+      status: waiting ? ('WAITING_FOR_SPC' as const) : ('APPROVED' as const),
+      femaleParticipants: female,
+      maleParticipants: male,
+      youthParticipants: youth,
+      householdsBenefited: households,
+      womenHeadedHouseholds: womenHeaded,
+      createdById: 'demo-officer-sunrise',
+      createdByName: 'Demo Officer (Fictional Sunrise Society)',
+      createdByRole: 'SOCIETY_OFFICER',
+      submittedAt: new Date(`2026-10-${String(10 + index).padStart(2, '0')}T03:50:00.000Z`),
+      ...(waiting
+        ? {}
+        : {
+            reviewedById: 'demo-programme-coordinator',
+            reviewedByName: 'Demo Programme Coordinator (Fictional Sunrise Society)',
+            reviewedAt: new Date(`2026-10-${String(18 + index).padStart(2, '0')}T04:00:00.000Z`),
+          }),
+      updatedByName: 'Demo Officer (Fictional Sunrise Society)',
+      updatedByRole: 'SOCIETY_OFFICER',
+    },
+  };
+});
 
 async function main() {
   await prisma.$transaction(async (tx) => {
@@ -146,8 +172,10 @@ async function main() {
     }
     await tx.annualFinancialSummary.upsert({ where: { id: demoAnnualSummary.id }, create: demoAnnualSummary, update: demoAnnualSummary });
     await tx.gradeChangeRequest.upsert({ where: { id: demoGradeRequest.id }, create: demoGradeRequest, update: {} });
-    for (const row of demoWorkPlan) {
+    for (const { row, sdgs } of demoWorkPlan) {
       await tx.workPlanActivity.upsert({ where: { id: row.id }, create: row, update: row });
+      await tx.workPlanActivitySdg.deleteMany({ where: { activityId: row.id } });
+      if (sdgs.length) await tx.workPlanActivitySdg.createMany({ data: sdgs.map((sdg) => ({ activityId: row.id, sdg })) });
     }
     await tx.emergencyIncident.upsert({
       where: { id: '29000000-0000-4000-8000-000000000501' },

@@ -139,6 +139,14 @@ void main() {
         expect(body, containsPair('documentType', 'AUDIT_REPORT'));
         expect(body, containsPair('financialYear', 2025));
         expect(body, containsPair('sizeBytes', 3));
+        // SHA-256 of [1, 2, 3] in base64: storage refuses any other file.
+        expect(
+          body,
+          containsPair(
+            'checksumSha256',
+            'A5BYxvLAy0ksUzsKTRTvd8wPeKvMztUofYShogEc+4E=',
+          ),
+        );
         expect(request.headers['authorization'], 'Bearer session');
         return http.Response(
           jsonEncode({
@@ -183,8 +191,9 @@ void main() {
       }),
     );
 
-    final document = await api.uploadAuditReport(
+    final document = await api.uploadDocument(
       _id,
+      documentType: 'AUDIT_REPORT',
       financialYear: 2025,
       file: const PickedDocument(
         name: 'audit.pdf',

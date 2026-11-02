@@ -10,7 +10,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,6 +27,7 @@ import {
 import { findDemoPrincipal } from '../../src/auth/demo-principals.js';
 import { NotificationsRepository } from '../../src/notifications/notifications.repository.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { latestCompletedFinancialYear } from '../../src/societies/financial-year.js';
 
 const databaseUrl = process.env['DATABASE_URL'];
 if (!databaseUrl)
@@ -354,6 +355,8 @@ describe('Document and notification persistence (PostgreSQL)', () => {
         fileName: 'office-bearers.pdf',
         contentType: 'application/pdf',
         sizeBytes: file.length,
+        financialYear: latestCompletedFinancialYear(),
+        checksumSha256: createHash('sha256').update(file).digest('base64'),
       })
       .expect(201);
     createdDocumentIds.push(created.body.document.id as string);

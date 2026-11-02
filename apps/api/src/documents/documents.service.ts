@@ -8,6 +8,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 
 import type { Principal } from '../auth/principal.js';
@@ -34,7 +35,12 @@ import {
 } from './documents.repository.js';
 import type { CreateDocumentDto } from './dto/create-document.dto.js';
 import type { DocumentQueryDto } from './dto/document-query.dto.js';
-import { extensionFor, storageKeyFor } from './upload-rules.js';
+import {
+  extensionFor,
+  isRegistrarDocument,
+  maxUploadBytes,
+  storageKeyFor,
+} from './upload-rules.js';
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   AUDIT_REPORT: 'Audit report',
@@ -91,6 +97,7 @@ export class DocumentsService {
     private readonly repository: DocumentsRepository,
     @Inject(DOCUMENT_STORAGE) private readonly storage: DocumentStorage,
     private readonly notifications: NotificationsService,
+    private readonly config: ConfigService,
   ) {}
 
   async list(principal: Principal, query: DocumentQueryDto) {
@@ -132,11 +139,21 @@ export class DocumentsService {
           : 'You can view this society but cannot add documents to it',
       );
     }
-    const isAuditReport = input.documentType === 'AUDIT_REPORT';
-    if (isAuditReport) {
+    const maxBytes = maxUploadBytes(
+      this.config.get<string>('DOCUMENT_MAX_UPLOAD_BYTES'),
+    );
+    if (input.sizeBytes > maxBytes) {
+      throw new BadRequestException(
+        `The file is larger than ${Math.round(maxBytes / 1_000_000)} MB. Choose a smaller PDF or photo.`,
+      );
+    }
+    // V5 M13a: the four Registrar documents are kept per financial year.
+    const isYearly = isRegistrarDocument(input.documentType);
+    const typeLabel = DOCUMENT_TYPE_LABELS[input.documentType] ?? 'Document';
+    if (isYearly) {
       if (input.financialYear == null) {
         throw new BadRequestException(
-          'Choose the financial year of the audit report',
+          `Choose the financial year of the ${typeLabel.toLowerCase()}`,
         );
       }
       if (!isSelectableFinancialYear(input.financialYear)) {
@@ -145,7 +162,9 @@ export class DocumentsService {
         );
       }
     } else if (input.financialYear != null) {
-      throw new BadRequestException('Only audit reports have a financial year');
+      throw new BadRequestException(
+        'Only the audit report, AGM minutes, office-bearer list and members list have a financial year',
+      );
     }
     const extension = extensionFor(input.fileName, input.contentType);
     if (!extension) {
@@ -159,29 +178,35 @@ export class DocumentsService {
       id,
       societyId: society.id,
       documentType: input.documentType,
-      // Each year's audit report keeps its own version history.
-      title: isAuditReport
-        ? `Audit report ${financialYearOf(input.financialYear!).label}`
+      // Each year's Registrar document keeps its own version history.
+      title: isYearly
+        ? `${typeLabel} ${financialYearOf(input.financialYear!).label}`
         : input.title,
       fileName: input.fileName,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
       storageKey: storageKeyFor({
         societyId: society.id,
+        documentType: input.documentType,
+        financialYear: isYearly ? input.financialYear! : null,
         documentId: id,
         extension,
       }),
+      checksumSha256: input.checksumSha256 ?? null,
       accessLevel: accessLevelFor(input.documentType),
       uploadedById: principal.id,
       uploadedByName: principal.displayName,
       uploadedByRole: principal.roles[0] ?? null,
-      financialYear: isAuditReport ? input.financialYear! : null,
+      financialYear: isYearly ? input.financialYear! : null,
     });
     const upload = await this.withStorage(() =>
       this.storage.createUploadRequest({
         key: record.storageKey,
         contentType: record.contentType,
         sizeBytes: record.sizeBytes,
+        ...(record.checksumSha256
+          ? { checksumSha256: record.checksumSha256 }
+          : {}),
       }),
     );
     return { document: toDocumentResponse(record), upload };

@@ -41,20 +41,28 @@ export class S3DocumentStorage implements DocumentStorage {
     key: string;
     contentType: string;
     sizeBytes: number;
+    checksumSha256?: string;
   }): Promise<PresignedRequest> {
     assertSafeStorageKey(input.key);
     const now = this.now();
-    const url = this.presign(
-      'PUT',
-      input.key,
-      now,
-      {},
-      { 'content-type': input.contentType },
-    );
+    // Signed headers bind the URL to this file: S3 refuses another type, and
+    // with a checksum it refuses a body whose SHA-256 does not match.
+    const signed: Record<string, string> = {
+      'content-type': input.contentType,
+      ...(input.checksumSha256
+        ? { 'x-amz-checksum-sha256': input.checksumSha256 }
+        : {}),
+    };
+    const url = this.presign('PUT', input.key, now, {}, signed);
     return {
       method: 'PUT',
       url,
-      headers: { 'Content-Type': input.contentType },
+      headers: {
+        'Content-Type': input.contentType,
+        ...(input.checksumSha256
+          ? { 'x-amz-checksum-sha256': input.checksumSha256 }
+          : {}),
+      },
       expiresAt: this.expiresAt(now),
     };
   }

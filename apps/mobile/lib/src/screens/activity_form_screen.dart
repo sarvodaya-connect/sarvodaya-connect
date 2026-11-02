@@ -447,12 +447,6 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: (_step + 1) / 4,
-                    color: _green,
-                    backgroundColor: const Color(0xFFDDE7DD),
-                  ),
-                  const SizedBox(height: 8),
                   const Text(
                     'Your draft is kept while this demo session is open.',
                     style: TextStyle(fontSize: 12, color: Colors.black54),

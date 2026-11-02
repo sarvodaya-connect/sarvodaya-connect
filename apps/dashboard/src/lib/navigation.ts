@@ -41,12 +41,10 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         ],
       };
     case "PROGRAMME_COORDINATOR":
+      // V5 SP01 order. Home, My societies and Disaster response join in PR 6
+      // when the SPC desktop opens; only the PR 4 approval pages exist today.
       return {
-        main: [
-          { href: "/dashboard", icon: "home", label: "Home" },
-          { href: "/societies", icon: "list", label: "My societies" },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
-        ],
+        main: [{ href: "/activities-to-approve", icon: "check", label: "Activities to approve" }],
         secondary: [],
       };
     case "DEPUTY_DISTRICT_MANAGER":
@@ -99,8 +97,9 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/emergencies", "Disaster & Emergency"],
   ["/districts", "District view"],
   ["/reviews", "Grade requests", "HQ approval queue"],
-  ["/compliance", "Audits and AGM"],
-  ["/documents", "Documents"],
+  ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
+  ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
+  ["/documents", "Documents", "Every certificate, minute and report in one place"],
   ["/search", "Search"],
   ["/notifications", "Alerts"],
 ];

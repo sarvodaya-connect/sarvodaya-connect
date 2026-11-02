@@ -562,44 +562,496 @@ class RecordDocument {
   final String? financialYearLabel;
 }
 
+/// The 17 UN Sustainable Development Goals in official order (V5 M51). The
+/// SPC chooses them when approving an activity; the number is what is saved.
+const sdgTitles = [
+  'No poverty',
+  'Zero hunger',
+  'Good health and well-being',
+  'Quality education',
+  'Gender equality',
+  'Clean water and sanitation',
+  'Affordable and clean energy',
+  'Decent work and economic growth',
+  'Industry, innovation and infrastructure',
+  'Reduced inequalities',
+  'Sustainable cities and communities',
+  'Responsible consumption and production',
+  'Climate action',
+  'Life below water',
+  'Life on land',
+  'Peace, justice and strong institutions',
+  'Partnerships for the goals',
+];
+
+String sdgTitle(int sdg) =>
+    sdg >= 1 && sdg <= sdgTitles.length ? sdgTitles[sdg - 1] : 'SDG $sdg';
+
+/// "SDG 6, 15"
+String sdgShortList(List<int> sdgs) => 'SDG ${sdgs.join(', ')}';
+
+/// Official icon shipped in assets/sdg (source: docs/sdg-icons.md).
+String sdgAsset(int sdg) =>
+    'assets/sdg/sdg-${sdg.toString().padLeft(2, '0')}.jpg';
+
+/// Waiting for the SPC until approved (with UN SDGs) or sent back. Only
+/// approved activities count in the dashboards.
+enum ActivityStatus {
+  waitingForSpc('WAITING_FOR_SPC', 'Waiting for SPC'),
+  sentBack('SENT_BACK', 'Sent back'),
+  approved('APPROVED', 'Approved');
+
+  const ActivityStatus(this.api, this.label);
+  final String api;
+  final String label;
+
+  static ActivityStatus fromApi(Object? value) => ActivityStatus.values
+      .firstWhere((status) => status.api == value, orElse: () => approved);
+}
+
+enum ActivityDimension {
+  social('SOCIAL', 'Social'),
+  economic('ECONOMIC', 'Economic'),
+  governance('GOVERNANCE', 'Governance');
+
+  const ActivityDimension(this.api, this.label);
+  final String api;
+  final String label;
+
+  static ActivityDimension? fromApi(Object? value) => ActivityDimension.values
+      .where((dimension) => dimension.api == value)
+      .firstOrNull;
+}
+
+/// The 10 Sarvodaya sectors (V5 M09a). To be confirmed with Sarvodaya.
+const sarvodayaSectors = [
+  'Community education',
+  'Child wellbeing',
+  'Culture',
+  'Economy',
+  'Governance',
+  'Health and nutrition',
+  'Housing and infrastructure',
+  'Spiritual development',
+  'Agriculture',
+  'Environment',
+];
+
+const monthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+int? _int(Object? value) => value is num ? value.toInt() : null;
+
+/// M09a–M09c: what the Society Officer sends to the SPC.
+class ActivityInput {
+  const ActivityInput({
+    required this.year,
+    required this.month,
+    required this.name,
+    required this.description,
+    required this.sector,
+    required this.dimension,
+    required this.allocatedCost,
+    this.datesLabel,
+    this.femaleParticipants,
+    this.maleParticipants,
+    this.youthParticipants,
+    this.householdsBenefited,
+    this.womenHeadedHouseholds,
+    this.partners,
+    this.resourcesNeeded,
+    this.volunteerHours,
+  });
+
+  final int year;
+  final int month;
+  final String name;
+  final String description;
+  final String sector;
+  final ActivityDimension dimension;
+  final double allocatedCost;
+  final String? datesLabel;
+  final int? femaleParticipants;
+  final int? maleParticipants;
+  final int? youthParticipants;
+  final int? householdsBenefited;
+  final int? womenHeadedHouseholds;
+  final String? partners;
+  final String? resourcesNeeded;
+  final int? volunteerHours;
+
+  /// Female plus male; youth are counted inside these.
+  int get totalParticipants =>
+      (femaleParticipants ?? 0) + (maleParticipants ?? 0);
+
+  Map<String, Object> toJson() => {
+    'year': year,
+    'month': month,
+    'name': name,
+    'description': description,
+    'sector': sector,
+    'dimension': dimension.api,
+    'allocatedCost': allocatedCost,
+    if (datesLabel?.trim().isNotEmpty ?? false)
+      'datesLabel': datesLabel!.trim(),
+    'femaleParticipants': ?femaleParticipants,
+    'maleParticipants': ?maleParticipants,
+    'youthParticipants': ?youthParticipants,
+    'householdsBenefited': ?householdsBenefited,
+    'womenHeadedHouseholds': ?womenHeadedHouseholds,
+    if (partners?.trim().isNotEmpty ?? false) 'partners': partners!.trim(),
+    if (resourcesNeeded?.trim().isNotEmpty ?? false)
+      'resourcesNeeded': resourcesNeeded!.trim(),
+    'volunteerHours': ?volunteerHours,
+  };
+}
+
 class WorkPlanActivity {
   const WorkPlanActivity({
     required this.month,
     required this.name,
     required this.allocatedCost,
+    this.id = '',
+    this.year = 0,
+    this.description = '',
     this.sector,
     this.datesLabel,
+    this.status = ActivityStatus.approved,
+    this.dimension,
+    this.sdgs = const [],
+    this.femaleParticipants,
+    this.maleParticipants,
+    this.youthParticipants,
+    this.householdsBenefited,
+    this.womenHeadedHouseholds,
+    this.partners,
+    this.resourcesNeeded,
+    this.volunteerHours,
+    this.createdBy,
+    this.submittedAt,
+    this.reviewedBy,
+    this.reviewedAt,
+    this.reviewComment,
   });
 
+  factory WorkPlanActivity.fromJson(Map<String, dynamic> json) {
+    final review = json['review'] as Map<String, dynamic>?;
+    return WorkPlanActivity(
+      id: json['id'] as String,
+      year: json['year'] as int,
+      month: json['month'] as int,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      allocatedCost: (json['allocatedCost'] as num).toDouble(),
+      sector: json['sector'] as String?,
+      datesLabel: json['datesLabel'] as String?,
+      status: ActivityStatus.fromApi(json['status']),
+      dimension: ActivityDimension.fromApi(json['dimension']),
+      sdgs: [for (final sdg in json['sdgs'] as List? ?? const []) sdg as int],
+      femaleParticipants: _int(json['femaleParticipants']),
+      maleParticipants: _int(json['maleParticipants']),
+      youthParticipants: _int(json['youthParticipants']),
+      householdsBenefited: _int(json['householdsBenefited']),
+      womenHeadedHouseholds: _int(json['womenHeadedHouseholds']),
+      partners: json['partners'] as String?,
+      resourcesNeeded: json['resourcesNeeded'] as String?,
+      volunteerHours: _int(json['volunteerHours']),
+      createdBy: json['createdBy'] == null
+          ? null
+          : ActorRef.fromJson(json['createdBy'] as Map<String, dynamic>),
+      submittedAt: _date(json['submittedAt']),
+      reviewedBy: review == null
+          ? null
+          : ActorRef.fromJson(review['by'] as Map<String, dynamic>),
+      reviewedAt: review == null ? null : _date(review['at']),
+      reviewComment: review?['comment'] as String?,
+    );
+  }
+
+  final String id;
+  final int year;
   final int month;
   final String name;
+  final String description;
   final double allocatedCost;
   final String? sector;
   final String? datesLabel;
+  final ActivityStatus status;
+  final ActivityDimension? dimension;
+  final List<int> sdgs;
+  final int? femaleParticipants;
+  final int? maleParticipants;
+  final int? youthParticipants;
+  final int? householdsBenefited;
+  final int? womenHeadedHouseholds;
+  final String? partners;
+  final String? resourcesNeeded;
+  final int? volunteerHours;
+  final ActorRef? createdBy;
+  final DateTime? submittedAt;
+  final ActorRef? reviewedBy;
+  final DateTime? reviewedAt;
+  final String? reviewComment;
+
+  int get totalParticipants =>
+      (femaleParticipants ?? 0) + (maleParticipants ?? 0);
+
+  /// "12–14 Sep · September 2027"
+  String get whenLabel {
+    final month = '${monthNames[this.month - 1]} $year';
+    return datesLabel == null ? month : '$datesLabel · $month';
+  }
+
+  ActivityInput toInput() => ActivityInput(
+    year: year,
+    month: month,
+    name: name,
+    description: description,
+    sector: sector ?? sarvodayaSectors.first,
+    dimension: dimension ?? ActivityDimension.social,
+    allocatedCost: allocatedCost,
+    datesLabel: datesLabel,
+    femaleParticipants: femaleParticipants,
+    maleParticipants: maleParticipants,
+    youthParticipants: youthParticipants,
+    householdsBenefited: householdsBenefited,
+    womenHeadedHouseholds: womenHeadedHouseholds,
+    partners: partners,
+    resourcesNeeded: resourcesNeeded,
+    volunteerHours: volunteerHours,
+  );
 }
 
 class WorkPlan {
-  const WorkPlan(this.year, this.activities, this.totalAllocated);
+  const WorkPlan(
+    this.year,
+    this.activities,
+    this.totalAllocated, {
+    this.canAddActivities = false,
+  });
 
   factory WorkPlan.fromJson(Map<String, dynamic> json) => WorkPlan(
     json['year'] as int,
     (json['activities'] as List)
-        .map(
-          (row) => WorkPlanActivity(
-            month: row['month'] as int,
-            name: row['name'] as String,
-            allocatedCost: (row['allocatedCost'] as num).toDouble(),
-            sector: row['sector'] as String?,
-            datesLabel: row['datesLabel'] as String?,
-          ),
-        )
+        .map((row) => WorkPlanActivity.fromJson(row as Map<String, dynamic>))
         .toList(),
     (json['totalAllocated'] as num).toDouble(),
+    canAddActivities:
+        (json['permissions'] as Map?)?['canAddActivities'] as bool? ?? false,
   );
 
   final int year;
   final List<WorkPlanActivity> activities;
   final double totalAllocated;
+  final bool canAddActivities;
+
+  int count(ActivityStatus status) =>
+      activities.where((activity) => activity.status == status).length;
+}
+
+/// SP07 / M51: one activity with its society and what the viewer may do.
+class ActivityDetail {
+  const ActivityDetail({
+    required this.activity,
+    required this.societyId,
+    required this.societyName,
+    required this.canEdit,
+    required this.canReview,
+  });
+
+  factory ActivityDetail.fromJson(Map<String, dynamic> json) {
+    final society = json['society'] as Map<String, dynamic>;
+    final permissions = json['permissions'] as Map<String, dynamic>;
+    return ActivityDetail(
+      activity: WorkPlanActivity.fromJson(json),
+      societyId: society['id'] as String,
+      societyName: society['name'] as String,
+      canEdit: permissions['canEdit'] as bool? ?? false,
+      canReview: permissions['canReview'] as bool? ?? false,
+    );
+  }
+
+  final WorkPlanActivity activity;
+  final String societyId;
+  final String societyName;
+  final bool canEdit;
+  final bool canReview;
+}
+
+/// M50: one row of the SPC's queue or recently approved list.
+class ActivityQueueItem {
+  const ActivityQueueItem({
+    required this.id,
+    required this.name,
+    required this.status,
+    required this.year,
+    required this.month,
+    required this.societyId,
+    required this.societyName,
+    required this.totalParticipants,
+    this.sentBy,
+    this.submittedAt,
+    this.householdsBenefited,
+    this.sdgs = const [],
+    this.approvedAt,
+  });
+
+  factory ActivityQueueItem.fromJson(Map<String, dynamic> json) {
+    final society = json['society'] as Map<String, dynamic>;
+    return ActivityQueueItem(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      status: ActivityStatus.fromApi(json['status']),
+      year: json['year'] as int,
+      month: json['month'] as int,
+      societyId: society['id'] as String,
+      societyName: society['name'] as String,
+      totalParticipants: _int(json['totalParticipants']) ?? 0,
+      sentBy: json['sentBy'] == null
+          ? null
+          : ActorRef.fromJson(json['sentBy'] as Map<String, dynamic>),
+      submittedAt: _date(json['submittedAt']),
+      householdsBenefited: _int(json['householdsBenefited']),
+      sdgs: [for (final sdg in json['sdgs'] as List? ?? const []) sdg as int],
+      approvedAt: _date(json['approvedAt']),
+    );
+  }
+
+  final String id;
+  final String name;
+  final ActivityStatus status;
+  final int year;
+  final int month;
+  final String societyId;
+  final String societyName;
+  final int totalParticipants;
+  final ActorRef? sentBy;
+  final DateTime? submittedAt;
+  final int? householdsBenefited;
+  final List<int> sdgs;
+  final DateTime? approvedAt;
+}
+
+class ActivityQueue {
+  const ActivityQueue({
+    required this.waiting,
+    required this.approvedRecently,
+    required this.societyCount,
+  });
+
+  factory ActivityQueue.fromJson(Map<String, dynamic> json) => ActivityQueue(
+    waiting: [
+      for (final row in json['waiting'] as List)
+        ActivityQueueItem.fromJson(row as Map<String, dynamic>),
+    ],
+    approvedRecently: [
+      for (final row in json['approvedRecently'] as List)
+        ActivityQueueItem.fromJson(row as Map<String, dynamic>),
+    ],
+    societyCount: json['societyCount'] as int? ?? 0,
+  );
+
+  final List<ActivityQueueItem> waiting;
+  final List<ActivityQueueItem> approvedRecently;
+  final int societyCount;
+}
+
+/// The four annual documents to the Registrar, in V5 order.
+const registrarDocumentTypes = [
+  'AUDIT_REPORT',
+  'AGM_MINUTES',
+  'OFFICE_BEARER_LIST',
+  'MEMBERS_LIST',
+];
+
+const documentTypeLabels = {
+  'AUDIT_REPORT': 'Audit report',
+  'AGM_MINUTES': 'AGM minutes',
+  'OFFICE_BEARER_LIST': 'Office-bearer list',
+  'MEMBERS_LIST': 'Signed members list',
+  'REGISTRATION': 'Registration',
+  'ACTIVITY_EVIDENCE': 'Activity evidence',
+  'FINANCE': 'Finance document',
+  'OTHER': 'Other document',
+};
+
+class RegistrarDocument {
+  const RegistrarDocument({
+    required this.id,
+    required this.fileName,
+    required this.sizeBytes,
+    required this.version,
+    required this.uploadedAt,
+    required this.uploadedBy,
+    required this.canOpen,
+  });
+
+  factory RegistrarDocument.fromJson(Map<String, dynamic> json) =>
+      RegistrarDocument(
+        id: json['id'] as String,
+        fileName: json['fileName'] as String,
+        sizeBytes: json['sizeBytes'] as int,
+        version: json['version'] as int? ?? 1,
+        uploadedAt: _date(json['uploadedAt'])!,
+        uploadedBy: ActorRef.fromJson(
+          json['uploadedBy'] as Map<String, dynamic>,
+        ),
+        canOpen: json['canOpen'] as bool? ?? true,
+      );
+
+  final String id;
+  final String fileName;
+  final int sizeBytes;
+  final int version;
+  final DateTime uploadedAt;
+  final ActorRef uploadedBy;
+  final bool canOpen;
+}
+
+/// M13 "Annual documents · 2026 — 4 of 4 uploaded".
+class RegistrarDocuments {
+  const RegistrarDocuments({
+    required this.startYear,
+    required this.yearLabel,
+    required this.documents,
+  });
+
+  factory RegistrarDocuments.fromJson(Map<String, dynamic> json) {
+    final year = json['financialYear'] as Map<String, dynamic>;
+    return RegistrarDocuments(
+      startYear: year['startYear'] as int,
+      yearLabel: year['label'] as String,
+      documents: {
+        for (final row in json['documents'] as List)
+          row['documentType'] as String: row['document'] == null
+              ? null
+              : RegistrarDocument.fromJson(
+                  row['document'] as Map<String, dynamic>,
+                ),
+      },
+    );
+  }
+
+  final int startYear;
+  final String yearLabel;
+
+  /// Keyed by document type; null when that document is missing.
+  final Map<String, RegistrarDocument?> documents;
+
+  int get submitted => documents.values.whereType<RegistrarDocument>().length;
+  int get missing => registrarDocumentTypes.length - submitted;
 }
 
 /// A file chosen for upload (M13a): PDF, JPG or PNG, up to 10 MB.

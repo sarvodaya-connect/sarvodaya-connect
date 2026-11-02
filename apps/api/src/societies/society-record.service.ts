@@ -22,6 +22,8 @@ import {
   selectableFinancialYears,
 } from './financial-year.js';
 import { canViewSociety } from './society-access.policy.js';
+import { toWorkPlanActivity } from '../activities/activity.mappers.js';
+import { canAddActivities } from '../activities/activity.policy.js';
 import {
   actorReference,
   toAmount,
@@ -313,16 +315,7 @@ export class SocietyRecordService {
       this.repository.listWorkPlan(society.id, planYear),
       this.repository.lastWorkPlanChange(society.id),
     ]);
-    const rows = activities.map((activity) => ({
-      id: activity.id,
-      year: activity.year,
-      month: activity.month,
-      name: activity.name,
-      description: activity.description,
-      ...(activity.sector ? { sector: activity.sector } : {}),
-      ...(activity.datesLabel ? { datesLabel: activity.datesLabel } : {}),
-      allocatedCost: toAmount(activity.allocatedCost) ?? 0,
-    }));
+    const rows = activities.map(toWorkPlanActivity);
     const latestActivity = activities.reduce<
       (typeof activities)[number] | null
     >(
@@ -334,6 +327,13 @@ export class SocietyRecordService {
       societyId: society.id,
       year: planYear,
       activities: rows,
+      counts: {
+        planned: rows.length,
+        approved: rows.filter((row) => row.status === 'APPROVED').length,
+        waiting: rows.filter((row) => row.status === 'WAITING_FOR_SPC').length,
+        sentBack: rows.filter((row) => row.status === 'SENT_BACK').length,
+      },
+      permissions: { canAddActivities: canAddActivities(principal, society) },
       totalAllocated:
         Math.round(
           rows.reduce((sum, row) => sum + row.allocatedCost, 0) * 100,
