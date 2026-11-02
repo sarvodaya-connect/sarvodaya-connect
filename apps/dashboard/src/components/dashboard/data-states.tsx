@@ -5,10 +5,10 @@ import { Icon, type IconName } from "./icon";
 
 /** V5 buttons: 38px high, 9px corners, 13px semibold. */
 export const primaryButtonClass =
-  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-brand-action bg-brand-action px-4 text-[13px] font-semibold text-white transition hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]";
+  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-brand-action bg-brand-action px-4 text-[13px] font-semibold text-white transition hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0] disabled:cursor-not-allowed disabled:border-[#dfe3dd] disabled:bg-[#dfe3dd] disabled:text-[#9aa39d]";
 
 export const secondaryButtonClass =
-  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-button-line bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-brand-mint-soft focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd]";
+  "inline-flex h-[38px] items-center justify-center gap-1.5 whitespace-nowrap rounded-button border border-button-line bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-brand-mint-soft focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#dbeadd] disabled:cursor-not-allowed disabled:text-[#9aa39d]";
 
 /**
  * Placeholder rows shown while data is loading (V5 ST01). The visual rows are

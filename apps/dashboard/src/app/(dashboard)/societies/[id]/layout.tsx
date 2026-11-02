@@ -10,7 +10,7 @@ import { isSocietyRecordId } from "@/lib/society-record-format";
 export default async function SocietyRecordLayout({ children, params }: LayoutProps<"/societies/[id]">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) return children;
-  await getCurrentViewer();
+  const viewer = await getCurrentViewer();
   const record = await getSocietyRecord(id);
   // Tab counts are helpful but not essential; a failed count leaves it blank.
   const [plan, documents, requests] = await Promise.all([
@@ -22,6 +22,7 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
   return (
     <>
       <RecordHeader
+        isHq={viewer.role === "HQ_ADMIN"}
         record={record}
         tabs={[
           { href: base, label: "Overview" },

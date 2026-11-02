@@ -285,14 +285,23 @@ class RecordPermissions {
   final DateTime? viewOnlyUntil;
 }
 
+/// The three Exco offices; every other seat holder is a "Member".
+const officeBearers = ['President', 'Secretary', 'Treasurer'];
+
 class ExcoMember {
   const ExcoMember({
     required this.id,
     required this.seatNumber,
     required this.fullName,
     required this.position,
+    this.seatType = 'ORDINARY',
     this.age,
+    this.dateOfBirth,
+    this.profession,
+    this.addressLine,
     this.phone,
+    this.email,
+    this.appointedOn,
     this.nicMasked,
   });
 
@@ -301,8 +310,14 @@ class ExcoMember {
     seatNumber: json['seatNumber'] as int? ?? 0,
     fullName: json['fullName'] as String,
     position: json['position'] as String,
+    seatType: json['seatType'] as String? ?? 'ORDINARY',
     age: json['age'] as int?,
+    dateOfBirth: DateTime.tryParse(json['dateOfBirth'] as String? ?? ''),
+    profession: json['profession'] as String?,
+    addressLine: json['addressLine'] as String?,
     phone: json['phone'] as String?,
+    email: json['email'] as String?,
+    appointedOn: json['appointedOn'] as String?,
     nicMasked: json['nicMasked'] as String?,
   );
 
@@ -310,12 +325,54 @@ class ExcoMember {
   final int seatNumber;
   final String fullName;
   final String position;
+
+  /// The seat group the API requires (3 children, 3 youth, 3 mothers, 9
+  /// ordinary, 7 elders' council). It stays with the seat when replacing.
+  final String seatType;
   final int? age;
+  final DateTime? dateOfBirth;
+  final String? profession;
+  final String? addressLine;
   final String? phone;
+  final String? email;
+  final String? appointedOn;
   final String? nicMasked;
 
-  bool get isOfficeBearer =>
-      const ['President', 'Secretary', 'Treasurer'].contains(position);
+  bool get isOfficeBearer => officeBearers.contains(position);
+
+  /// The seat as the council update expects it (V5 M07e saves all 25 together).
+  Map<String, Object?> toCouncilJson() => {
+    'seatNumber': seatNumber,
+    'fullName': fullName,
+    'position': position,
+    'seatType': seatType,
+    if (dateOfBirth != null)
+      'dateOfBirth': dateOfBirth!.toIso8601String().substring(0, 10),
+    if (dateOfBirth == null && age != null) 'age': age,
+    if (profession != null) 'profession': profession,
+    if (addressLine != null) 'addressLine': addressLine,
+    if (phone != null) 'phone': phone,
+    if (email != null) 'email': email,
+    if (appointedOn != null) 'appointedOn': appointedOn,
+    'isActive': true,
+    'isPrimaryContact': position == 'President',
+  };
+
+  ExcoMember copyWith({String? position}) => ExcoMember(
+    id: id,
+    seatNumber: seatNumber,
+    fullName: fullName,
+    position: position ?? this.position,
+    seatType: seatType,
+    age: age,
+    dateOfBirth: dateOfBirth,
+    profession: profession,
+    addressLine: addressLine,
+    phone: phone,
+    email: email,
+    appointedOn: appointedOn,
+    nicMasked: nicMasked,
+  );
 }
 
 class SocietyRecord {

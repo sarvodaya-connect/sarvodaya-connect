@@ -53,6 +53,8 @@ const HISTORY_CATEGORY: Record<
   AUDIT_REPORT_UPLOADED: 'ANNUAL_SUMMARY',
   DOCUMENT_UPLOADED: 'DOCUMENTS',
   WORK_PLAN_UPDATED: 'WORK_PLAN',
+  SOCIETY_CREATED: 'SOCIETY',
+  SOCIETY_STAFF_ASSIGNED: 'SOCIETY',
 };
 
 /** Fixed wording for actions whose stored detail is technical. */

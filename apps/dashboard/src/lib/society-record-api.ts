@@ -6,6 +6,10 @@ import { notFound } from "next/navigation";
 import type {
   AnnualFinancialSummaryResponse,
   GradeChangeRequest,
+  GradeQueue,
+  GradeQueueFilter,
+  GradeRequestDetail,
+  StaffOptions,
   SocietyHistoryCategory,
   SocietyHistoryEvent,
   SocietyRecord,
@@ -64,4 +68,24 @@ export function getHistory(id: string, category?: SocietyHistoryCategory): Promi
 
 export function getAnnualSummary(id: string, year?: number): Promise<AnnualFinancialSummaryResponse> {
   return platformApi(`/societies/${id}/annual-summary${year ? `?year=${year}` : ""}`);
+}
+
+/** V5 D22: the national grade-change queue (HQ only; the API refuses others). */
+export function getGradeQueue(status: GradeQueueFilter): Promise<GradeQueue> {
+  return platformApi(`/grade-requests?status=${status}`);
+}
+
+/** V5 D22r. */
+export async function getGradeRequestDetail(id: string): Promise<GradeRequestDetail> {
+  try {
+    return await platformApi(`/grade-requests/${id}`);
+  } catch (error) {
+    if (error instanceof Error && error.message === "Grade-change request not found") notFound();
+    throw error;
+  }
+}
+
+/** V5 D05a choices (HQ only). */
+export function getStaffOptions(id: string): Promise<StaffOptions> {
+  return platformApi(`/societies/${id}/staff-options`);
 }

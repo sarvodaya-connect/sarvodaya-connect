@@ -41,6 +41,8 @@ export const SOCIETY_CHANGE_ACTIONS = [
   'AUDIT_REPORT_UPLOADED',
   'DOCUMENT_UPLOADED',
   'WORK_PLAN_UPDATED',
+  'SOCIETY_CREATED',
+  'SOCIETY_STAFF_ASSIGNED',
 ] as const;
 
 /** A direct grade change made by HQ while editing the record (D05e). */
@@ -352,6 +354,11 @@ export class SocietiesRepository {
             phone: member.phone,
             email: member.email,
             age: member.age,
+            profession: member.profession,
+            addressLine: member.addressLine,
+            ...(member.dateOfBirth
+              ? { dateOfBirth: new Date(`${member.dateOfBirth}T00:00:00.000Z`) }
+              : {}),
             isActive: member.isActive,
             isPrimaryContact: member.isPrimaryContact,
             ...(member.appointedOn

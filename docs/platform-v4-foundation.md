@@ -69,7 +69,10 @@ All paths are under `/api/v1`. DTO validation rejects unsupported body fields.
 | `GET /identity/district-deputies` | DM's active district DDM choices |
 | `GET/POST /identity/district-access` | Scoped history / DM grants view-only access to own district DDM |
 | `POST /identity/district-access/:id/revoke` | District DM or HQ; immediate early revoke |
-| `GET /identity/audit` | Latest 200 events in current society/district scope; HQ national |
+| `GET /identity/audit` | V5 D24: up to 500 entries in the viewer's society/district scope (HQ national), filtered by `q`, `districtId`, `type`, `role` and `days`; names people, societies and accounts; never NICs or credentials |
+| `GET /grade-requests`, `GET /grade-requests/:id` | V5 D22/D22r, HQ only: the national grade queue with counts, and one request with the society at a glance and its grade history |
+| `POST /societies` | V5 D05n/D05c, HQ only: a society with details, starting grade and all 25 complete Exco members including the office bearers; NICs go through the NIC vault |
+| `GET /societies/:id/staff-options`, `PUT /societies/:id/assignments` | V5 D05a, HQ only: one DDM, SPC and Society Officer from the district; accounts whose access changes are signed out |
 | `GET /societies`, `GET /societies/:id` | Authenticated scoped reads; inaccessible details return 404 |
 | `PUT /societies/:id/council/:memberId/nic` | Assigned editors or HQ; encrypted at rest |
 | `POST /societies/:id/council/:memberId/nic/reveal` | Anyone with current society read scope; no-store response, logged reveal |

@@ -78,3 +78,22 @@ export interface NicRevealResult {
   nic: string;
   hideAfterSeconds: 30;
 }
+
+/** V5 D24 log groups ("Type" filter). */
+export const AUDIT_TYPES = ["SOCIETY", "EXCO", "GRADE", "ACCOUNTS", "ACCESS", "RECORDS", "ASSISTANT"] as const;
+export type AuditType = (typeof AUDIT_TYPES)[number];
+
+/** V5 D24: one change & access log entry. Never contains NICs, passwords or credentials. */
+export interface AuditLogEntry {
+  id: string;
+  createdAt: IsoDateTime;
+  action: string;
+  type: AuditType | null;
+  actor: { displayName: string; role: UserRole | null };
+  /** The society, the account changed, or the district. */
+  scope: string;
+  societyId: string | null;
+  detail: string;
+  /** Who decided a grade, "Waiting" for an open request, or null. */
+  approvedBy: string | null;
+}

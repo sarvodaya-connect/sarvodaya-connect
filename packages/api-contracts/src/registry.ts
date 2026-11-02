@@ -57,7 +57,11 @@ export interface CommitteeMember {
   isActive: boolean;
   seatNumber?: number;
   seatType?: MembershipCategory;
+  /** Worked out from dateOfBirth when it is known. */
   age?: number;
+  dateOfBirth?: IsoDate;
+  profession?: string;
+  addressLine?: string;
   isPrimaryContact?: boolean;
   /** The last four NIC characters, e.g. "••••0012". The full NIC needs a recorded reveal. */
   nicMasked?: string;

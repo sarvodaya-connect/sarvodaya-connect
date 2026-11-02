@@ -265,7 +265,28 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
           3 => 'Treasurer',
           _ => 'Member',
         },
+        seatType: switch (seat) {
+          <= 9 => 'ORDINARY',
+          <= 16 => 'ELDERS_COUNCIL',
+          <= 19 => 'MOTHERS',
+          <= 22 => 'YOUTH',
+          _ => 'CHILDREN',
+        },
         age: 22 + (seat * 7) % 45,
+        dateOfBirth: DateTime.utc(
+          1960 + (seat * 3) % 40,
+          1 + seat % 12,
+          1 + seat % 27,
+        ),
+        profession: const [
+          'Teacher',
+          'Farmer',
+          'Clerk',
+          'Shop owner',
+          'Nurse',
+        ][seat % 5],
+        addressLine: 'No. $seat, Fictional Lane',
+        phone: '+94 00 000 ${seat.toString().padLeft(4, '0')}',
         nicMasked: '••••${(seat * 37).toString().padLeft(4, '0')}',
       ),
   ];
@@ -720,6 +741,76 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     }
     // Fictional NIC that matches the masked last four characters.
     return '19900000${member!.nicMasked!.substring(4)}';
+  }
+
+  @override
+  Future<SocietyRecord> updateCouncil(
+    String societyId,
+    List<Map<String, Object?>> members,
+  ) async {
+    await _wait();
+    final society = _visible(societyId);
+    if (!_signedIn.canEditSociety(societyId)) {
+      throw const SocietyRecordException(
+        'You are not authorised to update this society',
+        status: 403,
+      );
+    }
+    if (members.length != 25) {
+      throw const SocietyRecordException(
+        'Every society must have exactly 25 Exco members',
+        status: 400,
+      );
+    }
+    final before = {
+      for (final member in society.exco) member.seatNumber: member,
+    };
+    society.exco = [
+      for (final row in members)
+        () {
+          final seat = row['seatNumber']! as int;
+          final previous = before[seat];
+          final same = previous?.fullName == row['fullName'];
+          return ExcoMember(
+            id: same ? previous!.id : 'exco-$seat-${_nextId++}',
+            seatNumber: seat,
+            fullName: row['fullName']! as String,
+            position: row['position']! as String,
+            seatType: row['seatType'] as String? ?? 'ORDINARY',
+            dateOfBirth: DateTime.tryParse(row['dateOfBirth'] as String? ?? ''),
+            profession: row['profession'] as String?,
+            addressLine: row['addressLine'] as String?,
+            phone: row['phone'] as String?,
+            // The API keeps a NIC only while the seat and name are unchanged.
+            nicMasked: same ? previous!.nicMasked : null,
+          );
+        }(),
+    ];
+    society.history.insert(0, _event('EXCO', 'Exco updated', _actor, clock()));
+    return _record(society);
+  }
+
+  @override
+  Future<void> setNic(String societyId, String memberId, String nic) async {
+    await _wait();
+    final society = _visible(societyId);
+    final index = society.exco.indexWhere((member) => member.id == memberId);
+    if (index < 0) {
+      throw const SocietyRecordException('Member not found', status: 404);
+    }
+    final member = society.exco[index];
+    society.exco[index] = ExcoMember(
+      id: member.id,
+      seatNumber: member.seatNumber,
+      fullName: member.fullName,
+      position: member.position,
+      seatType: member.seatType,
+      dateOfBirth: member.dateOfBirth,
+      profession: member.profession,
+      addressLine: member.addressLine,
+      phone: member.phone,
+      nicMasked: '••••${nic.substring(nic.length - 4).toUpperCase()}',
+    );
   }
 
   @override

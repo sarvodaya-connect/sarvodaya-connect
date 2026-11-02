@@ -55,16 +55,16 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 | D01, D01e | `/` `app/page.tsx` | — | match (PR 2) | 2 |
 | M01, M02, M03, M03e | — | `splash_screen.dart`, `language_screen.dart`, `sign_in_screen.dart` | match (PR 2) | 2 |
 | D16, D16i, D16t | `/accounts` | — | match (PR 2) | 2 |
-| D24 Change & access log | `/audit` | — | rework | 3 |
+| D24 Change & access log | `/audit`, `/audit/export` | — | match (PR 3) | 3 |
 
 ### Society record, ExCo and grades
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D05, D05e, SP03, SP04, DD05, DD08, DM03 | `/societies/[id]` | `society_record/society_record_screen.dart`, `edit_society_screen.dart` | rework | 3 |
-| D05x, M07, M07s, M07e, M07o, M07v, M07r, M07x, M07d | `/societies/[id]/exco` | `society_record_screen.dart`, `nic_reveal_button.dart` | rework (25 required positions) | 3 |
-| D05n, D05c, D05a | — | — | new | 3 |
-| D22, D22r, SP05, DD09, M06g, M06q | `/reviews`, `/societies/[id]/grade` | `grade_change_request_screen.dart`, `grade_requests_screen.dart` | rework | 3 |
+| D05, D05e, SP03, SP04, DD05, DD08, DM03 | `/societies/[id]` | `society_record/society_record_screen.dart`, `edit_society_screen.dart` | HQ match (PR 3) except the summary tiles; SPC/DDM/DM desktop views open in PR 6 | 3, 6 |
+| D05x, M07, M07s, M07e, M07o, M07v, M07r, M07x, M07d | `/societies/[id]/exco`, `/societies/[id]/exco/edit` | `society_record_screen.dart`, `exco_screens.dart` | match (PR 3); M07s on the phone shows the rule, new societies are created on the dashboard | 3 |
+| D05n, D05c, D05a | `/societies/new`, `/societies/[id]?panel=assign` | — | match (PR 3) | 3 |
+| D22, D22r, SP05, DD09, M06g, M06q | `/reviews`, `/reviews/[id]`, `/societies/[id]/grade` | `grade_change_request_screen.dart`, `grade_requests_screen.dart` | D22/D22r match (PR 3); phone screens unchanged from SC-65 | 3 |
 | M06, M06_SPC, M06_DDM, M06v, M06u | — | `society_record_screen.dart` | rework | 3 |
 | M06h | `/societies/[id]/history` | `society_record_screen.dart` | rework | 3 |
 

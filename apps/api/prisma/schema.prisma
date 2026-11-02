@@ -133,6 +133,10 @@ model SocietyCouncilMember {
   phone            String?            @db.VarChar(30)
   email            String?            @db.VarChar(254)
   age              Int?
+  // V5 D05x / M07: age is worked out from the date of birth when it is known.
+  dateOfBirth      DateTime?          @map("date_of_birth") @db.Date
+  profession       String?            @db.VarChar(100)
+  addressLine      String?            @map("address_line") @db.VarChar(255)
   appointedOn      DateTime?          @map("appointed_on") @db.Date
   endedOn          DateTime?          @map("ended_on") @db.Date
   isActive         Boolean            @default(true) @map("is_active")

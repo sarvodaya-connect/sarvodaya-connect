@@ -60,6 +60,8 @@ export class NicVaultService {
       await tx.platformAuditEvent.create({
         data: {
           actorId: principal.id,
+          actorName: principal.displayName,
+          actorRole: principal.roles[0] ?? null,
           action: 'MEMBER_NIC_UPDATED',
           targetId: memberId,
           societyId,
@@ -92,6 +94,8 @@ export class NicVaultService {
     await this.db.platformAuditEvent.create({
       data: {
         actorId: principal.id,
+        actorName: principal.displayName,
+        actorRole: principal.roles[0] ?? null,
         action: 'MEMBER_NIC_REVEALED',
         targetId: memberId,
         societyId,

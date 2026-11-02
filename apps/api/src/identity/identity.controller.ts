@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { Principal } from '../auth/principal.js';
 import { IdentityService } from './identity.service.js';
 import {
+  AuditQueryDto,
   GrantDistrictAccessDto,
   CreateAccountDto,
   LoginDto,
@@ -123,7 +125,10 @@ export class IdentityController {
   @Header('Cache-Control', 'no-store')
   @Get('audit')
   @UseGuards(AuthenticationGuard)
-  audit(@CurrentPrincipal() principal: Principal) {
-    return this.identity.audit(principal);
+  audit(
+    @Query() query: AuditQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.identity.audit(principal, query);
   }
 }

@@ -52,6 +52,15 @@ abstract interface class SocietyRecordApi {
   /// The member's full NIC. The server checks scope and records the reveal.
   Future<String> revealNic(String societyId, String memberId);
 
+  /// V5 M07e / M07o: saves all 25 Exco seats together and returns the record.
+  Future<SocietyRecord> updateCouncil(
+    String societyId,
+    List<Map<String, Object?>> members,
+  );
+
+  /// Stores a member's NIC in the encrypted NIC vault.
+  Future<void> setNic(String societyId, String memberId, String nic);
+
   /// M13a: records the metadata, sends the file to private storage through a
   /// short-lived link, then confirms it.
   Future<RecordDocument> uploadAuditReport(
@@ -194,6 +203,27 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
             method: 'POST',
           ))['nic']
           as String;
+
+  @override
+  Future<SocietyRecord> updateCouncil(
+    String societyId,
+    List<Map<String, Object?>> members,
+  ) async => SocietyRecord.fromJson(
+    await _call(
+      '/societies/$societyId/council',
+      method: 'PUT',
+      body: {'members': members},
+    ) as Map<String, dynamic>,
+  );
+
+  @override
+  Future<void> setNic(String societyId, String memberId, String nic) async {
+    await _call(
+      '/societies/$societyId/council/$memberId/nic',
+      method: 'PUT',
+      body: {'nic': nic},
+    );
+  }
 
   @override
   Future<RecordDocument> uploadAuditReport(

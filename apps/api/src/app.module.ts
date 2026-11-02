@@ -14,6 +14,10 @@ import { DistrictsController } from './districts/districts.controller.js';
 import { SocietiesController } from './societies/societies.controller.js';
 import { SocietiesService } from './societies/societies.service.js';
 import { SocietiesRepository } from './societies/societies.repository.js';
+import { GradeQueueController } from './societies/grade-queue.controller.js';
+import { GradeQueueService } from './societies/grade-queue.service.js';
+import { SocietyAdminController } from './societies/society-admin.controller.js';
+import { SocietyAdminService } from './societies/society-admin.service.js';
 import { SocietyRecordController } from './societies/society-record.controller.js';
 import { SocietyRecordRepository } from './societies/society-record.repository.js';
 import { SocietyRecordService } from './societies/society-record.service.js';
@@ -45,6 +49,8 @@ const repositoryEnvironmentFile = resolve(
     DistrictsController,
     SocietiesController,
     SocietyRecordController,
+    SocietyAdminController,
+    GradeQueueController,
   ],
   providers: [
     AppService,
@@ -52,6 +58,8 @@ const repositoryEnvironmentFile = resolve(
     SocietiesRepository,
     SocietyRecordService,
     SocietyRecordRepository,
+    SocietyAdminService,
+    GradeQueueService,
     DistrictsService,
   ],
 })

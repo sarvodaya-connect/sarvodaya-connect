@@ -57,6 +57,8 @@ export async function decideGradeRequest(
   requestId: string,
   decision: "APPROVE" | "REJECT",
   comment: string,
+  /** D22r returns to its own page; the record's Grade tab is the default. */
+  returnTo?: "queue",
 ): Promise<{ error?: string }> {
   await getCurrentViewer();
   const text = comment.trim();
@@ -70,7 +72,42 @@ export async function decideGradeRequest(
     return { error: error instanceof Error ? error.message : "The decision could not be saved. Try again." };
   }
   revalidatePath(`/societies/${societyId}`, "layout");
-  redirect(`/societies/${societyId}/grade?decided=${decision === "APPROVE" ? "approved" : "rejected"}`);
+  revalidatePath("/reviews", "layout");
+  const decided = decision === "APPROVE" ? "approved" : "rejected";
+  redirect(returnTo === "queue" ? `/reviews/${requestId}?decided=${decided}` : `/societies/${societyId}/grade?decided=${decided}`);
+}
+
+/** V5 D22r: the same decision, returning to the request page. */
+export async function decideFromQueue(
+  societyId: string,
+  requestId: string,
+  decision: "APPROVE" | "REJECT",
+  comment: string,
+): Promise<{ error?: string }> {
+  return decideGradeRequest(societyId, requestId, decision, comment, "queue");
+}
+
+/** V5 D05a: HQ chooses the DDM, SPC and Society Officer. The API checks HQ, roles and district. */
+export async function assignStaff(
+  societyId: string,
+  _previous: RecordFormResult,
+  form: FormData,
+): Promise<RecordFormResult> {
+  await getCurrentViewer();
+  const id = (name: string) => {
+    const value = form.get(name);
+    return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
+  };
+  const body = { deputyId: id("deputyId"), coordinatorId: id("coordinatorId"), officerId: id("officerId") };
+  if (!body.deputyId || !body.coordinatorId || !body.officerId)
+    return { error: "Choose a DDM, an SPC and a Society Officer." };
+  try {
+    await platformApi(`/societies/${societyId}/assignments`, { method: "PUT", body: JSON.stringify(body) });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The assignments could not be saved. Try again." };
+  }
+  revalidatePath(`/societies/${societyId}`, "layout");
+  redirect(`/societies/${societyId}?saved=1`);
 }
 
 /** D05x: shows one member's full NIC. The API checks scope and records the reveal. */
@@ -82,4 +119,97 @@ export async function revealMemberNic(societyId: string, memberId: string): Prom
   } catch (error) {
     return { error: error instanceof Error ? error.message : "The NIC could not be shown." };
   }
+}
+
+type CouncilSeat = { seatNumber: number; nic?: string } & Record<string, unknown>;
+
+function readSeats(form: FormData, field = "council"): CouncilSeat[] | null {
+  try {
+    const seats = JSON.parse(String(form.get(field) ?? ""));
+    return Array.isArray(seats) && seats.length === 25 ? seats : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * NICs go to the NIC vault one member at a time, after the seats are saved,
+ * so they are never part of the council update or the change log.
+ */
+async function storeNics(societyId: string, seats: CouncilSeat[], committee: { id: string; seatNumber?: number }[]) {
+  const failed: number[] = [];
+  for (const seat of seats.filter((item) => item.nic)) {
+    const member = committee.find((item) => item.seatNumber === seat.seatNumber);
+    try {
+      if (!member) throw new Error("missing");
+      await platformApi(`/societies/${societyId}/council/${member.id}/nic`, {
+        method: "PUT",
+        body: JSON.stringify({ nic: seat.nic }),
+      });
+    } catch {
+      failed.push(seat.seatNumber);
+    }
+  }
+  return failed;
+}
+
+/** V5 Edit Exco: all 25 seats at once. The API checks scope, seat groups and ages. */
+export async function updateExco(societyId: string, _previous: RecordFormResult, form: FormData): Promise<RecordFormResult> {
+  await getCurrentViewer();
+  const seats = readSeats(form);
+  if (!seats) return { error: "Every society must have exactly 25 Exco members." };
+  let committee: { id: string; seatNumber?: number }[];
+  try {
+    const record = await platformApi(`/societies/${societyId}/council`, {
+      method: "PUT",
+      // NICs are stored separately through the NIC vault below.
+      body: JSON.stringify({ members: seats.map((seat) => Object.fromEntries(Object.entries(seat).filter(([key]) => key !== "nic"))) }),
+    });
+    committee = record.committee;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The Exco could not be saved. Try again." };
+  }
+  const failed = await storeNics(societyId, seats, committee);
+  revalidatePath(`/societies/${societyId}`, "layout");
+  if (failed.length)
+    return { error: `The Exco was saved, but the NIC for seat ${failed.join(", ")} could not be stored. Enter it again.` };
+  redirect(`/societies/${societyId}/exco?saved=1`);
+}
+
+export type CreateSocietyResult = RecordFormResult & { field?: "societyCode" };
+
+/** V5 D05n + D05c: HQ creates the society and its 25 Exco members, then assigns staff (D05a). */
+export async function createSociety(_previous: CreateSocietyResult, form: FormData): Promise<CreateSocietyResult> {
+  const viewer = await getCurrentViewer();
+  if (viewer.role !== "HQ_ADMIN") return { error: "Only HQ can create a society record." };
+  const seats = readSeats(form);
+  if (!seats) return { error: "Every society must have exactly 25 Exco members." };
+  const text = (name: string) => String(form.get(name) ?? "").trim();
+  const number = (name: string) => (text(name) === "" ? undefined : Number(text(name)));
+  const body = {
+    societyCode: text("societyCode").toUpperCase(),
+    nameEn: text("nameEn"),
+    nameLocal: text("nameLocal") || undefined,
+    districtId: text("districtId"),
+    dsDivision: text("dsDivision"),
+    gnDivision: text("gnDivision") || undefined,
+    addressLine: text("addressLine"),
+    memberCount: number("memberCount"),
+    landline: text("landline") || undefined,
+    grade: text("grade"),
+    businessDescription: text("businessDescription") || undefined,
+    latitude: number("latitude"),
+    longitude: number("longitude"),
+    council: seats,
+  };
+  let created: { id: string };
+  try {
+    created = await platformApi("/societies", { method: "POST", body: JSON.stringify(body) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The society record could not be saved. Try again.";
+    return message.includes("is already used by") ? { error: message, field: "societyCode" } : { error: message };
+  }
+  revalidatePath("/societies", "layout");
+  // Step 3 · Assign staff opens on the new record.
+  redirect(`/societies/${created.id}?panel=assign`);
 }
