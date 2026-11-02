@@ -1,3 +1,4 @@
+import type Anthropic from '@anthropic-ai/sdk';
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -25,12 +26,6 @@ const MAX_YEARS = 10;
 const MODEL_ROWS = 25;
 const ANSWER_ROWS = 50;
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  input_schema: { type: 'object'; properties: Record<string, unknown>; required: string[]; additionalProperties: false };
-}
-
 /** What the model reads, plus the figures the answer shows (never retyped by the model). */
 export interface ToolOutcome {
   content: string;
@@ -41,7 +36,7 @@ export interface ToolOutcome {
 const yearProperty = { type: 'integer', description: 'Start year of the financial year: 2025 means FY 2025/26 (1 Apr 2025 to 31 Mar 2026).' };
 const districtProperty = { type: 'string', description: 'District name, e.g. "Kurunegala". Leave empty for all districts.' };
 
-export const ASSISTANT_TOOLS: ToolDefinition[] = [
+export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   {
     name: 'list_districts',
     description: 'List the district names. Use it to check a district name before other tools.',

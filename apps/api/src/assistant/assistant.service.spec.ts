@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Principal } from '../auth/principal.js';
 import { REQUIRED_ROLES } from '../auth/require-roles.decorator.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
-import { type AssistantModel, DisabledAssistantModel, type ModelResponse } from './assistant-model.js';
+import type Anthropic from '@anthropic-ai/sdk';
+
+import { type AssistantModel, DisabledAssistantModel } from './assistant-model.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
 import { AssistantService } from './assistant.service.js';
@@ -13,13 +15,12 @@ import { AssistantService } from './assistant.service.js';
 const hq: Principal = { id: 'hq-1', displayName: 'Fictional HQ admin', roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] };
 const now = new Date('2026-11-02T04:00:00Z');
 
-const toolUse = (name: string, input: object): ModelResponse => ({
-  stop_reason: 'tool_use',
-  content: [{ type: 'tool_use', id: `call-${name}`, name, input }],
-});
-const final = (answer: object): ModelResponse => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(answer) }] });
+/** Only the fields the service reads; the rest of a Message is irrelevant here. */
+const message = (stop_reason: Anthropic.StopReason, content: object[]) => ({ stop_reason, content }) as unknown as Anthropic.Message;
+const toolUse = (name: string, input: object) => message('tool_use', [{ type: 'tool_use', id: `call-${name}`, name, input }]);
+const final = (answer: object) => message('end_turn', [{ type: 'text', text: JSON.stringify(answer) }]);
 
-function setup(responses: ModelResponse[], outcome: ToolOutcome = { content: '{}' }) {
+function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content: '{}' }) {
   const createMessage = vi.fn();
   for (const response of responses) createMessage.mockResolvedValueOnce(response);
   const model: AssistantModel = { modelId: 'fake', createMessage };
@@ -77,7 +78,7 @@ describe('AssistantService', () => {
   });
 
   it('answers UNSUPPORTED when the model refuses', async () => {
-    const { service } = setup([{ stop_reason: 'refusal', content: [] }]);
+    const { service } = setup([message('refusal', [])]);
     expect((await service.ask(hq, 'Something it declines', [], now)).kind).toBe('UNSUPPORTED');
   });
 
@@ -86,7 +87,7 @@ describe('AssistantService', () => {
     failing.createMessage.mockRejectedValueOnce(new Error('Bedrock throttled'));
     await expect(failing.service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(ServiceUnavailableException);
 
-    const garbled = setup([{ stop_reason: 'end_turn', content: [{ type: 'text', text: 'not json' }] }]);
+    const garbled = setup([message('end_turn', [{ type: 'text', text: 'not json' }])]);
     await expect(garbled.service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(ServiceUnavailableException);
 
     const prisma = { platformAuditEvent: { create: vi.fn() } } as unknown as PrismaService;

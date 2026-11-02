@@ -1,15 +1,10 @@
+import type Anthropic from '@anthropic-ai/sdk';
 import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 
 import { hasRole, type Principal } from '../auth/principal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
-import {
-  ASSISTANT_MODEL,
-  type AssistantModel,
-  AssistantNotConfiguredError,
-  type ModelContentBlock,
-  type ModelMessage,
-} from './assistant-model.js';
+import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError } from './assistant-model.js';
 import { ASSISTANT_TOOLS, AssistantTools, type ToolOutcome } from './assistant-tools.js';
 import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind, type AssistantTurn } from './assistant.types.js';
 
@@ -68,8 +63,8 @@ export class AssistantService {
   async ask(principal: Principal, question: string, history: AssistantTurn[] = [], now = new Date()): Promise<AssistantAnswer> {
     if (!hasRole(principal, 'HQ_ADMIN')) throw new ForbiddenException('SarvoAI is for HQ only');
 
-    const messages: ModelMessage[] = [
-      ...history.map((turn): ModelMessage => ({ role: turn.role, content: turn.text })),
+    const messages: Anthropic.MessageParam[] = [
+      ...history.map((turn): Anthropic.MessageParam => ({ role: turn.role, content: turn.text })),
       { role: 'user', content: question },
     ];
     const toolsUsed: string[] = [];
@@ -91,7 +86,7 @@ export class AssistantService {
 
         if (response.stop_reason === 'tool_use') {
           messages.push({ role: 'assistant', content: response.content });
-          const calls = response.content.filter((block): block is Extract<ModelContentBlock, { type: 'tool_use' }> => block.type === 'tool_use');
+          const calls = response.content.filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use');
           const outcomes = await Promise.all(calls.map((call) => this.tools.run(call.name, call.input, now)));
           calls.forEach((call, index) => {
             toolsUsed.push(call.name);
@@ -99,7 +94,7 @@ export class AssistantService {
           });
           messages.push({
             role: 'user',
-            content: calls.map((call, index) => ({ type: 'tool_result', tool_use_id: call.id, content: outcomes[index].content, is_error: outcomes[index].isError })),
+            content: calls.map((call, index): Anthropic.ToolResultBlockParam => ({ type: 'tool_result', tool_use_id: call.id, content: outcomes[index].content, is_error: outcomes[index].isError })),
           });
           continue;
         }
@@ -118,9 +113,9 @@ export class AssistantService {
     throw new ServiceUnavailableException(UNAVAILABLE);
   }
 
-  private parse(content: ModelContentBlock[]): { kind: AssistantAnswerKind; summary: string; options: string[] } | undefined {
+  private parse(content: Anthropic.ContentBlock[]): { kind: AssistantAnswerKind; summary: string; options: string[] } | undefined {
     const raw = content
-      .filter((block): block is Extract<ModelContentBlock, { type: 'text' }> => block.type === 'text')
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
       .map((block) => block.text)
       .join('');
     try {
