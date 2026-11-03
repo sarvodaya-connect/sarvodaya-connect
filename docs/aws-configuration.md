@@ -27,8 +27,9 @@ Every setting is an environment variable with a safe development default (`.env.
 | `API_PUBLIC_URL` | Config | `http://localhost:3001` | Development storage links only |
 | `DISTRICT_ACCESS_MAX_DAYS` | Config | `14` | Longest temporary DDM access a DM can give (1–90 days). Checked by the API on every grant (PR 7) |
 | `AUTH_PROVIDER` | Config | `local` (`cognito` when `NODE_ENV=production`) | `local`: passwords and sessions in PostgreSQL, development and tests only. `cognito`: Amazon Cognito tokens; `local` is refused in production (PR 10) |
-| `COGNITO_USER_POOL_ID` | Config | — | User pool, e.g. `ap-southeast-1_AbCdEf123`; required when `AUTH_PROVIDER=cognito` (PR 10) |
-| `COGNITO_CLIENT_ID` | Config | — | App client ids that may call the API, comma-separated (dashboard, phone app) (PR 10) |
+| `COGNITO_USER_POOL_ID` | Config | — | User pool, e.g. `ap-southeast-1_AbCdEf123`; required when `AUTH_PROVIDER=cognito`. The token issuer and the region of the admin calls come from it (PR 10) |
+| `COGNITO_CLIENT_ID` | Config | — | Public app client ids (no secret) whose access tokens the API accepts, comma-separated (dashboard, phone app) (PR 10) |
+| `COGNITO_REGION` | Config | from the pool id | Optional check: must match the region in `COGNITO_USER_POOL_ID` |
 | `COGNITO_TOKEN_USE` | Config | `access` | Which Cognito token the clients send: `access` or `id` (PR 10) |
 | `LOG_FORMAT` | Config | `json` on Lambda and in production, `text` locally | One JSON object a line for CloudWatch (PR 10) |
 | `S3_ENDPOINT_HOST` | Config | — | Optional S3 host override (virtual-hosted), e.g. a VPC interface endpoint name |
@@ -46,6 +47,10 @@ The temporary DDM access maximum is added with PR 7. PR 8 (disaster response) ad
 | `API_BASE_URL` | Config | `http://localhost:3001/api/v1` | API address, read on the server only (server components and server actions) |
 | `PLATFORM_DEMO_MODE` | Config | `false` | Fictional demonstration data; ignored when `NODE_ENV` is `production`. In this mode SarvoAI shows labelled sample answers instead of calling the API |
 | `NEXT_PUBLIC_API_BASE_URL` | Config | `http://localhost:3001` | Public API address; not used for data access |
+| `AUTH_PROVIDER` | Config | `local` (`cognito` in production) | `cognito`: sign in with the user pool; `local`: the API's development passwords, refused in production |
+| `COGNITO_USER_POOL_ID` | Config | — | The same user pool as the API; required with `cognito` |
+| `COGNITO_CLIENT_ID` | Config | — | The dashboard's public app client (no client secret) |
+| `COGNITO_REGION` | Config | from the pool id | Optional check against the pool id |
 
 SarvoAI on the dashboard (`/sarvoai`, the D02 Ask bar) and the phone (M80–M89) call the same `POST /api/v1/assistant/questions` endpoint. They hold no AWS settings or credentials.
 
@@ -126,9 +131,12 @@ Nothing below has been deployed, and no AWS resources were created. Each item wa
 
 ### Identity: Amazon Cognito
 
-- `AUTH_PROVIDER=cognito` (the default in production) verifies the `Authorization: Bearer` token with [`aws-jwt-verify`](https://github.com/awslabs/aws-jwt-verify) against the user pool's public keys (signature, issuer, expiry, `token_use` and app client). Local passwords, sessions, account creation and password setting are switched off in this mode.
+Full setup, the user pool settings and the local development flow are in [`cognito-setup.md`](cognito-setup.md).
+
+- `AUTH_PROVIDER=cognito` (the default in production) verifies the `Authorization: Bearer` token with [`aws-jwt-verify`](https://github.com/awslabs/aws-jwt-verify) against the user pool's public keys (signature, issuer, expiry, `token_use` and app client). The API's local passwords and sessions are switched off in this mode; HQ account creation and password setting go to Cognito instead.
 - **Roles and scopes still come from the database.** The token's `sub` is looked up in `platform_accounts.provider_subject`; the account must be `ACTIVE`, and its role, district, societies and any temporary DDM grant are loaded on every request (`IdentityService.principalFor`), exactly as for local sessions. A token whose user has no linked active account is refused.
-- **To Confirm / owner step:** how accounts are provisioned in Cognito. Today HQ creates accounts in the dashboard (D16i) with local passwords. With Cognito, an administrator must create the user in the pool and set that user's `sub` on the matching account (`provider_subject`), or a Cognito admin flow must be added to D16i. The dashboard and phone sign-in screens also still use the local `POST /identity/login`; they need a Cognito sign-in (Hosted UI or SRP) before production. Neither is built in PR 10.
+- **Accounts:** HQ creates accounts and sets passwords from D16 as before. In Cognito mode the API creates the Cognito user with a permanent password and links its `sub`, using its IAM role. The dashboard and phone app sign in to the user pool directly (public client, `USER_PASSWORD_AUTH`). Only the first HQ account is linked by hand (`npm run identity:link-cognito-hq`). See `cognito-setup.md`.
+- **Ended sign-ins:** a password reset, role change or disable stores `sessions_revoked_at` (migration `20261106090000_cognito_session_revocation`). Tokens from an earlier sign-in are refused, and Cognito's refresh tokens are revoked.
 - Tests: `src/auth/cognito-authentication.provider.spec.ts` (mocked verifier) and `test/db/release-readiness.db-spec.ts` (Cognito mode end to end against PostgreSQL, with a mocked verifier: DDM temporary district loaded, forged/unlinked/disabled users refused, local login refused).
 
 ### API on Lambda behind API Gateway
@@ -164,11 +172,14 @@ SMOKE_HQ_USERNAME=<local hq> SMOKE_HQ_PASSWORD=<password> npm run smoke:local
 
 ### IAM for the API function
 
-The template grants only: `s3:PutObject` and `s3:GetObject` on `societies/*` and `incidents/*` in the documents bucket, and, when `SarvoAiEnabled=true`, `bedrock:InvokeModel` on the one Haiku 5.5 global inference profile (the same three statements as `sarvoai-bedrock-policy.json`). Lambda's VPC access is added by SAM (`AWSLambdaVPCAccessExecutionRole`). No Secrets Manager permission is needed at run time: `DATABASE_URL` and `NIC_ENCRYPTION_KEY` are resolved from Secrets Manager when the stack is deployed. If Sarvodaya prefers reading secrets at run time (so a rotation does not need a redeploy), add the AWS Parameters and Secrets Lambda Extension and `secretsmanager:GetSecretValue` on those two secrets (To Confirm).
+The template grants only:
+- `s3:PutObject` and `s3:GetObject` on `societies/*` and `incidents/*` in the documents bucket;
+- six Cognito admin actions on the one user pool, for HQ account management: `AdminGetUser`, `AdminCreateUser`, `AdminSetUserPassword`, `AdminEnableUser`, `AdminDisableUser` and `AdminUserGlobalSignOut` (no delete, listing or pool changes);
+- when `SarvoAiEnabled=true`, `bedrock:InvokeModel` on the one Haiku 5.5 global inference profile (the same three statements as `sarvoai-bedrock-policy.json`). Lambda's VPC access is added by SAM (`AWSLambdaVPCAccessExecutionRole`). No Secrets Manager permission is needed at run time: `DATABASE_URL` and `NIC_ENCRYPTION_KEY` are resolved from Secrets Manager when the stack is deployed. If Sarvodaya prefers reading secrets at run time (so a rotation does not need a redeploy), add the AWS Parameters and Secrets Lambda Extension and `secretsmanager:GetSecretValue` on those two secrets (To Confirm).
 
 ### Dashboard on Amplify
 
-`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL` and `PLATFORM_DEMO_MODE` into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server otherwise. The dashboard reads exactly three variables (`API_BASE_URL`, `PLATFORM_DEMO_MODE`, `NODE_ENV`); nothing is exposed to the browser. `npm run build` succeeds with only those set.
+`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL`, `PLATFORM_DEMO_MODE`, `AUTH_PROVIDER` and the `COGNITO_*` values into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server (or middleware) otherwise. Nothing is exposed to the browser (no `NEXT_PUBLIC_` values), and there is no client secret. `npm run build` succeeds with only `API_BASE_URL` and `PLATFORM_DEMO_MODE` set. Sign-in then fails closed until the Cognito values are added.
 
 ### SarvoAI on Bedrock
 
@@ -178,10 +189,15 @@ The template grants only: `s3:PutObject` and `s3:GetObject` on `societies/*` and
 
 ### Deployment steps (for the account owner; not done in PR 10)
 
-1. Create (outside this repository): the VPC with private subnets and a NAT gateway or VPC endpoints (S3, Bedrock runtime, Cognito JWKS over HTTPS), RDS PostgreSQL 17 with RDS Proxy, the private documents bucket (block public access, default encryption, the CORS rule above), the Cognito user pool and app clients, and two Secrets Manager secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`).
+1. Create (outside this repository):
+   - the VPC, with private subnets and a NAT gateway or VPC endpoints (S3, Bedrock runtime, and the Cognito user pool API and JWKS over HTTPS);
+   - RDS PostgreSQL 17 with RDS Proxy;
+   - the private documents bucket (block public access, default encryption, the CORS rule above);
+   - the Cognito user pool and public app clients, with the settings in `cognito-setup.md`;
+   - two Secrets Manager secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`).
 2. Run migrations from a one-off task in the VPC: `npm ci && npm run prisma:deploy` in `apps/api`.
 3. `npm run package:lambda`, then `sam deploy -t infrastructure/aws/template.yaml --guided` with the parameters (stage, bucket, pool, client ids, secret ARNs, subnets, security group).
-4. In Amplify, connect the repository (it uses `amplify.yml`) and set `API_BASE_URL` to the template's `ApiBaseUrl` output.
-5. Create the first HQ user in Cognito and link it (`provider_subject`); see the To Confirm item above.
+4. In Amplify, connect the repository (it uses `amplify.yml`), set `API_BASE_URL` to the template's `ApiBaseUrl` output, and set `COGNITO_USER_POOL_ID` and the dashboard's `COGNITO_CLIENT_ID`.
+5. Create the first HQ user in Cognito and link it with `npm run identity:link-cognito-hq` (`cognito-setup.md`, "First HQ account").
 6. Run the smoke checks against the deployed API with a fictional test account, then remove that account.
 
