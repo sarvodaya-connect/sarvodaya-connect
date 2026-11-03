@@ -43,7 +43,7 @@ void main() {
     await signInWithDemoAccount(tester);
     expect(find.text('Your account is ready'), findsNothing);
     expect(find.textContaining('Nimali'), findsOneWidget);
-    expect(find.text('Profile completeness'), findsOneWidget);
+    expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
   });
 
   testWidgets('the chosen language is saved on continue', (tester) async {

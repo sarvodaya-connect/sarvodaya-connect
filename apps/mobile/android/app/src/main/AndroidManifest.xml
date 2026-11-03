@@ -1,7 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The only permission: the app talks to the Sarvodaya Connect API over HTTPS.
+         Documents are chosen with the system file picker, which needs no storage permission. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="sarvodaya_connect_mobile"
+        android:label="Sarvodaya Connect"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

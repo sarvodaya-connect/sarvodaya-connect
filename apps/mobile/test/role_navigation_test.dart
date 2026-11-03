@@ -6,33 +6,35 @@ import 'test_helpers.dart';
 
 void main() {
   testWidgets(
-    'Society Officer receives M05 navigation and incomplete profile action',
+    'Society Officer receives the V5 M05 home and Nav, in demo mode too',
     (tester) async {
       final store = testStore();
       store.switchDemoRole(UserRole.societyOfficer);
       await pumpApp(tester, store: store);
 
-      expect(find.text('Profile completeness'), findsOneWidget);
-      expect(find.text('Complete profile'), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.bySemanticsLabel('Sarvodaya Connect'), findsOneWidget);
-      expect(find.text('Society'), findsOneWidget);
-      expect(find.text('Submit'), findsOneWidget);
-      expect(find.text('Requests'), findsOneWidget);
-      expect(find.text('More'), findsOneWidget);
+      expect(find.textContaining('Good '), findsOneWidget);
+      expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
+      for (final tab in ['Home', 'Society', 'Exco', 'Work plan', 'More']) {
+        expect(navTab(tab), findsOneWidget);
+      }
+      expect(find.text('Incident'), findsOneWidget);
+      // V5 PR 10: the V3 Submit and Requests tabs are gone.
+      expect(find.text('Submit'), findsNothing);
+      expect(find.text('Requests'), findsNothing);
     },
   );
 
-  testWidgets('M05i shows Tamil home copy and navigation', (tester) async {
+  testWidgets('M05i keeps the Tamil names on the Society Officer Nav', (
+    tester,
+  ) async {
     final store = testStore();
     store.switchDemoRole(UserRole.societyOfficer);
     store.chooseLanguage(AppLanguage.tamil);
     await pumpApp(tester, store: store);
 
-    expect(find.text('உங்கள் கவனம் தேவை'), findsOneWidget);
-    expect(find.text('விரைவு செயல்கள்'), findsOneWidget);
-    expect(find.text('முகப்பு'), findsWidgets);
-    expect(find.text('மேலும்'), findsOneWidget);
+    expect(navTab('முகப்பு'), findsOneWidget);
+    expect(navTab('சங்கம்'), findsOneWidget);
+    expect(navTab('மேலும்'), findsOneWidget);
   });
 
   for (final (role, tabs) in [

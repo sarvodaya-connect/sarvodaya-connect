@@ -7,17 +7,14 @@ import 'incidents/incident_screens.dart';
 
 import 'package:flutter/material.dart';
 
-import 'screens/documents_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/society_officer_home_screen.dart';
-import 'screens/society_profile_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/tracker_screen.dart';
 import 'models/app_language.dart';
 import 'state/demo_store.dart';
+import 'auth/api_auth_service.dart';
 import 'theme/app_theme.dart';
 import 'models/user.dart';
 
@@ -75,11 +72,52 @@ class _Root extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    // V5 PR 10: a release build without a valid https server address says so.
+    final problem = DemoStore.demoMode
+        ? null
+        : IdentityApi.configurationProblem();
+    if (problem != null) return ConfigurationProblemScreen(message: problem);
     if (store.showSplash) return const SplashScreen();
     if (!store.languageChosen) return const LanguageScreen();
     if (store.user == null) return const SignInScreen();
     return const HomeShell();
   }
+}
+
+/// Shown instead of the app when a release build is misconfigured, so it
+/// never signs in against the wrong server.
+class ConfigurationProblemScreen extends StatelessWidget {
+  const ConfigurationProblemScreen({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.settings_outlined,
+                size: 40,
+                color: AppColors.muted,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'This app is not set up yet',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Role-aware five-destination navigation for SC-39.
@@ -88,10 +126,6 @@ class HomeShell extends StatelessWidget {
 
   static const homeTab = 0;
   static const societyTab = 1;
-  static const documentsTab = 2;
-  static const trackerTab = 3;
-  static const roleWorkTab = 2;
-  static const moreTab = 4;
 
   /// Returns to the shell and opens a tab, for example after a submission.
   static void openTab(BuildContext context, int tab) {
@@ -104,11 +138,11 @@ class HomeShell extends StatelessWidget {
     final store = DemoScope.of(context);
     final role = store.activeRole;
     final user = store.user;
-    // A Society Officer with one society gets the Prototype v4 home in API
-    // mode; demo mode keeps the v3 journey.
+    // V5 PR 10: a Society Officer with one society gets the V5 bar (Home,
+    // Society, Incident, Exco, Work plan, More) in demo mode too; the V3
+    // Submit/Requests journey no longer matches the prototype.
     final officerSocietyId =
-        !DemoStore.demoMode &&
-            role == UserRole.societyOfficer &&
+        role == UserRole.societyOfficer &&
             user != null &&
             user.societyIds.length == 1
         ? user.societyIds.single
@@ -143,8 +177,8 @@ class HomeShell extends StatelessWidget {
     int selectedTab,
     String? officerSocietyId,
   ) => switch (role) {
-    // API mode: V5 Nav for the Society Officer (Home, Society, the red
-    // Incident button, Exco, Work plan, More).
+    // V5 Nav for the Society Officer (Home, Society, the red Incident
+    // button, Exco, Work plan, More), in API and demo mode.
     UserRole.societyOfficer when officerSocietyId != null =>
       _ShellConfiguration(
         pages: [
@@ -161,49 +195,45 @@ class HomeShell extends StatelessWidget {
               : const SizedBox.shrink(),
           const MoreScreen(),
         ],
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-            tooltip: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            label: _officerLabel(language, 'Home'),
+            tooltip: _officerLabel(language, 'Home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.apartment_outlined),
-            selectedIcon: Icon(Icons.apartment),
-            label: 'Society',
-            tooltip: 'Society',
+            icon: const Icon(Icons.apartment_outlined),
+            selectedIcon: const Icon(Icons.apartment),
+            label: _officerLabel(language, 'Society'),
+            tooltip: _officerLabel(language, 'Society'),
           ),
-          _IncidentDestination(),
-          NavigationDestination(
+          const _IncidentDestination(),
+          const NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
             label: 'Exco',
             tooltip: 'Exco',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today),
             label: 'Work plan',
             tooltip: 'Work plan',
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu),
-            label: 'More',
-            tooltip: 'More',
+            icon: const Icon(Icons.menu),
+            label: _officerLabel(language, 'More'),
+            tooltip: _officerLabel(language, 'More'),
           ),
         ],
       ),
+    // A Society Officer with no society, or several, has no V5 frame (To
+    // Confirm): their society list, the Incident button and More.
     UserRole.societyOfficer => _ShellConfiguration(
-      pages: const [
-        // Outside demo mode an officer with several societies starts from
-        // their society list; one society opens the V5 home above.
-        DemoStore.demoMode ? HomeScreen() : LiveSocietiesScreen(),
-        // Demo mode keeps the v3 profile that the Society Officer demo
-        // journey still uses.
-        DemoStore.demoMode ? SocietyProfileScreen() : LiveSocietiesScreen(),
-        DocumentsScreen(),
-        TrackerScreen(),
-        MoreScreen(),
+      pages: [
+        const LiveSocietiesScreen(),
+        selectedTab == 1 ? const IncidentsScreen() : const SizedBox.shrink(),
+        const MoreScreen(),
       ],
       destinations: [
         NavigationDestination(
@@ -211,20 +241,7 @@ class HomeShell extends StatelessWidget {
           selectedIcon: const Icon(Icons.home),
           label: _officerLabel(language, 'Home'),
         ),
-        NavigationDestination(
-          icon: const Icon(Icons.people_outline),
-          selectedIcon: const Icon(Icons.people),
-          label: _officerLabel(language, 'Society'),
-        ),
-        NavigationDestination(
-          icon: const _SubmitIcon(),
-          label: _officerLabel(language, 'Submit'),
-        ),
-        NavigationDestination(
-          icon: const _RequestsIcon(),
-          selectedIcon: const _RequestsIcon(selected: true),
-          label: _officerLabel(language, 'Requests'),
-        ),
+        const _IncidentDestination(),
         NavigationDestination(
           icon: const Icon(Icons.menu),
           selectedIcon: const Icon(Icons.menu_open),
@@ -324,44 +341,10 @@ class HomeShell extends StatelessWidget {
     return switch (english) {
       'Home' => 'முகப்பு',
       'Society' => 'சங்கம்',
-      'Submit' => 'சமர்ப்பி',
-      'Requests' => 'கோரிக்கைகள்',
       'More' => 'மேலும்',
       _ => english,
     };
   }
-}
-
-/// Catalogue bottom-bar "Submit": a filled green square with a plus.
-class _SubmitIcon extends StatelessWidget {
-  const _SubmitIcon();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 34,
-    height: 24,
-    decoration: BoxDecoration(
-      color: AppColors.action,
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: const Icon(Icons.add, color: Colors.white, size: 20),
-  );
-}
-
-/// Requests inbox icon with the amber dot for new requests.
-class _RequestsIcon extends StatelessWidget {
-  const _RequestsIcon({this.selected = false});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) => Badge(
-    smallSize: 7,
-    backgroundColor: const Color(0xFFF3C44E),
-    child: Icon(
-      selected ? Icons.mark_email_unread : Icons.mark_email_unread_outlined,
-    ),
-  );
 }
 
 class _ShellConfiguration {

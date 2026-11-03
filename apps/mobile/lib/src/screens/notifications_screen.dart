@@ -305,8 +305,8 @@ void openNotification(BuildContext context, AppNotification notification) {
   switch (notification.target) {
     case NotificationTarget.none:
       return;
+    // V5 M13: documents live in the society record, under the Society tab.
     case NotificationTarget.documents:
-      HomeShell.openTab(context, HomeShell.documentsTab);
     case NotificationTarget.societyProfile:
       HomeShell.openTab(context, HomeShell.societyTab);
     case NotificationTarget.audit:

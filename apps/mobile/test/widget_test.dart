@@ -59,7 +59,8 @@ void main() {
 
     expect(find.textContaining('Nimali'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
-    expect(find.text('Profile completeness'), findsOneWidget);
+    // V5 M05: the society card and the list of things to update.
+    expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
   });
 
   testWidgets('offline sign-in explains that internet is needed', (

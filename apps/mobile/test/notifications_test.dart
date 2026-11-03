@@ -92,8 +92,8 @@ void main() {
     await _openNotifications(tester);
     await tester.tap(find.text('HQ asked for the 4 Registrar documents'));
     await tester.pumpAndSettle();
-    expect(store.selectedTab, HomeShell.documentsTab);
-    expect(find.text('Registrar documents · FY 2025/26'), findsOneWidget);
+    // V5 PR 10: documents are part of the society record (M13), not a V3 tab.
+    expect(store.selectedTab, HomeShell.societyTab);
 
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
@@ -106,7 +106,6 @@ void main() {
     await tester.pumpAndSettle();
     await tapVisible(tester, find.text('Society location verified'));
     expect(store.selectedTab, HomeShell.societyTab);
-    expect(find.text('SSS-104233'), findsOneWidget);
   });
 
   testWidgets('Mark all read clears every unread state', (tester) async {
