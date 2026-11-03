@@ -39,7 +39,6 @@ void main() {
     UserRole.programmeCoordinator,
     UserRole.deputyDistrictManager,
     UserRole.districtManager,
-    UserRole.hqAdmin,
   ]) {
     testWidgets(
       '${role.label} receives the V4 role home and scoped directory',
@@ -59,6 +58,26 @@ void main() {
       },
     );
   }
+
+  testWidgets('HQ receives the V5 National Dashboard and HQ tabs', (
+    tester,
+  ) async {
+    final store = testStore()..switchDemoRole(UserRole.hqAdmin);
+    await pumpApp(tester, store: store);
+    expect(find.text('National Dashboard'), findsOneWidget);
+    for (final tab in [
+      'Overview',
+      'Districts',
+      'Societies',
+      'Alerts',
+      'More',
+    ]) {
+      expect(navTab(tab), findsOneWidget);
+    }
+    await tester.tap(navTab('Districts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alphabetical, never ranked'), findsOneWidget);
+  });
 
   testWidgets('M17 More changes language and signs out', (tester) async {
     final store = testStore();
@@ -82,7 +101,7 @@ void main() {
 
   testWidgets('role home exposes the M26 empty state', (tester) async {
     final store = testStore();
-    store.switchDemoRole(UserRole.hqAdmin);
+    store.switchDemoRole(UserRole.programmeCoordinator);
     store.setDemoOptions(emptyRecords: true);
     await pumpApp(tester, store: store);
 
@@ -91,7 +110,7 @@ void main() {
 
   testWidgets('role home exposes the M26 error state', (tester) async {
     final store = testStore();
-    store.switchDemoRole(UserRole.hqAdmin);
+    store.switchDemoRole(UserRole.programmeCoordinator);
     store.setDemoOptions(failLoads: true);
     await pumpApp(tester, store: store);
 

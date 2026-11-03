@@ -2,7 +2,10 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import type { Principal } from '../auth/principal.js';
 import { USER_DIRECTORY, type UserDirectory } from '../auth/user-directory.js';
-import type { NotificationQueryDto } from './dto/notification-query.dto.js';
+import {
+  ALERT_FILTERS,
+  type NotificationQueryDto,
+} from './dto/notification-query.dto.js';
 import {
   type NewNotification,
   type NotificationRecord,
@@ -13,6 +16,7 @@ export function toNotificationResponse(record: NotificationRecord) {
   return {
     id: record.id,
     category: record.category,
+    ...(record.topic ? { topic: record.topic } : {}),
     title: record.title,
     ...(record.body ? { body: record.body } : {}),
     ...(record.linkPath ? { linkPath: record.linkPath } : {}),
@@ -38,6 +42,7 @@ export class NotificationsService {
         unreadOnly: query.unreadOnly,
         page: query.page,
         pageSize: query.pageSize,
+        ...(query.filter ? { topics: [...ALERT_FILTERS[query.filter]] } : {}),
       });
     return {
       data: records.map(toNotificationResponse),

@@ -1,3 +1,5 @@
+import '../national/demo_national_api.dart';
+import '../national/national_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
 import '../society_record/society_record_api.dart';
@@ -64,6 +66,7 @@ class DemoStore extends ChangeNotifier {
     AuthService? authService,
     DocumentUploadService? uploadService,
     SocietyRecordApi? societyRecordApi,
+    NationalApi? nationalApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
@@ -84,6 +87,11 @@ class DemoStore extends ChangeNotifier {
                 isOnline: () => !offline,
               )
             : HttpSocietyRecordApi(identityApi));
+    national =
+        nationalApi ??
+        (demoMode
+            ? DemoNationalApi(user: () => _user, delay: loadDelay)
+            : HttpNationalApi(identityApi));
     this.documentPicker =
         documentPicker ??
         (demoMode ? const DemoDocumentPicker() : const DeviceDocumentPicker());
@@ -108,6 +116,9 @@ class DemoStore extends ChangeNotifier {
 
   /// SC-65 society record (M06–M13): API-backed, or fictional in demo mode.
   late final SocietyRecordApi societyRecords;
+
+  /// V5 PR 5 HQ National Dashboard (M05h, M61–M69): HQ only on the server.
+  late final NationalApi national;
 
   /// Chooses the audit report file to upload (M13a).
   late final DocumentPicker documentPicker;

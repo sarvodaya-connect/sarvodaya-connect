@@ -218,6 +218,7 @@ export class SocietyRecordService {
         ),
       {
         category: 'REQUEST',
+        topic: 'GRADE_REQUEST',
         title: `Grade change ${society.grade ?? '—'} → ${input.toGrade} requested`,
         body: `${society.nameEn} · sent by ${principal.displayName}`,
         linkPath: `/societies/${society.id}`,
@@ -262,6 +263,7 @@ export class SocietyRecordService {
       () => Promise.resolve([request.requestedById]),
       {
         category: approve ? 'APPROVAL' : 'RETURNED',
+        topic: 'GRADE_REQUEST',
         title: `Grade ${request.fromGrade ?? '—'} → ${request.toGrade} ${approve ? 'approved' : 'rejected'} by HQ`,
         body: `${society.nameEn}${input.comment ? ` · “${input.comment}”` : ''}`,
         linkPath: `/societies/${society.id}`,

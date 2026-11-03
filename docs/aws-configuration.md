@@ -65,5 +65,16 @@ Apply with `npm run prisma:deploy` in `apps/api` against RDS (through a migratio
 |---|---|---|
 | `20261103090000_v5_activities_sdgs_documents` | 4 | Activity status (waiting for SPC, sent back, approved), dimension, participants and beneficiaries, partners, resources, volunteer hours, who sent and reviewed it; `work_plan_activity_sdgs` (UN SDG 1–17 with a check constraint); document SHA-256. Existing activities become approved. |
 | `20261103091000_v5_registrar_document_counts` | 4 | Index on `society_documents (financial_year_start, document_type, society_id)` for the D11/D12 national counts |
+| `20261104090000_v5_national_dashboard` | 5 | `districts.province` (filled for the 25 districts); `notifications.topic` for the Alerts filters (existing rows get a topic from their link); `information_requests` and `information_request_societies` for HQ requests (D13); index `societies (status, updated_at)` for "not updated in 90+ days" and `notifications (recipient_user_id, topic, created_at)` |
 
 Indexes added in PR 4 for dashboard queries: `work_plan_activities (status, submitted_at)` and `(status, reviewed_at)` for the SPC queue, `work_plan_activity_sdgs (sdg)` for SDG rankings (PR 5), and the Registrar document index above. National Registrar counts run as two grouped SQL queries, not a loop over societies.
+
+## National dashboard queries (PR 5)
+
+PR 5 adds no settings and no AWS resources. Its endpoints are read-mostly and sized for Lambda:
+
+- **Grouped SQL:** the D02 figures, district cards, membership, programmes, reports and HQ tasks are each a handful of grouped queries over all societies, never a loop over societies. A report is at most one row per district, category or sector.
+- **Bounded lists:** the society directory, the "not added" list, the request tracker and Alerts are paginated (at most 100 rows a page); search returns at most 10 results a type (25 for one type).
+- **Map:** `GET /national/map` returns every society that has a position, as five small fields each. At about 5,500 societies this is roughly 600 KB of JSON, well inside the 6 MB Lambda response limit. If the registry grows far beyond that, return the points by district or as tiles instead.
+- **Reports:** the dashboard previews a report as JSON, prints it as PDF in the browser and builds the CSV ("Excel") download itself, so nothing is written to disk or S3. Scheduled reports would need EventBridge and email; they are not built (To Confirm in the PR).
+- **Requests:** sending a request to every active society writes one row and at most one notification per society in a single transaction; for about 1,100 societies that is well within one Lambda invocation.

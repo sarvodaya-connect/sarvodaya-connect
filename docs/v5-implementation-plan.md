@@ -83,18 +83,18 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D02 National Dashboard | `/dashboard` | — | rework | 5 |
-| D03 Map view | — | — | new | 5 |
-| D03b District view | `/districts/[id]` | — | rework | 5 |
-| D04 Societies list | `/societies` | — | rework | 5 |
-| D07 Programmes | `/activities` | — | rework | 5 |
-| D08 Membership | `/membership` | `membership_screen.dart` | rework | 5 |
-| D13 Requests and tasks | — | — | new | 5 |
-| D15 Reports | — | — | new | 5 |
-| D18 Search | `/search` | — | rework | 5 |
-| D19 Alerts | `/notifications` | — | rework | 5 |
+| D02 National Dashboard | `/dashboard` (API `/national/overview`) | — | match (PR 5); Ask SarvoAI box in PR 9 | 5 |
+| D03 Map view | `/map` (API `/national/map`) | — | match (PR 5) | 5 |
+| D03b District view | `/districts` (API `/national/districts`) | — | match (PR 5) | 5 |
+| D04 Societies list | `/societies` (API `/society-directory`) | — | match (PR 5); "Needs follow-up" tab To Confirm | 5 |
+| D07 Programmes | `/activities` (API `/national/programmes`) | — | match (PR 5) | 5 |
+| D08 Membership | `/membership` (API `/national/membership`) | `national/national_screens.dart` (M61) | match (PR 5); categories To Confirm | 5 |
+| D13 Requests and tasks | `/requests` (API `/information-requests`, `/hq-tasks`) | — | match (PR 5); reminders and personal tasks To Confirm | 5 |
+| D15 Reports | `/reports`, `/reports/[type]` (print), `/reports/[type]/download` (CSV) | — | match (PR 5); scheduled reports To Confirm | 5 |
+| D18 Search | `/search` (API `/search`) | — | match (PR 5) | 5 |
+| D19 Alerts | `/notifications` (API `/notifications?filter=`) | — | match (PR 5) | 5 |
 | D17 Settings | — | — | not assigned (see open questions) | — |
-| M05h, M61–M69d | — | `v4_role_home_screen.dart` (HQ) | rework / new | 5 |
+| M05h, M61–M69d | — | `national/national_screens.dart`, HQ tabs in `app.dart` | match (PR 5) | 5 |
 
 ### Role dashboards and phone homes
 
@@ -139,13 +139,13 @@ PR 1 applies the V5 bar style to the existing tabs. The V5 tab sets below change
 | SPC | Home, Alerts, More | Home, Societies, Alerts, Disasters, More |
 | DDM | Home, Alerts, More | Home, Societies, Alerts, Disasters, More |
 | DM | Home, Societies, Access, Alerts, More | Home, Societies, Access, Disasters, More |
-| HQ | Overview, Districts, Societies, Alerts, More | Home, Societies, Alerts, Disasters, More |
+| HQ | Overview, Districts, Societies, Alerts, More | Same (PR 5) |
 
 ## Sidebar items that wait for their pages
 
 The sidebar lists only pages that exist, so nobody lands on an empty page. These V5 items are added by the PR that builds them:
 
-- HQ: Map View (PR 5), Requests & Tasks (PR 5), Reports (PR 5), Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
+- HQ: Map View, Requests & Tasks and Reports were added in PR 5. Still waiting: Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
 - SPC: Activities to approve (added in PR 4, with SPC desktop sign-in limited to those pages until PR 6), Help (not assigned).
 - DM: Temporary DDM access (PR 7).
 - SPC, DDM and DM desktop sign-in: the dashboard still allows HQ only (`current-viewer.ts`, `identity-actions.ts`). PR 6 opens it with server-side scope on every request.
@@ -184,6 +184,6 @@ These are not decided in V5 or the confirmed requirements. No PR invents an answ
 
 - Who may open and close an incident beyond what the API allows today, and whether a Society Officer report notifies every society immediately or after review (PR 8).
 - Whether D17 Settings and the role "Help" item are in scope, and what they contain.
-- Whether HQ Districts (M65) on the phone needs its own API or reuses the district view (PR 5).
+- HQ Districts (M65) on the phone reuses the D03b endpoint `/national/districts` (decided in PR 5).
 - How long a temporary DDM grant may last and whether it can be renewed (PR 7).
 - The existing demo-only offline banners and queued submissions on the phone: offline editing is out of scope, so they will be removed with the screens that show them (PR 3, PR 4, PR 8).

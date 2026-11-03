@@ -1,17 +1,14 @@
-import { redirect } from "next/navigation";
-
-import { DistrictOverview, NationalOverview } from "@/components/dashboard/role-overviews";
+import { NationalOverviewView } from "@/components/dashboard/national/national-overview";
+import { first } from "@/components/dashboard/national/parts";
+import { selectableStartYears } from "@/lib/activity-format";
 import { getCurrentViewer } from "@/lib/current-viewer";
+import { getNationalOverview } from "@/lib/national-api";
+import { isDemoMode } from "@/lib/platform-api";
 
-export default async function DashboardHome() {
-  const viewer = await getCurrentViewer();
-
-  // The System Administrator has no society data; their home is platform access.
-  if (viewer.role === "SYSTEM_ADMIN") redirect("/admin");
-
-  // Programme Coordinators are limited to assigned societies; do not send them
-  // to the district overview, which contains district-wide figures and actions.
-  if (viewer.role === "PROGRAMME_COORDINATOR") redirect("/societies");
-
-  return viewer.role === "HQ_ADMIN" ? <NationalOverview /> : <DistrictOverview />;
+/** V5 D02 National Dashboard (HQ only; the API refuses everyone else). */
+export default async function DashboardHome({ searchParams }: PageProps<"/dashboard">) {
+  await getCurrentViewer();
+  const year = Number(first((await searchParams).year)) || undefined;
+  const overview = await getNationalOverview(year);
+  return <NationalOverviewView demo={isDemoMode()} overview={overview} years={selectableStartYears()} />;
 }

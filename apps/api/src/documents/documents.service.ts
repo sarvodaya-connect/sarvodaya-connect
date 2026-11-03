@@ -297,6 +297,7 @@ export class DocumentsService {
         districtId: record.society.districtId,
         excludeUserId: record.uploadedById,
         category: 'APPROVAL',
+        topic: 'RECORDS',
         title: `${DOCUMENT_TYPE_LABELS[record.documentType] ?? 'Document'} from ${record.society.nameEn} is waiting for review`,
         body: `${record.title} (version ${record.version}) was uploaded by ${record.uploadedByName}.`,
         linkPath: `/documents?society=${record.societyId}`,

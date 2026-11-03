@@ -1,3 +1,4 @@
+import 'national/national_screens.dart';
 import 'screens/live_societies_screen.dart';
 import 'screens/v4_role_home_screen.dart';
 import 'screens/district_access_screen.dart';
@@ -229,10 +230,46 @@ class HomeShell extends StatelessWidget {
         ),
       ],
     ),
+    // V5 HQ tabs: Overview, Districts, Societies, Alerts, More.
+    UserRole.hqAdmin => _ShellConfiguration(
+      pages: [
+        const NationalDashboardScreen(),
+        const DistrictsScreen(),
+        const NationalSocietiesScreen(asTab: true),
+        RoleWorkspaceScreen(role: role, workspace: RoleWorkspace.alerts),
+        const MoreScreen(),
+      ],
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.grid_view_outlined),
+          selectedIcon: Icon(Icons.grid_view),
+          label: 'Overview',
+          tooltip: 'Overview',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart),
+          label: 'Districts',
+          tooltip: 'Districts',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.list_alt_outlined),
+          selectedIcon: Icon(Icons.list_alt),
+          label: 'Societies',
+          tooltip: 'Societies',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications),
+          label: 'Alerts',
+          tooltip: 'Alerts',
+        ),
+        _MoreDestination(),
+      ],
+    ),
     UserRole.programmeCoordinator ||
     UserRole.deputyDistrictManager ||
-    UserRole.districtManager ||
-    UserRole.hqAdmin => _ShellConfiguration(
+    UserRole.districtManager => _ShellConfiguration(
       pages: [
         V4RoleHomeScreen(role: role),
         const MySocietiesScreen(),

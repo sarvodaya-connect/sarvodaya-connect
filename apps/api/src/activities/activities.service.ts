@@ -136,6 +136,7 @@ export class ActivitiesService {
       principal,
       {
         category: 'APPROVAL',
+        topic: 'ACTIVITY',
         title: `Activity to approve: ${activity.name} · ${society.nameEn}`,
         body: `${principal.displayName} planned it for ${MONTHS[activity.month - 1]} ${activity.year}. Choose its UN SDGs and approve it, or send it back.`,
         linkPath: `/activities-to-approve/${activity.id}`,
@@ -208,6 +209,7 @@ export class ActivitiesService {
       principal,
       {
         category: 'APPROVAL',
+        topic: 'ACTIVITY',
         title: `Activity approved: ${activity.name}`,
         body: `${principal.displayName} (SPC) approved it with UN SDG ${sdgs.join(', ')}. It now counts in the activity figures.`,
         linkPath: `/societies/${activity.societyId}/work-plan`,
@@ -237,6 +239,7 @@ export class ActivitiesService {
       principal,
       {
         category: 'RETURNED',
+        topic: 'ACTIVITY',
         title: `Activity sent back: ${activity.name}`,
         body: input.comment
           ? `${principal.displayName} (SPC): “${input.comment}”`

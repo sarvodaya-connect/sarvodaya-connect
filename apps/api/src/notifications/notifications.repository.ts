@@ -12,9 +12,22 @@ export type NotificationCategoryValue =
   | 'STALE_DATA'
   | 'SYSTEM';
 
+/** V5 D19 Alerts filters. */
+export const NOTIFICATION_TOPIC_VALUES = [
+  'GRADE_REQUEST',
+  'INCIDENT',
+  'ACCESS',
+  'RECORDS',
+  'ACTIVITY',
+  'ACCOUNT',
+  'INFORMATION_REQUEST',
+] as const;
+export type NotificationTopicValue = (typeof NOTIFICATION_TOPIC_VALUES)[number];
+
 export interface NewNotification {
   recipientUserId: string;
   category: NotificationCategoryValue;
+  topic?: NotificationTopicValue;
   title: string;
   body?: string;
   linkPath?: string;
@@ -28,11 +41,17 @@ export class NotificationsRepository {
 
   async listForRecipient(
     recipientUserId: string,
-    options: { unreadOnly: boolean; page: number; pageSize: number },
+    options: {
+      unreadOnly: boolean;
+      page: number;
+      pageSize: number;
+      topics?: NotificationTopicValue[];
+    },
   ) {
     const where = {
       recipientUserId,
       ...(options.unreadOnly ? { readAt: null } : {}),
+      ...(options.topics ? { topic: { in: options.topics } } : {}),
     };
     const [records, totalItems, unreadCount] = await executeDatabaseOperation(
       () =>

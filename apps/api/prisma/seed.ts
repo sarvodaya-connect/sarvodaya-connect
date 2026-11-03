@@ -18,9 +18,9 @@ if (!['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 const districtData = [
-  { id: '29000000-0000-4000-8000-000000000001', code: 'DEMO-N', nameEn: 'Fictional North District' },
-  { id: '29000000-0000-4000-8000-000000000002', code: 'DEMO-C', nameEn: 'Fictional Central District' },
-  { id: '29000000-0000-4000-8000-000000000003', code: 'DEMO-S', nameEn: 'Fictional South District' },
+  { id: '29000000-0000-4000-8000-000000000001', code: 'DEMO-N', nameEn: 'Fictional North District', province: 'Fictional Northern Province' },
+  { id: '29000000-0000-4000-8000-000000000002', code: 'DEMO-C', nameEn: 'Fictional Central District', province: 'Fictional Central Province' },
+  { id: '29000000-0000-4000-8000-000000000003', code: 'DEMO-S', nameEn: 'Fictional South District', province: 'Fictional Southern Province' },
 ] as const;
 
 const societyData = [
@@ -150,7 +150,7 @@ const demoWorkPlan = [
 async function main() {
   await prisma.$transaction(async (tx) => {
     for (const row of districtData) {
-      await tx.district.upsert({ where: { id: row.id }, create: row, update: { code: row.code, nameEn: row.nameEn } });
+      await tx.district.upsert({ where: { id: row.id }, create: row, update: { code: row.code, nameEn: row.nameEn, province: row.province } });
     }
     for (const row of societyData) {
       await tx.society.upsert({ where: { id: row.id }, create: row, update: row });

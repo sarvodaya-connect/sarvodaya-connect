@@ -23,7 +23,8 @@ export function navigationFor(viewer: DemoViewer): Navigation {
       return {
         main: [
           { href: "/dashboard", icon: "home", label: "National Overview", alsoActiveOn: ["/states"] },
-          { href: "/districts/kurunegala", icon: "chart", label: "District View", alsoActiveOn: ["/districts"] },
+          { href: "/map", icon: "map", label: "Map View" },
+          { href: "/districts", icon: "chart", label: "District View" },
           { href: "/societies", icon: "people", label: "Societies" },
           { href: "/reviews", icon: "document", label: "Review Queue" },
           { href: "/activities", icon: "leaf", label: "Programmes" },
@@ -32,6 +33,8 @@ export function navigationFor(viewer: DemoViewer): Navigation {
             ? [{ href: "/compliance", icon: "shield", label: "Audits" } satisfies NavigationItem]
             : []),
           { href: "/emergencies", icon: "alert", label: "Disaster & Emergency" },
+          { href: "/requests", icon: "mail", label: "Requests & Tasks" },
+          { href: "/reports", icon: "clipboard", label: "Reports" },
           ...(canViewDocumentLibrary(viewer)
             ? [{ href: "/documents", icon: "document", label: "Documents" } satisfies NavigationItem]
             : []),
@@ -91,17 +94,20 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/states", "Page states"],
   ["/societies/new", "Societies", "Create a society record"],
   ["/societies/", "Society record"],
-  ["/societies", "Societies"],
-  ["/membership", "Membership"],
-  ["/activities", "Programmes and activities"],
+  ["/societies", "Societies", "Search and filter every society"],
+  ["/membership", "Membership", "Aggregated counts — no personal data"],
+  ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
+  ["/activities", "Programmes & Activities", "Sarvodaya 10-sector approach"],
   ["/emergencies", "Disaster & Emergency"],
-  ["/districts", "District view"],
+  ["/districts", "District View", "Districts · active societies by A/B/C class"],
+  ["/map", "Map View", "Every society, by A/B/C class and status"],
+  ["/requests", "Requests & Tasks", "Ask districts and societies for documents or information"],
+  ["/reports", "Reports", "Standard reports, ready to print or share"],
   ["/reviews", "Grade requests", "HQ approval queue"],
   ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
-  ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
   ["/documents", "Documents", "Every certificate, minute and report in one place"],
-  ["/search", "Search"],
-  ["/notifications", "Alerts"],
+  ["/search", "Search", "Societies, people, documents and records"],
+  ["/notifications", "Alerts", "Requests, incidents, access and records"],
 ];
 
 /** Header title and subtitle (V5 HQTop and the role headers). */
@@ -110,8 +116,8 @@ export function headingFor(pathname: string, viewer: DemoViewer): { title: strin
   switch (viewer.role) {
     case "HQ_ADMIN":
       return {
-        title: page ?? "National overview",
-        subtitle: pageSubtitle ?? "Sarvodaya societies across Sri Lanka",
+        title: page ?? "National Dashboard",
+        subtitle: pageSubtitle ?? "Shramadana Societies Across Sri Lanka",
       };
     case "DISTRICT_MANAGER":
       return { title: page ?? "District overview", subtitle: `${viewer.scopeLabel} · view only` };

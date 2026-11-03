@@ -1,15 +1,11 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { NotificationsProvider } from "@/components/dashboard/notifications-context";
 import { getCurrentViewer } from "@/lib/current-viewer";
-import { notificationsFor } from "@/lib/demo-notifications";
+import { getUnreadAlertCount } from "@/lib/national-api";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const viewer = await getCurrentViewer();
+  const [viewer, unreadCount] = await Promise.all([getCurrentViewer(), getUnreadAlertCount()]);
 
   return (
-    // Keyed by viewer so switching the demonstration user starts with that user's notifications.
-    <NotificationsProvider initial={notificationsFor(viewer)} key={viewer.id}>
-      <DashboardShell viewer={viewer}>{children}</DashboardShell>
-    </NotificationsProvider>
+    <DashboardShell unreadCount={unreadCount} viewer={viewer}>{children}</DashboardShell>
   );
 }

@@ -46,43 +46,46 @@ enum MembershipCategory {
 }
 
 model District {
-  id                 String              @id @default(uuid()) @db.Uuid
-  code               String              @unique @db.VarChar(10)
-  nameEn             String              @unique @map("name_en") @db.VarChar(100)
-  accounts           PlatformAccount[]
-  societies          Society[]
-  emergencyIncidents EmergencyIncident[]
-  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                  String               @id @default(uuid()) @db.Uuid
+  code                String               @unique @db.VarChar(10)
+  nameEn              String               @unique @map("name_en") @db.VarChar(100)
+  // V5 D03b: shown under the district name.
+  province            String?              @db.VarChar(60)
+  accounts            PlatformAccount[]
+  informationRequests InformationRequest[]
+  societies           Society[]
+  emergencyIncidents  EmergencyIncident[]
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("districts")
 }
 
 model Society {
-  id                   String                     @id @default(uuid()) @db.Uuid
-  societyCode          String                     @unique @map("society_code") @db.VarChar(20)
-  nameEn               String                     @map("name_en") @db.VarChar(150)
-  nameLocal            String?                    @map("name_local") @db.VarChar(150)
-  districtId           String                     @map("district_id") @db.Uuid
-  district             District                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  dsDivision           String?                    @map("ds_division") @db.VarChar(100)
-  gnDivision           String?                    @map("gn_division") @db.VarChar(100)
-  village              String?                    @db.VarChar(100)
-  addressLine          String?                    @map("address_line") @db.VarChar(255)
+  id                   String                      @id @default(uuid()) @db.Uuid
+  societyCode          String                      @unique @map("society_code") @db.VarChar(20)
+  nameEn               String                      @map("name_en") @db.VarChar(150)
+  nameLocal            String?                     @map("name_local") @db.VarChar(150)
+  districtId           String                      @map("district_id") @db.Uuid
+  district             District                    @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  dsDivision           String?                     @map("ds_division") @db.VarChar(100)
+  gnDivision           String?                     @map("gn_division") @db.VarChar(100)
+  village              String?                     @db.VarChar(100)
+  addressLine          String?                     @map("address_line") @db.VarChar(255)
   latitude             Float?
   longitude            Float?
-  establishedOn        DateTime?                  @map("established_on") @db.Date
-  status               SocietyStatus              @default(UNDER_REVIEW)
+  establishedOn        DateTime?                   @map("established_on") @db.Date
+  status               SocietyStatus               @default(UNDER_REVIEW)
   // SC-65: V4 society record fields (Prototype v4, M06 and D05).
-  memberCount          Int?                       @map("member_count")
-  landline             String?                    @db.VarChar(30)
+  memberCount          Int?                        @map("member_count")
+  landline             String?                     @db.VarChar(30)
   // Information only: the app keeps no sales, stock or business accounts.
-  businessDescription  String?                    @map("business_description") @db.VarChar(1000)
+  businessDescription  String?                     @map("business_description") @db.VarChar(1000)
   // Only HQ changes the grade, directly or by approving a request.
   grade                SocietyGrade?
-  gradeChangedAt       DateTime?                  @map("grade_changed_at") @db.Timestamptz(3)
-  gradeChangedByName   String?                    @map("grade_changed_by_name") @db.VarChar(150)
-  gradeChangedByRole   String?                    @map("grade_changed_by_role") @db.VarChar(40)
+  gradeChangedAt       DateTime?                   @map("grade_changed_at") @db.Timestamptz(3)
+  gradeChangedByName   String?                     @map("grade_changed_by_name") @db.VarChar(150)
+  gradeChangedByRole   String?                     @map("grade_changed_by_role") @db.VarChar(40)
   annualSummaries      AnnualFinancialSummary[]
   gradeRequests        GradeChangeRequest[]
   workPlanActivities   WorkPlanActivity[]
@@ -94,11 +97,14 @@ model Society {
   emergencyAssessments EmergencyAssessment[]
   emergencyActions     EmergencyResponseAction[]
   emergencyReports     EmergencySituationReport[]
-  createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  informationRequests  InformationRequestSociety[]
+  createdAt            DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId])
   @@index([status])
+  // V5 D04 "Not updated in 90+ days".
+  @@index([status, updatedAt])
   @@index([nameEn])
   @@map("societies")
 }
@@ -421,10 +427,25 @@ enum EmergencyActionStatus {
   @@map("emergency_action_status")
 }
 
+// V5 D19: the Alerts filters (grade requests, incidents, access, records,
+// activities). Older notifications without a topic appear under All only.
+enum NotificationTopic {
+  GRADE_REQUEST
+  INCIDENT
+  ACCESS
+  RECORDS
+  ACTIVITY
+  ACCOUNT
+  INFORMATION_REQUEST
+
+  @@map("notification_topic")
+}
+
 model Notification {
   id              String               @id @default(uuid()) @db.Uuid
   recipientUserId String               @map("recipient_user_id") @db.VarChar(64)
   category        NotificationCategory
+  topic           NotificationTopic?
   title           String               @db.VarChar(200)
   body            String?              @db.VarChar(1000)
   // Relative path in the app or dashboard that shows the related item.
@@ -438,6 +459,7 @@ model Notification {
 
   @@index([recipientUserId, createdAt])
   @@index([recipientUserId, readAt])
+  @@index([recipientUserId, topic, createdAt])
   @@map("notifications")
 }
 
@@ -619,4 +641,49 @@ model PlatformAuditEvent {
   @@index([createdAt])
   @@index([societyId, createdAt])
   @@map("platform_audit_events")
+}
+
+// V5 D13: HQ asks a group of societies for documents or information. One row
+// per society records whether it has responded.
+enum InformationRequestAudience {
+  ALL_ACTIVE
+  DISTRICT
+  FIGURES_NOT_ADDED
+  AUDIT_PAST_DUE
+
+  @@map("information_request_audience")
+}
+
+model InformationRequest {
+  id            String                      @id @default(uuid()) @db.Uuid
+  title         String                      @db.VarChar(200)
+  audience      InformationRequestAudience
+  districtId    String?                     @map("district_id") @db.Uuid
+  district      District?                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  // 2025 means FY 2025/26; used by the "figures not added" and "audit past due" groups.
+  financialYear Int?                        @map("financial_year_start")
+  dueOn         DateTime                    @map("due_on") @db.Date
+  createdById   String                      @map("created_by_id") @db.VarChar(64)
+  createdByName String                      @map("created_by_name") @db.VarChar(150)
+  createdAt     DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  societies     InformationRequestSociety[]
+
+  @@index([createdAt])
+  @@map("information_requests")
+}
+
+model InformationRequestSociety {
+  requestId       String             @map("request_id") @db.Uuid
+  request         InformationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  societyId       String             @map("society_id") @db.Uuid
+  society         Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  respondedAt     DateTime?          @map("responded_at") @db.Timestamptz(3)
+  respondedById   String?            @map("responded_by_id") @db.VarChar(64)
+  respondedByName String?            @map("responded_by_name") @db.VarChar(150)
+  note            String?            @db.VarChar(500)
+
+  @@id([requestId, societyId])
+  @@index([societyId, respondedAt])
+  @@index([requestId, respondedAt])
+  @@map("information_request_societies")
 }
