@@ -67,6 +67,10 @@ export class IncidentListQueryDto {
     'ACTIVE';
 }
 
+export class ReportOptionsQueryDto {
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(150) search?: string;
+}
+
 /** V5 D30, IR02 and M48: open an incident. */
 export class OpenIncidentDto {
   @IsIn(INCIDENT_TYPES) type: (typeof INCIDENT_TYPES)[number];

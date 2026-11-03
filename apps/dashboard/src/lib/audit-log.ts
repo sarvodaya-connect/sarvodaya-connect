@@ -28,6 +28,14 @@ const ACTION_LABELS: Record<string, string> = {
   DOCUMENT_UPLOADED: "Document uploaded",
   WORK_PLAN_UPDATED: "Work plan",
   SARVOAI_QUESTION: "SarvoAI question",
+  INCIDENT_OPENED: "Incident opened",
+  INCIDENT_ASSESSMENT_SENT: "Assessment sent",
+  INCIDENT_NEED_ADDED: "Incident need added",
+  INCIDENT_HELPERS_ASSIGNED: "Helpers assigned",
+  INCIDENT_DELIVERY_UPDATED: "Delivery updated",
+  INCIDENT_REMINDER_SENT: "Assessment reminder",
+  INCIDENT_REPORT_CREATED: "Situation report",
+  INCIDENT_CLOSED: "Incident closed",
 };
 
 export function actionLabel(action: string) {

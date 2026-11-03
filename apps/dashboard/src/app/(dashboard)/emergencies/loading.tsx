@@ -1,3 +1,8 @@
-export default function EmergencyLoading() {
-  return <div role="status" className="rounded-2xl border border-[#dfe5dc] bg-white p-8 text-sm text-[#53645a]">Loading emergency response…</div>;
+/** V5 ST01: a loading line, never a progress bar. */
+export default function DisasterResponseLoading() {
+  return (
+    <div className="rounded-card border border-line bg-surface p-8 text-[12.5px] text-ink-soft" role="status">
+      Loading disaster response…
+    </div>
+  );
 }

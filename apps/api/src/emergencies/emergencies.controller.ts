@@ -23,6 +23,7 @@ import {
   CreateReportDto,
   IncidentListQueryDto,
   OpenIncidentDto,
+  ReportOptionsQueryDto,
   SendAssessmentDto,
   SocietyListQueryDto,
   UpdateDeliveryDto,
@@ -48,6 +49,14 @@ export class EmergenciesController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.service.list(principal, query.status);
+  }
+
+  @Get('report-options')
+  reportOptions(
+    @Query() query: ReportOptionsQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.service.reportOptions(principal, query.search);
   }
 
   @Post('incidents')

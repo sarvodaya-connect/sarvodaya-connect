@@ -352,6 +352,32 @@ describe('V5 disaster response (PostgreSQL)', () => {
     ).expect(201);
   });
 
+  it('D30 / IR02: the open form lists only the societies each role may report for', async () => {
+    const options = async (token: string, query = '') =>
+      (
+        await api('get', `/emergencies/report-options${query}`, token).expect(
+          200,
+        )
+      ).body;
+    const ids = (body: { societies: { id: string }[] }) =>
+      body.societies.map((s) => s.id).sort();
+    expect(ids(await options(tokens.officer))).toEqual([own]);
+    expect(ids(await options(tokens.spc))).toEqual([own, neighbour].sort());
+    // Temporary access is view only, so the district's societies are not offered.
+    expect(ids(await options(tokens.ddmTemporary))).toEqual([]);
+    expect(ids(await options(tokens.dm))).toEqual(
+      [own, neighbour, helper].sort(),
+    );
+    const hq = await options(
+      tokens.hq,
+      `?search=${encodeURIComponent('Fictional Coast')}`,
+    );
+    expect(ids(hq)).toEqual([coast]);
+    expect(hq.districts.map((d: { id: string }) => d.id)).toEqual(
+      expect.arrayContaining([districtId, secondDistrictId, farDistrictId]),
+    );
+  });
+
   it('IR05 / M48n: notifies only people whose scope covers the area, never the opener', async () => {
     const title = `New incident: Floods — Incident ${suffix}, Second ${suffix}`;
     for (const key of [

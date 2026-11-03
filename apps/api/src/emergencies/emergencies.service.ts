@@ -166,6 +166,60 @@ export class EmergenciesService {
     return { data: summaries, counts: { active, closed } };
   }
 
+  /** V5 D30, IR02, M48: the societies the user may report for, and every district. */
+  async reportOptions(principal: Principal, search?: string) {
+    const acting = actingScope(principal);
+    const term = search?.trim();
+    const [societies, districts] = await executeDatabaseOperation(() =>
+      Promise.all([
+        isEmptyScope(acting)
+          ? Promise.resolve([])
+          : this.prisma.society.findMany({
+              where: {
+                status: 'ACTIVE',
+                ...societyScopeFilter(acting),
+                ...(term
+                  ? {
+                      AND: [
+                        {
+                          OR: [
+                            {
+                              nameEn: {
+                                contains: term,
+                                mode: 'insensitive' as const,
+                              },
+                            },
+                            {
+                              societyCode: {
+                                contains: term,
+                                mode: 'insensitive' as const,
+                              },
+                            },
+                          ],
+                        },
+                      ],
+                    }
+                  : {}),
+              },
+              select: societyRefSelect,
+              orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+              take: 100,
+            }),
+        this.prisma.district.findMany({
+          select: { id: true, nameEn: true },
+          orderBy: { nameEn: 'asc' },
+        }),
+      ]),
+    );
+    return {
+      societies: societies.map((s) => ({
+        ...societyRef(s),
+        districtId: s.districtId,
+      })),
+      districts: districts.map((d) => ({ id: d.id, name: d.nameEn })),
+    };
+  }
+
   /** V5 D30, IR02, M48: anyone may open an incident for a society they act for. */
   async open(input: OpenIncidentDto, principal: Principal) {
     const now = new Date();

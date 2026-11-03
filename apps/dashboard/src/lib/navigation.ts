@@ -40,14 +40,14 @@ export function navigationFor(viewer: DemoViewer): Navigation {
           { href: "/accounts", icon: "key", label: "Administration", alsoActiveOn: ["/audit"] },
         ],
       };
-    // V5 SP01, DD01 and DM01 sidebars. "Disaster response" joins with the role
-    // incident pages (PR 8).
+    // V5 SP01, DD01 and DM01 sidebars, with "Disaster response" (IR01, PR 8).
     case "PROGRAMME_COORDINATOR":
       return {
         main: [
           { href: "/dashboard", icon: "home", label: "Home" },
           { href: "/my-societies", icon: "list", label: "My societies", alsoActiveOn: ["/societies"] },
           { href: "/activities-to-approve", icon: "check", label: "Activities to approve" },
+          { href: "/emergencies", icon: "alert", label: "Disaster response" },
         ],
         secondary: [],
       };
@@ -56,6 +56,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         main: [
           { href: "/dashboard", icon: "home", label: "Home" },
           { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
+          { href: "/emergencies", icon: "alert", label: "Disaster response" },
         ],
         secondary: [],
       };
@@ -65,6 +66,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
           { href: "/dashboard", icon: "home", label: "District overview" },
           { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
           { href: "/district-access", icon: "key", label: "Temporary DDM access" },
+          { href: "/emergencies", icon: "alert", label: "Disaster response" },
         ],
         secondary: [],
       };
@@ -97,7 +99,8 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/societies", "Societies"],
   ["/membership", "Membership"],
   ["/activities", "Programmes and activities"],
-  ["/emergencies", "Disaster & Emergency"],
+  ["/emergencies/", "Disaster response", "Live incident"],
+  ["/emergencies", "Disaster response", "Open and follow incidents"],
   ["/districts", "District view"],
   ["/reviews", "Grade requests", "HQ approval queue"],
   ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
@@ -113,6 +116,8 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
 /** Header title and subtitle (V5 HQTop and the role headers). */
 export function headingFor(pathname: string, viewer: DemoViewer): { title: string; subtitle: string } {
   const [, page, pageSubtitle] = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix)) ?? [];
+  // V5 IR01: every role acts on incidents in its own scope, so no "view only" here.
+  if (page === "Disaster response" && pageSubtitle) return { title: page, subtitle: pageSubtitle };
   switch (viewer.role) {
     case "HQ_ADMIN":
       return {

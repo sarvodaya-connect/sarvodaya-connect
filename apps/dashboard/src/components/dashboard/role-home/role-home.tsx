@@ -140,14 +140,49 @@ function AttentionTable({ items, showSpc }: { items: HomeAttentionItem[]; showSp
   );
 }
 
+/** V5 SP01 / DD01 / DM01 incident banner, with a working "Open incident" link (PR 8). */
 function IncidentBanners({ home, now }: { home: HomeSummary; now: Date }) {
   return home.incidents.map((incident) => (
-    <AccessBanner key={incident.id} tone="incident">
-      <strong>Active incident · {incident.title}</strong> ({incident.districtName}).{" "}
-      Opened {incident.openedByName ? `by ${incident.openedByName} ` : ""}
-      {sinceLabel(incident.openedAt, now)}.
+    <AccessBanner
+      action={
+        <Link className="underline underline-offset-2" href={`/emergencies/${incident.id}`}>
+          Open incident
+        </Link>
+      }
+      key={incident.id}
+      tone="incident"
+    >
+      <strong>
+        Active incident {incident.reference} · {incident.title}.
+      </strong>{" "}
+      Opened {incident.openedByName ? `by ${incident.openedByName}${incident.openedByRole ? ` (${SHORT_ROLE[incident.openedByRole] ?? incident.openedByRole})` : ""} ` : ""}
+      {sinceLabel(incident.openedAt, now)}
+      {incident.assessmentsDueAt ? ` · assessments due ${endsLabel(incident.assessmentsDueAt)}` : ""}.
     </AccessBanner>
   ));
+}
+
+/** V5 SP01 / DD01 "3 · Disaster response": open the live incident or report a new one. */
+function IncidentsCard({ home, n }: { home: HomeSummary; n: number }) {
+  const live = home.incidents[0];
+  const button =
+    "inline-flex h-9 items-center gap-1.5 rounded-button border px-3.5 text-[12.5px] font-semibold";
+  return (
+    <Card eyebrow="Disaster response" id="incidents-heading" n={n} title="Incidents">
+      <p className="text-[12.5px] text-ink-soft">
+        You can open or close an incident, send rapid assessments and see live incidents. Response actions are assigned by HQ.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Link className={`${button} border-button-line text-ink hover:bg-brand-mint-soft`} href={live ? `/emergencies/${live.id}` : "/emergencies"}>
+          <Icon className="size-4" name="alert" strokeWidth={2} />
+          Open incident
+        </Link>
+        <Link className={`${button} border-[var(--banner-incident-line)] text-danger-text hover:bg-danger-bg`} href="/dashboard?report=incident">
+          + Report an incident
+        </Link>
+      </div>
+    </Card>
+  );
 }
 
 function TemporaryAccessCard({ home, n, now }: { home: HomeSummary; n: number; now: Date }) {
@@ -424,7 +459,10 @@ export function RoleHome({ home, viewer, now = new Date() }: { home: HomeSummary
       ) : (
         <div className="grid items-stretch gap-4 lg:grid-cols-[1.7fr_1fr]">
           <AttentionCard home={home} n={1} />
-          {isSpc ? <SpcRecentCard home={home} now={now} /> : <TemporaryAccessCard home={home} n={2} now={now} />}
+          <div className="flex min-w-0 flex-col gap-4">
+            {isSpc ? <SpcRecentCard home={home} now={now} /> : <TemporaryAccessCard home={home} n={2} now={now} />}
+            <IncidentsCard home={home} n={3} />
+          </div>
         </div>
       )}
     </div>

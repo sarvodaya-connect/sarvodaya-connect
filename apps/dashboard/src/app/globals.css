@@ -174,3 +174,20 @@ body {
   background: #cde5d2;
   color: var(--brand-forest);
 }
+
+/* V5 D33 "Download PDF": print only the situation report. */
+@media print {
+  body:has(#situation-report) * {
+    visibility: hidden;
+  }
+  #situation-report,
+  #situation-report * {
+    visibility: visible;
+  }
+  #situation-report {
+    position: absolute;
+    inset: 0 0 auto 0;
+    max-width: none;
+    border: 0;
+  }
+}

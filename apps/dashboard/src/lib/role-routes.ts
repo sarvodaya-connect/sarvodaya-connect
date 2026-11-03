@@ -14,6 +14,8 @@ const FIELD_PATHS = [
   new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
   /^\/activities-to-approve(\/.*)?$/,
   /^\/district-access$/,
+  // V5 PR 8: disaster response (IR01–IR05). The API limits each incident to the user's scope.
+  new RegExp(`^/emergencies(/${UUID})?$`, "i"),
   /^\/no-access$/,
 ];
 
