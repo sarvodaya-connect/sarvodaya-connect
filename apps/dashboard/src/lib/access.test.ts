@@ -93,8 +93,8 @@ describe("provisional role-based visibility", () => {
       "Documents",
       "Administration",
     ]);
-    // V5 PR 6 (SP01, DD01, DM01). Disaster response joins in PR 8 and temporary DDM access in PR 7.
-    expect(labels(districtManager)).toEqual(["District overview", "Societies"]);
+    // V5 SP01, DD01, DM01 (and DM04 from PR 7). Disaster response joins in PR 8.
+    expect(labels(districtManager)).toEqual(["District overview", "Societies", "Temporary DDM access"]);
     expect(labels(coordinator)).toEqual(["Home", "My societies", "Activities to approve"]);
     expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies"]);
     expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);

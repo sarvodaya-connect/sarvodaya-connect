@@ -20,11 +20,25 @@ class LiveSocietiesScreen extends StatefulWidget {
   State<LiveSocietiesScreen> createState() => _LiveSocietiesState();
 }
 
+/// M05t / DD04 row of the DDM's district-wide, view-only list.
+class _DistrictRow {
+  const _DistrictRow(this.id, this.nameEn, this.societyCode, this.yours);
+  final String id;
+  final String nameEn;
+  final String societyCode;
+  final bool yours;
+}
+
 class _LiveSocietiesState extends State<LiveSocietiesScreen> {
   List<SocietyListItem>? _rows;
   SocietyRecordException? _error;
   String _search = '';
   final _query = TextEditingController();
+
+  /// M05t: a DDM with temporary access switches between their own and the district.
+  bool _district = false;
+  List<_DistrictRow>? _districtRows;
+  String? _districtError;
 
   @override
   void initState() {
@@ -38,7 +52,46 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
     super.dispose();
   }
 
+  Future<void> _loadDistrict() async {
+    setState(() {
+      _districtRows = null;
+      _districtError = null;
+    });
+    try {
+      final query = Uri(
+        queryParameters: {
+          'scope': 'DISTRICT',
+          'pageSize': '50',
+          if (_search.isNotEmpty) 'q': _search,
+        },
+      ).query;
+      final data = await DemoScope.read(
+        context,
+      ).identityApi.request('/home/societies?$query') as Map<String, dynamic>;
+      final rows = (data['data'] as List)
+          .map(
+            (r) => _DistrictRow(
+              r['id'] as String,
+              r['nameEn'] as String,
+              r['societyCode'] as String,
+              r['yours'] == true,
+            ),
+          )
+          .toList();
+      if (mounted) setState(() => _districtRows = rows);
+    } catch (error) {
+      // The API answers 403 once the temporary access has ended (DD07).
+      if (mounted) {
+        setState(() {
+          _district = false;
+          _districtError = 'Your temporary district-wide view has ended. You are back to your own societies.';
+        });
+      }
+    }
+  }
+
   Future<void> _load() async {
+    if (_district) return _loadDistrict();
     setState(() {
       _rows = null;
       _error = null;
@@ -68,10 +121,44 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
         initialTab: widget.initialTab,
       );
     }
+    final store = DemoScope.of(context);
+    final hasDistrictView =
+        user.roles.contains(UserRole.deputyDistrictManager) &&
+        user.delegatedDistrictAccess.any((g) => g.activeAt(store.now));
     return Scaffold(
       appBar: AppBar(title: const Text('Societies')),
       body: Column(
         children: [
+          if (hasDistrictView)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                    value: false,
+                    label: Text('My ${user.societyIds.length} · edit'),
+                  ),
+                  const ButtonSegment(
+                    value: true,
+                    label: Text('District · view only'),
+                  ),
+                ],
+                selected: {_district},
+                showSelectedIcon: false,
+                onSelectionChanged: (value) {
+                  setState(() => _district = value.first);
+                  _load();
+                },
+              ),
+            ),
+          if (_districtError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: AccessBanner(
+                tone: AccessBannerTone.viewOnly,
+                child: Text(_districtError!),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -90,7 +177,9 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
             ),
           ),
           Expanded(
-            child: _error != null
+            child: _district
+                ? _DistrictList(rows: _districtRows, onRefresh: _load)
+                : _error != null
                 ? StateMessage(
                     icon: Icons.error_outline,
                     tone: StateTone.error,
@@ -143,6 +232,59 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DistrictList extends StatelessWidget {
+  const _DistrictList({required this.rows, required this.onRefresh});
+  final List<_DistrictRow>? rows;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = this.rows;
+    if (rows == null) {
+      return const LoadingSkeleton(label: 'Loading district societies');
+    }
+    if (rows.isEmpty) {
+      return const StateMessage(
+        icon: Icons.holiday_village_outlined,
+        title: 'No societies match',
+        message: 'Try another name or S number.',
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        itemCount: rows.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          return Card(
+            child: ListTile(
+              title: Text(
+                row.nameEn,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(row.societyCode),
+              trailing: Text(
+                row.yours ? 'Yours · edit' : 'View only',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SocietyRecordScreen(societyId: row.id),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

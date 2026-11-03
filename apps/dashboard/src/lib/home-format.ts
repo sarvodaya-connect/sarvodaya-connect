@@ -10,6 +10,9 @@ export type SocietyFilters = {
   spcId?: string;
   ddmId?: string;
   page?: string;
+  /** DD04: "DISTRICT" lists the whole district through temporary access. */
+  scope?: string;
+  assignedToMe?: string;
 };
 
 /** Dates on the role homes are shown in Sri Lanka time. */
@@ -83,7 +86,7 @@ export const SHORT_ROLE: Record<string, string> = {
   SOCIETY_OFFICER: "Society Officer",
 };
 
-const KEYS = ["q", "grade", "dsDivision", "needsUpdate", "gradeRequest", "spcId", "ddmId", "page"] as const;
+const KEYS = ["q", "grade", "dsDivision", "needsUpdate", "gradeRequest", "spcId", "ddmId", "page", "scope", "assignedToMe"] as const;
 
 /** Keeps only the filters the list understands, each a single short string. */
 export function parseSocietyFilters(params: Record<string, string | string[] | undefined>): SocietyFilters {
@@ -97,8 +100,42 @@ export function parseSocietyFilters(params: Record<string, string | string[] | u
   if (filters.needsUpdate && !["true", "false"].includes(filters.needsUpdate)) delete filters.needsUpdate;
   if (filters.gradeRequest && !["PENDING", "NONE"].includes(filters.gradeRequest)) delete filters.gradeRequest;
   if (filters.page && !/^[1-9]\d{0,3}$/.test(filters.page)) delete filters.page;
+  if (filters.scope && filters.scope !== "DISTRICT") delete filters.scope;
+  if (filters.assignedToMe && !["true", "false"].includes(filters.assignedToMe)) delete filters.assignedToMe;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (filters.spcId && !uuid.test(filters.spcId)) delete filters.spcId;
   if (filters.ddmId && !uuid.test(filters.ddmId)) delete filters.ddmId;
   return filters;
+}
+
+/** "4 days left", "3 days 8 hours left", "5 hours left" (time left as text, never a bar). */
+export function timeLeft(until: string, now = new Date()) {
+  const ms = new Date(until).getTime() - now.getTime();
+  if (ms <= 0) return "Ended";
+  const hours = Math.floor(ms / 3_600_000);
+  const days = Math.floor(hours / 24);
+  const rest = hours % 24;
+  // V5 DD02 "4 days left"; M32 "3 days 8 hours left".
+  if (days >= 4) return `${days} days left`;
+  if (days >= 1) return `${days} ${days === 1 ? "day" : "days"}${rest ? ` ${rest} ${rest === 1 ? "hour" : "hours"}` : ""} left`;
+  if (hours >= 1) return `${hours} ${hours === 1 ? "hour" : "hours"} left`;
+  return "Less than an hour left";
+}
+
+/** "27 Oct, 8:00 a.m." */
+export function shortDateTime(value: string) {
+  const date = new Date(value);
+  const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: TIME_ZONE }).format(date);
+  const time = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TIME_ZONE })
+    .format(date)
+    .replace("am", "a.m.")
+    .replace("pm", "p.m.");
+  return `${day}, ${time}`;
+}
+
+/** "27 Oct → 31 Oct 2026" */
+export function periodLabel(start: string, end: string) {
+  const fmt = (value: string, year: boolean) =>
+    new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", ...(year ? { year: "numeric" } : {}), timeZone: TIME_ZONE }).format(new Date(value));
+  return `${fmt(start, false)} → ${fmt(end, true)}`;
 }

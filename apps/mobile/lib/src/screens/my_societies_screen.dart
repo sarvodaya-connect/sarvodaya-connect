@@ -145,6 +145,13 @@ class _SocietyListState extends State<_SocietyList> {
             (a, b) => a.profileCompleteness.compareTo(b.profileCompleteness),
           );
     final total = widget.societies.length;
+    // M05t: a DDM with temporary district access sees which societies are theirs.
+    final store = DemoScope.of(context);
+    final user = store.user;
+    final districtView =
+        user != null &&
+        user.roles.contains(UserRole.deputyDistrictManager) &&
+        user.delegatedDistrictAccess.any((g) => g.activeAt(store.now));
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -179,7 +186,14 @@ class _SocietyListState extends State<_SocietyList> {
               children: [
                 for (final (i, society) in visible.indexed) ...[
                   if (i > 0) const Divider(height: 1),
-                  _SocietyCard(society: society),
+                  _SocietyCard(
+                    society: society,
+                    access: districtView
+                        ? (user.societyIds.contains(society.id)
+                              ? 'Yours · edit'
+                              : 'View only')
+                        : null,
+                  ),
                 ],
               ],
             ),
@@ -190,9 +204,12 @@ class _SocietyListState extends State<_SocietyList> {
 }
 
 class _SocietyCard extends StatelessWidget {
-  const _SocietyCard({required this.society});
+  const _SocietyCard({required this.society, this.access});
 
   final SocietyDetails society;
+
+  /// DDM with temporary district access (M05t): "Yours · edit" or "View only".
+  final String? access;
 
   @override
   Widget build(BuildContext context) {
@@ -235,37 +252,45 @@ class _SocietyCard extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 70,
-                        child: Semantics(
-                          label: '$percent% complete',
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: percent / 100,
-                              minHeight: 4,
-                              color: color,
-                              backgroundColor: AppColors.line,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$percent%',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 4),
+                  // Numbers only, never a progress bar.
+                  Text(
+                    'Profile $percent% complete',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
                   ),
                 ],
               ),
             ),
+            if (access != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: access == 'View only'
+                        ? AppColors.stateGrey
+                        : AppColors.bannerEditBg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    access!,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: access == 'View only'
+                          ? AppColors.muted
+                          : AppColors.bannerEditText,
+                    ),
+                  ),
+                ),
+              ),
             OutlinedButton(
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

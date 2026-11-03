@@ -8,3 +8,4 @@ export * from "./society-record.js";
 export * from "./assistant.js";
 export * from "./activities.js";
 export * from "./home.js";
+export * from "./district-access.js";

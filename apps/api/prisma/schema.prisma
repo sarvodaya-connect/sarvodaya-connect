@@ -618,5 +618,7 @@ model PlatformAuditEvent {
 
   @@index([createdAt])
   @@index([societyId, createdAt])
+  // V5 PR 7: a grant's access history and "societies opened" counts.
+  @@index([action, targetId])
   @@map("platform_audit_events")
 }

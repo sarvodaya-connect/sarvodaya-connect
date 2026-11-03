@@ -41,7 +41,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         ],
       };
     // V5 SP01, DD01 and DM01 sidebars. "Disaster response" joins with the role
-    // incident pages (PR 8) and "Temporary DDM access" with PR 7.
+    // incident pages (PR 8).
     case "PROGRAMME_COORDINATOR":
       return {
         main: [
@@ -64,6 +64,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         main: [
           { href: "/dashboard", icon: "home", label: "District overview" },
           { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
+          { href: "/district-access", icon: "key", label: "Temporary DDM access" },
         ],
         secondary: [],
       };
@@ -102,6 +103,8 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
   ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
   ["/my-societies", "My societies"],
+  ["/district-access", "Temporary DDM access"],
+  ["/no-access", "No access"],
   ["/documents", "Documents", "Every certificate, minute and report in one place"],
   ["/search", "Search"],
   ["/notifications", "Alerts"],
@@ -123,6 +126,8 @@ export function headingFor(pathname: string, viewer: DemoViewer): { title: strin
         subtitle: `${viewer.scopeLabel.endsWith("District") ? viewer.scopeLabel : `${viewer.scopeLabel} District`} · view only`,
       };
     case "DEPUTY_DISTRICT_MANAGER":
+      // V5 DD03 / DD04: "Societies", with their own and (with temporary access) the district.
+      return { title: page === "My societies" ? "Societies" : (page ?? "Home"), subtitle: "Your assigned societies" };
     case "PROGRAMME_COORDINATOR":
       return {
         title: page ?? "Home",

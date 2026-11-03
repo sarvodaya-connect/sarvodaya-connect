@@ -76,6 +76,7 @@ function input(overrides: Partial<HomeInput> = {}): HomeInput {
     recent: [],
     temporaryAccess: [],
     districtViewCount: null,
+    recentlyEnded: null,
     incidents: [],
     ...overrides,
   };

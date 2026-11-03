@@ -13,6 +13,8 @@ const FIELD_PATHS = [
   /^\/my-societies$/,
   new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
   /^\/activities-to-approve(\/.*)?$/,
+  /^\/district-access$/,
+  /^\/no-access$/,
 ];
 
 export function canOpen(role: string | undefined, pathname: string): boolean {

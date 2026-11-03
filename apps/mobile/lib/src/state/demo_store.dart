@@ -1,3 +1,4 @@
+import '../district_access/district_access_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
 import '../society_record/society_record_api.dart';
@@ -64,6 +65,7 @@ class DemoStore extends ChangeNotifier {
     AuthService? authService,
     DocumentUploadService? uploadService,
     SocietyRecordApi? societyRecordApi,
+    DistrictAccessApi? districtAccessApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
@@ -84,6 +86,11 @@ class DemoStore extends ChangeNotifier {
                 isOnline: () => !offline,
               )
             : HttpSocietyRecordApi(identityApi));
+    districtAccess =
+        districtAccessApi ??
+        (demoMode
+            ? DemoDistrictAccessApi(clock: _clock)
+            : HttpDistrictAccessApi(identityApi));
     this.documentPicker =
         documentPicker ??
         (demoMode ? const DemoDocumentPicker() : const DeviceDocumentPicker());
@@ -108,6 +115,9 @@ class DemoStore extends ChangeNotifier {
 
   /// SC-65 society record (M06–M13): API-backed, or fictional in demo mode.
   late final SocietyRecordApi societyRecords;
+
+  /// V5 PR 7 temporary district access (M30–M32).
+  late final DistrictAccessApi districtAccess;
 
   /// Chooses the audit report file to upload (M13a).
   late final DocumentPicker documentPicker;

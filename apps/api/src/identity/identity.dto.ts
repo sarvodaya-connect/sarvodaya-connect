@@ -38,7 +38,8 @@ export class GrantDistrictAccessDto {
   @IsUUID() districtId: string;
   @IsISO8601({ strict: true }) startsAt: string;
   @IsISO8601({ strict: true }) expiresAt: string;
-  @IsString() @Length(3, 1000) reason: string;
+  /** V5 DM05: the reason is optional. */
+  @IsOptional() @IsString() @Length(0, 1000) reason?: string;
 }
 
 /** V5 D24 log groups; each covers the audit actions listed in identity.service.ts. */

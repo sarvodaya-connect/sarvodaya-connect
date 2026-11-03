@@ -10,5 +10,13 @@ export default async function MySocietiesPage({ searchParams }: PageProps<"/my-s
   const viewer = await getDesktopViewer();
   if (viewer.role === "HQ_ADMIN") redirect("/societies");
   const filters = parseSocietyFilters(await searchParams);
-  return <MySocieties filters={filters} list={await getHomeSocieties(filters)} />;
+  // DD07: a DDM whose temporary access has ended goes back to their own societies.
+  let list;
+  try {
+    list = await getHomeSocieties(filters);
+  } catch (error) {
+    if (filters.scope !== "DISTRICT" || !(error instanceof Error) || !/ended/i.test(error.message)) throw error;
+    redirect("/my-societies");
+  }
+  return <MySocieties filters={filters} list={list} role={viewer.role === "SYSTEM_ADMIN" ? undefined : viewer.role} />;
 }

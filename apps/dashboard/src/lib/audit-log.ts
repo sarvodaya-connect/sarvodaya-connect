@@ -22,6 +22,7 @@ const ACTION_LABELS: Record<string, string> = {
   LOCAL_HQ_BOOTSTRAPPED: "First HQ account",
   DISTRICT_ACCESS_GRANTED: "Temporary access given",
   DISTRICT_ACCESS_REVOKED: "Temporary access ended",
+  DISTRICT_SOCIETY_OPENED: "Opened with temporary access",
   ANNUAL_SUMMARY_UPDATED: "Annual summary",
   AUDIT_REPORT_UPLOADED: "Audit report uploaded",
   DOCUMENT_UPLOADED: "Document uploaded",

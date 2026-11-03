@@ -5,7 +5,10 @@ import type { HomeAttentionItem, HomeSummary } from "@sarvodaya-connect/api-cont
 
 import { actionLabel } from "@/lib/audit-log";
 import type { DemoViewer } from "@/lib/access";
-import { accessSentence, endsLabel, gradeLine, greeting, longDate, SHORT_ROLE, updatedLabel, waitedLabel } from "@/lib/home-format";
+import { endDistrictAccess } from "@/app/(dashboard)/district-access/actions";
+import { accessSentence, endsLabel, gradeLine, greeting, longDate, SHORT_ROLE, shortDateTime, timeLeft, updatedLabel, waitedLabel } from "@/lib/home-format";
+
+import { EndAccessButton } from "../district-access/access-controls";
 
 import { GradeBadge } from "../grade-queue/grade-badge";
 import { Icon } from "../icon";
@@ -147,38 +150,92 @@ function IncidentBanners({ home, now }: { home: HomeSummary; now: Date }) {
   ));
 }
 
-function TemporaryAccessCard({ home, n }: { home: HomeSummary; n: number }) {
+function TemporaryAccessCard({ home, n, now }: { home: HomeSummary; n: number; now: Date }) {
   const grant = home.temporaryAccess[0];
   const isDm = home.role === "DISTRICT_MANAGER";
   const status = (
     <span className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[10.5px] font-semibold ${grant ? "bg-info-bg text-info-text" : "bg-[#f0f1ee] text-[#56615a]"}`}>
-      <span aria-hidden="true">●</span> {grant ? "Active" : "None"}
+      <span aria-hidden="true">●</span> {grant ? (isDm ? "Active" : "Active · view only") : "None"}
     </span>
   );
-  return (
-    <Card action={status} eyebrow="Temporary access" id="temporary-access-heading" n={n} title={isDm ? (grant ? "Active grant" : "No active grant") : "District-wide view"}>
-      {grant ? (
-        <ul className="flex flex-col gap-3">
-          {home.temporaryAccess.map((g) => (
-            <li className="flex items-center gap-3" key={g.id}>
+  if (isDm) {
+    return (
+      <Card action={status} eyebrow="Temporary access" id="temporary-access-heading" n={n} title={grant ? "Active grant" : "No active grant"}>
+        {grant ? (
+          <div className="flex flex-1 flex-col justify-between gap-3">
+            <div className="flex items-center gap-3">
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-info-bg text-[11px] font-bold text-info-text">
-                {g.deputyName.split(" ").map((part) => part[0]).slice(0, 2).join("")}
+                {grant.deputyName.split(" ").map((part) => part[0]).slice(0, 2).join("")}
               </span>
               <span className="text-[12px] text-ink-soft">
-                <strong className="block text-[13px] text-ink">{isDm ? g.deputyName : `${g.districtName} district`}</strong>
-                View only · all {g.districtName} societies · ends {endsLabel(g.expiresAt)}
+                <strong className="block text-[13px] text-ink">{grant.deputyName}</strong>
+                View only · all {grant.districtSocietyCount} societies · ends {endsLabel(grant.expiresAt)} · {timeLeft(grant.expiresAt, now)}
               </span>
-            </li>
-          ))}
-        </ul>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                className="inline-flex h-8 items-center rounded-button border border-button-line px-3 text-[12px] font-semibold text-ink hover:bg-brand-mint-soft"
+                href={`/district-access?grant=${grant.id}`}
+              >
+                See details
+              </Link>
+              <EndAccessButton action={endDistrictAccess} compact deputyName={grant.deputyName} grantId={grant.id} returnTo="/dashboard" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col justify-between gap-3">
+            <p className="text-[12.5px] text-ink-soft">No DDM has temporary district access.</p>
+            <Link className="text-[12px] font-semibold text-brand-forest underline underline-offset-2" href="/district-access?panel=give">
+              Give temporary access
+            </Link>
+          </div>
+        )}
+      </Card>
+    );
+  }
+  return (
+    <Card action={status} eyebrow="Temporary access" id="temporary-access-heading" n={n} title="District-wide view">
+      {grant ? (
+        <div className="flex flex-1 flex-col justify-between gap-3">
+          <p className="text-[12.5px] text-ink-soft">
+            You can look at every {grant.districtName} society until {endsLabel(grant.expiresAt)}. You cannot edit them or request grade changes for them. Societies you open are recorded in
+            the access history.
+          </p>
+          <Link
+            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-button border border-button-line px-3.5 text-[12.5px] font-semibold text-ink hover:bg-brand-mint-soft"
+            href="/my-societies?scope=DISTRICT"
+          >
+            <Icon className="size-4" name="list" strokeWidth={2} />
+            Browse district societies
+          </Link>
+        </div>
       ) : (
         <p className="text-[12.5px] text-ink-soft">
-          {isDm
-            ? "No DDM has temporary district access."
-            : `None active. When your DM is away they can give you view-only access to all ${home.district?.name ?? "district"} societies for a set time.`}
+          None active. When your DM is away they can give you view-only access to all {home.district?.name ?? "district"} societies for a set time.
         </p>
       )}
     </Card>
+  );
+}
+
+/** V5 DD02 banner: the DDM's district-wide view, with the time left as text. */
+export function TemporaryViewBanner({ grant, now }: { grant: HomeSummary["temporaryAccess"][number]; now: Date }) {
+  return (
+    <AccessBanner action={`Ends ${endsLabel(grant.expiresAt)} · ${timeLeft(grant.expiresAt, now)}`} tone="temporary">
+      <strong>Temporary district-wide view</strong> · all {grant.districtSocietyCount} {grant.districtName} societies, <strong>view only</strong>. Given by{" "}
+      {grant.grantedByName ?? "your DM"} (DM) on {shortDateTime(grant.grantedAt)}.
+    </AccessBanner>
+  );
+}
+
+/** V5 DD07: the district-wide view has ended; links to other district societies now show "No access". */
+export function AccessEndedBanner({ ended, assigned }: { ended: NonNullable<HomeSummary["recentlyEnded"]>; assigned: number }) {
+  return (
+    <AccessBanner tone="viewOnly">
+      <strong>Your temporary district-wide view {ended.endedEarly ? "was ended early" : "ended"} on {endsLabel(ended.endedAt)}.</strong> {ended.grantedByName ?? "Your DM"} (DM) gave it
+      for {shortDateTime(ended.startsAt)} – {shortDateTime(ended.expiresAt)}. You are back to your {assigned} assigned {assigned === 1 ? "society" : "societies"}. Links to other
+      district societies now show No access.
+    </AccessBanner>
   );
 }
 
@@ -349,6 +406,8 @@ export function RoleHome({ home, viewer, now = new Date() }: { home: HomeSummary
         Your access: <strong>{access.strong}</strong>
         {access.rest}
       </AccessBanner>
+      {!isDm && !isSpc && home.temporaryAccess[0] && <TemporaryViewBanner grant={home.temporaryAccess[0]} now={now} />}
+      {!isDm && !isSpc && home.recentlyEnded && <AccessEndedBanner assigned={total} ended={home.recentlyEnded} />}
       <IncidentBanners home={home} now={now} />
 
       <div className={`grid gap-3 sm:grid-cols-2 ${isSpc || isDm ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>{tiles}</div>
@@ -358,14 +417,14 @@ export function RoleHome({ home, viewer, now = new Date() }: { home: HomeSummary
           <div className="grid items-stretch gap-4 lg:grid-cols-3">
             <GradesCard home={home} />
             <StaffCard home={home} />
-            <TemporaryAccessCard home={home} n={3} />
+            <TemporaryAccessCard home={home} n={3} now={now} />
           </div>
           <AttentionCard home={home} n={4} />
         </>
       ) : (
         <div className="grid items-stretch gap-4 lg:grid-cols-[1.7fr_1fr]">
           <AttentionCard home={home} n={1} />
-          {isSpc ? <SpcRecentCard home={home} now={now} /> : <TemporaryAccessCard home={home} n={2} />}
+          {isSpc ? <SpcRecentCard home={home} now={now} /> : <TemporaryAccessCard home={home} n={2} now={now} />}
         </div>
       )}
     </div>

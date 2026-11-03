@@ -55,6 +55,21 @@ export interface HomeAccessGrant {
   districtName: string;
   startsAt: string;
   expiresAt: string;
+  /** V5 PR 7 (DM01, DD02): who gave it, when, and the district societies opened with it. */
+  grantedByName: string | null;
+  grantedAt: string;
+  societiesOpened: number;
+  districtSocietyCount: number;
+}
+
+/** V5 DD07: the DDM's most recent grant, when it ended in the last 7 days. */
+export interface HomeEndedGrant {
+  districtName: string;
+  grantedByName: string | null;
+  startsAt: string;
+  expiresAt: string;
+  endedAt: string;
+  endedEarly: boolean;
 }
 
 export interface HomeSummary {
@@ -87,6 +102,8 @@ export interface HomeSummary {
   temporaryAccess: HomeAccessGrant[];
   /** DDM with an active grant: how many district societies they can view. */
   districtViewCount: number | null;
+  /** DDM without an active grant whose last one ended in the last 7 days. */
+  recentlyEnded: HomeEndedGrant | null;
   incidents: HomeIncident[];
 }
 
@@ -107,6 +124,8 @@ export interface HomeSocietyRow {
   /** Not updated for 90 days or more. */
   stale: boolean;
   editable: boolean;
+  /** DD04: one of the DDM's own assigned societies (shown as "Yours"). */
+  yours: boolean;
 }
 
 export interface HomeSocietyList {
@@ -115,6 +134,13 @@ export interface HomeSocietyList {
   /** Everything in scope, before filters: for "12 assigned societies". */
   scopeTotal: number;
   viewOnly: boolean;
+  /** DD04: "MINE" is the DDM's assigned societies; "DISTRICT" is the whole district through temporary access. */
+  scope: "MINE" | "DISTRICT";
+  /** DDM: how many societies each tab holds ("My societies · edit 18", "District · view only 106"). */
+  tabs: { mine: number; district: number | null };
+  /** DDM with an active grant (DD02 / DD04 banner). */
+  access: HomeAccessGrant | null;
+  recentlyEnded: HomeEndedGrant | null;
   district: { id: string; name: string } | null;
   /** Choices for the filter menus, from the societies in scope. */
   options: {
