@@ -6,6 +6,10 @@ export const SIGN_IN_FAILED =
   "The username or password is not correct. Check them and try again.";
 export const SIGN_IN_LOCKED =
   "Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.";
+/** Cognito could not be reached, or answered in a way the dashboard does not expect. */
+export const SIGN_IN_UNAVAILABLE = "Sign-in is not available right now. Try again in a few minutes.";
+/** The sign-in exists but HQ has not finished the account, or it is disabled. */
+export const SIGN_IN_NOT_READY = "This account cannot sign in yet. Ask HQ to check it.";
 export const SOCIETY_OFFICER_ON_DESKTOP = "Society Officers use the Sarvodaya Connect phone app.";
 /** Accounts with no desktop dashboard (HQ, DMs, DDMs and SPCs have one). */
 export const NOT_HQ_ON_DESKTOP = "This dashboard is for HQ. Please use the mobile app.";

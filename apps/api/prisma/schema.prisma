@@ -702,28 +702,31 @@ model EmergencySituationReport {
 
 // V4 identity and access. Credentials and invitation tokens are never stored in plaintext.
 model PlatformAccount {
-  id               String              @id @default(uuid()) @db.Uuid
-  username         String              @unique @db.VarChar(100)
-  displayName      String              @map("display_name") @db.VarChar(150)
-  phone            String              @db.VarChar(30)
-  email            String?             @db.VarChar(254)
-  role             String              @db.VarChar(40)
-  districtId       String?             @map("district_id") @db.Uuid
-  district         District?           @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  societyIds       String[]            @default([]) @map("society_ids") @db.Uuid
-  status           String              @default("PENDING") @db.VarChar(20)
-  passwordHash     String?             @map("password_hash")
+  id                String              @id @default(uuid()) @db.Uuid
+  username          String              @unique @db.VarChar(100)
+  displayName       String              @map("display_name") @db.VarChar(150)
+  phone             String              @db.VarChar(30)
+  email             String?             @db.VarChar(254)
+  role              String              @db.VarChar(40)
+  districtId        String?             @map("district_id") @db.Uuid
+  district          District?           @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  societyIds        String[]            @default([]) @map("society_ids") @db.Uuid
+  status            String              @default("PENDING") @db.VarChar(20)
+  passwordHash      String?             @map("password_hash")
   // V5 D16: when HQ last set the password and how many times it has been set.
-  passwordSetAt    DateTime?           @map("password_set_at") @db.Timestamptz(3)
-  passwordSetCount Int                 @default(0) @map("password_set_count")
+  passwordSetAt     DateTime?           @map("password_set_at") @db.Timestamptz(3)
+  passwordSetCount  Int                 @default(0) @map("password_set_count")
   // Sign-in lockout is kept in the database so it holds across API instances.
-  failedLoginCount Int                 @default(0) @map("failed_login_count")
-  lockedUntil      DateTime?           @map("locked_until") @db.Timestamptz(3)
-  providerSubject  String?             @unique @map("provider_subject")
-  invitations      AccountInvitation[]
-  sessions         AccountSession[]
-  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  failedLoginCount  Int                 @default(0) @map("failed_login_count")
+  lockedUntil       DateTime?           @map("locked_until") @db.Timestamptz(3)
+  // Amazon Cognito user (`sub`) for this account; role and scope stay here, never in the token.
+  providerSubject   String?             @unique @map("provider_subject")
+  // Cognito tokens from a sign-in before this time are refused (password reset, scope change, disable).
+  sessionsRevokedAt DateTime?           @map("sessions_revoked_at") @db.Timestamptz(3)
+  invitations       AccountInvitation[]
+  sessions          AccountSession[]
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId, role])
   @@map("platform_accounts")

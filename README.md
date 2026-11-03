@@ -573,6 +573,8 @@ These demo identities are not production authentication. Cognito integration and
 
 The API, dashboard and mobile app are currently used for local development and demonstration. No AWS testing environment is configured by this repository. The diagram above records the testing-phase direction from the hosting proposal; AWS resources, deployment, production data and credentials are not configured here. Complete the AWS setup, security review, backups, monitoring and cost checks before testing with staff. See [infrastructure/docker](infrastructure/docker/README.md) for the local PostgreSQL environment.
 
+Staff sign-in uses Amazon Cognito in deployed environments (`AUTH_PROVIDER=cognito`) and the API's own development passwords locally (`AUTH_PROVIDER=local`, the default outside production). Pool settings, HQ account management and the local flow are in [docs/cognito-setup.md](docs/cognito-setup.md).
+
 ## 12. Security and privacy
 
 - Never commit `.env` files, passwords, access tokens, AWS credentials, private keys or real client data.

@@ -20,6 +20,7 @@ const ACTION_LABELS: Record<string, string> = {
   ACCOUNT_PASSWORD_CHANGED: "Password set",
   ACCOUNT_DISABLED: "Account disabled",
   LOCAL_HQ_BOOTSTRAPPED: "First HQ account",
+  COGNITO_HQ_LINKED: "First HQ account (Cognito)",
   DISTRICT_ACCESS_GRANTED: "Temporary access given",
   DISTRICT_ACCESS_REVOKED: "Temporary access ended",
   DISTRICT_SOCIETY_OPENED: "Opened with temporary access",

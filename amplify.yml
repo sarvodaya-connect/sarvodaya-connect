@@ -4,6 +4,11 @@
 # checked out. Set these in the Amplify console (Environment variables):
 #   API_BASE_URL        config  https://<api-id>.execute-api.<region>.amazonaws.com/api/v1
 #   PLATFORM_DEMO_MODE  config  false (ignored in production builds anyway)
+#   AUTH_PROVIDER         config  cognito (the production default; local is refused in production)
+#   COGNITO_USER_POOL_ID  config  <region>_<id> of the Sarvodaya user pool
+#   COGNITO_CLIENT_ID     config  the public app client (no client secret) used by the dashboard
+#   COGNITO_REGION        config  optional; must match the user pool id
+# None of these are secrets. Never add AWS keys or a client secret here.
 # Amplify only passes variables to the server at run time when they are written
 # to .env.production during the build (see the build step below).
 version: 1
@@ -18,7 +23,7 @@ applications:
         build:
           commands:
             # Server-side variables only; nothing is exposed to the browser (no NEXT_PUBLIC_ values).
-            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE)=' > .env.production || true
+            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE|AUTH_PROVIDER|COGNITO_USER_POOL_ID|COGNITO_CLIENT_ID|COGNITO_REGION)=' > .env.production || true
             - npm run build
       artifacts:
         baseDirectory: .next

@@ -1,9 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   authProviderName,
+  cognitoUserPool,
   CognitoAuthenticationProvider,
   type CognitoTokenVerifier,
   cognitoVerifierFromConfig,
@@ -27,10 +29,10 @@ function setup(verify: CognitoTokenVerifier['verify'], principal: Principal | nu
 
 describe('CognitoAuthenticationProvider', () => {
   it('verifies the token, then loads role and scope from the database by Cognito subject', async () => {
-    const { provider, verifyToken, principalForSubject } = setup(async () => ({ sub: 'cognito-sub-1' }));
+    const { provider, verifyToken, principalForSubject } = setup(async () => ({ sub: 'cognito-sub-1', authTime: 1_800_000_000 }));
     await expect(provider.authenticate(request(`Bearer ${JWT}`))).resolves.toEqual(dm);
     expect(verifyToken).toHaveBeenCalledWith(JWT);
-    expect(principalForSubject).toHaveBeenCalledWith('cognito-sub-1');
+    expect(principalForSubject).toHaveBeenCalledWith('cognito-sub-1', 1_800_000_000);
   });
 
   it('refuses expired or forged tokens without loading an account', async () => {
@@ -78,8 +80,70 @@ describe('cognitoVerifierFromConfig', () => {
     expect(cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: 'ap-southeast-1_Fictional1', COGNITO_CLIENT_ID: 'client' }))).toHaveProperty('verify');
   });
 
+  it('checks the pool id format and the configured region, failing closed', () => {
+    expect(() => cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: 'not-a-pool', COGNITO_CLIENT_ID: 'client' }))).toThrow('<region>_<id>');
+    expect(() =>
+      cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: POOL, COGNITO_CLIENT_ID: 'client', COGNITO_REGION: 'us-east-1' })),
+    ).toThrow('does not match');
+    expect(() => cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: POOL, COGNITO_CLIENT_ID: ' , ' }))).toThrow('COGNITO_CLIENT_ID');
+    expect(cognitoUserPool(config({ COGNITO_USER_POOL_ID: POOL, COGNITO_REGION: 'ap-southeast-1' }))).toEqual({ userPoolId: POOL, region: 'ap-southeast-1' });
+  });
+
   it('rejects a token that is not from the configured pool', async () => {
     const verifier = cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: 'ap-southeast-1_Fictional1', COGNITO_CLIENT_ID: 'client' }));
     await expect(verifier.verify(JWT)).rejects.toThrow();
+  });
+});
+
+/**
+ * The real aws-jwt-verify checks, with a key pair made for the test and the
+ * pool's public keys cached up front: nothing contacts AWS.
+ */
+const POOL = 'ap-southeast-1_Fictional1';
+const ISSUER = `https://cognito-idp.ap-southeast-1.amazonaws.com/${POOL}`;
+const CLIENT = 'fictionalclient1';
+const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const { privateKey: otherKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const KID = 'fictional-key-1';
+const jwks = { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: KID, alg: 'RS256', use: 'sig' }] } as never;
+const now = () => Math.floor(Date.now() / 1000);
+
+function token(claims: Record<string, unknown> = {}, key = privateKey) {
+  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const body = `${part({ alg: 'RS256', kid: KID })}.${part({
+    sub: 'cognito-sub-1',
+    iss: ISSUER,
+    client_id: CLIENT,
+    token_use: 'access',
+    auth_time: now() - 60,
+    iat: now() - 60,
+    exp: now() + 3600,
+    ...claims,
+  })}`;
+  return `${body}.${sign('RSA-SHA256', Buffer.from(body), key).toString('base64url')}`;
+}
+
+describe('Cognito token verification (signature and claims)', () => {
+  const verifier = cognitoVerifierFromConfig(config({ COGNITO_USER_POOL_ID: POOL, COGNITO_CLIENT_ID: CLIENT }), { jwks });
+
+  it('accepts an access token from the pool and app client, and returns sub and sign-in time', async () => {
+    const authTime = now() - 60;
+    await expect(verifier.verify(token({ auth_time: authTime }))).resolves.toEqual({ sub: 'cognito-sub-1', authTime });
+  });
+
+  it('refuses expired, wrongly signed, wrong-pool, wrong-client and ID tokens', async () => {
+    await expect(verifier.verify(token({ exp: now() - 10 }))).rejects.toThrow(/expired/i);
+    await expect(verifier.verify(token({}, otherKey))).rejects.toThrow(/signature/i);
+    await expect(verifier.verify(token({ iss: 'https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_Other' }))).rejects.toThrow(/iss/i);
+    await expect(verifier.verify(token({ client_id: 'another-client' }))).rejects.toThrow(/client/i);
+    await expect(verifier.verify(token({ token_use: 'id', aud: CLIENT }))).rejects.toThrow(/token use|token_use/i);
+  });
+
+  it('end to end: a forged token never reaches the database', async () => {
+    const principalForSubject = vi.fn<SubjectPrincipalLoader['principalForSubject']>().mockResolvedValue(dm);
+    const provider = new CognitoAuthenticationProvider(verifier, { principalForSubject });
+    await expect(provider.authenticate(request(`Bearer ${token({}, otherKey)}`))).resolves.toBeNull();
+    expect(principalForSubject).not.toHaveBeenCalled();
+    await expect(provider.authenticate(request(`Bearer ${token()}`))).resolves.toEqual(dm);
   });
 });

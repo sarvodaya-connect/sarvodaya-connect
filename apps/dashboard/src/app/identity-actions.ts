@@ -2,9 +2,17 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { platformApi, SESSION_COOKIE } from "@/lib/platform-api";
+import { authMode, cognitoConfig, cognitoRevoke, cognitoSignIn, CognitoSignInError } from "@/lib/cognito";
+import { PlatformApiError, platformApi } from "@/lib/platform-api";
 import { DESKTOP_ROLES, getCurrentViewer, ROLE_COOKIE } from "@/lib/current-viewer";
-import { NOT_HQ_ON_DESKTOP, SOCIETY_OFFICER_ON_DESKTOP } from "@/lib/sign-in-messages";
+import { REFRESH_COOKIE, SESSION_COOKIE, sessionCookie, SIGN_IN_SECONDS } from "@/lib/session-cookies";
+import {
+  NOT_HQ_ON_DESKTOP,
+  SIGN_IN_FAILED,
+  SIGN_IN_NOT_READY,
+  SIGN_IN_UNAVAILABLE,
+  SOCIETY_OFFICER_ON_DESKTOP,
+} from "@/lib/sign-in-messages";
 export type FormResult = {
   error?: string;
   success?: string;
@@ -12,59 +20,100 @@ export type FormResult = {
   username?: string;
 };
 
+/** The roles of the account behind a new token, or null when the API refuses it (unlinked or disabled). */
+async function rolesFor(token: string): Promise<string[] | null> {
+  try {
+    const me: { roles?: string[] } = await platformApi("/identity/me", { headers: { Authorization: `Bearer ${token}` } });
+    return me.roles ?? [];
+  } catch (e) {
+    if (e instanceof PlatformApiError && (e.status === 401 || e.status === 403)) return null;
+    throw e;
+  }
+}
+
+/** Ends a Cognito sign-in; best effort, the cookies are removed either way. */
+async function revokeCognito(refreshToken: string | undefined) {
+  if (!refreshToken) return;
+  await cognitoRevoke(cognitoConfig(), refreshToken).catch(() => undefined);
+}
+
 export async function login(
   _previous: FormResult,
   form: FormData,
 ): Promise<FormResult> {
-  const username = String(form.get("username") ?? "").slice(0, 100);
-  let result: { token: string; user?: { roles: string[] } };
+  const username = String(form.get("username") ?? "").trim().slice(0, 100);
+  const password = String(form.get("password") ?? "");
+  if (!username || !password) return { error: SIGN_IN_FAILED, username };
   let role: (typeof DESKTOP_ROLES)[number] | undefined;
   try {
-    result = await platformApi("/identity/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password: form.get("password") }),
-    });
+    let token: string;
+    let refreshToken: string | undefined;
+    let tokenSeconds = SIGN_IN_SECONDS;
+    let roles: string[] | null;
+    if (authMode() === "cognito") {
+      // Cognito checks the password; the API then decides who this is from its own records.
+      const tokens = await cognitoSignIn(cognitoConfig(), username.toLowerCase(), password);
+      token = tokens.accessToken;
+      refreshToken = tokens.refreshToken;
+      tokenSeconds = Math.max(60, Math.min(tokens.expiresIn - 60, SIGN_IN_SECONDS));
+      roles = await rolesFor(token);
+      if (!roles) {
+        await revokeCognito(refreshToken);
+        return { error: SIGN_IN_NOT_READY, username };
+      }
+    } else {
+      const result: { token: string; user?: { roles: string[] } } = await platformApi("/identity/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      token = result.token;
+      roles = result.user?.roles ?? [];
+    }
     // V5: HQ, DMs, DDMs and SPCs use the desktop; Society Officers use the phone app.
-    const roles = result.user?.roles ?? [];
     role = DESKTOP_ROLES.find((candidate) => roles.includes(candidate));
     if (!role) {
-      // Not a desktop role: end the session the API just opened.
-      await platformApi("/identity/logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${result.token}` },
-      }).catch(() => undefined);
+      // Not a desktop role: end the sign-in that was just opened.
+      if (refreshToken) await revokeCognito(refreshToken);
+      else
+        await platformApi("/identity/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => undefined);
       return {
         error: roles.includes("SOCIETY_OFFICER") ? SOCIETY_OFFICER_ON_DESKTOP : NOT_HQ_ON_DESKTOP,
         username,
       };
     }
-    (await cookies()).set(SESSION_COOKIE, result.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 8 * 3600,
-    });
-    (await cookies()).set(ROLE_COOKIE, role, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 8 * 3600,
-    });
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, token, sessionCookie(tokenSeconds));
+    if (refreshToken) jar.set(REFRESH_COOKIE, refreshToken, sessionCookie(SIGN_IN_SECONDS));
+    jar.set(ROLE_COOKIE, role, sessionCookie(SIGN_IN_SECONDS));
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not sign in", username };
+    if (e instanceof CognitoSignInError || e instanceof PlatformApiError) return { error: e.message, username };
+    // Missing or wrong sign-in configuration: say so in the server log, never to the person.
+    console.error(`Sign-in is not configured: ${e instanceof Error ? e.message : "unknown error"}`);
+    return { error: SIGN_IN_UNAVAILABLE, username };
   }
   redirect("/dashboard");
 }
+
+/** Removes every sign-in cookie. */
+async function clearSignIn() {
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+  jar.delete(REFRESH_COOKIE);
+  jar.delete(ROLE_COOKIE);
+}
+
 export async function signOut() {
+  const refreshToken = (await cookies()).get(REFRESH_COOKIE)?.value;
   try {
-    await platformApi("/identity/logout", { method: "POST" });
+    if (refreshToken) await revokeCognito(refreshToken);
+    else await platformApi("/identity/logout", { method: "POST" });
   } catch {
     /* Remove browser credentials even if the API is unavailable. */
   }
-  (await cookies()).delete(SESSION_COOKIE);
-  (await cookies()).delete(ROLE_COOKIE);
+  await clearSignIn();
   redirect("/");
 }
 export async function createAccount(
@@ -93,7 +142,7 @@ export async function createAccount(
     });
     revalidatePath("/accounts");
     return {
-      success: `Account created for ${input.username}. Give the username and password to the person yourself.`,
+      success: `Account created for ${input.username}. Give the username and password to the person yourself, in person or by phone, not by email or chat.`,
     };
   } catch (e) {
     return {
@@ -122,10 +171,13 @@ export async function setAccountPassword(
   }
   revalidatePath("/accounts");
   if (id === viewer.id) {
-    (await cookies()).delete(SESSION_COOKIE);
+    await clearSignIn();
     redirect("/");
   }
-  return { success: "Password set. The old password no longer works. Give the new one to the person yourself." };
+  return {
+    success:
+      "Password set. The old password no longer works and the person has been signed out everywhere. Give the new password to them yourself, in person or by phone, not by email or chat.",
+  };
 }
 /** D16: HQ changes a person's role or scope. The API signs them out and ends any temporary district view. */
 export async function updateAccount(

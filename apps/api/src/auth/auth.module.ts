@@ -18,6 +18,7 @@ import {
   cognitoVerifierFromConfig,
   SUBJECT_PRINCIPAL_LOADER,
 } from './cognito-authentication.provider.js';
+import { COGNITO_ACCOUNT_ADMIN, cognitoAccountAdminFromConfig, NO_COGNITO_ADMIN } from './cognito-account-admin.js';
 import { PlatformUserDirectory, USER_DIRECTORY } from './user-directory.js';
 
 @Global()
@@ -41,6 +42,13 @@ import { PlatformUserDirectory, USER_DIRECTORY } from './user-directory.js';
         authProviderName(config) === 'cognito'
           ? cognitoVerifierFromConfig(config)
           : { verify: () => Promise.reject(new Error('Cognito is not selected')) },
+    },
+    // HQ account creation and password resets in Cognito, with the API's IAM role.
+    {
+      provide: COGNITO_ACCOUNT_ADMIN,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        authProviderName(config) === 'cognito' ? cognitoAccountAdminFromConfig(config) : NO_COGNITO_ADMIN,
     },
     CognitoAuthenticationProvider,
     {

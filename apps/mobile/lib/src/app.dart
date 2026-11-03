@@ -15,6 +15,7 @@ import 'screens/splash_screen.dart';
 import 'models/app_language.dart';
 import 'state/demo_store.dart';
 import 'auth/api_auth_service.dart';
+import 'auth/cognito_auth.dart';
 import 'theme/app_theme.dart';
 import 'models/user.dart';
 
@@ -75,7 +76,8 @@ class _Root extends StatelessWidget {
     // V5 PR 10: a release build without a valid https server address says so.
     final problem = DemoStore.demoMode
         ? null
-        : IdentityApi.configurationProblem();
+        : IdentityApi.configurationProblem() ??
+              CognitoSettings.configurationProblem();
     if (problem != null) return ConfigurationProblemScreen(message: problem);
     if (store.showSplash) return const SplashScreen();
     if (!store.languageChosen) return const LanguageScreen();

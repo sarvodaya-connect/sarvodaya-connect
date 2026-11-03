@@ -6,11 +6,16 @@ import 'package:http/http.dart' as http;
 
 import '../models/user.dart';
 import 'auth_service.dart';
+import 'cognito_auth.dart';
 
 class IdentityApi {
-  IdentityApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
-      baseUrl = baseUrl ?? defaultBaseUrl;
+  IdentityApi({
+    http.Client? client,
+    String? baseUrl,
+    DateTime Function()? clock,
+  }) : _client = client ?? http.Client(),
+       _clock = clock ?? DateTime.now,
+       baseUrl = baseUrl ?? defaultBaseUrl;
   static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   /// V5 PR 10: why a release build cannot reach the API, or null when it can.
@@ -41,17 +46,49 @@ class IdentityApi {
   }
 
   final http.Client _client;
+  final DateTime Function() _clock;
   final String baseUrl;
   String? token;
   VoidCallback? onUnauthorized;
+
+  /// Cognito: when the access token expires, and how to get a new one
+  /// (false when the sign-in has ended). Null with local sessions.
+  DateTime? tokenExpiresAt;
+
+  /// The clock used for token expiry (replaceable in tests).
+  DateTime now() => _clock();
+  Future<bool> Function()? refreshSession;
+
+  /// Gets a new access token a minute before the current one expires.
+  Future<void> _freshToken() async {
+    final expires = tokenExpiresAt;
+    final refresh = refreshSession;
+    if (token == null || expires == null || refresh == null) return;
+    if (_clock().isBefore(expires.subtract(const Duration(minutes: 1)))) {
+      return;
+    }
+    if (!await refresh()) {
+      token = null;
+      onUnauthorized?.call();
+      throw const IdentityError(401, 'Sign in to continue');
+    }
+  }
+
   Future<dynamic> request(
     String path, {
     Map<String, dynamic>? body,
     String method = 'GET',
+
+    /// Sign-in only: the new token being checked, before it is kept.
+    String? bearer,
   }) async {
+    if (bearer == null) await _freshToken();
     final request = http.Request(method, Uri.parse('$baseUrl$path'));
     request.headers['Content-Type'] = 'application/json';
-    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    final authorization = bearer ?? token;
+    if (authorization != null) {
+      request.headers['Authorization'] = 'Bearer $authorization';
+    }
     if (body != null) request.body = jsonEncode(body);
     try {
       final response = await http.Response.fromStream(
@@ -63,7 +100,7 @@ class IdentityApi {
       } on FormatException {
         throw const AuthServiceException();
       }
-      if (response.statusCode == 401 && token != null) {
+      if (response.statusCode == 401 && bearer == null && token != null) {
         token = null;
         onUnauthorized?.call();
       }
@@ -92,13 +129,20 @@ class IdentityError implements Exception {
 }
 
 class ApiAuthService implements AuthService {
-  ApiAuthService(this.api);
+  ApiAuthService(this.api, {this.cognito});
   final IdentityApi api;
+
+  /// Set when this build signs in with Amazon Cognito; null for local sessions.
+  final CognitoClient? cognito;
+  String? _refreshToken;
+
   @override
   Future<AuthSession?> signIn({
     required String username,
     required String password,
   }) async {
+    final cognito = this.cognito;
+    if (cognito != null) return _cognitoSignIn(cognito, username, password);
     try {
       final data = await api.request(
         '/identity/login',
@@ -115,6 +159,79 @@ class ApiAuthService implements AuthService {
       }
       if (e.status == 401) return null;
       throw const AuthServiceException();
+    }
+  }
+
+  /// Cognito checks the password; the API then says who this is, with the
+  /// role and scope from its own records. Tokens are kept in memory only.
+  Future<AuthSession?> _cognitoSignIn(
+    CognitoClient cognito,
+    String username,
+    String password,
+  ) async {
+    final CognitoTokens tokens;
+    try {
+      tokens = await cognito.signIn(username.trim().toLowerCase(), password);
+    } on CognitoRefusedException {
+      return null;
+    }
+    dynamic me;
+    try {
+      me = await api.request('/identity/me', bearer: tokens.accessToken);
+    } on IdentityError catch (e) {
+      // A Cognito user with no active account here (unlinked or disabled).
+      if (tokens.refreshToken != null) {
+        await cognito.revoke(tokens.refreshToken!).catchError((Object _) {});
+      }
+      if (e.status == 401 || e.status == 403) {
+        throw const AuthAccountNotReadyException();
+      }
+      throw const AuthServiceException();
+    }
+    _keep(tokens);
+    _refreshToken = tokens.refreshToken;
+    api.refreshSession = _refresh;
+    return AuthSession(
+      user: AuthenticatedUser.fromJson(me as Map<String, dynamic>),
+    );
+  }
+
+  void _keep(CognitoTokens tokens) {
+    api.token = tokens.accessToken;
+    api.tokenExpiresAt = api.now().add(tokens.expiresIn);
+  }
+
+  Future<bool> _refresh() async {
+    final cognito = this.cognito;
+    final refreshToken = _refreshToken;
+    if (cognito == null || refreshToken == null) return false;
+    try {
+      _keep(await cognito.refresh(refreshToken));
+      return true;
+    } on CognitoRefusedException {
+      // Signed out elsewhere, password reset by HQ, disabled, or too old.
+      _refreshToken = null;
+      return false;
+    }
+  }
+
+  /// Ends the sign-in on the server too, then forgets every token.
+  Future<void> signOut() async {
+    final refreshToken = _refreshToken;
+    final hadToken = api.token != null;
+    _refreshToken = null;
+    api.refreshSession = null;
+    api.tokenExpiresAt = null;
+    try {
+      if (cognito != null && refreshToken != null) {
+        await cognito!.revoke(refreshToken);
+      } else if (cognito == null && hadToken) {
+        await api.request('/identity/logout', method: 'POST');
+      }
+    } catch (_) {
+      // Signing out on the phone still works without a connection.
+    } finally {
+      api.token = null;
     }
   }
 }

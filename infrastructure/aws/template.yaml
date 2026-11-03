@@ -24,9 +24,11 @@ Parameters:
     Description: Private S3 bucket for society documents and incident photos (blocks public access)
   CognitoUserPoolId:
     Type: String
+    Description: The Sarvodaya user pool, <region>_<id>; the token issuer is https://cognito-idp.<region>.amazonaws.com/<pool id>
+    AllowedPattern: '^[a-z]{2}(-[a-z]+)+-[0-9]_[A-Za-z0-9]+$'
   CognitoClientIds:
     Type: String
-    Description: Comma-separated app client ids (dashboard, phone app)
+    Description: Comma-separated public app client ids (dashboard, phone app); no client secret. Access tokens must carry one of these as client_id
   DatabaseSecretArn:
     Type: String
     Description: Secrets Manager secret whose SecretString is the RDS Proxy DATABASE_URL
@@ -37,7 +39,7 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
   LambdaSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Allowed to reach the RDS Proxy on 5432; outbound HTTPS through a NAT gateway or VPC endpoints (S3, Bedrock, Cognito JWKS)
+    Description: Allowed to reach the RDS Proxy on 5432; outbound HTTPS through a NAT gateway or VPC endpoints (S3, Bedrock, Cognito user pool API and JWKS)
   SarvoAiEnabled:
     Type: String
     AllowedValues: ['false', 'true']
@@ -80,6 +82,7 @@ Resources:
           NODE_ENV: production
           AUTH_PROVIDER: cognito
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_REGION: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]
           COGNITO_CLIENT_ID: !Ref CognitoClientIds
           COGNITO_TOKEN_USE: access
           # Secrets are resolved from Secrets Manager when the stack is deployed;
@@ -108,6 +111,21 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/societies/*
                 - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/incidents/*
+            # HQ account management (D16): create a user, set HQ's permanent password,
+            # enable or disable it and end its sessions. One user pool only; no delete,
+            # no attribute or pool changes, no listing of users.
+            - Sid: CognitoAccountAdmin
+              Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+                - cognito-idp:AdminEnableUser
+                - cognito-idp:AdminDisableUser
+                - cognito-idp:AdminUserGlobalSignOut
+              Resource: !Sub
+                - arn:${AWS::Partition}:cognito-idp:${PoolRegion}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+                - PoolRegion: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]
         - !If
           - SarvoAiOn
           # The three statements AWS requires for a global inference profile; see sarvoai-bedrock-policy.json.

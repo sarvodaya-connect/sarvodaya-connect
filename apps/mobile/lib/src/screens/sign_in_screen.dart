@@ -52,6 +52,12 @@ class _SignInScreenState extends State<SignInScreen> {
       setState(
         () => _error = 'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.',
       );
+    } on AuthAccountNotReadyException {
+      if (!mounted) return;
+      _password.clear();
+      setState(
+        () => _error = 'This account cannot sign in yet. Ask HQ to check it.',
+      );
     } on OfflineException {
       if (!mounted) return;
       setState(

@@ -10,14 +10,18 @@ The app reads two compile-time values (`--dart-define`):
 |---|---|---|---|
 | `API_BASE_URL` | Config | **none** | The API, e.g. `https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/api/v1`. A release build without it, or with an address that is not `https://`, opens a "This app is not set up yet" screen and never signs in. |
 | `SC_DEMO_MODE` | Config | `false` | Fictional demonstration data and the demo account. On by default only in debug builds and tests. Never set it to `true` for a store build. |
+| `AUTH_PROVIDER` | Config | `cognito` | `cognito` signs in with the Sarvodaya user pool. `local` (the API's development passwords) is the debug default and is refused in release builds. |
+| `COGNITO_USER_POOL_ID` | Config | **none** | e.g. `ap-southeast-1_AbC123xyZ`. Without it, or `COGNITO_CLIENT_ID`, a release build opens "This app is not set up yet". |
+| `COGNITO_CLIENT_ID` | Config | **none** | The phone's public app client (no client secret). |
+| `COGNITO_REGION` | Config | from the pool id | Optional check. |
 
-There are no secrets in the app: users sign in with their own account, and the app holds only the session token for that sign-in.
+There are no secrets in the app: users sign in with their own account, and the app holds that sign-in's Cognito tokens in memory only. See `cognito-setup.md`.
 
 ## What the app collects (for the store privacy forms)
 
 Fill in Google Play's **Data safety** form and App Store Connect's **App Privacy** questionnaire from this list. The answers are the release owner's to give; this is what the code does:
 
-- **Account:** username and password at sign-in (sent to the API over HTTPS, not stored on the phone); the session token is kept in memory only.
+- **Account:** username and password at sign-in (sent to Amazon Cognito over HTTPS, not stored on the phone); the tokens are kept in memory only.
 - **Society records** the user is allowed to edit: society details, Exco members' names, positions, phone numbers and, for authorised roles, NICs (sent to the API over HTTPS; NICs are stored encrypted by the API and shown one record at a time to authorised viewers).
 - **Yearly total profit and total expenses**, activities, disaster assessments (counts only, no personal details) and documents or photos the user chooses to upload (PDF, JPG or PNG, up to 10 MB). Files go straight to private storage through short-lived links.
 - **Not collected:** location (the map uses society coordinates typed into the record), contacts, camera or microphone access (files come from the system picker), advertising identifiers, analytics or crash reporting SDKs, and no tracking across apps.
@@ -47,7 +51,8 @@ Android App Bundle for Play internal testing:
 ```
 cd apps/mobile
 flutter test
-flutter build appbundle --release --dart-define=API_BASE_URL=https://<api>/api/v1
+flutter build appbundle --release --dart-define=API_BASE_URL=https://<api>/api/v1 \
+  --dart-define=COGNITO_USER_POOL_ID=<pool id> --dart-define=COGNITO_CLIENT_ID=<phone app client id>
 ```
 
 Signing: create the upload keystore outside the repository and an `apps/mobile/android/key.properties` file (git-ignored) with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Without it the bundle is built **unsigned** (it is never signed with the debug key) and Play will not accept it. Use Play App Signing; keep the upload key in Sarvodaya's password manager.
@@ -56,7 +61,8 @@ iOS for TestFlight (on a Mac with Xcode 26 or later):
 
 ```
 cd apps/mobile
-flutter build ipa --release --dart-define=API_BASE_URL=https://<api>/api/v1
+flutter build ipa --release --dart-define=API_BASE_URL=https://<api>/api/v1 \
+  --dart-define=COGNITO_USER_POOL_ID=<pool id> --dart-define=COGNITO_CLIENT_ID=<phone app client id>
 ```
 
 Signing uses Xcode automatic signing with Sarvodaya's Apple Developer team: set the team on the Runner target (or pass `--export-options-plist`). Then upload `build/ios/ipa/*.ipa` with Xcode Organizer or Transporter, and add internal testers in App Store Connect → TestFlight. Before the first upload, run **Product → Archive → Generate Privacy Report** in Xcode to confirm the Flutter engine's and plugins' privacy manifests are included.
@@ -75,4 +81,4 @@ Signing uses Xcode automatic signing with Sarvodaya's Apple Developer team: set 
 4. Privacy policy URL, support contact, data deletion terms, and the answers to the Data safety and App Privacy forms.
 5. The production `API_BASE_URL` (HTTPS) once the API is deployed.
 6. A launcher icon that reads well at small sizes: the current icon is the full "sarvodaya connect" wordmark on white, which becomes small at home-screen size (To Confirm with Sarvodaya's brand owner).
-7. Production sign-in: the API accepts Amazon Cognito tokens (`AUTH_PROVIDER=cognito`), but the phone's sign-in screen still uses the local username and password endpoint, which production refuses. A Cognito sign-in in the app is needed before an internal testing build can sign in to any API running with `NODE_ENV=production` (see `docs/aws-configuration.md`). Do not work around this by running a hosted API in development mode: that mode also accepts the demonstration user header and is for local machines only.
+7. The Cognito user pool id and the phone's app client id (see `cognito-setup.md`). Release builds sign in with Cognito and refuse the API's development passwords. Sign-in against a real user pool has not been tested yet; see the checklist at the end of `cognito-setup.md`. Do not work around a missing pool by running a hosted API in development mode: that mode also accepts the demonstration user header and is for local machines only.
