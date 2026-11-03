@@ -15,10 +15,20 @@ export function mapboxToken(value = process.env.NEXT_PUBLIC_MAPBOX_TOKEN): strin
 /** To Confirm with Sarvodaya: a light base map keeps the grade colours readable. */
 export const MAP_STYLE = "mapbox://styles/mapbox/light-v11";
 
-/** Sri Lanka with a small margin, [west, south] and [east, north]. Pan and zoom stay inside it. */
+/** Sri Lanka with a small margin, [west, south] and [east, north]. The default view fits it. */
 export const SRI_LANKA_BOUNDS: [[number, number], [number, number]] = [
   [79.2, 5.6],
   [82.3, 10.1],
+];
+
+/**
+ * How far the user can pan. Wider than the island because Mapbox keeps the
+ * whole view inside it: a wide card showing all of Sri Lanka also shows sea
+ * either side.
+ */
+export const PAN_BOUNDS: [[number, number], [number, number]] = [
+  [76.0, 4.0],
+  [85.5, 11.7],
 ];
 
 export const GRADE_COLOURS: Record<MapSocietyClass, string> = {

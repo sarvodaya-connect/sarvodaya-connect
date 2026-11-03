@@ -3,7 +3,7 @@
 import type { Map as MapboxMap, MapOptions } from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
 
-import { MAP_STYLE, SRI_LANKA_BOUNDS } from "@/lib/mapbox";
+import { MAP_STYLE, PAN_BOUNDS, SRI_LANKA_BOUNDS } from "@/lib/mapbox";
 
 export type Mapbox = typeof import("mapbox-gl");
 export type MapPhase = "loading" | "ready" | "error";
@@ -42,7 +42,7 @@ export function useMapbox(
       map = new mapbox.Map({
         bounds: SRI_LANKA_BOUNDS,
         fitBoundsOptions: { padding: 12 },
-        maxBounds: SRI_LANKA_BOUNDS,
+        maxBounds: PAN_BOUNDS,
         ...latest.current.options,
         accessToken: token,
         container: element,

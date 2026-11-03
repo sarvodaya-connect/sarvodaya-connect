@@ -92,7 +92,7 @@ export function SocietyLocationMap({
 
   return (
     <div className={`relative overflow-hidden rounded-lg border border-line bg-[#e3efe0] ${className}`}>
-      <div aria-label={onPick ? "Map for choosing the society's location" : `Map showing where ${name} is`} className="absolute inset-0" ref={container} role="region" />
+      <div aria-label={onPick ? "Map for choosing the society's location" : `Map showing where ${name} is`} className="h-full w-full" ref={container} role="region" />
       <MapStatus phase={phase} retry={retry} />
     </div>
   );

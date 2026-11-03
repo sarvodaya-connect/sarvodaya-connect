@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SocietyMap } from "@sarvodaya-connect/api-contracts";
 
-import { mapboxToken, typedPosition } from "@/lib/mapbox";
+import { PAN_BOUNDS, SRI_LANKA_BOUNDS, mapboxToken, typedPosition } from "@/lib/mapbox";
 
 import { fakeMapbox } from "./fake-mapbox.test-helper";
 
@@ -74,7 +74,9 @@ describe("V5 D02 society map (Mapbox)", () => {
     await screen.findByRole("list", { name: "Grade" });
     const options = fakeMapbox.maps[0]!.options;
     expect(options.accessToken).toBe(TOKEN);
-    expect(options.maxBounds).toEqual(options.bounds);
+    // Opens on the whole island; panning stops a little way out to sea.
+    expect(options.bounds).toEqual(SRI_LANKA_BOUNDS);
+    expect(options.maxBounds).toEqual(PAN_BOUNDS);
     expect(options).not.toHaveProperty("attributionControl", false);
   });
 
