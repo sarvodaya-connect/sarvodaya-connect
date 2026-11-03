@@ -276,6 +276,26 @@ export function NationalOverviewView({ demo, overview, years }: { demo: boolean;
   const { financialYear } = overview;
   return (
     <div className="space-y-5">
+      <form action="/sarvoai" className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3" method="get" role="search">
+        <span aria-hidden className="grid size-9 place-items-center rounded-full bg-brand-forest text-[#f3c44e]">
+          <Icon className="size-4" name="sparkle" />
+        </span>
+        <span className="min-w-[160px]">
+          <strong className="block text-[13px] text-ink">Ask Sarvo<span className="text-[#f0a040]">AI</span></strong>
+          <span className="text-[11px] text-muted">HQ only · answers from society records you can see</span>
+        </span>
+        <label className="sr-only" htmlFor="ask-sarvoai">Ask SarvoAI a question</label>
+        <input
+          className="min-w-[200px] flex-1 rounded-button border border-line bg-[#f7f8f5] px-3 py-2 text-[12px] text-ink"
+          id="ask-sarvoai"
+          maxLength={500}
+          minLength={3}
+          name="q"
+          placeholder="e.g. Which Kurunegala societies have not added their yearly figures?"
+          required
+        />
+        <button className="rounded-button bg-brand-forest px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#174f34]" type="submit">Ask</button>
+      </form>
       <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3">
         <span className="text-[12px] font-semibold text-ink">Reporting period</span>
         <YearLinks current={financialYear.startYear} href={(year) => `/dashboard?year=${year}`} years={years} />

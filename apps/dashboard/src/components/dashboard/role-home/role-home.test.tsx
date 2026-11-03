@@ -5,7 +5,7 @@ import type { HomeSocietyList, HomeSummary } from "@sarvodaya-connect/api-contra
 
 import { getViewer } from "@/lib/access";
 import { parseSocietyFilters } from "@/lib/home-format";
-import { canOpen } from "@/lib/role-routes";
+import { canOpen, noAccessPathFor } from "@/lib/role-routes";
 
 import { MySocieties } from "./my-societies";
 import { RoleHome } from "./role-home";
@@ -309,10 +309,13 @@ describe("role pages and filters", () => {
     const record = "/societies/3f2b8c1e-7a4d-4b8e-9c2a-1d5e6f7a8b9c";
     for (const role of ["PROGRAMME_COORDINATOR", "DEPUTY_DISTRICT_MANAGER", "DISTRICT_MANAGER"]) {
       for (const path of ["/dashboard", "/my-societies", record, `${record}/exco`, "/activities-to-approve"]) expect(canOpen(role, path)).toBe(true);
-      for (const path of ["/accounts", "/audit", "/reviews", "/societies", "/societies/new", "/search", "/membership", "/districts/kurunegala"])
+      for (const path of ["/accounts", "/audit", "/reviews", "/societies", "/societies/new", "/search", "/membership", "/districts/kurunegala", "/sarvoai", "/sarvoai?q=x"])
         expect(canOpen(role, path)).toBe(false);
     }
     expect(canOpen("HQ_ADMIN", "/accounts")).toBe(true);
+    expect(canOpen("HQ_ADMIN", "/sarvoai")).toBe(true);
+    expect(noAccessPathFor("/sarvoai")).toBe("/no-access?page=sarvoai");
+    expect(noAccessPathFor("/accounts")).toBe("/no-access?page=hq");
     expect(canOpen(undefined, "/accounts")).toBe(true);
   });
 

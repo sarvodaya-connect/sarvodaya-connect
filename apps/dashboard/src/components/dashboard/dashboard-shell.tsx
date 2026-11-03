@@ -101,6 +101,16 @@ export function DashboardShell({
             <p className="mt-1.5 text-[10.5px] text-muted">People | Communities | A Just and Compassionate Society</p>
           </div>
           <div className="flex items-center gap-4">
+            {viewer.role === "HQ_ADMIN" && (
+              // V5 HQTop: SarvoAI is HQ only (the API refuses every other role).
+              <Link
+                className="hidden items-center gap-1.5 rounded-button bg-brand-forest px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#174f34] sm:inline-flex"
+                href="/sarvoai"
+              >
+                <Icon className="size-4 text-[#f3c44e]" name="sparkle" />
+                Ask Sarvo<span className="-ml-1.5 text-[#f0a040]">AI</span>
+              </Link>
+            )}
             <div className="hidden w-[300px] md:block">
               <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
             </div>

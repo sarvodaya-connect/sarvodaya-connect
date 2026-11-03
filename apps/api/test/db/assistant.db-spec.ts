@@ -32,6 +32,8 @@ describe('SarvoAI tools and endpoint (PostgreSQL)', () => {
   const code = (key: string) => `S-AI${key.toUpperCase()}${suffix}`.slice(0, 20);
   const hqId = randomUUID();
   const managerId = randomUUID();
+  // V5 PR 9: one account for each role that must be refused.
+  const fieldIds = { so: randomUUID(), spc: randomUUID(), ddm: randomUUID() };
   const tokens: Record<string, string> = {};
 
   const run = async (name: string, input: object) => {
@@ -87,9 +89,12 @@ describe('SarvoAI tools and endpoint (PostgreSQL)', () => {
       data: [
         { id: hqId, username: `ai.hq.${suffix}`, displayName: 'Fictional HQ', role: 'HQ_ADMIN', phone: '+94000000000', status: 'ACTIVE', passwordHash: passwordHash('test-password-123') },
         { id: managerId, username: `ai.dm.${suffix}`, displayName: 'Fictional DM', role: 'DISTRICT_MANAGER', districtId, phone: '+94000000001', status: 'ACTIVE', passwordHash: passwordHash('test-password-123') },
+        { id: fieldIds.so, username: `ai.so.${suffix}`, displayName: 'Fictional SO', role: 'SOCIETY_OFFICER', societyIds: [ids.a], phone: '+94000000002', status: 'ACTIVE', passwordHash: passwordHash('test-password-123') },
+        { id: fieldIds.spc, username: `ai.spc.${suffix}`, displayName: 'Fictional SPC', role: 'PROGRAMME_COORDINATOR', districtId, societyIds: [ids.a], phone: '+94000000003', status: 'ACTIVE', passwordHash: passwordHash('test-password-123') },
+        { id: fieldIds.ddm, username: `ai.ddm.${suffix}`, displayName: 'Fictional DDM', role: 'DEPUTY_DISTRICT_MANAGER', districtId, societyIds: [ids.a], phone: '+94000000004', status: 'ACTIVE', passwordHash: passwordHash('test-password-123') },
       ],
     });
-    for (const [key, username] of [['hq', `ai.hq.${suffix}`], ['dm', `ai.dm.${suffix}`]]) {
+    for (const [key, username] of [['hq', `ai.hq.${suffix}`], ['dm', `ai.dm.${suffix}`], ['so', `ai.so.${suffix}`], ['spc', `ai.spc.${suffix}`], ['ddm', `ai.ddm.${suffix}`]]) {
       const login = await request(app.getHttpServer()).post('/api/v1/identity/login').send({ username, password: 'test-password-123' }).expect(201);
       tokens[key] = login.body.token;
     }
@@ -98,8 +103,8 @@ describe('SarvoAI tools and endpoint (PostgreSQL)', () => {
   afterAll(async () => {
     if (db) {
       const societies = Object.values(ids);
-      await db.platformAuditEvent.deleteMany({ where: { actorId: { in: [hqId, managerId] } } });
-      await db.platformAccount.deleteMany({ where: { id: { in: [hqId, managerId] } } });
+      await db.platformAuditEvent.deleteMany({ where: { actorId: { in: [hqId, managerId, ...Object.values(fieldIds)] } } });
+      await db.platformAccount.deleteMany({ where: { id: { in: [hqId, managerId, ...Object.values(fieldIds)] } } });
       await db.societyCouncilMember.deleteMany({ where: { societyId: { in: societies } } });
       await db.annualFinancialSummary.deleteMany({ where: { societyId: { in: societies } } });
       await db.society.deleteMany({ where: { id: { in: societies } } });
@@ -166,8 +171,13 @@ describe('SarvoAI tools and endpoint (PostgreSQL)', () => {
   it('keeps the endpoint HQ-only and answers 503 while SarvoAI is switched off', async () => {
     const ask = (token: string) =>
       request(app.getHttpServer()).post('/api/v1/assistant/questions').set('Authorization', `Bearer ${token}`).send({ question: 'Average profit in Kurunegala?' });
-    await ask(tokens.dm).expect(403);
+    for (const role of ['so', 'spc', 'ddm', 'dm']) {
+      const refused = await ask(tokens[role]).expect(403);
+      expect(refused.body.error.message).toBeTruthy();
+    }
     await ask(tokens.hq).expect(503);
+    // Refused requests are not recorded as questions; nothing reached the tools.
+    expect(await db.platformAuditEvent.count({ where: { action: 'SARVOAI_QUESTION', actorId: { in: Object.values(fieldIds) } } })).toBe(0);
     await request(app.getHttpServer()).post('/api/v1/assistant/questions').send({ question: 'Average profit?' }).expect(401);
   });
 });

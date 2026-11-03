@@ -36,16 +36,61 @@ class NotificationsScreen extends StatelessWidget {
         children: [
           if (store.offline) const OfflineBanner(),
           Expanded(
-            child: DemoLoader(
-              loadingLabel: 'Loading notifications',
-              skeletonCards: 2,
-              builder: (context) => const _NotificationsContent(),
-            ),
+            child: DemoStore.demoMode
+                ? DemoLoader(
+                    loadingLabel: 'Loading notifications',
+                    skeletonCards: 2,
+                    builder: (context) => const _NotificationsContent(),
+                  )
+                : const _ApiNotifications(),
           ),
         ],
       ),
     );
   }
+}
+
+/// V5 M16 outside demonstration mode: the user's own notifications from the API.
+class _ApiNotifications extends StatefulWidget {
+  const _ApiNotifications();
+
+  @override
+  State<_ApiNotifications> createState() => _ApiNotificationsState();
+}
+
+class _ApiNotificationsState extends State<_ApiNotifications> {
+  late Future<void> _load;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _load = DemoScope.read(context).loadNotifications();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<void>(
+    future: _load,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const LoadingSkeleton(cards: 2, label: 'Loading notifications');
+      }
+      final error = DemoScope.of(context).notificationsError;
+      if (error != null) {
+        return StateMessage(
+          icon: Icons.error_outline,
+          title: 'We couldn’t load your notifications',
+          message: error,
+          tone: StateTone.error,
+          isAlert: true,
+          primaryLabel: 'Try again',
+          onPrimary: () => setState(
+            () => _load = DemoScope.read(context).loadNotifications(),
+          ),
+        );
+      }
+      return const _NotificationsContent();
+    },
+  );
 }
 
 class _NotificationsContent extends StatelessWidget {

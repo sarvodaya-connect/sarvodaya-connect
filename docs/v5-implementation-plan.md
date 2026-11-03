@@ -93,7 +93,7 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 | D15 Reports | `/reports`, `/reports/[type]` (print), `/reports/[type]/download` (CSV) | — | match (PR 5); scheduled reports To Confirm | 5 |
 | D18 Search | `/search` (API `/search`) | — | match (PR 5) | 5 |
 | D19 Alerts | `/notifications` (API `/notifications?filter=`) | — | match (PR 5) | 5 |
-| D17 Settings | — | — | not assigned (see open questions) | — |
+| D17 Settings | `/settings` | — | profile, sign-out, language note and password (PR 9); notification preferences To Confirm | 9 |
 | M05h, M61–M69d | — | `national/national_screens.dart`, HQ tabs in `app.dart` | match (PR 5) | 5 |
 
 ### Role dashboards and phone homes
@@ -103,8 +103,8 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 | SP01, SP02 | `/dashboard`, `/societies` (HQ-only sign-in today) | — | new | 6 |
 | DD01, DD03 | as above | — | new | 6 |
 | DM01, DM02 | as above | — | new | 6 |
-| M05, M05s, M05d, M05m | — | `society_officer_home_screen.dart`, `v4_role_home_screen.dart` | rework | 6 |
-| M16*, M17*, M20 | — | `notifications_screen.dart`, `more_screen.dart`, `my_societies_screen.dart` | rework | 6 |
+| M05, M05s, M05d, M05m | — | `society_officer_home_screen.dart` (M05), `home/home_screens.dart` on `GET /home` (M05s, M05d, M05t, M05m) | match (PR 9; M05 unchanged) | 6, 9 |
+| M16*, M17*, M20 | — | `notifications_screen.dart` (API outside demo mode), `more_screen.dart`, `home/home_screens.dart` (`DistrictSocietiesScreen`) | match (PR 9); Help content To Confirm | 9 |
 
 ### Temporary DDM access
 
@@ -126,8 +126,8 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D40–D49f | — | — | new, on `POST /api/v1/assistant/questions` | 9 |
-| M80–M89f | — | — | new, on the same endpoint | 9 |
+| D40–D49f | `/sarvoai`, D02 Ask bar, HQ header button, `/no-access?page=sarvoai` | — | match (PR 9), on `POST /api/v1/assistant/questions` | 9 |
+| M80–M89f | — | `sarvoai/sarvoai_screen.dart`, from M05h and More | match (PR 9), on the same endpoint | 9 |
 
 ## Phone bottom-bar tabs
 
@@ -136,16 +136,16 @@ PR 1 applies the V5 bar style to the existing tabs. The V5 tab sets below change
 | Role | V5 tabs | Today |
 |---|---|---|
 | Society Officer | Home, Society, **Incident** (red), Exco, Work plan, More | Home, Society, Exco, Work plan, More (API mode); Home, Society, Submit, Requests, More (demo) |
-| SPC | Home, Alerts, More | Home, Societies, Alerts, Disasters, More |
-| DDM | Home, Alerts, More | Home, Societies, Alerts, Disasters, More |
-| DM | Home, Societies, Access, Alerts, More | Home, Societies, Access, Disasters, More |
+| SPC | Home, Alerts, More | Same (PR 9); Disaster response opens from the home and More |
+| DDM | Home, Alerts, More | Same (PR 9); Disaster response opens from the home and More |
+| DM | Home, Societies, Access, Alerts, More | Same (PR 9); Disaster response opens from the home and More |
 | HQ | Overview, Districts, Societies, Alerts, More | Same (PR 5) |
 
 ## Sidebar items that wait for their pages
 
 The sidebar lists only pages that exist, so nobody lands on an empty page. These V5 items are added by the PR that builds them:
 
-- HQ: Map View, Requests & Tasks and Reports were added in PR 5. Still waiting: Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
+- HQ: Map View, Requests & Tasks and Reports were added in PR 5. Settings and the **Ask SarvoAI** header button were added in PR 9. Still waiting: the Review Queue count badge from real data (PR 3).
 - SPC: Activities to approve (added in PR 4, with SPC desktop sign-in limited to those pages until PR 6), Help (not assigned).
 - DM: Temporary DDM access (PR 7).
 - SPC, DDM and DM desktop sign-in: opened in PR 6. `GET /home` and `GET /home/societies` work out SP01/DD01/DM01 and SP02/DD03/DM02 from the user's own societies (the DM's district, view only). `middleware.ts` keeps these roles on `/dashboard`, `/my-societies`, `/societies/<id>` and `/activities-to-approve`; it steers screens only, the API decides what data each request returns. No new environment variables or migrations; Next.js middleware is supported on Amplify Hosting.
@@ -185,7 +185,7 @@ Every PR keeps the agreed AWS shape. Nothing here creates AWS resources, adds cr
 These are not decided in V5 or the confirmed requirements. No PR invents an answer; each will be listed again in the PR that meets it.
 
 - Who may open and close an incident beyond what the API allows today, and whether a Society Officer report notifies every society immediately or after review (PR 8: every role within its own scope; notifications go straight away to the people covering the area, not to everyone; still To Confirm).
-- Whether D17 Settings and the role "Help" item are in scope, and what they contain.
+- D17 Settings: which notification preferences exist and what they change (PR 9 builds the profile, language and password parts only). The "Help and HQ contact" content on the phone and the SPC "Help" item have no frame yet.
 - HQ Districts (M65) on the phone reuses the D03b endpoint `/national/districts` (decided in PR 5).
 - How long a temporary DDM grant may last and whether it can be renewed (PR 7).
 - The existing demo-only offline banners and queued submissions on the phone: offline editing is out of scope, so they will be removed with the screens that show them (PR 3, PR 4, PR 8).

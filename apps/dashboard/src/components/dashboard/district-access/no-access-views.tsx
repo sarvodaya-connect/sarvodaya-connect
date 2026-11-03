@@ -50,13 +50,27 @@ export function SocietyNoAccess({
 }
 
 /** V5 M69d (desktop too): a page for another role, here HQ. */
-export function RolePageNoAccess({ name, roleLabel, scope }: { name: string; roleLabel: string; scope: string }) {
+export function RolePageNoAccess({
+  name,
+  page = "hq",
+  roleLabel,
+  scope,
+}: {
+  name: string;
+  page?: "hq" | "sarvoai";
+  roleLabel: string;
+  scope: string;
+}) {
   return (
     <NoAccessState
       action={<Link className={secondaryButtonClass} href="/dashboard">Go to my home</Link>}
-      description={`You are signed in as ${name} (${roleLabel}, ${scope}). You can see the figures for your own societies on your home page.`}
+      description={
+        page === "sarvoai"
+          ? `You are signed in as ${name} (${roleLabel}, ${scope}). This link opens an HQ tool, so nothing from it is shown here. Your own societies are on your home page.`
+          : `You are signed in as ${name} (${roleLabel}, ${scope}). You can see the figures for your own societies on your home page.`
+      }
       heading="h1"
-      title="This page is for HQ only"
+      title={page === "sarvoai" ? "SarvoAI is for HQ only" : "This page is for HQ only"}
     />
   );
 }
