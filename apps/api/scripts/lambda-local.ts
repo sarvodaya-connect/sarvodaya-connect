@@ -91,7 +91,7 @@ const handlerPath = resolve(import.meta.dirname, '..', process.env.LAMBDA_HANDLE
 const { handler } = (await import(pathToFileURL(handlerPath).href)) as { handler: Handler };
 process.env.AWS_LAMBDA_FUNCTION_NAME ??= 'sarvodaya-api-local';
 
-createServer(async (request, response) => {
+const server = createServer(async (request, response) => {
   let body: Buffer;
   try {
     body = await readBody(request);
@@ -108,4 +108,9 @@ createServer(async (request, response) => {
   const headers: Record<string, string | string[]> = { ...(result.headers as Record<string, string>) };
   if (result.cookies?.length) headers['set-cookie'] = result.cookies;
   response.writeHead(result.statusCode ?? 200, headers).end(payload);
-}).listen(PORT, () => console.log(JSON.stringify({ level: 'log', message: `Lambda emulator on http://localhost:${PORT}/api/v1` })));
+});
+server.listen(PORT, () => {
+  const address = server.address();
+  const port = address && typeof address === 'object' ? address.port : PORT;
+  console.log(JSON.stringify({ level: 'log', message: `Lambda emulator on http://localhost:${port}/api/v1` }));
+});
