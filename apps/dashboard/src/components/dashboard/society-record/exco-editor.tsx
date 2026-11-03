@@ -277,10 +277,10 @@ export function ExcoEditor({
         <section className="rounded-card border border-line bg-surface p-4">
           <h3 className="text-[15px] font-bold text-ink">Progress</h3>
           <p className={`mt-2 text-[26px] font-bold ${filled === 25 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
-          <div aria-hidden="true" className="mt-2 h-2 rounded-full bg-state-grey">
-            <div className={`h-2 rounded-full ${filled === 25 ? "bg-brand-action" : "bg-[#e2b33a]"}`} style={{ width: `${(filled / 25) * 100}%` }} />
-          </div>
-          <p className="mt-3 text-[12px] text-ink-soft">All 25 are required.</p>
+          {/* V5 PR 10: the count as words, never a progress bar. */}
+          <p className="mt-1 text-[12px] text-ink-soft">
+            {filled === 25 ? "All 25 seats are filled." : `${25 - filled} ${25 - filled === 1 ? "seat" : "seats"} still to fill. All 25 are required.`}
+          </p>
         </section>
         <section className="rounded-card border border-line bg-surface p-4">
           <h3 className="text-[15px] font-bold text-ink">Office bearers</h3>
