@@ -10,11 +10,15 @@ vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/current-viewer", () => ({ getDesktopViewer }));
 vi.mock("@/lib/home-api", () => ({ getHome }));
 vi.mock("@/app/(dashboard)/district-access/actions", () => ({ endDistrictAccess: vi.fn(), giveDistrictAccess: vi.fn() }));
+vi.mock("@/components/dashboard/emergencies/open-incident-panel", () => ({ OpenIncidentPanel: () => null }));
 
 import DashboardHome from "./page";
 import { RoleHome } from "@/components/dashboard/role-home/role-home";
 import { NationalOverview } from "@/components/dashboard/role-overviews";
+import { OpenIncidentPanel } from "@/components/dashboard/emergencies/open-incident-panel";
 import { getViewer } from "@/lib/access";
+
+const props = (search: Record<string, string> = {}) => ({ params: Promise.resolve({}), searchParams: Promise.resolve(search) }) as never;
 
 describe("dashboard role home routing", () => {
   beforeEach(() => {
@@ -26,7 +30,7 @@ describe("dashboard role home routing", () => {
   it("shows the national overview to HQ administrators", async () => {
     getDesktopViewer.mockResolvedValue(getViewer("hq-admin"));
 
-    const page = await DashboardHome();
+    const page = await DashboardHome(props());
 
     expect(page.type).toBe(NationalOverview);
     expect(getHome).not.toHaveBeenCalled();
@@ -38,18 +42,32 @@ describe("dashboard role home routing", () => {
       getDesktopViewer.mockResolvedValue(viewer);
       getHome.mockResolvedValue({ role: viewer.role });
 
-      const page = await DashboardHome();
+      const page = await DashboardHome(props());
 
-      expect(page.type).toBe(RoleHome);
-      expect(page.props).toMatchObject({ home: { role: viewer.role }, viewer });
+      const [home, panel] = page.props.children;
+      expect(home.type).toBe(RoleHome);
+      expect(home.props).toMatchObject({ home: { role: viewer.role }, viewer });
+      expect(panel).toBe(false);
     }
     expect(getHome).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens IR02 Report an incident over the role home", async () => {
+    const viewer = getViewer("programme-coordinator");
+    getDesktopViewer.mockResolvedValue(viewer);
+    getHome.mockResolvedValue({ role: viewer.role });
+
+    const page = await DashboardHome(props({ report: "incident" }));
+
+    const [, panel] = page.props.children;
+    expect(panel.type).toBe(OpenIncidentPanel);
+    expect(panel.props).toMatchObject({ closeHref: "/dashboard", viewer });
   });
 
   it("sends platform administrators to administration", async () => {
     getDesktopViewer.mockResolvedValue(getViewer("system-admin"));
 
-    await expect(DashboardHome()).rejects.toThrow("REDIRECT:/admin");
+    await expect(DashboardHome(props())).rejects.toThrow("REDIRECT:/admin");
     expect(redirect).toHaveBeenCalledWith("/admin");
   });
 });

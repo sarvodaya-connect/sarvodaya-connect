@@ -1,37 +1,116 @@
-import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
+
 import type { Principal } from '../auth/principal.js';
-import { assertCanAccessSociety, assertCanCreateEmergencyAction, assertCanManageEmergency, assertCanUseEmergency } from './emergency-access.policy.js';
+import {
+  actingScope,
+  canCoordinate,
+  coversSociety,
+  isEmptyScope,
+  societyScopeFilter,
+  viewingScope,
+} from './emergency-access.policy.js';
 
-const officer: Principal = {
-  id: 'officer-1', displayName: 'Demo officer', roles: ['SOCIETY_OFFICER'],
-  districtIds: ['district-1'], societyIds: ['society-1'],
-};
+const NOW = new Date('2026-10-26T06:00:00Z');
+const own = { id: 'society-own', districtId: 'district-1' };
+const neighbour = { id: 'society-neighbour', districtId: 'district-1' };
+const far = { id: 'society-far', districtId: 'district-2' };
 
-describe('emergency access policy', () => {
-  it('allows assigned officers to assess their society', () => {
-    expect(() => assertCanUseEmergency(officer)).not.toThrow();
-    expect(() => assertCanAccessSociety(officer, 'society-1', 'district-1')).not.toThrow();
+const person = (
+  roles: Principal['roles'],
+  extra: Partial<Principal> = {},
+): Principal => ({
+  id: `${roles[0]}-1`,
+  displayName: 'Fictional user',
+  roles,
+  // Every account carries its district; only DMs act for all of it.
+  districtIds: ['district-1'],
+  societyIds: ['society-own'],
+  ...extra,
+});
+
+const officer = person(['SOCIETY_OFFICER']);
+const spc = person(['PROGRAMME_COORDINATOR']);
+const ddm = person(['DEPUTY_DISTRICT_MANAGER']);
+const dm = person(['DISTRICT_MANAGER'], { societyIds: [] });
+const hq = person(['HQ_ADMIN'], { districtIds: [], societyIds: [] });
+const ddmWithAccess = person(['DEPUTY_DISTRICT_MANAGER'], {
+  delegatedDistrictAccess: [
+    {
+      districtId: 'district-1',
+      startsAt: '2026-10-25T00:00:00Z',
+      expiresAt: '2026-10-28T00:00:00Z',
+    },
+  ],
+});
+
+describe('V5 PR 8 disaster response scope', () => {
+  it.each([
+    ['Society Officer', officer],
+    ['SPC', spc],
+    ['DDM', ddm],
+  ])(
+    '%s acts for assigned societies only, not the rest of the district',
+    (_, who) => {
+      const scope = actingScope(who);
+      expect(coversSociety(scope, own)).toBe(true);
+      expect(coversSociety(scope, neighbour)).toBe(false);
+      expect(coversSociety(scope, far)).toBe(false);
+    },
+  );
+
+  it('DM acts for the whole district and nothing outside it', () => {
+    const scope = actingScope(dm);
+    expect(coversSociety(scope, own)).toBe(true);
+    expect(coversSociety(scope, neighbour)).toBe(true);
+    expect(coversSociety(scope, far)).toBe(false);
   });
 
-  it('rejects out-of-scope societies and incident activation by an officer', () => {
-    expect(() => assertCanAccessSociety(officer, 'society-2', 'district-1')).toThrow(ForbiddenException);
-    expect(() => assertCanManageEmergency(officer)).toThrow(ForbiddenException);
+  it('HQ acts nationally', () => {
+    const scope = actingScope(hq);
+    expect(coversSociety(scope, far)).toBe(true);
+    expect(societyScopeFilter(scope)).toEqual({});
   });
 
-  it('allows district-scoped managers and national administrators to coordinate', () => {
-    const manager: Principal = { ...officer, roles: ['DISTRICT_MANAGER'] };
-    const hq: Principal = { ...officer, roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] };
-    expect(() => assertCanManageEmergency(manager)).not.toThrow();
-    expect(() => assertCanAccessSociety(manager, 'society-9', 'district-1')).not.toThrow();
-    expect(() => assertCanAccessSociety(manager, 'society-9', 'district-2')).toThrow(ForbiddenException);
-    expect(() => assertCanAccessSociety(hq, 'society-9', 'district-2')).not.toThrow();
+  it('DDM temporary access adds a view-only district while it lasts', () => {
+    expect(coversSociety(viewingScope(ddmWithAccess, NOW), neighbour)).toBe(
+      true,
+    );
+    // View only: the district never becomes part of what they act for.
+    expect(coversSociety(actingScope(ddmWithAccess), neighbour)).toBe(false);
+    const after = new Date('2026-10-28T00:00:01Z');
+    expect(coversSociety(viewingScope(ddmWithAccess, after), neighbour)).toBe(
+      false,
+    );
   });
 
-  it('allows coordinators to create scoped actions without granting incident activation', () => {
-    const coordinator: Principal = { ...officer, roles: ['PROGRAMME_COORDINATOR'] };
-    expect(() => assertCanCreateEmergencyAction(coordinator)).not.toThrow();
-    expect(() => assertCanAccessSociety(coordinator, 'society-1', 'district-1')).not.toThrow();
-    expect(() => assertCanManageEmergency(coordinator)).toThrow(ForbiddenException);
+  it('temporary access means nothing for other roles', () => {
+    const spcWithGrant = {
+      ...spc,
+      delegatedDistrictAccess: ddmWithAccess.delegatedDistrictAccess,
+    };
+    expect(coversSociety(viewingScope(spcWithGrant, NOW), neighbour)).toBe(
+      false,
+    );
+  });
+
+  it('an account without a role in disaster response sees nothing', () => {
+    const nobody = person([] as unknown as Principal['roles']);
+    expect(isEmptyScope(actingScope(nobody))).toBe(true);
+    expect(isEmptyScope(viewingScope(nobody, NOW))).toBe(true);
+  });
+
+  it('only HQ coordinates response actions', () => {
+    expect(canCoordinate(hq)).toBe(true);
+    for (const who of [officer, spc, ddm, dm])
+      expect(canCoordinate(who)).toBe(false);
+  });
+
+  it('builds a society filter from the scope', () => {
+    expect(societyScopeFilter(actingScope(dm))).toEqual({
+      OR: [{ districtId: { in: ['district-1'] } }, { id: { in: [] } }],
+    });
+    expect(societyScopeFilter(actingScope(spc))).toEqual({
+      OR: [{ districtId: { in: [] } }, { id: { in: ['society-own'] } }],
+    });
   });
 });

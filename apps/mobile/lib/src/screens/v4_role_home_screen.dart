@@ -11,7 +11,7 @@ import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
 import '../district_access/access_format.dart';
 import '../theme/app_theme.dart';
-import 'emergency_response_screen.dart';
+import '../incidents/incident_screens.dart';
 
 class V4RoleHomeScreen extends StatefulWidget {
   const V4RoleHomeScreen({super.key, required this.role});
@@ -145,6 +145,9 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
               const SizedBox(height: 12),
               TemporaryViewCard(grant: grant, now: store.now),
             ],
+            const SizedBox(height: 12),
+            // V5 M40: the live incident covering the user's societies.
+            const IncidentHomeSection(),
             if (_loading)
               const Row(
                 children: [
@@ -202,7 +205,7 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute<void>(
-                  builder: (_) => const EmergencyResponseScreen(),
+                  builder: (_) => const IncidentsScreen(),
                 ),
               ),
             ),

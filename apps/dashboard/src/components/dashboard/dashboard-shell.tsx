@@ -59,9 +59,12 @@ function SidebarLink({ item, pathname }: { item: NavigationItem; pathname: strin
  * row of links under the header.
  */
 export function DashboardShell({
+  alerts,
   children,
   viewer,
 }: {
+  /** V5 IR05: the role bell with its notifications. HQ keeps the link to the alerts page. */
+  alerts?: React.ReactNode;
   children: React.ReactNode;
   viewer: DemoViewer;
 }) {
@@ -100,21 +103,23 @@ export function DashboardShell({
             <div className="hidden w-[300px] md:block">
               <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
             </div>
-            <Link
-              aria-label={unreadCount > 0 ? `Alerts, ${unreadCount} new` : "Alerts"}
-              className="relative rounded-full p-1 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
-              href="/notifications"
-            >
-              <Icon className="size-5" name="bell" strokeWidth={2} />
-              {unreadCount > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -right-1 -top-1 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger-dot px-0.5 text-[9px] font-bold text-white"
-                >
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
+            {alerts ?? (
+              <Link
+                aria-label={unreadCount > 0 ? `Alerts, ${unreadCount} new` : "Alerts"}
+                className="relative rounded-full p-1 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
+                href="/notifications"
+              >
+                <Icon className="size-5" name="bell" strokeWidth={2} />
+                {unreadCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-1 -top-1 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger-dot px-0.5 text-[9px] font-bold text-white"
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+            )}
             <form action={signOut}>
               <button
                 aria-label={`Account: ${viewer.displayName} · sign out`}

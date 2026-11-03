@@ -95,17 +95,45 @@ describe("SP01 SPC home", () => {
     expect(screen.getByText("No changes in your societies yet.")).toBeInTheDocument();
   });
 
-  it("shows active incidents as an alert", () => {
+  it("shows active incidents as an alert that opens the incident (PR 8)", () => {
     render(
       <RoleHome
         home={home({
-          incidents: [{ id: "i1", title: "Floods — North Western", type: "FLOOD", districtName: "Kurunegala", openedAt: "2026-10-25T00:40:00Z", openedByName: "N. Wijesinghe" }],
+          incidents: [
+            {
+              id: "i1",
+              title: "Floods — North Western",
+              type: "FLOOD",
+              districtName: "Kurunegala",
+              openedAt: "2026-10-25T00:40:00Z",
+              openedByName: "N. Wijesinghe",
+              openedByRole: "SOCIETY_OFFICER",
+              reference: "INC-2026-09",
+              assessmentsDueAt: "2026-10-27T12:30:00Z",
+            },
+          ],
         })}
         now={now}
         viewer={getViewer("programme-coordinator")}
       />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("Active incident · Floods — North Western (Kurunegala). Opened by N. Wijesinghe yesterday.");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Active incident INC-2026-09 · Floods — North Western. Opened by N. Wijesinghe (Society Officer) yesterday · assessments due Tue 27 Oct, 6:00 p.m.",
+    );
+    expect(within(alert).getByRole("link", { name: "Open incident" })).toHaveAttribute("href", "/emergencies/i1");
+    // SP01 card 3: both buttons work.
+    const card = screen.getByRole("region", { name: "Incidents" });
+    expect(within(card).getByRole("link", { name: /Open incident/ })).toHaveAttribute("href", "/emergencies/i1");
+    expect(within(card).getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+  });
+
+  it("lets SPCs, DDMs and DMs open the disaster response pages", () => {
+    for (const role of ["PROGRAMME_COORDINATOR", "DEPUTY_DISTRICT_MANAGER", "DISTRICT_MANAGER"]) {
+      expect(canOpen(role, "/emergencies")).toBe(true);
+      expect(canOpen(role, "/emergencies/3f2a9c1e-1b2c-4d5e-8f90-123456789abc")).toBe(true);
+      expect(canOpen(role, "/emergencies/not-an-id")).toBe(false);
+    }
   });
 });
 

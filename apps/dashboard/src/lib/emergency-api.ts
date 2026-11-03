@@ -1,58 +1,58 @@
 import "server-only";
 
-import type { EmergencyIncident, EmergencyIncidentDetail } from "@sarvodaya-connect/api-contracts";
-import type { DemoViewer } from "./access";
+import type {
+  EmergencyHelpingCandidate,
+  EmergencyIncidentDetail,
+  EmergencyIncidentList,
+  EmergencySituationReport,
+  EmergencySocietyPage,
+  EmergencySocietyRef,
+} from "@sarvodaya-connect/api-contracts";
 
-export type IncidentRecord = EmergencyIncidentDetail;
+import { platformApi } from "./platform-api";
 
-export type EmergencyData =
-  | { available: true; incidents: IncidentRecord[] }
-  | { available: false; incidents: []; message: string };
-
-const DEMO_API_USERS = {
-  HQ_ADMIN: "demo-hq-admin",
-  DISTRICT_MANAGER: "demo-dm-north",
-  PROGRAMME_COORDINATOR: "demo-programme-coordinator",
-} as const;
-
-function demoApiUser(viewer: DemoViewer) {
-  return DEMO_API_USERS[viewer.role as keyof typeof DEMO_API_USERS];
+/**
+ * V5 PR 8: disaster response through the API. Every request is checked
+ * against the signed-in user's own societies or district by the API.
+ */
+export function getIncidents(status: "ACTIVE" | "CLOSED"): Promise<EmergencyIncidentList> {
+  return platformApi(`/emergencies/incidents?status=${status}`);
 }
 
-function apiUrl(path: string) {
-  const base = process.env.API_BASE_URL?.trim() || "http://localhost:3001/api/v1";
-  return `${base.replace(/\/$/, "")}${path}`;
+export function getIncident(id: string): Promise<EmergencyIncidentDetail> {
+  return platformApi(`/emergencies/incidents/${encodeURIComponent(id)}`);
 }
 
-export async function getEmergencyData(viewer: DemoViewer): Promise<EmergencyData> {
-  const user = demoApiUser(viewer);
-  if (!user) return { available: false, incidents: [], message: "This role does not have emergency-response access." };
-  try {
-    const response = await fetch(apiUrl("/emergencies/incidents"), {
-      headers: { "X-Demo-User": user },
-      cache: "no-store",
-    });
-    if (!response.ok) return { available: false, incidents: [], message: `The local API returned ${response.status}. Check its logs and sign-in role.` };
-    const rows = (await response.json()) as EmergencyIncident[];
-    const incidents = await Promise.all(rows.map(async (incident) => {
-      const detail = await fetch(apiUrl(`/emergencies/incidents/${incident.id}`), {
-        headers: { "X-Demo-User": user },
-        cache: "no-store",
-      });
-      if (!detail.ok) throw new Error(`The local API returned ${detail.status} while loading incident details.`);
-      const records = await detail.json() as Pick<EmergencyIncidentDetail, "assessments" | "actions" | "reports">;
-      return { ...incident, ...records };
-    }));
-    return { available: true, incidents };
-  } catch {
-    return { available: false, incidents: [], message: "The local API is unavailable. Start the NestJS API and PostgreSQL, then refresh this page." };
-  }
+export function getIncidentSocieties(id: string, state: string, page: number): Promise<EmergencySocietyPage> {
+  const query = new URLSearchParams({ state, page: String(page), pageSize: "50" });
+  return platformApi(`/emergencies/incidents/${encodeURIComponent(id)}/societies?${query}`);
 }
 
-export function emergencyApiUrl(path: string) {
-  return apiUrl(path);
+export function getSituationReport(id: string): Promise<EmergencySituationReport> {
+  return platformApi(`/emergencies/situation-reports/${encodeURIComponent(id)}`);
 }
 
-export function emergencyApiDemoUser(viewer: DemoViewer) {
-  return demoApiUser(viewer);
+export function getHelpingCandidates(actionId: string): Promise<EmergencyHelpingCandidate[]> {
+  return platformApi(`/emergencies/actions/${encodeURIComponent(actionId)}/candidates`);
+}
+
+export type ReportOptions = {
+  societies: (EmergencySocietyRef & { districtId: string })[];
+  districts: { id: string; name: string }[];
+};
+
+/** The societies the user may report for (their own scope) and every district. */
+export function getReportOptions(search?: string): Promise<ReportOptions> {
+  const query = search ? `?${new URLSearchParams({ search: search.slice(0, 150) })}` : "";
+  return platformApi(`/emergencies/report-options${query}`);
+}
+
+/** Message for a request that failed: the API's own words, or a general one. */
+export function failureMessage(error: unknown) {
+  return error instanceof Error && error.message ? error.message : "The request could not be completed. Try again.";
+}
+
+/** The API answers "not found" for incidents outside the user's scope. */
+export function isNotFound(error: unknown) {
+  return error instanceof Error && /not found/i.test(error.message);
 }

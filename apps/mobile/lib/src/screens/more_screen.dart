@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
 import 'notifications_screen.dart';
-import 'emergency_response_screen.dart';
+import '../incidents/incident_screens.dart';
 
 /// M17 - account, language, offline queue, help and sign-out.
 class MoreScreen extends StatelessWidget {
@@ -75,15 +75,13 @@ class MoreScreen extends StatelessWidget {
               Icons.health_and_safety_outlined,
               color: AppColors.leaf,
             ),
-            title: const Text('Emergency response'),
+            title: const Text('Disaster response'),
             subtitle: const Text(
-              'Incidents, rapid assessments and situation reports',
+              'Live incidents, rapid assessments and situation reports',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const EmergencyResponseScreen(),
-              ),
+              MaterialPageRoute<void>(builder: (_) => const IncidentsScreen()),
             ),
           ),
           _MenuRow(
