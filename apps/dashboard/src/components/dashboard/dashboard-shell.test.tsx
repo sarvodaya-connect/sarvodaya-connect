@@ -4,23 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getViewer, type DemoViewer } from "@/lib/access";
 
 import { DashboardShell } from "./dashboard-shell";
-import { NotificationsProvider } from "./notifications-context";
 
 const pathname = vi.hoisted(() => ({ current: "/dashboard" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
 vi.mock("@/app/identity-actions", () => ({ signOut: vi.fn() }));
 
 function renderShell(viewer: DemoViewer, unread = 0) {
-  const notifications = Array.from({ length: unread }, (_, index) => ({
-    id: `n${index}`,
-    read: false,
-  })) as never;
   return render(
-    <NotificationsProvider initial={notifications}>
-      <DashboardShell viewer={viewer}>
-        <p>Page body</p>
-      </DashboardShell>
-    </NotificationsProvider>,
+    <DashboardShell unreadCount={unread} viewer={viewer}>
+      <p>Page body</p>
+    </DashboardShell>,
   );
 }
 
@@ -34,8 +27,8 @@ describe("V5 dashboard shell", () => {
   it("shows the HQ header, sidebar and signed-in user", () => {
     renderShell(getViewer("hq-admin"), 3);
 
-    expect(screen.getByRole("heading", { level: 1, name: "National overview" })).toBeInTheDocument();
-    expect(screen.getByText("Sarvodaya societies across Sri Lanka")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "National Dashboard" })).toBeInTheDocument();
+    expect(screen.getByText("Shramadana Societies Across Sri Lanka")).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText("Search societies by name, S number or district…")).not.toHaveLength(0);
     expect(screen.getByRole("link", { name: "Alerts, 3 new" })).toHaveAttribute("href", "/notifications");
     expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();

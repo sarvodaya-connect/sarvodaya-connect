@@ -1,20 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getDesktopViewer, getHome, redirect } = vi.hoisted(() => ({
+const { getDesktopViewer, getHome, getNationalOverview, redirect } = vi.hoisted(() => ({
   getDesktopViewer: vi.fn(),
   getHome: vi.fn(),
+  getNationalOverview: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error(`REDIRECT:${path}`); }),
 }));
 
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/current-viewer", () => ({ getDesktopViewer }));
 vi.mock("@/lib/home-api", () => ({ getHome }));
+vi.mock("@/lib/national-api", () => ({ getNationalOverview }));
+vi.mock("@/lib/platform-api", () => ({ isDemoMode: () => false }));
 vi.mock("@/app/(dashboard)/district-access/actions", () => ({ endDistrictAccess: vi.fn(), giveDistrictAccess: vi.fn() }));
 vi.mock("@/components/dashboard/emergencies/open-incident-panel", () => ({ OpenIncidentPanel: () => null }));
 
 import DashboardHome from "./page";
 import { RoleHome } from "@/components/dashboard/role-home/role-home";
-import { NationalOverview } from "@/components/dashboard/role-overviews";
+import { NationalOverviewView } from "@/components/dashboard/national/national-overview";
 import { OpenIncidentPanel } from "@/components/dashboard/emergencies/open-incident-panel";
 import { getViewer } from "@/lib/access";
 
@@ -24,15 +27,19 @@ describe("dashboard role home routing", () => {
   beforeEach(() => {
     getDesktopViewer.mockReset();
     getHome.mockReset();
+    getNationalOverview.mockReset();
     redirect.mockClear();
   });
 
-  it("shows the national overview to HQ administrators", async () => {
+  it("shows HQ the V5 D02 National Dashboard for the chosen year", async () => {
     getDesktopViewer.mockResolvedValue(getViewer("hq-admin"));
+    getNationalOverview.mockResolvedValue({ financialYear: { startYear: 2024 } });
 
-    const page = await DashboardHome(props());
+    const page = await DashboardHome(props({ year: "2024" }));
 
-    expect(page.type).toBe(NationalOverview);
+    expect(page.type).toBe(NationalOverviewView);
+    expect(page.props.overview).toEqual({ financialYear: { startYear: 2024 } });
+    expect(getNationalOverview).toHaveBeenCalledWith(2024);
     expect(getHome).not.toHaveBeenCalled();
   });
 

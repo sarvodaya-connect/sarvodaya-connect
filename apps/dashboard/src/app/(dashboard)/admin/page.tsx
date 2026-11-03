@@ -1,5 +1,5 @@
 import { NoAccessState } from "@/components/dashboard/data-states";
-import { PlatformAdminOverview } from "@/components/dashboard/role-overviews";
+import { PlatformAdminScreen } from "@/components/dashboard/platform-admin";
 import { getCurrentViewer } from "@/lib/current-viewer";
 
 export default async function PlatformAdminPage() {
@@ -9,5 +9,5 @@ export default async function PlatformAdminPage() {
     return <NoAccessState heading="h1" />;
   }
 
-  return <PlatformAdminOverview />;
+  return <PlatformAdminScreen />;
 }

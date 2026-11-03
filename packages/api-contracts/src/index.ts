@@ -7,5 +7,6 @@ export * from './platform.js';
 export * from "./society-record.js";
 export * from "./assistant.js";
 export * from "./activities.js";
+export * from "./national.js";
 export * from "./home.js";
 export * from "./district-access.js";

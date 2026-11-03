@@ -11,7 +11,6 @@ import {
 } from "./access";
 import { complianceRecords } from "./demo-compliance";
 import { libraryDocuments } from "./demo-documents";
-import { notificationsFor } from "./demo-notifications";
 
 const hq = getViewer("hq-admin");
 const districtManager = getViewer("district-manager");
@@ -60,22 +59,6 @@ describe("provisional role-based visibility", () => {
     expect(complianceRecords.some((record) => canSeeSociety(systemAdmin, record))).toBe(false);
   });
 
-  it("only sends each role the notifications meant for it", () => {
-    expect(notificationsFor(hq)).toHaveLength(9);
-    expect(notificationsFor(districtManager).map((notification) => notification.id)).toEqual([
-      "note-review-queue",
-      "note-registrar-kurunegala",
-      "note-activity-evidence",
-      "note-audit-overdue-kurunegala",
-      "note-returned-wellawa",
-    ]);
-    expect(notificationsFor(coordinator).map((notification) => notification.id)).toEqual([
-      "note-activity-evidence",
-      "note-library-approved",
-    ]);
-    expect(notificationsFor(systemAdmin).map((notification) => notification.category)).toEqual(["SYSTEM", "SYSTEM"]);
-  });
-
   it("gives each role its V5 sidebar and leaves out pages it cannot open", () => {
     const labels = (viewer: ReturnType<typeof getViewer>) => {
       const { main, secondary } = navigationFor(viewer);
@@ -83,6 +66,7 @@ describe("provisional role-based visibility", () => {
     };
     expect(labels(hq)).toEqual([
       "National Overview",
+      "Map View",
       "District View",
       "Societies",
       "Review Queue",
@@ -90,6 +74,8 @@ describe("provisional role-based visibility", () => {
       "Membership",
       "Audits",
       "Disaster & Emergency",
+      "Requests & Tasks",
+      "Reports",
       "Documents",
       "Administration",
     ]);

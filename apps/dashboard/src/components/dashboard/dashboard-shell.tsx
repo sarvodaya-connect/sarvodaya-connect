@@ -17,7 +17,6 @@ import {
 
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon } from "./icon";
-import { useNotifications } from "./notifications-context";
 
 /** Hills along the bottom of the V5 header (HQTop). */
 function HeaderHills() {
@@ -61,15 +60,17 @@ function SidebarLink({ item, pathname }: { item: NavigationItem; pathname: strin
 export function DashboardShell({
   alerts,
   children,
+  unreadCount = 0,
   viewer,
 }: {
   /** V5 IR05: the role bell with its notifications. HQ keeps the link to the alerts page. */
   alerts?: React.ReactNode;
   children: React.ReactNode;
+  /** The signed-in user's unread alerts, from the API. */
+  unreadCount?: number;
   viewer: DemoViewer;
 }) {
   const pathname = usePathname();
-  const { unreadCount } = useNotifications();
   const navigation = navigationFor(viewer);
   const { title, subtitle } = headingFor(pathname, viewer);
   const scope = `${SHORT_ROLE_LABELS[viewer.role]} · ${viewer.scopeLabel}`;

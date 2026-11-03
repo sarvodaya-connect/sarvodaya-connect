@@ -1734,6 +1734,7 @@ export class EmergenciesService {
       const ids = (await recipients()).filter((id) => id !== principal.id);
       return await this.notifications.notifyUsers(ids, {
         category: 'EMERGENCY',
+        topic: 'INCIDENT',
         title: message.title.slice(0, 200),
         body: message.body.slice(0, 1000),
         linkPath: message.linkPath,

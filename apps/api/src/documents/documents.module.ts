@@ -17,5 +17,6 @@ import { RegistrarDocumentsService } from './registrar-documents.service.js';
     RegistrarDocumentsService,
     RegistrarDocumentsRepository,
   ],
+  exports: [RegistrarDocumentsRepository],
 })
 export class DocumentsModule {}
