@@ -11,6 +11,12 @@ import type {
 import type { Principal } from '../auth/principal.js';
 import { societyWhereForPrincipal } from './society-access.policy.js';
 
+/**
+ * The most pins one map request returns. PR 5 sizes the map for about 5,500
+ * located societies; 10,000 pins is roughly 1 MB of JSON, well inside Lambda.
+ */
+export const MAP_POINT_LIMIT = 10_000;
+
 const include = {
   district: true,
   contacts: true,
@@ -424,6 +430,45 @@ export class SocietiesRepository {
           orderBy: { category: 'asc' },
         });
       }),
+    );
+  }
+
+  /**
+   * Map pins within the person's scope: one bounded select of the fields a pin
+   * needs (no contacts or other personal data), plus a count of the active
+   * societies in scope that have no position yet.
+   */
+  mapPoints(principal: Principal) {
+    const scope = societyWhereForPrincipal(principal);
+    return executeDatabaseOperation(() =>
+      Promise.all([
+        this.prisma.society.findMany({
+          where: {
+            AND: [scope, { latitude: { not: null }, longitude: { not: null } }],
+          },
+          select: {
+            id: true,
+            nameEn: true,
+            societyCode: true,
+            grade: true,
+            status: true,
+            latitude: true,
+            longitude: true,
+            district: { select: { nameEn: true } },
+          },
+          orderBy: { id: 'asc' },
+          take: MAP_POINT_LIMIT + 1,
+        }),
+        this.prisma.society.count({
+          where: {
+            AND: [
+              scope,
+              { status: 'ACTIVE' },
+              { OR: [{ latitude: null }, { longitude: null }] },
+            ],
+          },
+        }),
+      ]),
     );
   }
 

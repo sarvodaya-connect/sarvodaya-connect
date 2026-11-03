@@ -6,7 +6,10 @@ import { useActionState, useState } from "react";
 import type { SocietyGrade, SocietyRecord } from "@sarvodaya-connect/api-contracts";
 
 import type { RecordFormResult } from "@/app/(dashboard)/societies/[id]/record-actions";
+import { mapboxToken, typedPosition } from "@/lib/mapbox";
 import { actorLabel, SOCIETY_GRADE_LABELS } from "@/lib/society-record-format";
+
+import { SocietyLocationMap } from "../maps/society-location-map";
 
 const inputClass =
   "mt-1 w-full rounded-input border border-line bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring";
@@ -21,6 +24,8 @@ type Values = {
   gnDivision: string;
   businessDescription: string;
   grade: string;
+  latitude: string;
+  longitude: string;
 };
 
 function initialValues(record: SocietyRecord): Values {
@@ -34,6 +39,8 @@ function initialValues(record: SocietyRecord): Values {
     gnDivision: record.address.gnDivision ?? "",
     businessDescription: record.businessDescription ?? "",
     grade: record.grade ?? "",
+    latitude: record.location?.latitude.toString() ?? "",
+    longitude: record.location?.longitude.toString() ?? "",
   };
 }
 
@@ -61,16 +68,20 @@ export function EditSocietyPanel({
   const membersInvalid = values.memberCount.trim() !== "" && !/^\d+$/.test(values.memberCount.trim());
   const required = (["nameEn", "societyCode", "addressLine"] as const).filter((key) => !values[key].trim());
   const request = record.openGradeRequest;
+  const token = mapboxToken();
+  const position = typedPosition(values.latitude, values.longitude);
+  const locationChanged = values.latitude.trim() !== before.latitude || values.longitude.trim() !== before.longitude;
+  const locationInvalid = locationChanged && !position;
   const set = (key: keyof Values) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [key]: event.target.value }));
 
-  const field = (key: keyof Values, label: string, options: { required?: boolean; hint?: string; type?: string } = {}) => (
+  const field = (key: keyof Values, label: string, options: { required?: boolean; hint?: string; type?: string; inputMode?: "decimal" } = {}) => (
     <label className="block text-[11px] font-semibold text-ink-soft">
       {label} {options.required && <span className="text-danger-text">*</span>}
       <input
         aria-invalid={options.required && !values[key].trim() ? true : undefined}
         className={`${inputClass} ${values[key].trim() !== before[key] ? "border-[#e5c96b] bg-[#fffbea]" : ""}`}
-        inputMode={options.type === "number" ? "numeric" : undefined}
+        inputMode={options.type === "number" ? "numeric" : options.inputMode}
         name={key}
         onChange={set(key)}
         value={values[key]}
@@ -113,6 +124,28 @@ export function EditSocietyPanel({
             {field("gnDivision", "GN division")}
           </div>
           {field("businessDescription", "Business run by the society", { hint: "Information only — no sales, stock or accounts." })}
+
+          <fieldset className="space-y-2">
+            <legend className="text-[11px] font-semibold text-ink-soft">Map location</legend>
+            {token && (
+              <SocietyLocationMap
+                className="h-48"
+                name={record.nameEn}
+                onPick={(latitude, longitude) => setValues((current) => ({ ...current, latitude: String(latitude), longitude: String(longitude) }))}
+                position={position}
+                token={token}
+              />
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {field("latitude", "Latitude", { inputMode: "decimal" })}
+              {field("longitude", "Longitude", { inputMode: "decimal" })}
+            </div>
+            {locationInvalid ? (
+              <p className="text-[11px] text-danger-text" role="alert">Enter both, for example 7.6123 and 80.2354.</p>
+            ) : (
+              <p className="text-[10px] text-muted">{token ? "Click the map or drag the pin, or type the coordinates." : "Type the coordinates."}</p>
+            )}
+          </fieldset>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-[11px] font-semibold text-ink-soft">
@@ -181,7 +214,7 @@ export function EditSocietyPanel({
             </Link>
             <button
               className="rounded-button bg-brand-action px-4 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed disabled:cursor-not-allowed disabled:bg-[#dfe3dd] disabled:text-[#9aa39d]"
-              disabled={!dirty || reasonMissing || membersInvalid || required.length > 0 || pending}
+              disabled={!dirty || reasonMissing || membersInvalid || locationInvalid || required.length > 0 || pending}
               type="submit"
             >
               {pending ? "Saving…" : "Save changes"}

@@ -2,8 +2,11 @@ import Link from "next/link";
 
 import type { SocietyRecord, WorkPlanOverview } from "@sarvodaya-connect/api-contracts";
 
+import { mapboxToken } from "@/lib/mapbox";
+
 import { secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
+import { SocietyLocationMap } from "../maps/society-location-map";
 import { Pill } from "../ui/pill";
 import {
   actorLabel,
@@ -60,7 +63,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-/** A decorative map with the society's pin. Coordinates are shown as text. */
+/** A decorative map with the society's pin, shown when Mapbox is not set up. Coordinates are shown as text. */
 function MapPreview({ hasLocation }: { hasLocation: boolean }) {
   return (
     <svg aria-hidden="true" className="h-32 w-full rounded-lg border border-line bg-[#e3efe0]" preserveAspectRatio="none" viewBox="0 0 240 120">
@@ -100,6 +103,7 @@ export function RecordOverview({
     });
   const staff = [...record.staff].sort((a, b) => STAFF_ORDER.indexOf(a.role as never) - STAFF_ORDER.indexOf(b.role as never));
   const request = record.openGradeRequest;
+  const token = mapboxToken();
 
   return (
     <>
@@ -128,7 +132,11 @@ export function RecordOverview({
               </div>
             </dl>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <MapPreview hasLocation={Boolean(record.location)} />
+              {record.location && token ? (
+                <SocietyLocationMap className="h-32" name={record.nameEn} position={record.location} token={token} />
+              ) : (
+                <MapPreview hasLocation={Boolean(record.location)} />
+              )}
               <div>
                 <p className="text-[10px] text-muted">Business run by the society</p>
                 <p className="mt-0.5 text-[12px] text-ink">{record.businessDescription || "None recorded."}</p>

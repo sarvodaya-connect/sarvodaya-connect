@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
 import {
   RECORD_COMPLETE,
   approvedInYear,
@@ -365,8 +366,10 @@ export class NationalRepository {
           grade: true,
           latitude: true,
           longitude: true,
+          district: { select: { nameEn: true } },
         },
         orderBy: { id: 'asc' },
+        take: MAP_POINT_LIMIT + 1,
       }),
     );
   }

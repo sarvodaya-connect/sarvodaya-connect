@@ -31,6 +31,16 @@ export async function updateSocietyRecord(
     if (!/^\d+$/.test(members.trim())) return { error: "Enter the number of members using numbers only, for example 418." };
     body.memberCount = Number(members.trim());
   }
+  const latitude = String(form.get("latitude") ?? "").trim();
+  const longitude = String(form.get("longitude") ?? "").trim();
+  if (latitude !== (form.get("latitude__before") ?? "") || longitude !== (form.get("longitude__before") ?? "")) {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!latitude || !longitude || !(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180))
+      return { error: "Enter both latitude and longitude, for example 7.6123 and 80.2354." };
+    body.latitude = lat;
+    body.longitude = lng;
+  }
   const grade = form.get("grade");
   if (typeof grade === "string" && grade && grade !== form.get("grade__before")) {
     const reason = form.get("gradeReason");

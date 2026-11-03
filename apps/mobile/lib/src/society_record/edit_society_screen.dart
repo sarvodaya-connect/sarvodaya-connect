@@ -4,7 +4,7 @@ import '../models/society.dart';
 import '../screens/manual_pin_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
-import '../widgets/map_preview.dart';
+import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
 import 'grade_change_request_screen.dart';
 import 'record_widgets.dart';
@@ -409,9 +409,11 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                   const FieldLabel('Map location'),
                   Stack(
                     children: [
-                      MapPreview(
+                      SocietyStreetMap(
                         height: 110,
                         location: _location,
+                        onPick: (location) =>
+                            setState(() => _location = location),
                         semanticLabel: _location == null
                             ? 'No map location set'
                             : 'Map location ${_location!.latitude.toStringAsFixed(4)}, ${_location!.longitude.toStringAsFixed(4)}',
