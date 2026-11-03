@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
-export const SESSION_COOKIE = "sc_session";
+import { SESSION_COOKIE } from "./session-cookies";
+export { SESSION_COOKIE };
 
 /** A refused or failed API request; `status` is the HTTP status (0 when the API could not be reached). */
 export class PlatformApiError extends Error {
@@ -19,7 +20,10 @@ export async function platformApi(path: string, init: RequestInit = {}) {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  // An explicit Authorization header (sign-in checking a new token) wins over the cookie.
+  if (headers.has("Authorization")) {
+    /* keep it */
+  } else if (token) headers.set("Authorization", `Bearer ${token}`);
   // Demonstration mode only: pages for another role name their demo user.
   else if (isDemoMode() && !headers.has("X-Demo-User")) headers.set("X-Demo-User", "demo-hq-admin");
   const base = process.env.API_BASE_URL ?? "http://localhost:3001/api/v1";
