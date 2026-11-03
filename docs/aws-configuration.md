@@ -213,3 +213,47 @@ The template grants only:
 5. Create the first HQ user in Cognito and link it with `npm run identity:link-cognito-hq` (`cognito-setup.md`, "First HQ account").
 6. Run the smoke checks against the deployed API with a fictional test account, then remove that account.
 
+## GitHub Actions AWS readiness checks
+
+The separate **AWS readiness** workflow runs on pull requests and pushes to `main`
+when API code, shared contracts, AWS infrastructure, the smoke Compose file,
+`amplify.yml`, `.nvmrc`, or the workflow itself changes. It can also be run manually.
+It uses read-only repository permissions and needs no AWS credentials or paid services.
+
+- **Validate AWS SAM template:** runs pinned `cfn-lint` against
+  `infrastructure/aws/template.yaml`.
+- **Packaged Lambda smoke checks:** uses Node from `.nvmrc`, installs API dependencies
+  and runs `npm run package:lambda`. It extracts the zip outside the checkout so
+  development dependencies cannot hide missing production dependencies, then calls
+  the packaged handler through the
+  existing local API Gateway emulator with a fresh PostgreSQL 17 database and a
+  private MinIO bucket. The existing 11 smoke checks exercise fictional HQ/SPC
+  sign-in, scoped home access, unauthenticated rejection, signed upload, content-type
+  tampering rejection, upload completion, matching download bytes and unsigned
+  download rejection. This intentionally uses local authentication; it does not
+  contact Cognito or Bedrock.
+
+Run the same package and smoke steps locally from `apps/api` with Node 24, Docker
+Compose v2, `curl` and `unzip` installed:
+
+```sh
+npm ci
+npm run package:lambda
+bash scripts/smoke-ci.sh
+```
+
+The runner uses a unique Compose project, random loopback ports and generated
+credentials, seeds only fictional fixtures, and bootstraps a temporary local HQ.
+An exit/signal trap stops the emulator and removes containers, networks and volumes
+on success or failure. An `always()` workflow step repeats container cleanup if the
+runner is interrupted. A forcibly terminated local shell can be cleaned up with
+`docker compose -p <project-name> -f infrastructure/docker/docker-compose.aws-smoke.yml down --volumes --remove-orphans`
+(set dummy values for `SMOKE_DB_PASSWORD`, `MINIO_ROOT_USER` and
+`MINIO_ROOT_PASSWORD` to satisfy Compose interpolation).
+The earlier `npm run smoke:local` command and its settings remain supported.
+
+Passing these checks establishes template linting, package construction and local
+behaviour. It does not validate Amplify hosting, AWS IAM, VPC routing, RDS Proxy,
+real S3 behaviour or real Cognito sign-in/refresh/revocation. Those still require
+an AWS staging deployment and the real-user-pool checks in `cognito-setup.md`.
+Required pull-request checks must be configured separately in repository rules.

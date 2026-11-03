@@ -1,0 +1,78 @@
+name: AWS readiness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/api-contracts/**"
+      - "infrastructure/aws/**"
+      - "infrastructure/docker/docker-compose.aws-smoke.yml"
+      - "amplify.yml"
+      - ".nvmrc"
+      - ".github/workflows/aws-readiness.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/api-contracts/**"
+      - "infrastructure/aws/**"
+      - "infrastructure/docker/docker-compose.aws-smoke.yml"
+      - "amplify.yml"
+      - ".nvmrc"
+      - ".github/workflows/aws-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  template:
+    name: Validate AWS SAM template
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CloudFormation linter
+        run: python -m pip install cfn-lint==1.59.0
+      - name: Validate SAM template
+        run: cfn-lint infrastructure/aws/template.yaml
+
+  package-smoke:
+    name: Packaged Lambda smoke checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      # Prisma needs a URL during generation; the smoke runner replaces it with
+      # the disposable database's random port and temporary credentials.
+      DATABASE_URL: postgresql://unused:unused@127.0.0.1:5432/unused
+      # A unique project also lets the final step remove resources if the runner
+      # was interrupted before its shell trap completed.
+      COMPOSE_PROJECT_NAME: aws-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - name: Install API dependencies
+        run: npm ci
+      - name: Build Lambda deployment package
+        run: npm run package:lambda
+      - name: Check packaged handler with PostgreSQL and MinIO
+        run: bash scripts/smoke-ci.sh
+      - name: Remove smoke containers, volumes and networks
+        if: always()
+        # Dummy values only satisfy Compose interpolation for this fallback.
+        env:
+          SMOKE_DB_PASSWORD: unused
+          MINIO_ROOT_USER: unused
+          MINIO_ROOT_PASSWORD: unused-unused
+        run: docker compose -f ../../infrastructure/docker/docker-compose.aws-smoke.yml down --volumes --remove-orphans
