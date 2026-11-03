@@ -6,6 +6,9 @@ import { Icon } from "@/components/dashboard/icon";
 import { secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Pill } from "@/components/dashboard/ui/pill";
 import { documentTypeLabel } from "@/components/dashboard/documents/document-labels";
+import { SocietyPinsMap } from "@/components/dashboard/maps/society-pins-map";
+import { mapboxToken } from "@/lib/mapbox";
+
 import { MEMBERSHIP_LABELS, membershipNote } from "./membership-labels";
 
 import { GRADE_STYLE, Panel, SampleBadge, SdgTile, Stat, YearLinks, count, lkrShort, share } from "./parts";
@@ -76,10 +79,11 @@ function SocietyStatus({ overview }: { overview: NationalOverview }) {
   );
 }
 
-function DistrictMap({ overview }: { overview: NationalOverview }) {
+/** The drawn map: active societies per district. Shown when Mapbox is not set up. */
+function DrawnDistrictMap({ overview }: { overview: NationalOverview }) {
   const placed = overview.districts.filter((district) => district.active > 0 && district.latitude !== null && district.longitude !== null);
   return (
-    <Panel eyebrow="Society map" link={{ href: "/map", label: "Map view" }} title="Active societies by district">
+    <>
       <div className="flex flex-1 items-center justify-center rounded-lg bg-[#e9eef1] p-3">
         <svg aria-labelledby="district-map-title" className="h-auto max-h-[340px] w-full" role="img" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
           <title id="district-map-title">Active societies in each district</title>
@@ -96,6 +100,19 @@ function DistrictMap({ overview }: { overview: NationalOverview }) {
         </svg>
       </div>
       <p className="mt-2 text-[11px] text-muted">Each number is the active societies in a district, placed at the average position of its societies. Click a district to see its societies.</p>
+      <p className="mt-1 text-[11px] text-muted">The street map is not set up yet, so a drawn map is shown.</p>
+    </>
+  );
+}
+
+/** V5 D02 Society map: the Mapbox map of every society when a token is set, otherwise the drawn district map. */
+function SocietyMapCard({ mapboxToken, overview }: { mapboxToken: string | null; overview: NationalOverview }) {
+  return (
+    <Panel eyebrow="Society map" link={{ href: "/map", label: "Map view" }} title={mapboxToken ? "Societies by grade" : "Active societies by district"}>
+      {mapboxToken ? <SocietyPinsMap token={mapboxToken} /> : <DrawnDistrictMap overview={overview} />}
+      <Link className="mt-2 self-start text-[11px] font-semibold text-brand-forest underline-offset-2 hover:underline" href="/societies">
+        List view ›
+      </Link>
       {overview.societies.withoutLocation > 0 && (
         <Link className="mt-2 flex items-center justify-between rounded-lg border border-line px-3 py-2 text-[11px] text-ink hover:bg-brand-mint-soft" href="/reports?type=data-quality">
           <span><strong>{count(overview.societies.withoutLocation)} active societies</strong> have no map position yet</span>
@@ -304,7 +321,7 @@ export function NationalOverviewView({ demo, overview, years }: { demo: boolean;
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
         <SocietyStatus overview={overview} />
-        <DistrictMap overview={overview} />
+        <SocietyMapCard mapboxToken={mapboxToken()} overview={overview} />
       </div>
       <h2 className="text-[16px] font-bold text-ink">Demographics <span className="text-[11px] font-normal text-muted">Members and activities</span></h2>
       <div className="grid gap-4 xl:grid-cols-2">

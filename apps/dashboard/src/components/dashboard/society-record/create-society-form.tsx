@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
 import type { CreateSocietyResult } from "@/app/(dashboard)/societies/[id]/record-actions";
+import { mapboxToken, typedPosition } from "@/lib/mapbox";
 import { SOCIETY_GRADE_LABELS } from "@/lib/society-record-format";
 import { submitWithoutReset } from "@/lib/use-form-submit";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
+import { SocietyLocationMap } from "../maps/society-location-map";
 import { ExcoEditor, emptyExco, excoProblems } from "./exco-editor";
 
 const inputClass =
@@ -77,6 +79,7 @@ export function CreateSocietyForm({
   const [touched, setTouched] = useState(false);
   const [rows, setRows] = useState(emptyExco);
   const [state, submit, pending] = useActionState(action, {});
+  const token = mapboxToken();
   const problems = detailProblems(details);
   const excoIssues = excoProblems(rows, "create");
   const codeError =
@@ -195,14 +198,28 @@ export function CreateSocietyForm({
           </section>
           <section className="rounded-card border border-line bg-surface p-5">
             <h3 className="text-[16px] font-bold text-ink">Map location</h3>
-            <div aria-hidden="true" className="mt-3 grid h-40 place-items-center rounded-lg bg-[#dce8d6] text-brand-forest">
-              <Icon className="size-8" name="map" strokeWidth={2} />
-            </div>
+            {token ? (
+              <div className="mt-3">
+                <SocietyLocationMap
+                  className="h-56"
+                  name={details.nameEn.trim()}
+                  onPick={(latitude, longitude) => setDetails((all) => ({ ...all, latitude: String(latitude), longitude: String(longitude) }))}
+                  position={typedPosition(details.latitude, details.longitude)}
+                  token={token}
+                />
+              </div>
+            ) : (
+              <div aria-hidden="true" className="mt-3 grid h-40 place-items-center rounded-lg bg-[#dce8d6] text-brand-forest">
+                <Icon className="size-8" name="map" strokeWidth={2} />
+              </div>
+            )}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {field("latitude", "Latitude", { inputMode: "decimal" })}
               {field("longitude", "Longitude", { inputMode: "decimal" })}
             </div>
-            <p className="mt-2 text-[11.5px] text-ink-soft">Type the coordinates. They can be corrected later by HQ or the society&apos;s staff.</p>
+            <p className="mt-2 text-[11.5px] text-ink-soft">
+              {token ? "Click the map or drag the pin, or type the coordinates." : "Type the coordinates."} They can be corrected later by HQ or the society&apos;s staff.
+            </p>
           </section>
         </div>
       ) : (

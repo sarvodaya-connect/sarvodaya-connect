@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/society.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
-import '../widgets/map_preview.dart';
 import '../widgets/section_card.dart';
+import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
 
-/// "Place Pin Manually": tap the demonstration map or type coordinates.
+/// "Place Pin Manually": tap the street map (the drawn demonstration map when
+/// Mapbox is not set up) or type coordinates.
 /// Returns the chosen [GeoLocation], or null if the officer cancels.
 class ManualPinScreen extends StatefulWidget {
   const ManualPinScreen({super.key, this.initial});
@@ -35,8 +36,7 @@ class _ManualPinScreenState extends State<ManualPinScreen> {
     super.dispose();
   }
 
-  void _placeAt(Offset fraction) {
-    final location = DemoMapArea.locationAt(fraction);
+  void _placeAt(GeoLocation location) {
     setState(() {
       _pin = location;
       _latitude.text = location.latitude.toStringAsFixed(4);
@@ -73,16 +73,19 @@ class _ManualPinScreenState extends State<ManualPinScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const NoticeBanner(
+            NoticeBanner(
               icon: Icons.touch_app_outlined,
               title: 'Tap the map where the society meets',
-              message: 'Or type the coordinates below. This is a demonstration map around the fictional society.',
+              message: MapboxConfig.usable(MapboxConfig.token)
+                  ? 'Or type the coordinates below.'
+                  : 'Or type the coordinates below. This is a demonstration map around the fictional society.',
             ),
             const SizedBox(height: 12),
-            MapPreview(
+            SocietyStreetMap(
               location: _pin,
               height: 240,
-              onTapFraction: _placeAt,
+              onPick: _placeAt,
+              pickOnDrawnMap: true,
               semanticLabel:
                   'Map. Tap to place the pin, or enter the coordinates below.',
             ),

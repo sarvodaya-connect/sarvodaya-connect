@@ -26,6 +26,7 @@ import {
 import { recordPermissions } from './society-record.policy.js';
 import type { GradeChange } from './societies.repository.js';
 import {
+  MAP_POINT_LIMIT,
   SocietiesRepository,
   type SocietyRecord,
   type SocietySummaryRecord,
@@ -292,6 +293,25 @@ export class SocietiesService {
         totalItems,
         totalPages: Math.ceil(totalItems / query.pageSize),
       },
+    };
+  }
+
+  /** Map pins for HQ (national), a DM (their district) and SPC, DDM and Society Officer (their societies and any current DDM grant). */
+  async map(principal: Principal) {
+    const [rows, withoutLocation] = await this.repository.mapPoints(principal);
+    return {
+      points: rows.slice(0, MAP_POINT_LIMIT).map((row) => ({
+        id: row.id,
+        name: row.nameEn,
+        societyCode: row.societyCode,
+        grade: row.grade,
+        status: row.status,
+        latitude: row.latitude!,
+        longitude: row.longitude!,
+        district: row.district.nameEn,
+      })),
+      withoutLocation,
+      truncated: rows.length > MAP_POINT_LIMIT,
     };
   }
 
