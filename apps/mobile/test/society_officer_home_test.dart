@@ -77,12 +77,16 @@ void main() {
     ) async {
       final store = await _openHome(tester);
 
-      await tester.tap(find.text('Exco members'));
-      expect(store.selectedTab, OfficerTabs.exco);
-      await tester.tap(find.text('Annual work plan'));
-      expect(store.selectedTab, OfficerTabs.workPlan);
-      await tester.tap(find.text('Society information'));
-      expect(store.selectedTab, OfficerTabs.society);
+      for (final (tile, tab) in [
+        ('Exco members', OfficerTabs.exco),
+        ('Annual work plan', OfficerTabs.workPlan),
+        ('Society information', OfficerTabs.society),
+      ]) {
+        await tester.ensureVisible(find.text(tile));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(tile));
+        expect(store.selectedTab, tab);
+      }
 
       await tester.ensureVisible(find.text('Change history'));
       await tester.tap(find.text('Change history'));
@@ -101,10 +105,12 @@ void main() {
       testWidgets('lays out without overflow on $label', (tester) async {
         await _openHome(tester, size: size, textScale: scale);
         expect(tester.takeException(), isNull);
-        await tester.drag(find.byType(ListView), const Offset(0, -800));
+        // V5 M40: the live incident comes first while one is open.
+        expect(find.textContaining('ACTIVE INCIDENT'), findsOneWidget);
+        await tester.drag(find.byType(ListView), const Offset(0, -1600));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.text('Disaster response'), findsOneWidget);
+        expect(find.textContaining('summary and audit report'), findsOneWidget);
       });
     }
   });

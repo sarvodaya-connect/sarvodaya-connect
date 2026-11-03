@@ -301,7 +301,7 @@ export class EmergenciesService {
       principal,
       {
         title: `New incident: ${incident.title}`,
-        body: `Opened by ${principal.displayName} (${society.nameEn}). ${areaNames.join(' and ')}. Send a rapid assessment by ${sriLankaTime(dueAt)}.${incident.message ? ` ${incident.message}` : ''}`,
+        body: `Opened by ${principal.displayName} (${society.nameEn}). ${areaNames.join(' and ')}. Send a rapid assessment by ${sriLankaTime(dueAt)}${incident.message ? ` ${incident.message}` : ''}`,
         linkPath: `/emergencies/${incident.id}`,
       },
       incident.id,
@@ -612,7 +612,7 @@ export class EmergenciesService {
       principal,
       {
         title: `Incident closed: ${incident.title}`,
-        body: `Closed by ${principal.displayName} (${ROLE_NAMES[principal.roles[0] ?? ''] ?? 'staff'}) on ${sriLankaTime(closedAt)}.`,
+        body: `Closed by ${principal.displayName} (${ROLE_NAMES[principal.roles[0] ?? ''] ?? 'staff'}) on ${sriLankaTime(closedAt)}`,
         linkPath: `/emergencies/${id}`,
       },
       id,
@@ -657,7 +657,7 @@ export class EmergenciesService {
           {
             title: `Assessment due: ${incident.title}`,
             body: incident.assessmentsDueAt
-              ? `Send a rapid assessment for your society by ${sriLankaTime(incident.assessmentsDueAt)}.`
+              ? `Send a rapid assessment for your society by ${sriLankaTime(incident.assessmentsDueAt)}`
               : 'Send a rapid assessment for your society.',
             linkPath: `/emergencies/${id}`,
           },
@@ -858,7 +858,7 @@ export class EmergenciesService {
       principal,
       {
         title: `Helpers assigned: ${action.title} for ${forName}`,
-        body: `${helpers.map((h) => h.nameEn).join(', ')} will help. Deliver by ${sriLankaTime(dueAt)}.${input.note ? ` ${input.note}` : ''}`,
+        body: `${helpers.map((h) => h.nameEn).join(', ')} will help. Deliver by ${sriLankaTime(dueAt)}${input.note ? ` ${input.note}` : ''}`,
         linkPath: `/emergencies/${action.incidentId}?tab=actions`,
       },
       action.incidentId,
