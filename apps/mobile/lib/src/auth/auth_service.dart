@@ -31,3 +31,9 @@ class AuthServiceException implements Exception {
 class AuthLockedException implements Exception {
   const AuthLockedException();
 }
+
+/// The password was right, but the account cannot be used yet: HQ has not
+/// finished it, or it is disabled (Cognito sign-in).
+class AuthAccountNotReadyException implements Exception {
+  const AuthAccountNotReadyException();
+}

@@ -8,7 +8,11 @@ import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
 import '../society_record/society_record_api.dart';
+
+import 'dart:async' show unawaited;
+
 import '../auth/api_auth_service.dart';
+import '../auth/cognito_auth.dart';
 import '../models/activity_draft.dart';
 import '../models/activity_report_data.dart';
 import '../validation/activity_validators.dart';
@@ -86,7 +90,7 @@ class DemoStore extends ChangeNotifier {
         authService ??
         (demoMode
             ? DemoAuthService(isOnline: () => !offline)
-            : ApiAuthService(identityApi));
+            : ApiAuthService(identityApi, cognito: _cognitoClient()));
     societyRecords =
         societyRecordApi ??
         (demoMode
@@ -360,12 +364,17 @@ class DemoStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cognito in release builds (and when AUTH_PROVIDER=cognito); null for the API's local sign-in.
+  static CognitoClient? _cognitoClient() {
+    final settings = CognitoSettings.fromEnvironment();
+    return settings == null ? null : CognitoClient(settings);
+  }
+
   void signOut() {
-    final token = identityApi.token;
-    if (token != null) {
-      identityApi
-          .request('/identity/logout', method: 'POST')
-          .catchError((Object _) => <String, dynamic>{});
+    final auth = _authService;
+    if (auth is ApiAuthService) {
+      // Ends the Cognito or local session on the server, then forgets the tokens.
+      unawaited(auth.signOut());
     }
     identityApi.token = null;
     _user = null;
