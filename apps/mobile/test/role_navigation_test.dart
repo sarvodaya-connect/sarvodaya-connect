@@ -35,28 +35,32 @@ void main() {
     expect(find.text('மேலும்'), findsOneWidget);
   });
 
-  for (final role in [
-    UserRole.programmeCoordinator,
-    UserRole.deputyDistrictManager,
-    UserRole.districtManager,
+  for (final (role, tabs) in [
+    (UserRole.programmeCoordinator, ['Home', 'Alerts', 'More']),
+    (UserRole.deputyDistrictManager, ['Home', 'Alerts', 'More']),
+    (
+      UserRole.districtManager,
+      ['Home', 'Societies', 'Access', 'Alerts', 'More'],
+    ),
   ]) {
-    testWidgets(
-      '${role.label} receives the V4 role home and scoped directory',
-      (tester) async {
-        final store = testStore()..switchDemoRole(role);
-        await pumpApp(tester, store: store);
-        expect(find.text('${role.label} home'), findsOneWidget);
-        expect(find.text('Societies'), findsOneWidget);
-        expect(find.text('Submit'), findsNothing);
-        expect(find.text('Reviews'), findsNothing);
-        if (role == UserRole.districtManager) {
-          expect(find.text('Access'), findsOneWidget);
-        }
+    testWidgets('${role.label} receives the V5 home and tabs', (tester) async {
+      final store = testStore()..switchDemoRole(role);
+      await pumpApp(tester, store: store);
+      expect(find.textContaining('Good '), findsOneWidget);
+      for (final tab in tabs) {
+        expect(navTab(tab), findsOneWidget);
+      }
+      expect(navTab('Disasters'), findsNothing);
+      expect(find.text('Submit'), findsNothing);
+      if (role == UserRole.districtManager) {
+        expect(find.text('District overview'), findsOneWidget);
         await tester.tap(navTab('Societies'));
         await tester.pumpAndSettle();
-        expect(find.text('My societies'), findsOneWidget);
-      },
-    );
+        expect(find.text('Your district · view only'), findsOneWidget);
+      } else {
+        expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
+      }
+    });
   }
 
   testWidgets('HQ receives the V5 National Dashboard and HQ tabs', (
@@ -105,7 +109,7 @@ void main() {
     store.setDemoOptions(emptyRecords: true);
     await pumpApp(tester, store: store);
 
-    expect(find.text('No records yet'), findsOneWidget);
+    expect(find.text('No societies match'), findsOneWidget);
   });
 
   testWidgets('role home exposes the M26 error state', (tester) async {

@@ -1,6 +1,7 @@
 import 'national/national_screens.dart';
 import 'screens/live_societies_screen.dart';
-import 'screens/v4_role_home_screen.dart';
+import 'home/home_screens.dart';
+import 'screens/notifications_screen.dart';
 import 'district_access/district_access_screens.dart';
 import 'incidents/incident_screens.dart';
 
@@ -10,8 +11,6 @@ import 'screens/documents_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/language_screen.dart';
 import 'screens/more_screen.dart';
-import 'screens/my_societies_screen.dart';
-import 'screens/role_workspace_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/society_officer_home_screen.dart';
 import 'screens/society_profile_screen.dart';
@@ -120,18 +119,17 @@ class HomeShell extends StatelessWidget {
       store.selectedTab,
       officerSocietyId,
     );
+    // A tab remembered from another role may not exist in this tab set.
+    final tab = store.selectedTab.clamp(0, configuration.pages.length - 1);
     return Scaffold(
-      body: IndexedStack(
-        index: store.selectedTab,
-        children: configuration.pages,
-      ),
+      body: IndexedStack(index: tab, children: configuration.pages),
       // V5 bottom bar (Nav): icon-only, styled by the theme, with a hairline above.
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.headerLine)),
         ),
         child: NavigationBar(
-          selectedIndex: store.selectedTab,
+          selectedIndex: tab,
           onDestinationSelected: store.selectTab,
           destinations: configuration.destinations,
         ),
@@ -197,9 +195,9 @@ class HomeShell extends StatelessWidget {
       ),
     UserRole.societyOfficer => _ShellConfiguration(
       pages: const [
-        DemoStore.demoMode
-            ? HomeScreen()
-            : V4RoleHomeScreen(role: UserRole.societyOfficer),
+        // Outside demo mode an officer with several societies starts from
+        // their society list; one society opens the V5 home above.
+        DemoStore.demoMode ? HomeScreen() : LiveSocietiesScreen(),
         // Demo mode keeps the v3 profile that the Society Officer demo
         // journey still uses.
         DemoStore.demoMode ? SocietyProfileScreen() : LiveSocietiesScreen(),
@@ -240,7 +238,7 @@ class HomeShell extends StatelessWidget {
         const NationalDashboardScreen(),
         const DistrictsScreen(),
         const NationalSocietiesScreen(asTab: true),
-        RoleWorkspaceScreen(role: role, workspace: RoleWorkspace.alerts),
+        const NotificationsScreen(),
         const MoreScreen(),
       ],
       destinations: const [
@@ -271,34 +269,52 @@ class HomeShell extends StatelessWidget {
         _MoreDestination(),
       ],
     ),
+    // V5 Nav: SPC and DDM have Home, Alerts and More; incidents open from
+    // the home (M40) and More.
     UserRole.programmeCoordinator ||
-    UserRole.deputyDistrictManager ||
-    UserRole.districtManager => _ShellConfiguration(
+    UserRole.deputyDistrictManager => const _ShellConfiguration(
+      pages: [RoleHomeScreen(), NotificationsScreen(), MoreScreen()],
+      destinations: [
+        _HomeDestination(),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications),
+          label: 'Alerts',
+          tooltip: 'Alerts',
+        ),
+        _MoreDestination(),
+      ],
+    ),
+    // V5 Nav (DM): Home, Societies, Access, Alerts and More.
+    UserRole.districtManager => const _ShellConfiguration(
       pages: [
-        V4RoleHomeScreen(role: role),
-        const MySocietiesScreen(),
-        role == UserRole.districtManager
-            ? const DistrictAccessScreen()
-            : RoleWorkspaceScreen(role: role, workspace: RoleWorkspace.alerts),
-        selectedTab == 3 ? const IncidentsScreen() : const SizedBox.shrink(),
-        const MoreScreen(),
+        RoleHomeScreen(),
+        DistrictSocietiesScreen(),
+        DistrictAccessScreen(),
+        NotificationsScreen(),
+        MoreScreen(),
       ],
       destinations: [
-        const _HomeDestination(),
-        const NavigationDestination(
-          icon: Icon(Icons.holiday_village_outlined),
+        _HomeDestination(),
+        NavigationDestination(
+          icon: Icon(Icons.list_alt_outlined),
+          selectedIcon: Icon(Icons.list_alt),
           label: 'Societies',
+          tooltip: 'Societies',
         ),
         NavigationDestination(
-          icon: Icon(
-            role == UserRole.districtManager
-                ? Icons.schedule
-                : Icons.notifications_outlined,
-          ),
-          label: role == UserRole.districtManager ? 'Access' : 'Alerts',
+          icon: Icon(Icons.key_outlined),
+          selectedIcon: Icon(Icons.key),
+          label: 'Access',
+          tooltip: 'Access',
         ),
-        const _IncidentDestination(),
-        const _MoreDestination(),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications),
+          label: 'Alerts',
+          tooltip: 'Alerts',
+        ),
+        _MoreDestination(),
       ],
     ),
   };

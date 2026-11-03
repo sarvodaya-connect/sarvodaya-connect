@@ -8,8 +8,10 @@ import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
 import 'notifications_screen.dart';
 import '../incidents/incident_screens.dart';
+import '../sarvoai/sarvoai_screen.dart';
 
-/// M17 - account, language, offline queue, help and sign-out.
+/// V5 M17 More: profile, language, notifications, help and sign-out, and
+/// SarvoAI for HQ.
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
@@ -29,108 +31,173 @@ class MoreScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
           if (store.offline)
             const OfflineBanner(
               message: 'No connection. Connect to load or save information.',
             ),
-          Material(
-            color: AppColors.surface,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              leading: CircleAvatar(
-                backgroundColor: AppColors.mint,
-                foregroundColor: AppColors.forest,
-                child: Text(
-                  _initials(user.displayName),
+          if (user.roles.contains(UserRole.hqAdmin)) ...[
+            // V5 M17 (HQ) and M80: SarvoAI is HQ only; the API checks it too.
+            Material(
+              color: AppColors.pine,
+              borderRadius: BorderRadius.circular(14),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFFF3C44E),
+                ),
+                title: Text.rich(
+                  const TextSpan(
+                    children: [
+                      TextSpan(text: 'Ask Sarvo'),
+                      TextSpan(
+                        text: 'AI',
+                        style: TextStyle(color: Color(0xFFF0A040)),
+                      ),
+                    ],
+                  ),
+                  semanticsLabel: 'Ask SarvoAI',
                   style: const TextStyle(
-                    fontSize: 13,
+                    color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-              title: Text(
-                user.primaryRole == UserRole.societyOfficer
-                    ? _shortName(user.displayName)
-                    : user.displayName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                subtitle: const Text(
+                  'Questions about societies and yearly figures · HQ only',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
-              ),
-              subtitle: Text(
-                user.primaryRole == UserRole.societyOfficer
-                    ? 'Secretary · ${store.society.nameEn}'
-                    : user.primaryRole.label,
-                style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const Icon(
-              Icons.health_and_safety_outlined,
-              color: AppColors.leaf,
-            ),
-            title: const Text('Disaster response'),
-            subtitle: const Text(
-              'Live incidents, rapid assessments and situation reports',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const IncidentsScreen()),
-            ),
-          ),
-          _MenuRow(
-            icon: Icons.translate,
-            title: 'Language',
-            trailing: store.selectedLanguage.englishLabel,
-            onTap: () => _chooseLanguage(context),
-          ),
-          if (user.primaryRole == UserRole.societyOfficer)
-            _MenuRow(
-              icon: Icons.notifications_none,
-              title: 'Notifications',
-              trailing: store.unreadNotificationCount == 0
-                  ? null
-                  : '${store.unreadNotificationCount} unread',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationsScreen(),
-                ),
-              ),
-            ),
-          _MenuRow(
-            icon: Icons.help_outline,
-            title: 'Help',
-            onTap: () => showDialog<void>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Need help?'),
-                content: const Text(
-                  'Contact your District Centre if your account, society assignment or submitted information is incorrect.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
+                trailing: const Icon(Icons.chevron_right, color: Colors.white),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SarvoAiScreen(),
                   ),
-                ],
+                ),
               ),
             ),
+            const SizedBox(height: 12),
+          ],
+          _Group(
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.mint,
+                  foregroundColor: AppColors.forest,
+                  child: Text(
+                    _initials(user.displayName),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  user.primaryRole == UserRole.societyOfficer
+                      ? _shortName(user.displayName)
+                      : user.displayName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  _scopeLabel(store, user),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ),
+            ],
           ),
-          _MenuRow(
-            icon: Icons.logout,
-            title: 'Sign out',
-            danger: true,
-            onTap: store.signOut,
+          const SizedBox(height: 12),
+          _Group(
+            children: [
+              _MenuRow(
+                icon: Icons.language,
+                title: 'Language',
+                trailing: store.selectedLanguage.englishLabel,
+                onTap: () => _chooseLanguage(context),
+              ),
+              _MenuRow(
+                icon: Icons.notifications_none,
+                title: 'Notifications',
+                chevron: true,
+                trailing: store.unreadNotificationCount == 0
+                    ? null
+                    : '${store.unreadNotificationCount} unread',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                ),
+              ),
+              _MenuRow(
+                icon: Icons.health_and_safety_outlined,
+                title: 'Disaster response',
+                chevron: true,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const IncidentsScreen(),
+                  ),
+                ),
+              ),
+              _MenuRow(
+                icon: Icons.help_outline,
+                title: 'Help and HQ contact',
+                chevron: true,
+                onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Need help?'),
+                    content: const Text(
+                      'Contact your District Centre if your account, society assignment or submitted information is incorrect.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              _MenuRow(
+                icon: Icons.logout,
+                title: 'Sign out',
+                subtitle: 'Back to the sign-in screen',
+                danger: true,
+                last: true,
+                onTap: store.signOut,
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  /// V5 M17: "Society Program Coordinator (SPC) · 12 societies".
+  static String _scopeLabel(DemoStore store, AuthenticatedUser user) {
+    final societies = user.societyIds.length;
+    final count = '$societies ${societies == 1 ? 'society' : 'societies'}';
+    return switch (user.primaryRole) {
+      UserRole.societyOfficer => 'Society Officer · ${store.society.nameEn}',
+      UserRole.programmeCoordinator =>
+        'Society Program Coordinator (SPC) · $count',
+      UserRole.deputyDistrictManager =>
+        'Deputy District Manager (DDM) · $count',
+      UserRole.districtManager => 'District Manager (DM) · view only',
+      UserRole.hqAdmin => 'HQ · National',
+    };
   }
 
   static String _shortName(String name) {
@@ -181,53 +248,93 @@ class MoreScreen extends StatelessWidget {
   }
 }
 
+/// A white card holding rows, as in V5 M17.
+class _Group extends StatelessWidget {
+  const _Group({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.surface,
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: const BorderSide(color: AppColors.line),
+    ),
+    child: Column(children: children),
+  );
+}
+
 class _MenuRow extends StatelessWidget {
   const _MenuRow({
     required this.icon,
     required this.title,
     required this.onTap,
     this.trailing,
+    this.subtitle,
     this.danger = false,
+    this.chevron = false,
+    this.last = false,
   });
 
   final IconData icon;
   final String title;
   final String? trailing;
+  final String? subtitle;
   final VoidCallback onTap;
   final bool danger;
+  final bool chevron;
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
     final color = danger ? AppColors.danger : AppColors.ink;
-    return Material(
-      color: AppColors.surface,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: danger ? color : AppColors.inkSoft),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(fontSize: 13.5, color: color),
-                ),
-              ),
-              if (trailing != null)
-                Text(
-                  trailing!,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.muted,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        decoration: BoxDecoration(
+          border: last
+              ? null
+              : const Border(bottom: BorderSide(color: AppColors.line)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: danger ? color : AppColors.inkSoft),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-            ],
-          ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (trailing != null)
+              Text(
+                trailing!,
+                style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+              ),
+            if (chevron)
+              const Icon(Icons.chevron_right, color: AppColors.muted),
+          ],
         ),
       ),
     );

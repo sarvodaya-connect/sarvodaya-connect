@@ -1,5 +1,7 @@
+import '../home/home_api.dart';
 import '../national/demo_national_api.dart';
 import '../national/national_api.dart';
+import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
 import '../incidents/incident_api.dart';
@@ -70,6 +72,8 @@ class DemoStore extends ChangeNotifier {
     DocumentUploadService? uploadService,
     SocietyRecordApi? societyRecordApi,
     NationalApi? nationalApi,
+    SarvoAiApi? sarvoAiApi,
+    HomeApi? homeApi,
     DistrictAccessApi? districtAccessApi,
     IncidentApi? incidentApi,
     DocumentPicker? documentPicker,
@@ -97,6 +101,22 @@ class DemoStore extends ChangeNotifier {
         (demoMode
             ? DemoNationalApi(user: () => _user, delay: loadDelay)
             : HttpNationalApi(identityApi));
+    sarvoAi =
+        sarvoAiApi ??
+        (demoMode
+            ? DemoSarvoAiApi(user: () => _user, delay: loadDelay)
+            : HttpSarvoAiApi(identityApi));
+    home =
+        homeApi ??
+        (demoMode
+            ? DemoHomeApi(
+                user: () => _user,
+                clock: _clock,
+                delay: loadDelay,
+                failing: () => failLoads,
+                empty: () => emptyRecords,
+              )
+            : HttpHomeApi(identityApi));
     districtAccess =
         districtAccessApi ??
         (demoMode
@@ -134,6 +154,13 @@ class DemoStore extends ChangeNotifier {
 
   /// V5 PR 5 HQ National Dashboard (M05h, M61–M69): HQ only on the server.
   late final NationalApi national;
+
+  /// V5 PR 9 SarvoAI (M80–M89): HQ only on the server.
+  late final SarvoAiApi sarvoAi;
+
+  /// V5 M05s / M05d / M05m: SPC, DDM and DM homes from `GET /home` (PR 6 API).
+  late final HomeApi home;
+
   /// V5 PR 7 temporary district access (M30–M32).
   late final DistrictAccessApi districtAccess;
 
@@ -677,7 +704,32 @@ class DemoStore extends ChangeNotifier {
 
   // ----- Notifications (SC-47, M16) -----
 
-  late final List<AppNotification> _notifications = demoNotifications(now);
+  // Demonstration mode starts with fictional notifications; otherwise they
+  // are the signed-in user's own, loaded from the API (V5 M16).
+  late final List<AppNotification> _notifications = demoMode
+      ? demoNotifications(now)
+      : <AppNotification>[];
+
+  /// Set when the last API load failed; the screen offers to try again.
+  String? notificationsError;
+
+  /// Loads the signed-in user's notifications from the API (not in demo mode).
+  Future<void> loadNotifications() async {
+    if (demoMode) return;
+    try {
+      final data = await identityApi.request('/notifications?pageSize=50');
+      _notifications
+        ..clear()
+        ..addAll([
+          for (final row in (data['data'] as List).cast<Map<String, dynamic>>())
+            AppNotification.fromApi(row),
+        ]);
+      notificationsError = null;
+    } catch (_) {
+      notificationsError = 'We couldn’t load your notifications. Check the connection and try again.';
+    }
+    notifyListeners();
+  }
 
   /// Notifications, newest first.
   List<AppNotification> get notifications {
@@ -694,6 +746,11 @@ class DemoStore extends ChangeNotifier {
     if (index < 0 || _notifications[index].read) return;
     _notifications[index] = _notifications[index].markedRead();
     notifyListeners();
+    if (!demoMode) {
+      identityApi
+          .request('/notifications/$id/read', method: 'POST')
+          .catchError((_) => null);
+    }
   }
 
   void markAllNotificationsRead() {
@@ -701,6 +758,11 @@ class DemoStore extends ChangeNotifier {
       _notifications[i] = _notifications[i].markedRead();
     }
     notifyListeners();
+    if (!demoMode) {
+      identityApi
+          .request('/notifications/read-all', method: 'POST')
+          .catchError((_) => null);
+    }
   }
 
   void _notify({

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../society_record/society_record_models.dart'
     show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
+import '../sarvoai/sarvoai_screen.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -462,6 +463,56 @@ class NationalDashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+            // V5 M05h: the SarvoAI entry point (HQ only; the API checks it too).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Material(
+                color: AppColors.pine,
+                shape: const StadiumBorder(),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => _push(context, const SarvoAiScreen()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 18,
+                          color: Color(0xFFF3C44E),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text.rich(
+                            const TextSpan(
+                              children: [
+                                TextSpan(text: 'Ask Sarvo'),
+                                TextSpan(
+                                  text: 'AI',
+                                  style: TextStyle(color: Color(0xFFF0A040)),
+                                ),
+                              ],
+                            ),
+                            semanticsLabel: 'Ask SarvoAI',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          'HQ only',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -1,6 +1,17 @@
 import "server-only";
 import { cookies } from "next/headers";
 export const SESSION_COOKIE = "sc_session";
+
+/** A refused or failed API request; `status` is the HTTP status (0 when the API could not be reached). */
+export class PlatformApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "PlatformApiError";
+  }
+}
 export const isDemoMode = () =>
   process.env.NODE_ENV !== "production" &&
   process.env.PLATFORM_DEMO_MODE === "true";
@@ -20,8 +31,9 @@ export async function platformApi(path: string, init: RequestInit = {}) {
       cache: "no-store",
     });
   } catch {
-    throw new Error(
+    throw new PlatformApiError(
       "The service is unavailable. Check your connection and try again.",
+      0,
     );
   }
   if (!response.ok) {
@@ -38,12 +50,13 @@ export async function platformApi(path: string, init: RequestInit = {}) {
           .filter(Boolean)
           .join("; ")
       : "";
-    throw new Error(
+    throw new PlatformApiError(
       typeof message === "string"
         ? message === "Request validation failed" && details
           ? `${message}: ${details}`
           : message
         : "The request could not be completed. Check the fields and try again.",
+      response.status,
     );
   }
   return response.json();

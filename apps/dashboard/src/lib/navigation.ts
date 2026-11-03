@@ -41,6 +41,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         ],
         secondary: [
           { href: "/accounts", icon: "key", label: "Administration", alsoActiveOn: ["/audit"] },
+          { href: "/settings", icon: "settings", label: "Settings" },
         ],
       };
     // V5 SP01, DD01 and DM01 sidebars, with "Disaster response" (IR01, PR 8).
@@ -115,6 +116,8 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/district-access", "Temporary DDM access"],
   ["/no-access", "No access"],
   ["/documents", "Documents", "Every certificate, minute and report in one place"],
+  ["/settings", "Settings", "Your profile and preferences"],
+  ["/sarvoai", "SarvoAI", "Ask questions about society records · HQ only"],
   ["/search", "Search", "Societies, people, documents and records"],
   ["/notifications", "Alerts", "Requests, incidents, access and records"],
 ];

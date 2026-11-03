@@ -19,10 +19,25 @@ Every setting is an environment variable with a safe development default (`.env.
 | `LOCAL_STORAGE_DIR` | Config | `.local-storage` | Development driver only; refused in production |
 | `STORAGE_SIGNING_SECRET` | Secret | random per start | Development driver link signing |
 | `CORS_ALLOWED_ORIGINS` | Config | empty | Development driver only: dashboard origin allowed to PUT to local upload links (PR 4) |
-| `SARVOAI_ENABLED` | Config (feature flag) | `false` | SarvoAI on Bedrock; see `sarvoai-aws-setup.md` |
+| `SARVOAI_ENABLED` | Config (feature flag) | `false` | SarvoAI on Bedrock; see `sarvoai-aws-setup.md`. While it is not `true`, `POST /assistant/questions` answers 503 and nothing is sent to AWS (PR 9 screens show "SarvoAI isn’t available right now") |
+| `SARVOAI_MODEL_ID` | Config | `global.anthropic.claude-haiku-5-5` | Bedrock model or inference profile SarvoAI calls; the IAM policy must allow this one model |
+| `SARVOAI_AWS_REGION` | Config | `ap-southeast-1` | Bedrock Region; requests are signed with the API's IAM role (no API key) |
+| `NODE_ENV` | Config | `development` | `production` on AWS; turns off development-only drivers and demonstration users |
+| `API_PORT` | Config | `3001` | Local only; Lambda does not listen on a port |
+| `API_PUBLIC_URL` | Config | `http://localhost:3001` | Development storage links only |
 | `DISTRICT_ACCESS_MAX_DAYS` | Config | `14` | Longest temporary DDM access a DM can give (1–90 days). Checked by the API on every grant (PR 7) |
 
-The temporary DDM access maximum is added with PR 7. PR 8 (disaster response) adds no environment variables.
+The temporary DDM access maximum is added with PR 7. PR 8 (disaster response) adds no environment variables. PR 9 adds no new variables; it documents the SarvoAI model and Region settings from PR #74.
+
+## Dashboard settings (Amplify)
+
+| Variable | Kind | Default (development) | Purpose |
+|---|---|---|---|
+| `API_BASE_URL` | Config | `http://localhost:3001/api/v1` | API address, read on the server only (server components and server actions) |
+| `PLATFORM_DEMO_MODE` | Config | `false` | Fictional demonstration data; ignored when `NODE_ENV` is `production`. In this mode SarvoAI shows labelled sample answers instead of calling the API |
+| `NEXT_PUBLIC_API_BASE_URL` | Config | `http://localhost:3001` | Public API address; not used for data access |
+
+SarvoAI on the dashboard (`/sarvoai`, the D02 Ask bar) and the phone (M80–M89) call the same `POST /api/v1/assistant/questions` endpoint. They hold no AWS settings or credentials.
 
 ## Documents in S3 (PR 4)
 

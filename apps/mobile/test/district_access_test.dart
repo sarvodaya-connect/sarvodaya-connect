@@ -4,7 +4,7 @@ import 'package:sarvodaya_connect_mobile/src/district_access/access_format.dart'
 import 'package:sarvodaya_connect_mobile/src/district_access/district_access_api.dart';
 import 'package:sarvodaya_connect_mobile/src/district_access/district_access_screens.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
-import 'package:sarvodaya_connect_mobile/src/screens/v4_role_home_screen.dart';
+import 'package:sarvodaya_connect_mobile/src/home/home_screens.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
 

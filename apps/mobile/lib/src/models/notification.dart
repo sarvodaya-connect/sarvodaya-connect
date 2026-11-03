@@ -32,6 +32,29 @@ class AppNotification {
 
   bool get opensItem => target != NotificationTarget.none;
 
+  /// A notification from the API (`GET /notifications`, V5 M16). Its link
+  /// points at a dashboard page, so on the phone it opens nothing.
+  factory AppNotification.fromApi(Map<String, dynamic> json) {
+    final topic = json['topic'] as String?;
+    final category = json['category'] as String?;
+    return AppNotification(
+      id: json['id'] as String,
+      kind: category == 'RETURNED'
+          ? NotificationKind.returned
+          : switch (topic) {
+              'GRADE_REQUEST' => NotificationKind.review,
+              'ACTIVITY' => NotificationKind.approved,
+              'RECORDS' => NotificationKind.reminder,
+              'INFORMATION_REQUEST' => NotificationKind.request,
+              _ => NotificationKind.notice,
+            },
+      title: json['title'] as String,
+      message: (json['body'] as String?) ?? '',
+      receivedAt: DateTime.parse(json['createdAt'] as String),
+      read: json['read'] == true,
+    );
+  }
+
   AppNotification markedRead() => AppNotification(
     id: id,
     kind: kind,

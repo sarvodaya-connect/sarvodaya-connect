@@ -78,6 +78,7 @@ describe("provisional role-based visibility", () => {
       "Reports",
       "Documents",
       "Administration",
+      "Settings",
     ]);
     // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8).
     expect(labels(districtManager)).toEqual(["District overview", "Societies", "Temporary DDM access", "Disaster response"]);

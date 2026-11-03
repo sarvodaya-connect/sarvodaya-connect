@@ -19,6 +19,11 @@ const FIELD_PATHS = [
   /^\/no-access$/,
 ];
 
+/** V5 M69d / D49f: which no-access page a refused path shows. */
+export function noAccessPathFor(pathname: string) {
+  return pathname.startsWith("/sarvoai") ? "/no-access?page=sarvoai" : "/no-access?page=hq";
+}
+
 export function canOpen(role: string | undefined, pathname: string): boolean {
   if (!role || !FIELD_ROLES.has(role)) return true;
   return FIELD_PATHS.some((pattern) => pattern.test(pathname));
