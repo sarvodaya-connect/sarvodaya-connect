@@ -47,6 +47,10 @@ export interface HomeIncident {
   districtName: string;
   openedAt: string;
   openedByName: string | null;
+  /** V5 PR 8: the opener's role, the reference ("INC-2026-09") and the assessment deadline. */
+  openedByRole: string | null;
+  reference: string;
+  assessmentsDueAt: string | null;
 }
 
 export interface HomeAccessGrant {

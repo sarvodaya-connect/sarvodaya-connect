@@ -94,6 +94,9 @@ model Society {
   emergencyAssessments EmergencyAssessment[]
   emergencyActions     EmergencyResponseAction[]
   emergencyReports     EmergencySituationReport[]
+  reportedIncidents    EmergencyIncident[]        @relation("IncidentReportingSociety")
+  helpingActions       EmergencyActionHelper[]    @relation("ActionHelperSociety")
+  emergencyEvidence    EmergencyEvidence[]
   createdAt            DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -421,6 +424,45 @@ enum EmergencyActionStatus {
   @@map("emergency_action_status")
 }
 
+// V5 PR 8: a society's state in a rapid assessment (Safe, Affected, Critical).
+enum EmergencyImpact {
+  SAFE
+  AFFECTED
+  CRITICAL
+
+  @@map("emergency_impact")
+}
+
+enum EmergencyRoadAccess {
+  OPEN
+  PARTLY_BLOCKED
+  CUT_OFF
+  UNKNOWN
+
+  @@map("emergency_road_access")
+}
+
+// Urgent needs from assessments, and what a response action provides.
+enum EmergencyNeed {
+  DRINKING_WATER
+  DRY_RATIONS
+  TEMPORARY_SHELTER
+  MEDICAL_HELP
+  CLOTHING
+  VOLUNTEERS
+  OTHER
+
+  @@map("emergency_need")
+}
+
+enum EmergencyHelperStatus {
+  ASSIGNED
+  IN_PROGRESS
+  DELIVERED
+
+  @@map("emergency_helper_status")
+}
+
 model Notification {
   id              String               @id @default(uuid()) @db.Uuid
   recipientUserId String               @map("recipient_user_id") @db.VarChar(64)
@@ -443,77 +485,174 @@ model Notification {
 
 // Emergency-response data uses fictional/demo content until approved for live use.
 model EmergencyIncident {
-  id          String                     @id @default(uuid()) @db.Uuid
-  districtId  String                     @map("district_id") @db.Uuid
-  district    District                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  title       String                     @db.VarChar(160)
-  type        EmergencyIncidentType
-  severity    EmergencySeverity
-  status      EmergencyIncidentStatus    @default(ACTIVE)
-  description String                     @db.VarChar(4000)
-  location    String                     @db.VarChar(200)
-  latitude    Float?
-  longitude   Float?
-  createdById String                     @map("created_by_id") @db.VarChar(64)
-  activatedAt DateTime                   @default(now()) @map("activated_at") @db.Timestamptz(3)
-  closedAt    DateTime?                  @map("closed_at") @db.Timestamptz(3)
-  assessments EmergencyAssessment[]
-  actions     EmergencyResponseAction[]
-  reports     EmergencySituationReport[]
-  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                 String                     @id @default(uuid()) @db.Uuid
+  // V5 PR 8: shown as INC-{year}-{number}, for example INC-2026-09.
+  referenceNumber    Int                        @unique @default(autoincrement()) @map("reference_number")
+  // The reporting society's district. The area can cover more districts.
+  districtId         String                     @map("district_id") @db.Uuid
+  district           District                   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  areaDistrictIds    String[]                   @default([]) @map("area_district_ids") @db.Uuid
+  reportingSocietyId String?                    @map("reporting_society_id") @db.Uuid
+  reportingSociety   Society?                   @relation("IncidentReportingSociety", fields: [reportingSocietyId], references: [id], onDelete: SetNull)
+  title              String                     @db.VarChar(160)
+  type               EmergencyIncidentType
+  severity           EmergencySeverity          @default(MODERATE)
+  status             EmergencyIncidentStatus    @default(ACTIVE)
+  description        String                     @db.VarChar(4000)
+  // V5 D30: "Message to societies", shown with the new-incident notification.
+  message            String                     @default("") @db.VarChar(1000)
+  location           String                     @db.VarChar(200)
+  latitude           Float?
+  longitude          Float?
+  createdById        String                     @map("created_by_id") @db.VarChar(64)
+  createdByName      String?                    @map("created_by_name") @db.VarChar(150)
+  createdByRole      String?                    @map("created_by_role") @db.VarChar(40)
+  // When it started (entered by the opener); activatedAt is when it was opened here.
+  startedAt          DateTime                   @default(now()) @map("started_at") @db.Timestamptz(3)
+  assessmentsDueAt   DateTime?                  @map("assessments_due_at") @db.Timestamptz(3)
+  lastReminderAt     DateTime?                  @map("last_reminder_at") @db.Timestamptz(3)
+  activatedAt        DateTime                   @default(now()) @map("activated_at") @db.Timestamptz(3)
+  closedAt           DateTime?                  @map("closed_at") @db.Timestamptz(3)
+  closedById         String?                    @map("closed_by_id") @db.VarChar(64)
+  closedByName       String?                    @map("closed_by_name") @db.VarChar(150)
+  closedByRole       String?                    @map("closed_by_role") @db.VarChar(40)
+  assessments        EmergencyAssessment[]
+  actions            EmergencyResponseAction[]
+  reports            EmergencySituationReport[]
+  evidence           EmergencyEvidence[]
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId, status, activatedAt])
+  @@index([areaDistrictIds], type: Gin)
+  @@index([status, activatedAt])
   @@map("emergency_incidents")
 }
 
 model EmergencyAssessment {
-  id                  String                @id @default(uuid()) @db.Uuid
-  incidentId          String                @map("incident_id") @db.Uuid
-  incident            EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  societyId           String                @map("society_id") @db.Uuid
-  society             Society               @relation(fields: [societyId], references: [id], onDelete: Restrict)
-  clientMutationId    String                @map("client_mutation_id") @db.Uuid
-  revision            Int                   @default(1)
-  status              EmergencyRecordStatus @default(DRAFT)
-  observedAt          DateTime              @map("observed_at") @db.Timestamptz(3)
-  peopleAffected      Int                   @default(0) @map("people_affected")
-  householdsAffected  Int                   @default(0) @map("households_affected")
-  displacedPeople     Int                   @default(0) @map("displaced_people")
-  infrastructureNotes String                @default("") @map("infrastructure_notes") @db.VarChar(2000)
-  urgentNeeds         String                @default("") @map("urgent_needs") @db.VarChar(2000)
-  notes               String                @default("") @db.VarChar(4000)
-  latitude            Float?
-  longitude           Float?
-  createdById         String                @map("created_by_id") @db.VarChar(64)
-  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                     String                @id @default(uuid()) @db.Uuid
+  incidentId             String                @map("incident_id") @db.Uuid
+  incident               EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  societyId              String                @map("society_id") @db.Uuid
+  society                Society               @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  clientMutationId       String                @map("client_mutation_id") @db.Uuid
+  revision               Int                   @default(1)
+  status                 EmergencyRecordStatus @default(DRAFT)
+  observedAt             DateTime              @map("observed_at") @db.Timestamptz(3)
+  // V5 M41: the society's state, counts and needs. Counts only, never names or NICs.
+  impact                 EmergencyImpact       @default(AFFECTED)
+  peopleAffected         Int                   @default(0) @map("people_affected")
+  // Families affected.
+  householdsAffected     Int                   @default(0) @map("households_affected")
+  displacedPeople        Int                   @default(0) @map("displaced_people")
+  housesFullyDamaged     Int                   @default(0) @map("houses_fully_damaged")
+  housesPartlyDamaged    Int                   @default(0) @map("houses_partly_damaged")
+  injured                Int                   @default(0)
+  roadAccess             EmergencyRoadAccess   @default(UNKNOWN) @map("road_access")
+  needs                  EmergencyNeed[]       @default([])
+  confirmedWithPresident Boolean               @default(false) @map("confirmed_with_president")
+  infrastructureNotes    String                @default("") @map("infrastructure_notes") @db.VarChar(2000)
+  urgentNeeds            String                @default("") @map("urgent_needs") @db.VarChar(2000)
+  notes                  String                @default("") @db.VarChar(4000)
+  latitude               Float?
+  longitude              Float?
+  createdById            String                @map("created_by_id") @db.VarChar(64)
+  createdByName          String?               @map("created_by_name") @db.VarChar(150)
+  evidence               EmergencyEvidence[]
+  createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([createdById, clientMutationId])
   @@index([incidentId, societyId, status])
+  @@index([incidentId, status, createdAt])
   @@map("emergency_assessments")
 }
 
+// V5 D32: a need for one society. HQ assigns the societies that help with it;
+// its status (needed, assigned, in progress, delivered) comes from the helpers.
 model EmergencyResponseAction {
-  id               String                @id @default(uuid()) @db.Uuid
-  incidentId       String                @map("incident_id") @db.Uuid
-  incident         EmergencyIncident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  societyId        String?               @map("society_id") @db.Uuid
-  society          Society?              @relation(fields: [societyId], references: [id], onDelete: SetNull)
-  clientMutationId String                @map("client_mutation_id") @db.Uuid
-  title            String                @db.VarChar(160)
-  description      String                @default("") @db.VarChar(2000)
-  status           EmergencyActionStatus @default(PLANNED)
-  dueAt            DateTime?             @map("due_at") @db.Timestamptz(3)
-  createdById      String                @map("created_by_id") @db.VarChar(64)
-  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id               String                  @id @default(uuid()) @db.Uuid
+  incidentId       String                  @map("incident_id") @db.Uuid
+  incident         EmergencyIncident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  societyId        String?                 @map("society_id") @db.Uuid
+  society          Society?                @relation(fields: [societyId], references: [id], onDelete: SetNull)
+  clientMutationId String                  @map("client_mutation_id") @db.Uuid
+  need             EmergencyNeed           @default(OTHER)
+  title            String                  @db.VarChar(160)
+  description      String                  @default("") @db.VarChar(2000)
+  // Items, people or tasks only: never money.
+  quantity         Int                     @default(0)
+  unit             String                  @default("") @db.VarChar(30)
+  // V4 status, kept for older records; V5 works the status out from the helpers.
+  status           EmergencyActionStatus   @default(PLANNED)
+  dueAt            DateTime?               @map("due_at") @db.Timestamptz(3)
+  createdById      String                  @map("created_by_id") @db.VarChar(64)
+  createdByName    String?                 @map("created_by_name") @db.VarChar(150)
+  helpers          EmergencyActionHelper[]
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([createdById, clientMutationId])
   @@index([incidentId, status, dueAt])
+  @@index([societyId])
   @@map("emergency_response_actions")
 }
 
+// V5 D32, M45h, M46: a society HQ asked to help with a need, and its delivery.
+model EmergencyActionHelper {
+  id                String                @id @default(uuid()) @db.Uuid
+  actionId          String                @map("action_id") @db.Uuid
+  action            EmergencyResponseAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  helperSocietyId   String                @map("helper_society_id") @db.Uuid
+  helperSociety     Society               @relation("ActionHelperSociety", fields: [helperSocietyId], references: [id], onDelete: Restrict)
+  quantity          Int
+  deliveredQuantity Int                   @default(0) @map("delivered_quantity")
+  status            EmergencyHelperStatus @default(ASSIGNED)
+  // HQ's note to the helping society, and the helper's delivery note.
+  note              String                @default("") @db.VarChar(1000)
+  deliveryNote      String                @default("") @map("delivery_note") @db.VarChar(1000)
+  deliveredOn       DateTime?             @map("delivered_on") @db.Date
+  assignedById      String                @map("assigned_by_id") @db.VarChar(64)
+  assignedByName    String                @map("assigned_by_name") @db.VarChar(150)
+  updatedById       String?               @map("updated_by_id") @db.VarChar(64)
+  updatedByName     String?               @map("updated_by_name") @db.VarChar(150)
+  evidence          EmergencyEvidence[]
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([actionId, helperSocietyId])
+  @@index([helperSocietyId])
+  @@map("emergency_action_helpers")
+}
+
+// V5 M41/M46: photo or PDF evidence in private S3, uploaded by pre-signed URL.
+// The key holds only ids (incidents/{incident}/{kind}/{evidence}.{ext}).
+model EmergencyEvidence {
+  id             String                 @id @default(uuid()) @db.Uuid
+  incidentId     String                 @map("incident_id") @db.Uuid
+  incident       EmergencyIncident      @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  // The society the evidence is about; viewing it needs scope over this society.
+  societyId      String                 @map("society_id") @db.Uuid
+  society        Society                @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  assessmentId   String?                @map("assessment_id") @db.Uuid
+  assessment     EmergencyAssessment?   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  helperId       String?                @map("helper_id") @db.Uuid
+  helper         EmergencyActionHelper? @relation(fields: [helperId], references: [id], onDelete: Cascade)
+  storageKey     String                 @unique @map("storage_key") @db.VarChar(600)
+  contentType    String                 @map("content_type") @db.VarChar(100)
+  sizeBytes      Int                    @map("size_bytes")
+  checksumSha256 String?                @map("checksum_sha256") @db.VarChar(44)
+  uploadedById   String                 @map("uploaded_by_id") @db.VarChar(64)
+  uploadedAt     DateTime?              @map("uploaded_at") @db.Timestamptz(3)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([assessmentId])
+  @@index([helperId])
+  @@map("emergency_evidence")
+}
+
+// V5 D33: numbered situation reports. Each is a snapshot of the counts at the
+// time it was made, so an earlier report keeps its figures.
 model EmergencySituationReport {
   id               String                @id @default(uuid()) @db.Uuid
   incidentId       String                @map("incident_id") @db.Uuid
@@ -523,13 +662,18 @@ model EmergencySituationReport {
   clientMutationId String                @map("client_mutation_id") @db.Uuid
   revision         Int                   @default(1)
   status           EmergencyRecordStatus @default(DRAFT)
+  number           Int?
+  asOf             DateTime?             @map("as_of") @db.Timestamptz(3)
+  snapshot         Json?
   summary          String                @db.VarChar(4000)
   needs            String                @default("") @db.VarChar(2000)
   createdById      String                @map("created_by_id") @db.VarChar(64)
+  createdByName    String?               @map("created_by_name") @db.VarChar(150)
   createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([createdById, clientMutationId], map: "emergency_situation_reports_created_by_id_client_mutation_i_key")
+  @@unique([incidentId, number])
   @@index([incidentId, status, createdAt])
   @@map("emergency_situation_reports")
 }

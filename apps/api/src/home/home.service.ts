@@ -9,6 +9,7 @@ import type {
 
 import { readableDistrictIds, type Principal } from '../auth/principal.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
+import { incidentReference } from '../emergencies/emergency-format.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DistrictAccessService } from '../identity/district-access.service.js';
 import {
@@ -366,8 +367,15 @@ export class HomeService {
         },
         orderBy: { expiresAt: 'asc' },
       }),
+      // V5 PR 8: incidents whose area covers one of the user's districts.
       db.emergencyIncident.findMany({
-        where: { districtId: { in: scopeDistricts }, status: 'ACTIVE' },
+        where: {
+          OR: [
+            { areaDistrictIds: { hasSome: scopeDistricts } },
+            { districtId: { in: scopeDistricts } },
+          ],
+          status: 'ACTIVE',
+        },
         include: { district: { select: { nameEn: true } } },
         orderBy: { activatedAt: 'desc' },
       }),
@@ -425,7 +433,10 @@ export class HomeService {
         type: i.type,
         districtName: i.district.nameEn,
         openedAt: i.activatedAt.toISOString(),
-        openedByName: nameOf.get(i.createdById) ?? null,
+        openedByName: i.createdByName ?? nameOf.get(i.createdById) ?? null,
+        openedByRole: i.createdByRole,
+        reference: incidentReference(i.referenceNumber, i.activatedAt),
+        assessmentsDueAt: i.assessmentsDueAt?.toISOString() ?? null,
       })),
     };
     return composeHome(input);
