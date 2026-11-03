@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getCurrentViewer } from "@/lib/current-viewer";
+import { getDesktopViewer } from "@/lib/current-viewer";
 import { platformApi } from "@/lib/platform-api";
 
 export type RecordFormResult = { error?: string };
@@ -19,7 +19,7 @@ export async function updateSocietyRecord(
   _previous: RecordFormResult,
   form: FormData,
 ): Promise<RecordFormResult> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   const body: Record<string, string | number> = {};
   for (const field of TEXT_FIELDS) {
     const value = form.get(field);
@@ -60,7 +60,7 @@ export async function decideGradeRequest(
   /** D22r returns to its own page; the record's Grade tab is the default. */
   returnTo?: "queue",
 ): Promise<{ error?: string }> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   const text = comment.trim();
   if (decision === "REJECT" && !text) return { error: "Enter a reason for rejecting. The requester will see it." };
   try {
@@ -93,7 +93,7 @@ export async function assignStaff(
   _previous: RecordFormResult,
   form: FormData,
 ): Promise<RecordFormResult> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   const id = (name: string) => {
     const value = form.get(name);
     return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
@@ -112,7 +112,7 @@ export async function assignStaff(
 
 /** D05x: shows one member's full NIC. The API checks scope and records the reveal. */
 export async function revealMemberNic(societyId: string, memberId: string): Promise<{ nic?: string; error?: string }> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   try {
     const result = await platformApi(`/societies/${societyId}/council/${memberId}/nic/reveal`, { method: "POST" });
     return { nic: result.nic };
@@ -155,7 +155,7 @@ async function storeNics(societyId: string, seats: CouncilSeat[], committee: { i
 
 /** V5 Edit Exco: all 25 seats at once. The API checks scope, seat groups and ages. */
 export async function updateExco(societyId: string, _previous: RecordFormResult, form: FormData): Promise<RecordFormResult> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   const seats = readSeats(form);
   if (!seats) return { error: "Every society must have exactly 25 Exco members." };
   let committee: { id: string; seatNumber?: number }[];
@@ -180,7 +180,7 @@ export type CreateSocietyResult = RecordFormResult & { field?: "societyCode" };
 
 /** V5 D05n + D05c: HQ creates the society and its 25 Exco members, then assigns staff (D05a). */
 export async function createSociety(_previous: CreateSocietyResult, form: FormData): Promise<CreateSocietyResult> {
-  const viewer = await getCurrentViewer();
+  const viewer = await getDesktopViewer();
   if (viewer.role !== "HQ_ADMIN") return { error: "Only HQ can create a society record." };
   const seats = readSeats(form);
   if (!seats) return { error: "Every society must have exactly 25 Exco members." };
@@ -237,7 +237,7 @@ export async function startDocumentUpload(
     checksumSha256: string;
   },
 ): Promise<StartUploadResult> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   try {
     const result = await platformApi("/documents", {
       method: "POST",
@@ -251,7 +251,7 @@ export async function startDocumentUpload(
 
 /** Confirms the file reached storage; the API checks its size before recording it. */
 export async function completeDocumentUpload(societyId: string, documentId: string): Promise<{ error?: string }> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   try {
     await platformApi(`/documents/${documentId}/complete`, { method: "POST" });
   } catch (error) {
@@ -279,7 +279,7 @@ export async function createActivity(
   _previous: RecordFormResult,
   form: FormData,
 ): Promise<RecordFormResult> {
-  await getCurrentViewer();
+  await getDesktopViewer();
   const text = (name: string) => String(form.get(name) ?? "").trim();
   const body: Record<string, string | number> = {
     year: Number(form.get("year")),

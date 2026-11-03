@@ -10,8 +10,8 @@ export default function NotFound() {
       <section className="mt-8 w-full max-w-lg rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
         <EmptyState
           action={
-            <Link className={primaryButtonClass} href="/societies">
-              Go to societies
+            <Link className={primaryButtonClass} href="/dashboard">
+              Go to my home
             </Link>
           }
           description="The page you requested does not exist or may have moved."

@@ -21,12 +21,16 @@ import {
   SocietyMembershipUpdateDto,
   SocietyProfileUpdateDto,
 } from './dto/society-updates.dto.js';
+import { DistrictAccessService } from '../identity/district-access.service.js';
 import { SocietiesService } from './societies.service.js';
 
 @Controller('societies')
 @UseGuards(AuthenticationGuard, RolesGuard)
 export class SocietiesController {
-  constructor(private readonly service: SocietiesService) {}
+  constructor(
+    private readonly service: SocietiesService,
+    private readonly access: DistrictAccessService,
+  ) {}
 
   @Get()
   list(
@@ -110,10 +114,16 @@ export class SocietiesController {
   }
 
   @Get(':id')
-  getById(
+  async getById(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.service.getById(id, principal);
+    const record = await this.service.getById(id, principal);
+    // V5 DD06: opening a district society with temporary access is recorded.
+    await this.access.recordOpen(principal, {
+      id: record.id,
+      districtId: record.district.id,
+    });
+    return record;
   }
 }

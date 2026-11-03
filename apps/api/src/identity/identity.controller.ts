@@ -15,6 +15,7 @@ import type { Request } from 'express';
 import { AuthenticationGuard } from '../auth/authentication.guard.js';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { Principal } from '../auth/principal.js';
+import { DistrictAccessService } from './district-access.service.js';
 import { IdentityService } from './identity.service.js';
 import {
   AuditQueryDto,
@@ -26,7 +27,10 @@ import {
 } from './identity.dto.js';
 @Controller('identity')
 export class IdentityController {
-  constructor(private readonly identity: IdentityService) {}
+  constructor(
+    private readonly identity: IdentityService,
+    private readonly access: DistrictAccessService,
+  ) {}
   @Header('Cache-Control', 'no-store')
   @Post('login')
   login(@Body() input: LoginDto) {
@@ -99,10 +103,22 @@ export class IdentityController {
   deputies(@CurrentPrincipal() principal: Principal) {
     return this.identity.deputies(principal);
   }
-  @Get('district-access') @UseGuards(AuthenticationGuard) grants(
+  /** V5 DM04 / M32: grants with names, status and societies opened. */
+  @Header('Cache-Control', 'no-store')
+  @Get('district-access')
+  @UseGuards(AuthenticationGuard)
+  grants(@CurrentPrincipal() principal: Principal) {
+    return this.access.list(principal);
+  }
+  /** V5 DM04 "See details" / M32 access history. */
+  @Header('Cache-Control', 'no-store')
+  @Get('district-access/:id')
+  @UseGuards(AuthenticationGuard)
+  grantDetail(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.identity.grants(principal);
+    return this.access.detail(id, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Post('district-access')
@@ -111,7 +127,7 @@ export class IdentityController {
     @Body() input: GrantDistrictAccessDto,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.identity.grant(input, principal);
+    return this.access.grant(input, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Post('district-access/:id/revoke')
@@ -120,7 +136,7 @@ export class IdentityController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.identity.revoke(id, principal);
+    return this.access.revoke(id, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Get('audit')

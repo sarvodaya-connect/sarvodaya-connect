@@ -1,5 +1,8 @@
 import '../national/demo_national_api.dart';
 import '../national/national_api.dart';
+import '../district_access/district_access_api.dart';
+import '../incidents/demo_incident_api.dart';
+import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
 import '../society_record/society_record_api.dart';
@@ -67,6 +70,8 @@ class DemoStore extends ChangeNotifier {
     DocumentUploadService? uploadService,
     SocietyRecordApi? societyRecordApi,
     NationalApi? nationalApi,
+    DistrictAccessApi? districtAccessApi,
+    IncidentApi? incidentApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
@@ -92,6 +97,16 @@ class DemoStore extends ChangeNotifier {
         (demoMode
             ? DemoNationalApi(user: () => _user, delay: loadDelay)
             : HttpNationalApi(identityApi));
+    districtAccess =
+        districtAccessApi ??
+        (demoMode
+            ? DemoDistrictAccessApi(clock: _clock)
+            : HttpDistrictAccessApi(identityApi));
+    incidents =
+        incidentApi ??
+        (demoMode
+            ? DemoIncidentApi(clock: _clock)
+            : HttpIncidentApi(identityApi));
     this.documentPicker =
         documentPicker ??
         (demoMode ? const DemoDocumentPicker() : const DeviceDocumentPicker());
@@ -119,6 +134,11 @@ class DemoStore extends ChangeNotifier {
 
   /// V5 PR 5 HQ National Dashboard (M05h, M61–M69): HQ only on the server.
   late final NationalApi national;
+  /// V5 PR 7 temporary district access (M30–M32).
+  late final DistrictAccessApi districtAccess;
+
+  /// V5 PR 8 disaster response (M40–M49). Sent online only.
+  late final IncidentApi incidents;
 
   /// Chooses the audit report file to upload (M13a).
   late final DocumentPicker documentPicker;

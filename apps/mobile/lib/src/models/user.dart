@@ -12,10 +12,16 @@ class DistrictAccessGrant {
     required this.districtId,
     required this.startsAt,
     required this.expiresAt,
+    this.grantId,
+    this.grantedByName,
   });
   final String districtId;
   final DateTime startsAt;
   final DateTime expiresAt;
+
+  /// V5 PR 7 (M05t): which grant, and the DM who gave it.
+  final String? grantId;
+  final String? grantedByName;
   bool activeAt(DateTime now) =>
       !now.isBefore(startsAt) && now.isBefore(expiresAt);
 }
@@ -84,6 +90,8 @@ class AuthenticatedUser {
                       (g['startsAt'] as String?) ?? '1970-01-01T00:00:00Z',
                     ),
                     expiresAt: DateTime.parse(g['expiresAt'] as String),
+                    grantId: g['grantId'] as String?,
+                    grantedByName: g['grantedByName'] as String?,
                   ),
                 )
                 .toList(),

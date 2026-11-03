@@ -1,8 +1,8 @@
 import 'national/national_screens.dart';
 import 'screens/live_societies_screen.dart';
 import 'screens/v4_role_home_screen.dart';
-import 'screens/district_access_screen.dart';
-import 'screens/emergency_response_screen.dart';
+import 'district_access/district_access_screens.dart';
+import 'incidents/incident_screens.dart';
 
 import 'package:flutter/material.dart';
 
@@ -145,13 +145,16 @@ class HomeShell extends StatelessWidget {
     int selectedTab,
     String? officerSocietyId,
   ) => switch (role) {
-    // API mode: Prototype v4 M05 home and bottom bar (Home, Society, Exco,
-    // Work plan, More). Submissions to District are not part of v4.
+    // API mode: V5 Nav for the Society Officer (Home, Society, the red
+    // Incident button, Exco, Work plan, More).
     UserRole.societyOfficer when officerSocietyId != null =>
       _ShellConfiguration(
         pages: [
           SocietyOfficerHomeScreen(societyId: officerSocietyId),
           const LiveSocietiesScreen(),
+          selectedTab == OfficerTabs.incident
+              ? const IncidentsScreen()
+              : const SizedBox.shrink(),
           selectedTab == OfficerTabs.exco
               ? const LiveSocietiesScreen(initialTab: 1)
               : const SizedBox.shrink(),
@@ -172,6 +175,7 @@ class HomeShell extends StatelessWidget {
             label: 'Society',
             tooltip: 'Society',
           ),
+          _IncidentDestination(),
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
@@ -276,9 +280,7 @@ class HomeShell extends StatelessWidget {
         role == UserRole.districtManager
             ? const DistrictAccessScreen()
             : RoleWorkspaceScreen(role: role, workspace: RoleWorkspace.alerts),
-        selectedTab == 3
-            ? const EmergencyResponseScreen()
-            : const SizedBox.shrink(),
+        selectedTab == 3 ? const IncidentsScreen() : const SizedBox.shrink(),
         const MoreScreen(),
       ],
       destinations: [
@@ -295,10 +297,7 @@ class HomeShell extends StatelessWidget {
           ),
           label: role == UserRole.districtManager ? 'Access' : 'Alerts',
         ),
-        const NavigationDestination(
-          icon: Icon(Icons.warning_amber_outlined),
-          label: 'Disasters',
-        ),
+        const _IncidentDestination(),
         const _MoreDestination(),
       ],
     ),
@@ -354,6 +353,36 @@ class _ShellConfiguration {
 
   final List<Widget> pages;
   final List<NavigationDestination> destinations;
+}
+
+/// V5 Nav: the red "Incident" button for disaster response (M40–M49).
+class _IncidentDestination extends NavigationDestination {
+  const _IncidentDestination()
+    : super(
+        icon: const _IncidentIcon(),
+        selectedIcon: const _IncidentIcon(),
+        label: 'Incident',
+        tooltip: 'Incident',
+      );
+}
+
+class _IncidentIcon extends StatelessWidget {
+  const _IncidentIcon();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 46,
+    height: 30,
+    decoration: BoxDecoration(
+      color: AppColors.danger,
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: const Icon(
+      Icons.warning_amber_rounded,
+      color: Colors.white,
+      size: 20,
+    ),
+  );
 }
 
 class _HomeDestination extends NavigationDestination {

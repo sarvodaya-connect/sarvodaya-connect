@@ -53,12 +53,15 @@ describe("V5 dashboard shell", () => {
     renderShell(getViewer("programme-coordinator"));
 
     const nav = within(desktopNav());
-    // V5 PR 4: the SPC desktop opens with SP06; Home and My societies join in PR 6.
+    // V5 SP01 sidebar: Home, My societies, Activities to approve.
     expect(nav.getByRole("link", { name: "Activities to approve" })).toHaveAttribute("aria-current", "page");
-    expect(nav.queryByRole("link", { name: "My societies" })).not.toBeInTheDocument();
+    expect(nav.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/dashboard");
+    expect(nav.getByRole("link", { name: "My societies" })).toHaveAttribute("href", "/my-societies");
     expect(nav.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
     expect(nav.getByText("SPC · 3 assigned societies")).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText("Search your societies…")).not.toHaveLength(0);
+    // The header search looks only through the SPC's own societies.
+    const search = screen.getAllByPlaceholderText("Search your 3 societies…")[0]!;
+    expect(search.closest("form")).toHaveAttribute("action", "/my-societies");
     expect(screen.getByRole("link", { name: "Alerts" })).toBeInTheDocument();
   });
 

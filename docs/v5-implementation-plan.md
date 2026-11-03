@@ -118,9 +118,9 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 
 | V5 | Dashboard | Phone | Status | PR |
 |---|---|---|---|---|
-| D30, D31, D32, D33 | `/emergencies` | — | rework | 8 |
-| IR01–IR05 (SPC, DDM, DM) | — | — | new | 8 |
-| M40–M49, M48n | — | `emergency_response_screen.dart` | rework | 8 |
+| D30, D31, D32, D33 | `/emergencies`, `/emergencies/[id]` (tabs, `?panel=open/assess/close/assign/need`) | — | match (PR 8) | 8 |
+| IR01–IR05 (SPC, DDM, DM) | `/emergencies/[id]`, IR02 as `/dashboard?report=incident`, IR05 under the role bell | — | match (PR 8) | 8 |
+| M40–M49, M48n | — | `incidents/incident_screens.dart` (M48n in the app, not a push notification yet) | match (PR 8) | 8 |
 
 ### SarvoAI
 
@@ -148,7 +148,7 @@ The sidebar lists only pages that exist, so nobody lands on an empty page. These
 - HQ: Map View, Requests & Tasks and Reports were added in PR 5. Still waiting: Settings (not assigned), the **Ask SarvoAI** header button (PR 9), and the Review Queue count badge from real data (PR 3).
 - SPC: Activities to approve (added in PR 4, with SPC desktop sign-in limited to those pages until PR 6), Help (not assigned).
 - DM: Temporary DDM access (PR 7).
-- SPC, DDM and DM desktop sign-in: the dashboard still allows HQ only (`current-viewer.ts`, `identity-actions.ts`). PR 6 opens it with server-side scope on every request.
+- SPC, DDM and DM desktop sign-in: opened in PR 6. `GET /home` and `GET /home/societies` work out SP01/DD01/DM01 and SP02/DD03/DM02 from the user's own societies (the DM's district, view only). `middleware.ts` keeps these roles on `/dashboard`, `/my-societies`, `/societies/<id>` and `/activities-to-approve`; it steers screens only, the API decides what data each request returns. No new environment variables or migrations; Next.js middleware is supported on Amplify Hosting.
 
 ## Access rules
 
@@ -177,12 +177,14 @@ Every PR keeps the agreed AWS shape. Nothing here creates AWS resources, adds cr
 - **No-access wording:** V5 ST04 and M26 name the society ("You don't have access to Thalawa SSS"). The confirmed rule is that no-access screens reveal nothing about restricted records, so the screens say "this society" or "this page".
 - **Sidebar counts:** V5 shows a "6" on Review Queue. The old sidebar hard-coded "2". PR 1 removes the hard-coded number; PR 3 shows the real count.
 - **Phone bar labels:** V5 shows icons only. Labels are kept as tooltips and screen-reader names so the bar stays accessible.
+- **Incident notifications (PR 8):** V5 D30, IR02, IR05 and M48n say every signed-in user is notified. The confirmed rule is that notifications go only to the people whose scope covers the societies involved (and HQ), so the screens say so.
+- **Rapid assessment progress (PR 8):** V5 M41 shows a segmented bar of the twelve questions. The no-bars rule applies, so the screens show "Question 5 of 10" as text.
 
 ## Open questions (To Confirm)
 
 These are not decided in V5 or the confirmed requirements. No PR invents an answer; each will be listed again in the PR that meets it.
 
-- Who may open and close an incident beyond what the API allows today, and whether a Society Officer report notifies every society immediately or after review (PR 8).
+- Who may open and close an incident beyond what the API allows today, and whether a Society Officer report notifies every society immediately or after review (PR 8: every role within its own scope; notifications go straight away to the people covering the area, not to everyone; still To Confirm).
 - Whether D17 Settings and the role "Help" item are in scope, and what they contain.
 - HQ Districts (M65) on the phone reuses the D03b endpoint `/national/districts` (decided in PR 5).
 - How long a temporary DDM grant may last and whether it can be renewed (PR 7).

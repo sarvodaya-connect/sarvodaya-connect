@@ -1,5 +1,6 @@
+import { TemporaryRecordNotice } from "@/components/dashboard/district-access/record-access-notice";
 import { RecordHeader } from "@/components/dashboard/society-record/record-header";
-import { getCurrentViewer } from "@/lib/current-viewer";
+import { getDesktopViewer } from "@/lib/current-viewer";
 import { getGradeRequests, getSocietyDocuments, getSocietyRecord, getWorkPlan } from "@/lib/society-record-api";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
@@ -10,7 +11,7 @@ import { isSocietyRecordId } from "@/lib/society-record-format";
 export default async function SocietyRecordLayout({ children, params }: LayoutProps<"/societies/[id]">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) return children;
-  const viewer = await getCurrentViewer();
+  const viewer = await getDesktopViewer();
   const record = await getSocietyRecord(id);
   // Tab counts are helpful but not essential; a failed count leaves it blank.
   const [plan, documents, requests] = await Promise.all([
@@ -33,6 +34,9 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
           { href: `${base}/history`, label: "History" },
         ]}
       />
+      {record.permissions.viewOnlyReason === "TEMPORARY_DISTRICT_ACCESS" && (
+        <TemporaryRecordNotice until={record.permissions.viewOnlyUntil} viewerName={viewer.displayName} />
+      )}
       {children}
     </>
   );

@@ -9,7 +9,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/state_views.dart';
-import 'emergency_response_screen.dart';
+import '../incidents/incident_screens.dart';
 import 'notifications_screen.dart';
 
 /// Number of Exco seats a society fills.
@@ -18,8 +18,10 @@ const _excoSeats = 25;
 /// Bottom-bar tabs of the Society Officer shell in API mode (Prototype v4).
 abstract final class OfficerTabs {
   static const society = 1;
-  static const exco = 2;
-  static const workPlan = 3;
+  // V5 Nav: the red Incident button sits in the middle (PR 8).
+  static const incident = 2;
+  static const exco = 3;
+  static const workPlan = 4;
 }
 
 /// M05 · Home: Society Officer (Prototype v4). Their one society at a glance —
@@ -146,6 +148,8 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
                 Text('Refreshing…'),
               ],
             ),
+          // V5 M40: the live incident and what HQ has arranged for this society.
+          IncidentHomeSection(societyId: widget.societyId),
           _SocietySummaryCard(
             record: record,
             plan: plan,
@@ -210,17 +214,6 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
                 summary.totalExpenses == null ||
                 summary.auditReport == null,
             onTap: () => store.selectTab(OfficerTabs.society),
-          ),
-          const SizedBox(height: 10),
-          _LinkCard(
-            icon: Icons.warning_amber_outlined,
-            title: 'Disaster response',
-            subtitle: 'Live incidents and rapid assessments',
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => const EmergencyResponseScreen(),
-              ),
-            ),
           ),
         ],
       ),
@@ -718,11 +711,9 @@ class _LinkCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.icon,
     this.attention = false,
   });
 
-  final IconData? icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -742,10 +733,6 @@ class _LinkCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
         child: Row(
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 20, color: AppColors.inkSoft),
-              const SizedBox(width: 12),
-            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
