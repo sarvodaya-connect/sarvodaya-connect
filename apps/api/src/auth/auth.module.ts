@@ -1,6 +1,7 @@
 import { NicVaultController } from '../identity/nic-vault.controller.js';
 import { NicVaultService } from '../identity/nic-vault.service.js';
 import { IdentityService } from '../identity/identity.service.js';
+import { DistrictAccessService } from '../identity/district-access.service.js';
 import { IdentityController } from '../identity/identity.controller.js';
 import { SessionAuthenticationProvider } from '../identity/session-authentication.provider.js';
 import { Global, Module } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { DemoUserDirectory, USER_DIRECTORY } from './user-directory.js';
   providers: [
     NicVaultService,
     IdentityService,
+    DistrictAccessService,
     SessionAuthenticationProvider,
     AuthenticationGuard,
     RolesGuard,
@@ -29,6 +31,7 @@ import { DemoUserDirectory, USER_DIRECTORY } from './user-directory.js';
   ],
   exports: [
     NicVaultService,
+    DistrictAccessService,
     AuthenticationGuard,
     RolesGuard,
     AUTHENTICATION_PROVIDER,

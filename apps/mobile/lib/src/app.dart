@@ -1,6 +1,6 @@
 import 'screens/live_societies_screen.dart';
 import 'screens/v4_role_home_screen.dart';
-import 'screens/district_access_screen.dart';
+import 'district_access/district_access_screens.dart';
 import 'screens/emergency_response_screen.dart';
 
 import 'package:flutter/material.dart';

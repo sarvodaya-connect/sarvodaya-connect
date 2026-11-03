@@ -1,9 +1,16 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { HomeRole, HomeSocietyList, HomeSummary } from './home.types.js';
+import type {
+  HomeAccessGrant,
+  HomeEndedGrant,
+  HomeRole,
+  HomeSocietyList,
+  HomeSummary,
+} from './home.types.js';
 
 import { readableDistrictIds, type Principal } from '../auth/principal.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { DistrictAccessService } from '../identity/district-access.service.js';
 import {
   financialYear,
   latestCompletedFinancialYear,
@@ -36,7 +43,58 @@ export function homeRoleOf(principal: Principal): HomeRole | null {
  */
 @Injectable()
 export class HomeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: DistrictAccessService,
+  ) {}
+
+  /** Active grants with names and counts, in the home's shape. */
+  private async accessGrants(
+    grants: Parameters<DistrictAccessService['views']>[0],
+    now: Date,
+  ): Promise<HomeAccessGrant[]> {
+    return (await this.access.views(grants, now)).map((g) => ({
+      id: g.id,
+      deputyName: g.deputy.name,
+      districtName: g.district.name,
+      startsAt: g.startsAt,
+      expiresAt: g.expiresAt,
+      grantedByName: g.grantedBy.name,
+      grantedAt: g.grantedAt,
+      societiesOpened: g.societiesOpened,
+      districtSocietyCount: g.district.societyCount,
+    }));
+  }
+
+  /** V5 DD07: a DDM's last grant, if it ended in the last 7 days. */
+  private async recentlyEnded(
+    deputyId: string,
+    now: Date,
+  ): Promise<HomeEndedGrant | null> {
+    if (!UUID.test(deputyId)) return null;
+    const since = new Date(now.getTime() - 7 * 86_400_000);
+    const [grant] = await this.prisma.districtAccessGrant.findMany({
+      where: {
+        deputyId,
+        OR: [
+          { revokedAt: { gt: since, lte: now } },
+          { revokedAt: null, expiresAt: { gt: since, lte: now } },
+        ],
+      },
+      orderBy: { expiresAt: 'desc' },
+      take: 1,
+    });
+    if (!grant) return null;
+    const [view] = await this.access.views([grant], now);
+    return {
+      districtName: view!.district.name,
+      grantedByName: view!.grantedBy.name,
+      startsAt: view!.startsAt,
+      expiresAt: view!.expiresAt,
+      endedAt: (grant.revokedAt ?? grant.expiresAt).toISOString(),
+      endedEarly: Boolean(grant.revokedAt),
+    };
+  }
 
   async summary(principal: Principal, now = new Date()): Promise<HomeSummary> {
     const role = homeRoleOf(principal);
@@ -58,19 +116,28 @@ export class HomeService {
       throw new ForbiddenException(
         'The society list is for SPCs, DDMs and District Managers',
       );
+    const delegated = readableDistrictIds(principal, now).filter((id) =>
+      UUID.test(id),
+    );
+    const isDdm = role === 'DEPUTY_DISTRICT_MANAGER';
+    const districtScope = isDdm && query.scope === 'DISTRICT';
+    // DD04: the district list needs active temporary access, checked now.
+    if (districtScope && !delegated.length)
+      throw new ForbiddenException(
+        'Your temporary district-wide view has ended',
+      );
     return executeDatabaseOperation(async () => {
       const db = this.prisma;
       const myDistricts = principal.districtIds.filter((id) => UUID.test(id));
+      const assigned = principal.societyIds.filter((id) => UUID.test(id));
       const [societies, district] = await Promise.all([
         db.society.findMany({
           where:
             role === 'DISTRICT_MANAGER'
               ? { districtId: { in: myDistricts } }
-              : {
-                  id: {
-                    in: principal.societyIds.filter((id) => UUID.test(id)),
-                  },
-                },
+              : districtScope
+                ? { districtId: { in: delegated } }
+                : { id: { in: assigned } },
           select: {
             id: true,
             societyCode: true,
@@ -92,6 +159,21 @@ export class HomeService {
           : null,
       ]);
       const ids = societies.map((s) => s.id);
+      const grants = isDdm
+        ? await db.districtAccessGrant.findMany({
+            where: {
+              deputyId: UUID.test(principal.id) ? principal.id : undefined,
+              revokedAt: null,
+              startsAt: { lte: now },
+              expiresAt: { gt: now },
+            },
+            orderBy: { expiresAt: 'desc' },
+            take: 1,
+          })
+        : [];
+      const [access] = grants.length
+        ? await this.accessGrants(grants, now)
+        : [null];
       const [pending, accounts] = await Promise.all([
         db.gradeChangeRequest.findMany({
           where: { societyId: { in: ids }, status: 'PENDING' },
@@ -128,6 +210,21 @@ export class HomeService {
           societies: societies.map((s) => ({ ...s, grade: s.grade ?? null })),
           pendingGradeRequests: pending,
           accounts,
+          scope: districtScope ? 'DISTRICT' : 'MINE',
+          assigned: new Set(assigned),
+          tabs: isDdm
+            ? {
+                mine: districtScope
+                  ? await db.society.count({ where: { id: { in: assigned } } })
+                  : societies.length,
+                district: access ? access.districtSocietyCount : null,
+              }
+            : { mine: societies.length, district: null },
+          access: access ?? null,
+          recentlyEnded:
+            isDdm && !access
+              ? await this.recentlyEnded(principal.id, now)
+              : null,
         },
         query,
       );
@@ -279,28 +376,17 @@ export class HomeService {
         : null,
     ]);
 
-    // Names for the people mentioned: grant holders and incident openers.
-    const personIds = [
-      ...grants.map((g) => g.deputyId),
-      ...incidents.map((i) => i.createdById),
-    ].filter((id) => UUID.test(id));
-    const grantDistricts = [...new Set(grants.map((g) => g.districtId))];
-    const [people, districts] = await Promise.all([
-      personIds.length
-        ? db.platformAccount.findMany({
-            where: { id: { in: [...new Set(personIds)] } },
-            select: { id: true, displayName: true },
-          })
-        : [],
-      grantDistricts.length
-        ? db.district.findMany({
-            where: { id: { in: grantDistricts } },
-            select: { id: true, nameEn: true },
-          })
-        : [],
-    ]);
+    // Names for the people who opened incidents.
+    const personIds = incidents
+      .map((i) => i.createdById)
+      .filter((id) => UUID.test(id));
+    const people = personIds.length
+      ? await db.platformAccount.findMany({
+          where: { id: { in: [...new Set(personIds)] } },
+          select: { id: true, displayName: true },
+        })
+      : [];
     const nameOf = new Map(people.map((p) => [p.id, p.displayName]));
-    const districtName = new Map(districts.map((d) => [d.id, d.nameEn]));
     const societyName = new Map(societies.map((s) => [s.id, s.nameEn]));
 
     const input: HomeInput = {
@@ -327,14 +413,12 @@ export class HomeService {
         actorRole: e.actorRole,
         at: e.createdAt.toISOString(),
       })),
-      temporaryAccess: grants.map((g) => ({
-        id: g.id,
-        deputyName: nameOf.get(g.deputyId) ?? 'Deputy District Manager',
-        districtName: districtName.get(g.districtId) ?? '',
-        startsAt: g.startsAt.toISOString(),
-        expiresAt: g.expiresAt.toISOString(),
-      })),
+      temporaryAccess: await this.accessGrants(grants, now),
       districtViewCount,
+      recentlyEnded:
+        role === 'DEPUTY_DISTRICT_MANAGER' && !grants.length
+          ? await this.recentlyEnded(principal.id, now)
+          : null,
       incidents: incidents.map((i) => ({
         id: i.id,
         title: i.title,

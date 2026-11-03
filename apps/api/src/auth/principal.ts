@@ -17,9 +17,12 @@ export interface Principal {
   districtIds: string[];
   societyIds: string[];
   delegatedDistrictAccess?: {
+    /** V5 PR 7: the grant, so opening a district society can be recorded against it. */
+    grantId?: string;
     districtId: string;
     startsAt?: string;
     expiresAt: string;
+    grantedByName?: string;
   }[];
 }
 

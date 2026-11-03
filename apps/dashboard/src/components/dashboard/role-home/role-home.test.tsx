@@ -10,6 +10,8 @@ import { canOpen } from "@/lib/role-routes";
 import { MySocieties } from "./my-societies";
 import { RoleHome } from "./role-home";
 
+vi.mock("@/app/(dashboard)/district-access/actions", () => ({ endDistrictAccess: vi.fn(), giveDistrictAccess: vi.fn() }));
+
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>
@@ -53,6 +55,7 @@ function home(overrides: Partial<HomeSummary> = {}): HomeSummary {
     staff: [],
     temporaryAccess: [],
     districtViewCount: null,
+    recentlyEnded: null,
     incidents: [],
     ...overrides,
   };
@@ -122,7 +125,7 @@ describe("DD01 DDM home", () => {
         home={home({
           role: "DEPUTY_DISTRICT_MANAGER",
           districtViewCount: 106,
-          temporaryAccess: [{ id: "g1", deputyName: "P. Dissanayake", districtName: "Kurunegala", startsAt: "2026-10-25T00:00:00Z", expiresAt: "2026-10-31T12:30:00Z" }],
+          temporaryAccess: [{ id: "g1", deputyName: "P. Dissanayake", districtName: "Kurunegala", startsAt: "2026-10-25T00:00:00Z", expiresAt: "2026-10-31T12:30:00Z", grantedByName: "R. Fernando", grantedAt: "2026-10-25T03:40:00Z", societiesOpened: 9, districtSocietyCount: 106 }],
         })}
         now={now}
         viewer={ddm}
@@ -148,7 +151,7 @@ describe("DM01 DM district overview", () => {
             { id: "u1", displayName: "P. Dissanayake", role: "DEPUTY_DISTRICT_MANAGER", societyCount: 18, notUpdatedCount: 3 },
             { id: "u2", displayName: "S. Karunaratne", role: "PROGRAMME_COORDINATOR", societyCount: 12, notUpdatedCount: 2 },
           ],
-          temporaryAccess: [{ id: "g1", deputyName: "P. Dissanayake", districtName: "Kurunegala", startsAt: "2026-10-25T00:00:00Z", expiresAt: "2026-10-31T12:30:00Z" }],
+          temporaryAccess: [{ id: "g1", deputyName: "P. Dissanayake", districtName: "Kurunegala", startsAt: "2026-10-25T00:00:00Z", expiresAt: "2026-10-31T12:30:00Z", grantedByName: "R. Fernando", grantedAt: "2026-10-25T03:40:00Z", societiesOpened: 9, districtSocietyCount: 106 }],
         })}
         now={now}
         viewer={getViewer("district-manager")}
@@ -174,8 +177,10 @@ describe("DM01 DM district overview", () => {
     expect(attention.queryByText("Editable")).not.toBeInTheDocument();
 
     expect(screen.getByRole("heading", { name: "Active grant" })).toBeInTheDocument();
-    // Ending a grant early is PR 7: no buttons yet.
-    expect(screen.queryByRole("button", { name: /End now/ })).not.toBeInTheDocument();
+    // V5 PR 7: the DM can see the grant's history or end it early from DM01.
+    expect(screen.getByRole("link", { name: "See details" })).toHaveAttribute("href", "/district-access?grant=g1");
+    expect(screen.getByRole("button", { name: "End now" })).toBeInTheDocument();
+    expect(screen.getByText(/View only · all 106 societies · ends Sat 31 Oct, 6:00 p.m. · 5 days left/)).toBeInTheDocument();
     noBars(container);
   });
 });
@@ -198,6 +203,7 @@ function list(overrides: Partial<HomeSocietyList> = {}): HomeSocietyList {
         updatedAt: "2026-10-26T02:00:00Z",
         stale: false,
         editable: true,
+        yours: false,
       },
       {
         id: "s2",
@@ -214,11 +220,16 @@ function list(overrides: Partial<HomeSocietyList> = {}): HomeSocietyList {
         updatedAt: "2026-06-02T02:00:00Z",
         stale: true,
         editable: true,
+        yours: false,
       },
     ],
     meta: { page: 1, pageSize: 20, totalItems: 2, totalPages: 1 },
     scopeTotal: 12,
     viewOnly: false,
+    scope: "MINE",
+    tabs: { mine: 12, district: null },
+    access: null,
+    recentlyEnded: null,
     district: { id: "d1", name: "Kurunegala" },
     options: { dsDivisions: ["Kuliyapitiya East"], spcs: [{ id: "u2", name: "S. Karunaratne" }], ddms: [{ id: "u1", name: "P. Dissanayake" }] },
     ...overrides,

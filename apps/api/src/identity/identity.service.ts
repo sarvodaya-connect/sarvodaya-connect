@@ -24,7 +24,6 @@ import type { AuditType } from './identity.dto.js';
 import type {
   AccountDetailsDto,
   CreateAccountDto,
-  GrantDistrictAccessDto,
   LoginDto,
   SetAccountPasswordDto,
   AuditQueryDto,
@@ -86,6 +85,7 @@ const AUDIT_ACTIONS: Record<AuditType, readonly string[]> = {
   ACCESS: [
     'DISTRICT_ACCESS_GRANTED',
     'DISTRICT_ACCESS_REVOKED',
+    'DISTRICT_SOCIETY_OPENED',
     'MEMBER_NIC_REVEALED',
   ],
   RECORDS: [
@@ -411,7 +411,21 @@ export class IdentityService {
         startsAt: { lte: new Date() },
         expiresAt: { gt: new Date() },
       },
+      select: {
+        id: true,
+        districtId: true,
+        startsAt: true,
+        expiresAt: true,
+        grantedById: true,
+      },
     });
+    const grantors = grants.length
+      ? await this.db.platformAccount.findMany({
+          where: { id: { in: [...new Set(grants.map((g) => g.grantedById))] } },
+          select: { id: true, displayName: true },
+        })
+      : [];
+    const grantorName = new Map(grantors.map((a) => [a.id, a.displayName]));
     return {
       id: account.id,
       displayName: account.displayName,
@@ -419,9 +433,11 @@ export class IdentityService {
       districtIds: account.districtId ? [account.districtId] : [],
       societyIds: account.societyIds,
       delegatedDistrictAccess: grants.map((g) => ({
+        grantId: g.id,
         districtId: g.districtId,
         startsAt: g.startsAt.toISOString(),
         expiresAt: g.expiresAt.toISOString(),
+        grantedByName: grantorName.get(g.grantedById),
       })),
     };
   }
@@ -453,95 +469,6 @@ export class IdentityService {
         select: { id: true, displayName: true, districtId: true },
       }),
     };
-  }
-  async grants(principal: Principal) {
-    const where = hasRole(principal, 'HQ_ADMIN')
-      ? {}
-      : hasRole(principal, 'DISTRICT_MANAGER')
-        ? { districtId: { in: principal.districtIds } }
-        : { deputyId: principal.id };
-    return {
-      data: await this.db.districtAccessGrant.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-      }),
-    };
-  }
-  async grant(input: GrantDistrictAccessDto, principal: Principal) {
-    if (
-      !hasRole(principal, 'DISTRICT_MANAGER') ||
-      !principal.districtIds.includes(input.districtId)
-    )
-      throw new ForbiddenException(
-        'Only the District Manager of this district can grant access',
-      );
-    const deputy = await this.db.platformAccount.findUnique({
-      where: { id: input.deputyId },
-    });
-    if (
-      !deputy ||
-      deputy.role !== 'DEPUTY_DISTRICT_MANAGER' ||
-      deputy.districtId !== input.districtId ||
-      deputy.status !== 'ACTIVE'
-    )
-      throw new BadRequestException('Choose an active DDM in your district');
-    const startsAt = new Date(input.startsAt);
-    const expiresAt = new Date(input.expiresAt);
-    if (expiresAt <= startsAt || expiresAt <= new Date())
-      throw new BadRequestException(
-        'End time must be later than start time and now',
-      );
-    return this.db.$transaction(async (tx) => {
-      const grant = await tx.districtAccessGrant.create({
-        data: {
-          districtId: input.districtId,
-          deputyId: input.deputyId,
-          reason: input.reason,
-          startsAt,
-          expiresAt,
-          grantedById: principal.id,
-        },
-      });
-      await tx.platformAuditEvent.create({
-        data: {
-          actorId: principal.id,
-          action: 'DISTRICT_ACCESS_GRANTED',
-          targetId: grant.id,
-          districtId: input.districtId,
-          detail: `View only until ${expiresAt.toISOString()}. ${input.reason}`,
-        },
-      });
-      return grant;
-    });
-  }
-  async revoke(id: string, principal: Principal) {
-    const grant = await this.db.districtAccessGrant.findUnique({
-      where: { id },
-    });
-    if (
-      !grant ||
-      !(
-        hasRole(principal, 'HQ_ADMIN') ||
-        (hasRole(principal, 'DISTRICT_MANAGER') &&
-          principal.districtIds.includes(grant.districtId))
-      )
-    )
-      throw new NotFoundException('Access grant not found');
-    return this.db.$transaction(async (tx) => {
-      await tx.districtAccessGrant.update({
-        where: { id },
-        data: { revokedAt: new Date() },
-      });
-      await tx.platformAuditEvent.create({
-        data: {
-          actorId: principal.id,
-          action: 'DISTRICT_ACCESS_REVOKED',
-          targetId: id,
-          districtId: grant.districtId,
-        },
-      });
-      return { revoked: true };
-    });
   }
   /**
    * V5 D24 change & access log, within the viewer's scope (HQ national).

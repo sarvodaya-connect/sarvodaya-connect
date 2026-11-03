@@ -20,6 +20,7 @@ Every setting is an environment variable with a safe development default (`.env.
 | `STORAGE_SIGNING_SECRET` | Secret | random per start | Development driver link signing |
 | `CORS_ALLOWED_ORIGINS` | Config | empty | Development driver only: dashboard origin allowed to PUT to local upload links (PR 4) |
 | `SARVOAI_ENABLED` | Config (feature flag) | `false` | SarvoAI on Bedrock; see `sarvoai-aws-setup.md` |
+| `DISTRICT_ACCESS_MAX_DAYS` | Config | `14` | Longest temporary DDM access a DM can give (1–90 days). Checked by the API on every grant (PR 7) |
 
 The temporary DDM access maximum is added with PR 7.
 
@@ -65,5 +66,6 @@ Apply with `npm run prisma:deploy` in `apps/api` against RDS (through a migratio
 |---|---|---|
 | `20261103090000_v5_activities_sdgs_documents` | 4 | Activity status (waiting for SPC, sent back, approved), dimension, participants and beneficiaries, partners, resources, volunteer hours, who sent and reviewed it; `work_plan_activity_sdgs` (UN SDG 1–17 with a check constraint); document SHA-256. Existing activities become approved. |
 | `20261103091000_v5_registrar_document_counts` | 4 | Index on `society_documents (financial_year_start, document_type, society_id)` for the D11/D12 national counts |
+| `20261104090000_v5_access_history_index` | 7 | Index on `platform_audit_events (action, target_id)` for a temporary access grant's history and "societies opened" count |
 
 Indexes added in PR 4 for dashboard queries: `work_plan_activities (status, submitted_at)` and `(status, reviewed_at)` for the SPC queue, `work_plan_activity_sdgs (sdg)` for SDG rankings (PR 5), and the Registrar document index above. National Registrar counts run as two grouped SQL queries, not a loop over societies.

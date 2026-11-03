@@ -9,6 +9,7 @@ const { getDesktopViewer, getHome, redirect } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/current-viewer", () => ({ getDesktopViewer }));
 vi.mock("@/lib/home-api", () => ({ getHome }));
+vi.mock("@/app/(dashboard)/district-access/actions", () => ({ endDistrictAccess: vi.fn(), giveDistrictAccess: vi.fn() }));
 
 import DashboardHome from "./page";
 import { RoleHome } from "@/components/dashboard/role-home/role-home";

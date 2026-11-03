@@ -54,6 +54,7 @@ export interface HomeInput {
   recent: HomeSummary['recent'];
   temporaryAccess: HomeSummary['temporaryAccess'];
   districtViewCount: number | null;
+  recentlyEnded: HomeSummary['recentlyEnded'];
   incidents: HomeSummary['incidents'];
 }
 
@@ -230,6 +231,7 @@ export function composeHome(input: HomeInput): HomeSummary {
     staff,
     temporaryAccess: input.temporaryAccess,
     districtViewCount: input.districtViewCount,
+    recentlyEnded: input.recentlyEnded,
     incidents: input.incidents,
   };
 }
@@ -245,6 +247,13 @@ export interface SocietyListInput {
   })[];
   pendingGradeRequests: HomeInput['pendingGradeRequests'];
   accounts: HomeAccount[];
+  /** DD04: the DDM's whole district through temporary access, or their own societies. */
+  scope?: HomeSocietyList['scope'];
+  /** The user's own assigned societies: editable, and "Yours" in the district list. */
+  assigned?: Set<string>;
+  tabs?: HomeSocietyList['tabs'];
+  access?: HomeSocietyList['access'];
+  recentlyEnded?: HomeSocietyList['recentlyEnded'];
 }
 
 export interface SocietyListQuery {
@@ -257,6 +266,8 @@ export interface SocietyListQuery {
   gradeRequest?: 'PENDING' | 'NONE';
   spcId?: string;
   ddmId?: string;
+  scope?: 'MINE' | 'DISTRICT';
+  assignedToMe?: boolean;
 }
 
 /**
@@ -268,6 +279,11 @@ export function composeSocietyList(
   query: SocietyListQuery,
 ): HomeSocietyList {
   const viewOnly = input.role === 'DISTRICT_MANAGER';
+  const scope = input.scope ?? 'MINE';
+  const assigned = input.assigned ?? new Set<string>();
+  // In the DDM's district list only their own societies stay editable.
+  const editable = (id: string) =>
+    !viewOnly && (scope === 'MINE' || assigned.has(id));
   const holder = (role: string) => {
     const map = new Map<string, HomeAccount>();
     for (const a of input.accounts)
@@ -300,7 +316,8 @@ export function composeSocietyList(
       dsDivision: s.dsDivision,
       updatedAt: s.updatedAt.toISOString(),
       stale: daysSince(s.updatedAt, input.now) >= NOT_UPDATED_DAYS,
-      editable: !viewOnly,
+      editable: editable(s.id),
+      yours: scope === 'DISTRICT' && assigned.has(s.id),
     };
   });
 
@@ -317,7 +334,9 @@ export function composeSocietyList(
       (!query.gradeRequest ||
         (query.gradeRequest === 'PENDING') === Boolean(row.pendingGrade)) &&
       (!query.spcId || spc.get(row.id)?.id === query.spcId) &&
-      (!query.ddmId || ddm.get(row.id)?.id === query.ddmId),
+      (!query.ddmId || ddm.get(row.id)?.id === query.ddmId) &&
+      (query.assignedToMe === undefined ||
+        assigned.has(row.id) === query.assignedToMe),
   );
   const start = (query.page - 1) * query.pageSize;
   const people = (map: Map<string, HomeAccount>) =>
@@ -335,6 +354,10 @@ export function composeSocietyList(
     },
     scopeTotal: rows.length,
     viewOnly,
+    scope,
+    tabs: input.tabs ?? { mine: rows.length, district: null },
+    access: input.access ?? null,
+    recentlyEnded: input.recentlyEnded ?? null,
     district: input.district,
     options: {
       dsDivisions: [

@@ -9,6 +9,8 @@ import '../society_record/activity_screens.dart';
 import '../state/demo_store.dart';
 import '../widgets/demo_options_sheet.dart';
 import '../widgets/state_views.dart';
+import '../district_access/access_format.dart';
+import '../theme/app_theme.dart';
 import 'emergency_response_screen.dart';
 
 class V4RoleHomeScreen extends StatefulWidget {
@@ -139,16 +141,10 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
               UserRole.hqAdmin => 'National summary. Use the HQ dashboard for accounts and administration.',
               _ => 'View and update your society.',
             }),
-            for (final grant in grants)
-              Card(
-                color: Colors.amber.shade100,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Temporary district view · ${grant.districtId}\nEnds ${grant.expiresAt.toLocal()}. You can edit only your assigned societies.',
-                  ),
-                ),
-              ),
+            for (final grant in grants) ...[
+              const SizedBox(height: 12),
+              TemporaryViewCard(grant: grant, now: store.now),
+            ],
             if (_loading)
               const Row(
                 children: [
@@ -224,4 +220,78 @@ class _RoleHomeState extends State<V4RoleHomeScreen> {
       ),
     );
   }
+}
+
+/// V5 M05t: the DDM's temporary district-wide view, with the time left as
+/// words. Their own societies stay editable; the rest open view only.
+class TemporaryViewCard extends StatelessWidget {
+  const TemporaryViewCard({super.key, required this.grant, required this.now});
+  final DistrictAccessGrant grant;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: 'Temporary district-wide view',
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F3A5F),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Temporary district-wide view',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'All societies in your district · view only.'
+            '${grant.grantedByName == null ? '' : ' Granted by ${grant.grantedByName} (DM).'}',
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Ends ${accessEnds(grant.expiresAt)} · ${accessTimeLeft(grant.expiresAt, now)}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.bannerTemporaryBg,
+              padding: EdgeInsets.zero,
+            ),
+            onPressed: () =>
+                DemoScope.read(context).selectTab(HomeShell.societyTab),
+            child: const Text('Browse district societies'),
+          ),
+        ],
+      ),
+    ),
+  );
 }

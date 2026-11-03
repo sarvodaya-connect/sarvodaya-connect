@@ -58,4 +58,16 @@ export class HomeSocietyQueryDto {
   @IsOptional()
   @IsUUID()
   ddmId?: string;
+
+  /** DD04: a DDM with temporary access can list the whole district (view only). */
+  @IsOptional()
+  @IsIn(['MINE', 'DISTRICT'])
+  scope?: 'MINE' | 'DISTRICT';
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  assignedToMe?: boolean;
 }

@@ -10,7 +10,8 @@ import { canOpen, ROLE_COOKIE } from "@/lib/role-routes";
  */
 export function middleware(request: NextRequest) {
   if (canOpen(request.cookies.get(ROLE_COOKIE)?.value, request.nextUrl.pathname)) return NextResponse.next();
-  return NextResponse.redirect(new URL("/dashboard", request.url));
+  // V5 M69d / ST04: say the page is for HQ instead of silently going home.
+  return NextResponse.redirect(new URL("/no-access?page=hq", request.url));
 }
 
 export const config = {

@@ -1,3 +1,4 @@
+import { TemporaryRecordNotice } from "@/components/dashboard/district-access/record-access-notice";
 import { RecordHeader } from "@/components/dashboard/society-record/record-header";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { getGradeRequests, getSocietyDocuments, getSocietyRecord, getWorkPlan } from "@/lib/society-record-api";
@@ -33,6 +34,9 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
           { href: `${base}/history`, label: "History" },
         ]}
       />
+      {record.permissions.viewOnlyReason === "TEMPORARY_DISTRICT_ACCESS" && (
+        <TemporaryRecordNotice until={record.permissions.viewOnlyUntil} viewerName={viewer.displayName} />
+      )}
       {children}
     </>
   );
