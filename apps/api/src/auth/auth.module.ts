@@ -5,12 +5,20 @@ import { DistrictAccessService } from '../identity/district-access.service.js';
 import { IdentityController } from '../identity/identity.controller.js';
 import { SessionAuthenticationProvider } from '../identity/session-authentication.provider.js';
 import { Global, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { AUTHENTICATION_PROVIDER } from './authentication-provider.js';
 import { AuthenticationGuard } from './authentication.guard.js';
 import { DemoAuthenticationProvider } from './demo-authentication.provider.js';
 import { RolesGuard } from './roles.guard.js';
-import { DemoUserDirectory, USER_DIRECTORY } from './user-directory.js';
+import {
+  authProviderName,
+  CognitoAuthenticationProvider,
+  COGNITO_TOKEN_VERIFIER,
+  cognitoVerifierFromConfig,
+  SUBJECT_PRINCIPAL_LOADER,
+} from './cognito-authentication.provider.js';
+import { PlatformUserDirectory, USER_DIRECTORY } from './user-directory.js';
 
 @Global()
 @Module({
@@ -23,11 +31,28 @@ import { DemoUserDirectory, USER_DIRECTORY } from './user-directory.js';
     AuthenticationGuard,
     RolesGuard,
     DemoAuthenticationProvider,
+    // AUTH_PROVIDER picks local sessions (development, tests) or Amazon Cognito
+    // (production). Either way roles and scopes come from the database.
+    { provide: SUBJECT_PRINCIPAL_LOADER, useExisting: IdentityService },
+    {
+      provide: COGNITO_TOKEN_VERIFIER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        authProviderName(config) === 'cognito'
+          ? cognitoVerifierFromConfig(config)
+          : { verify: () => Promise.reject(new Error('Cognito is not selected')) },
+    },
+    CognitoAuthenticationProvider,
     {
       provide: AUTHENTICATION_PROVIDER,
-      useExisting: SessionAuthenticationProvider,
+      inject: [ConfigService, SessionAuthenticationProvider, CognitoAuthenticationProvider],
+      useFactory: (
+        config: ConfigService,
+        session: SessionAuthenticationProvider,
+        cognito: CognitoAuthenticationProvider,
+      ) => (authProviderName(config) === 'cognito' ? cognito : session),
     },
-    { provide: USER_DIRECTORY, useClass: DemoUserDirectory },
+    { provide: USER_DIRECTORY, useClass: PlatformUserDirectory },
   ],
   exports: [
     NicVaultService,

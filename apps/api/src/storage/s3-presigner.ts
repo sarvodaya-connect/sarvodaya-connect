@@ -26,6 +26,10 @@ export interface PresignS3Options {
   query?: Record<string, string>;
   /** Extra headers the client must send unchanged, for example content-type. */
   signedHeaders?: Record<string, string>;
+  /** "http" only for a local S3-compatible store such as MinIO. */
+  protocol?: 'https' | 'http';
+  /** Path-style addressing: the bucket goes in the path instead of the host. */
+  bucketInPath?: string;
 }
 
 /** RFC 3986 encoding as required by Signature Version 4. */
@@ -59,7 +63,8 @@ export function presignS3Url(options: PresignS3Options): string {
   const timestamp = amzDate(options.now);
   const date = timestamp.slice(0, 8);
   const scope = `${date}/${options.region}/s3/aws4_request`;
-  const path = `/${options.key.split('/').map(awsUriEncode).join('/')}`;
+  const segments = [...(options.bucketInPath ? [options.bucketInPath] : []), ...options.key.split('/')];
+  const path = `/${segments.map(awsUriEncode).join('/')}`;
 
   const headers: Record<string, string> = { host: options.host };
   for (const [name, value] of Object.entries(options.signedHeaders ?? {})) {
@@ -115,5 +120,5 @@ export function presignS3Url(options: PresignS3Options): string {
   );
   const signature = hmac(signingKey, stringToSign).toString('hex');
 
-  return `https://${options.host}${path}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+  return `${options.protocol ?? 'https'}://${options.host}${path}?${canonicalQuery}&X-Amz-Signature=${signature}`;
 }

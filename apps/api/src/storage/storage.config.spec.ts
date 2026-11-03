@@ -46,6 +46,13 @@ describe('createDocumentStorage', () => {
     ).toThrow('S3_BUCKET is required');
   });
 
+  it('allows a local S3-compatible endpoint outside production only', () => {
+    const s3 = { STORAGE_DRIVER: 's3', S3_BUCKET: 'sarvodaya-documents-test', S3_REGION: 'ap-south-1', S3_ENDPOINT_URL: 'http://localhost:9000' };
+    expect(createDocumentStorage(configOf(s3))).toBeInstanceOf(S3DocumentStorage);
+    expect(() => createDocumentStorage(configOf({ ...s3, NODE_ENV: 'production' }))).toThrow('S3_ENDPOINT_URL is for local');
+    expect(() => createDocumentStorage(configOf({ ...s3, S3_ENDPOINT_URL: 'ftp://localhost' }))).toThrow('http or https');
+  });
+
   it('rejects unknown drivers and unsafe link lifetimes', () => {
     expect(() =>
       createDocumentStorage(configOf({ STORAGE_DRIVER: 'ftp' })),

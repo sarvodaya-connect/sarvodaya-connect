@@ -16,6 +16,7 @@ import type {
 import { DocumentsRepository } from './../src/documents/documents.repository.js';
 import type { NewNotification } from './../src/notifications/notifications.repository.js';
 import { NotificationsRepository } from './../src/notifications/notifications.repository.js';
+import { DemoUserDirectory, USER_DIRECTORY } from './../src/auth/user-directory.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
 import { latestCompletedFinancialYear } from './../src/societies/financial-year.js';
 
@@ -273,6 +274,10 @@ describe('Documents and notifications (e2e)', () => {
       .useFactory({
         factory: () => (notifications = new InMemoryNotificationsRepository()),
       })
+      // No database here: reviewers are the fictional demo users. The
+      // database directory is tested in test/db/release-readiness.db-spec.ts.
+      .overrideProvider(USER_DIRECTORY)
+      .useClass(DemoUserDirectory)
       .compile();
 
     app = moduleFixture.createNestApplication();

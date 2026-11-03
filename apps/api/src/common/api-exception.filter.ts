@@ -1,8 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('ApiExceptionFilter');
+
   catch(exception: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
     const request = host.switchToHttp().getRequest<Request>();
@@ -26,6 +28,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const details = Array.isArray(messages) ? messages.map((m: unknown) => ({ field: typeof m === 'string' ? m.split(' ')[0] : 'request', messages: [String(m)] })) : undefined;
     const header = request.headers['x-request-id'];
     const requestId = typeof header === 'string' && header.length <= 128 ? header : randomUUID();
+    // Unexpected failures are logged with the error name, route and request id only: never the request body or headers.
+    if (status >= 500) this.logger.error(`${request.method} ${request.route?.path ?? 'unmatched route'} failed with ${status} (${exception instanceof Error ? exception.name : 'unknown error'}); requestId ${requestId}`);
     response.status(status).json({ error: { code, message, requestId, ...(details ? { details } : {}) } });
   }
 }

@@ -15,6 +15,8 @@ export interface S3StorageOptions {
   urlTtlSeconds: number;
   /** Override for S3-compatible endpoints or tests. Defaults to virtual-hosted S3. */
   host?: string;
+  /** Local S3-compatible store (MinIO) for development and smoke tests: path-style, may be http. */
+  endpointUrl?: string;
   now?: () => Date;
   fetchFn?: typeof fetch;
 }
@@ -30,9 +32,17 @@ export class S3DocumentStorage implements DocumentStorage {
   private readonly now: () => Date;
   private readonly fetchFn: typeof fetch;
 
+  private readonly protocol: 'https' | 'http' = 'https';
+  private readonly bucketInPath?: string;
+
   constructor(private readonly options: S3StorageOptions) {
+    const endpoint = options.endpointUrl ? new URL(options.endpointUrl) : undefined;
+    if (endpoint) {
+      this.protocol = endpoint.protocol === 'http:' ? 'http' : 'https';
+      this.bucketInPath = options.bucket;
+    }
     this.host =
-      options.host ?? `${options.bucket}.s3.${options.region}.amazonaws.com`;
+      endpoint?.host ?? options.host ?? `${options.bucket}.s3.${options.region}.amazonaws.com`;
     this.now = options.now ?? (() => new Date());
     this.fetchFn = options.fetchFn ?? fetch;
   }
@@ -119,6 +129,8 @@ export class S3DocumentStorage implements DocumentStorage {
       now,
       query,
       signedHeaders,
+      protocol: this.protocol,
+      bucketInPath: this.bucketInPath,
     });
   }
 

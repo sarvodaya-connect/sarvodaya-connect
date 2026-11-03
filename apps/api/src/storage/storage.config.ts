@@ -15,6 +15,16 @@ function required(config: ConfigService, name: string): string {
   return value;
 }
 
+/** S3_ENDPOINT_URL: a local S3-compatible store such as MinIO (development and smoke tests only). */
+function localEndpoint(config: ConfigService, isProduction: boolean): string | undefined {
+  const value = config.get<string>('S3_ENDPOINT_URL')?.trim();
+  if (!value) return undefined;
+  if (isProduction) throw new Error('S3_ENDPOINT_URL is for local S3-compatible storage only. Leave it empty in production.');
+  const url = new URL(value);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('S3_ENDPOINT_URL must be an http or https URL');
+  return url.origin;
+}
+
 /**
  * Chooses the document storage driver from configuration:
  * - STORAGE_DRIVER=local (default outside production): files in LOCAL_STORAGE_DIR,
@@ -49,6 +59,7 @@ export function createDocumentStorage(config: ConfigService): DocumentStorage {
       region,
       urlTtlSeconds,
       host: config.get<string>('S3_ENDPOINT_HOST')?.trim() || undefined,
+      endpointUrl: localEndpoint(config, isProduction),
       // Read on every request so rotated credentials are picked up.
       credentials: () => ({
         accessKeyId: required(config, 'AWS_ACCESS_KEY_ID'),

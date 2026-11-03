@@ -13,6 +13,7 @@ import {
   scryptSync,
   timingSafeEqual,
 } from 'node:crypto';
+import { authProviderName } from '../auth/cognito-authentication.provider.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   hasRole,
@@ -105,13 +106,22 @@ const LOCKOUT_MS = 15 * 60_000;
 
 @Injectable()
 export class IdentityService {
+  /** Chosen once at start-up, like the authentication provider itself. */
+  private readonly cognito: boolean;
+
   constructor(
     private readonly db: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    this.cognito = authProviderName(config) === 'cognito';
+  }
 
+  /** Local passwords and accounts: development and tests only, and never alongside Cognito. */
   private localOnly() {
-    if (!['development', 'test'].includes(this.config.get('NODE_ENV') ?? '')) {
+    if (
+      !['development', 'test'].includes(this.config.get('NODE_ENV') ?? '') ||
+      this.cognito
+    ) {
       throw new ForbiddenException(
         'Local credentials are disabled. Configure the production identity provider.',
       );
@@ -440,6 +450,14 @@ export class IdentityService {
         grantedByName: grantorName.get(g.grantedById),
       })),
     };
+  }
+  /** V5 PR 10: the account linked to a Cognito user (`provider_subject`), with roles and scope from the database. */
+  async principalForSubject(subject: string): Promise<Principal | null> {
+    const account = await this.db.platformAccount.findUnique({
+      where: { providerSubject: subject },
+      select: { id: true },
+    });
+    return account ? this.principalFor(account.id) : null;
   }
   async authenticate(token: string) {
     this.localOnly();
