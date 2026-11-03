@@ -57,3 +57,11 @@ Finder navTab(String label) => find.descendant(
   of: find.byType(NavigationBar),
   matching: find.byTooltip(label),
 );
+
+/// Opens a screen over the signed-in app. V5 PR 10 removed the V3 Society
+/// Officer tabs (Submit, Requests) that used to lead to some older screens.
+Future<void> openScreen(WidgetTester tester, Widget screen) async {
+  Navigator.of(tester.element(find.byType(NavigationBar)))
+      .push(MaterialPageRoute<void>(builder: (_) => screen));
+  await tester.pumpAndSettle();
+}

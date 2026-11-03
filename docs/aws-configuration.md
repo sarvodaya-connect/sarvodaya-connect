@@ -26,6 +26,16 @@ Every setting is an environment variable with a safe development default (`.env.
 | `API_PORT` | Config | `3001` | Local only; Lambda does not listen on a port |
 | `API_PUBLIC_URL` | Config | `http://localhost:3001` | Development storage links only |
 | `DISTRICT_ACCESS_MAX_DAYS` | Config | `14` | Longest temporary DDM access a DM can give (1–90 days). Checked by the API on every grant (PR 7) |
+| `AUTH_PROVIDER` | Config | `local` (`cognito` when `NODE_ENV=production`) | `local`: passwords and sessions in PostgreSQL, development and tests only. `cognito`: Amazon Cognito tokens; `local` is refused in production (PR 10) |
+| `COGNITO_USER_POOL_ID` | Config | — | User pool, e.g. `ap-southeast-1_AbCdEf123`; required when `AUTH_PROVIDER=cognito` (PR 10) |
+| `COGNITO_CLIENT_ID` | Config | — | App client ids that may call the API, comma-separated (dashboard, phone app) (PR 10) |
+| `COGNITO_TOKEN_USE` | Config | `access` | Which Cognito token the clients send: `access` or `id` (PR 10) |
+| `LOG_FORMAT` | Config | `json` on Lambda and in production, `text` locally | One JSON object a line for CloudWatch (PR 10) |
+| `S3_ENDPOINT_HOST` | Config | — | Optional S3 host override (virtual-hosted), e.g. a VPC interface endpoint name |
+| `S3_ENDPOINT_URL` | Config | — | Local S3-compatible store (MinIO) for development and the smoke test only; path-style; refused in production (PR 10) |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | Secret | — | S3 signing keys. **On Lambda the runtime sets them from the function's IAM role**; never set them by hand on AWS. Only a local MinIO needs them |
+
+PR 10 adds the Cognito, log format and local S3 endpoint settings above; nothing else changes.
 
 The temporary DDM access maximum is added with PR 7. PR 8 (disaster response) adds no environment variables. PR 9 adds no new variables; it documents the SarvoAI model and Region settings from PR #74.
 
@@ -109,3 +119,69 @@ PR 5 adds no settings and no AWS resources. Its endpoints are read-mostly and si
 - **Map:** `GET /national/map` returns every society that has a position, as five small fields each. At about 5,500 societies this is roughly 600 KB of JSON, well inside the 6 MB Lambda response limit. If the registry grows far beyond that, return the points by district or as tiles instead.
 - **Reports:** the dashboard previews a report as JSON, prints it as PDF in the browser and builds the CSV ("Excel") download itself, so nothing is written to disk or S3. Scheduled reports would need EventBridge and email; they are not built (To Confirm in the PR).
 - **Requests:** sending a request to every active society writes one row and at most one notification per society in a single transaction; for about 1,100 societies that is well within one Lambda invocation.
+
+## Release readiness (PR 10)
+
+Nothing below has been deployed, and no AWS resources were created. Each item was checked locally as described.
+
+### Identity: Amazon Cognito
+
+- `AUTH_PROVIDER=cognito` (the default in production) verifies the `Authorization: Bearer` token with [`aws-jwt-verify`](https://github.com/awslabs/aws-jwt-verify) against the user pool's public keys (signature, issuer, expiry, `token_use` and app client). Local passwords, sessions, account creation and password setting are switched off in this mode.
+- **Roles and scopes still come from the database.** The token's `sub` is looked up in `platform_accounts.provider_subject`; the account must be `ACTIVE`, and its role, district, societies and any temporary DDM grant are loaded on every request (`IdentityService.principalFor`), exactly as for local sessions. A token whose user has no linked active account is refused.
+- **To Confirm / owner step:** how accounts are provisioned in Cognito. Today HQ creates accounts in the dashboard (D16i) with local passwords. With Cognito, an administrator must create the user in the pool and set that user's `sub` on the matching account (`provider_subject`), or a Cognito admin flow must be added to D16i. The dashboard and phone sign-in screens also still use the local `POST /identity/login`; they need a Cognito sign-in (Hosted UI or SRP) before production. Neither is built in PR 10.
+- Tests: `src/auth/cognito-authentication.provider.spec.ts` (mocked verifier) and `test/db/release-readiness.db-spec.ts` (Cognito mode end to end against PostgreSQL, with a mocked verifier: DDM temporary district loaded, forged/unlinked/disabled users refused, local login refused).
+
+### API on Lambda behind API Gateway
+
+- **Entry point:** `apps/api/src/lambda.ts` (`lambda.handler`) for an API Gateway **HTTP API** (payload format 2.0), using `@codegenie/serverless-express`. Promise-style only (Node.js 24 Lambda runtimes no longer support callback handlers). The Nest app is created once per Lambda instance and reused; it holds no request or user state. The local server (`main.ts`) and the handler share `app.setup.ts` (prefix, validation, `{ error: { message } }` filter, CORS for the local storage driver).
+- **Package:** `npm run package:lambda` in `apps/api` builds `.lambda/sarvodaya-api.zip` (git-ignored): the compiled app with the generated Prisma client and production dependencies only. The Prisma CLI, Studio, TypeScript, type packages, source maps of dependencies and the non-PostgreSQL query compilers are removed. Result on 3 Nov 2026: **36 MB zipped, 183 MB unzipped** (Lambda limit 250 MB). There are no native binaries (the script fails if one appears), so the zip runs on arm64 or x86_64.
+- **Template:** `infrastructure/aws/template.yaml` (AWS SAM): `nodejs24.x`, arm64, 1024 MB, 29 s timeout (HTTP APIs wait at most 30 s), VPC subnets and security group as parameters, JSON log format, 90-day log retention, API access logs with request id, route, status and latency only. `cfn-lint` 1.59 passes with no findings. It is not deployed.
+- **Local emulator:** `npm run build && npm run lambda:local` serves the built handler on `http://localhost:3011/api/v1`, turning each HTTP request into an API Gateway payload 2.0 event and enforcing Lambda's 6 MB payload limit. `LAMBDA_HANDLER_PATH=.lambda/package/lambda.js` runs the deployment package itself. `sam local start-api -t infrastructure/aws/template.yaml` is the alternative where AWS SAM CLI is installed (it was not available on the machine used for PR 10).
+
+### Local smoke test (sign-in, home, private document upload)
+
+Run against the emulator with a fresh PostgreSQL (all 13 migrations applied to an empty database, then `npm run prisma:seed` and `npm run identity:bootstrap`) and MinIO (`cgr.dev/chainguard/minio`, private bucket):
+
+```
+STORAGE_DRIVER=s3 S3_BUCKET=sarvodaya-documents-smoke S3_REGION=us-east-1 S3_ENDPOINT_URL=http://localhost:9000 \
+AWS_ACCESS_KEY_ID=<minio user> AWS_SECRET_ACCESS_KEY=<minio password> \
+LAMBDA_HANDLER_PATH=.lambda/package/lambda.js npm run lambda:local
+SMOKE_HQ_USERNAME=<local hq> SMOKE_HQ_PASSWORD=<password> npm run smoke:local
+```
+
+`scripts/smoke-local.ts` checks, in order: HQ signs in; HQ creates a fictional SPC for a seeded society; the SPC signs in; `GET /home` returns the SPC home; `GET /home` without a token is 401; the API returns a 15-minute pre-signed upload URL whose key holds only ids; the file uploads straight to storage; the same URL with a different content type is refused (403); `POST /documents/:id/complete` confirms the size; the pre-signed download returns the same bytes; an unsigned GET is refused. **All 11 checks passed** against the packaged handler, and the 128 JSON log lines contained no password, token, document content or signature.
+
+### Database: RDS through RDS Proxy
+
+- Point `DATABASE_URL` at the **RDS Proxy** endpoint (TLS, `sslmode=require`), not the instance. Each Lambda instance opens at most `DATABASE_CONNECTION_LIMIT` connections (default 2, allowed 1–20; idle connections close after 10 s). Size the proxy's `MaxConnectionsPercent` for (expected concurrent Lambda instances × 2) plus the migration task, and set the function's reserved concurrency so that product stays inside it.
+- Migrations: `npm run prisma:deploy` from a one-off task in the VPC (CodeBuild or an ECS task), never from a developer machine. All 13 migrations applied cleanly to an empty PostgreSQL 17 database on 3 Nov 2026, and `prisma migrate diff --exit-code` reported no drift. PR 10 adds no migration.
+- Queries stay bounded: lists are paginated (at most 100 a page), national figures are grouped SQL, and no endpoint loops over societies (PR 4, 5, 8).
+
+### Logs
+
+- JSON lines (`LOG_FORMAT=json`, automatic on Lambda) with level, timestamp, context and message; Lambda's own JSON log format is set in the template. Unexpected 5xx errors log the method, route, error name and request id only. Log lines never contain NICs, passwords, tokens, signed URLs or document contents (checked in the smoke run).
+- Retention: 90 days for the function and access logs (template).
+
+### IAM for the API function
+
+The template grants only: `s3:PutObject` and `s3:GetObject` on `societies/*` and `incidents/*` in the documents bucket, and, when `SarvoAiEnabled=true`, `bedrock:InvokeModel` on the one Haiku 5.5 global inference profile (the same three statements as `sarvoai-bedrock-policy.json`). Lambda's VPC access is added by SAM (`AWSLambdaVPCAccessExecutionRole`). No Secrets Manager permission is needed at run time: `DATABASE_URL` and `NIC_ENCRYPTION_KEY` are resolved from Secrets Manager when the stack is deployed. If Sarvodaya prefers reading secrets at run time (so a rotation does not need a redeploy), add the AWS Parameters and Secrets Lambda Extension and `secretsmanager:GetSecretValue` on those two secrets (To Confirm).
+
+### Dashboard on Amplify
+
+`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL` and `PLATFORM_DEMO_MODE` into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server otherwise. The dashboard reads exactly three variables (`API_BASE_URL`, `PLATFORM_DEMO_MODE`, `NODE_ENV`); nothing is exposed to the browser. `npm run build` succeeds with only those set.
+
+### SarvoAI on Bedrock
+
+- Checked against AWS's Claude Haiku 5.5 model card on 3 Nov 2026: from **ap-southeast-1 (Singapore)** the model is available **only** through the **global** cross-Region inference profile `global.anthropic.claude-haiku-5-5` on `bedrock-runtime` (no in-Region and no geo/APAC option). That matches the defaults above; requests may be processed in any AWS commercial Region.
+- Not checked (needs the account owner): that the account has completed Anthropic's first-time use form and the AWS Marketplace subscription, and that no Service Control Policy blocks global routing. See `sarvoai-aws-setup.md`. Until Sarvodaya approves global processing, keep `SARVOAI_ENABLED=false` (the default here and in the template).
+- Limits: questions 3–500 characters, at most 10 earlier turns of 2,000 characters, 6 tool rounds, 8,000 output tokens; the summary shown is cut at 1,200 characters and each suggestion at 200. Errors return a fixed message; the provider's error and the prompt are never returned.
+
+### Deployment steps (for the account owner; not done in PR 10)
+
+1. Create (outside this repository): the VPC with private subnets and a NAT gateway or VPC endpoints (S3, Bedrock runtime, Cognito JWKS over HTTPS), RDS PostgreSQL 17 with RDS Proxy, the private documents bucket (block public access, default encryption, the CORS rule above), the Cognito user pool and app clients, and two Secrets Manager secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`).
+2. Run migrations from a one-off task in the VPC: `npm ci && npm run prisma:deploy` in `apps/api`.
+3. `npm run package:lambda`, then `sam deploy -t infrastructure/aws/template.yaml --guided` with the parameters (stage, bucket, pool, client ids, secret ARNs, subnets, security group).
+4. In Amplify, connect the repository (it uses `amplify.yml`) and set `API_BASE_URL` to the template's `ApiBaseUrl` output.
+5. Create the first HQ user in Cognito and link it (`provider_subject`); see the To Confirm item above.
+6. Run the smoke checks against the deployed API with a fictional test account, then remove that account.
+

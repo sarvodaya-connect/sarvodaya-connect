@@ -383,10 +383,25 @@ describe('Document and notification persistence (PostgreSQL)', () => {
     const reviewerNotifications = await prisma.notification.findMany({
       where: { documentId: stored.id },
     });
-    expect(
-      reviewerNotifications
-        .map((notification) => notification.recipientUserId)
-        .sort(),
-    ).toEqual(['demo-dm-north', 'demo-hq-admin']);
+    const recipients = reviewerNotifications.map(
+      (notification) => notification.recipientUserId,
+    );
+    expect(recipients).toEqual(
+      expect.arrayContaining(['demo-dm-north', 'demo-hq-admin']),
+    );
+    // V5 PR 10: real reviewer accounts in the database are told too, and
+    // nobody else: only active HQ, or active DMs of the society's district.
+    const others = recipients.filter((id) => !id.startsWith('demo-'));
+    const reviewers = await prisma.platformAccount.count({
+      where: {
+        id: { in: others },
+        status: 'ACTIVE',
+        OR: [
+          { role: 'HQ_ADMIN' },
+          { role: 'DISTRICT_MANAGER', districtId: NORTH.id },
+        ],
+      },
+    });
+    expect(reviewers).toBe(others.length);
   });
 });

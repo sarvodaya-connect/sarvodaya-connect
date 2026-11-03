@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sarvodaya_connect_mobile/src/screens/council_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/screens/replace_member_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
@@ -17,16 +16,26 @@ Future<DemoStore> _pumpForm(WidgetTester tester) async {
       store: store,
       child: MaterialApp(
         theme: AppTheme.light(),
-        home: const CouncilScreen(),
-        routes: {
-          '/replace': (_) =>
-              const ReplaceMemberScreen(memberId: 'cm-treasurer'),
-        },
+        // The V3 Exco list that opened this form was removed in V5 PR 10;
+        // a plain page stands in for it.
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const ReplaceMemberScreen(memberId: 'cm-treasurer'),
+                ),
+              ),
+              child: const Text('Replace K. Perera'),
+            ),
+          ),
+        ),
       ),
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.bySemanticsLabel('Replace K. Perera'));
+  await tester.tap(find.text('Replace K. Perera'));
   await tester.pumpAndSettle();
   return store;
 }
@@ -95,9 +104,8 @@ void main() {
 
       expect(store.draft?.fullName, 'S. Tharmalingam');
       expect(store.memberById('cm-treasurer')?.fullName, 'K. Perera');
-      expect(find.text('Draft change, not sent yet'), findsOneWidget);
-      expect(find.textContaining('Draft: S. Tharmalingam'), findsOneWidget);
-      expect(find.text('Next: add supporting document'), findsOneWidget);
+      // Saving closes the form and returns to the page that opened it.
+      expect(find.byType(ReplaceMemberScreen), findsNothing);
     },
   );
 }

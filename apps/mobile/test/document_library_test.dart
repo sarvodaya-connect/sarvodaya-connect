@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/document.dart';
+import 'package:sarvodaya_connect_mobile/src/screens/documents_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/services/demo_document_upload_service.dart';
 import 'package:sarvodaya_connect_mobile/src/services/document_upload_service.dart';
 
@@ -10,8 +11,7 @@ const _agmFile = 'AGM minutes 2026-09-28.pdf';
 
 Future<void> _openDocuments(WidgetTester tester) async {
   await signInWithDemoAccount(tester);
-  await tester.tap(find.text('Submit'));
-  await tester.pumpAndSettle();
+  await openScreen(tester, const DocumentsScreen());
 }
 
 Future<void> _chooseAndUpload(WidgetTester tester) async {

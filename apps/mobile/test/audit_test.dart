@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/audit.dart';
 import 'package:sarvodaya_connect_mobile/src/models/document.dart';
+import 'package:sarvodaya_connect_mobile/src/screens/audit_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/screens/documents_screen.dart';
 
 import 'test_helpers.dart';
 
 Future<void> _openAudit(WidgetTester tester) async {
   await signInWithDemoAccount(tester);
-  await tapVisible(tester, find.text('Audit FY 2025/26'));
+  await openScreen(tester, const AuditScreen());
   // The checklist is folded under "Required steps", as in the catalogue.
   await tapVisible(tester, find.text('Required steps'));
 }

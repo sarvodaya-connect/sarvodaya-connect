@@ -1,0 +1,171 @@
+# V5 PR 10: the API on AWS Lambda behind an API Gateway HTTP API (AWS SAM).
+#
+# This template describes the agreed shape; nothing in the repository deploys
+# it, and it creates no resources until an authorised person runs
+# `sam deploy` against Sarvodaya's account. Build the code first:
+#
+#   cd apps/api && npm run package:lambda      # -> apps/api/.lambda/package
+#   sam validate --lint -t infrastructure/aws/template.yaml
+#   sam local start-api -t infrastructure/aws/template.yaml   # optional local check
+#
+# The VPC, subnets, RDS Proxy, Cognito user pool, documents bucket and the
+# Secrets Manager secrets are created separately and passed in as parameters.
+# See docs/aws-configuration.md for every setting and the deployment steps.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sarvodaya Connect API (NestJS on Lambda behind API Gateway)
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [staging, production]
+  DocumentsBucketName:
+    Type: String
+    Description: Private S3 bucket for society documents and incident photos (blocks public access)
+  CognitoUserPoolId:
+    Type: String
+  CognitoClientIds:
+    Type: String
+    Description: Comma-separated app client ids (dashboard, phone app)
+  DatabaseSecretArn:
+    Type: String
+    Description: Secrets Manager secret whose SecretString is the RDS Proxy DATABASE_URL
+  NicKeySecretArn:
+    Type: String
+    Description: Secrets Manager secret whose SecretString is NIC_ENCRYPTION_KEY (64 hex characters)
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  LambdaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Allowed to reach the RDS Proxy on 5432; outbound HTTPS through a NAT gateway or VPC endpoints (S3, Bedrock, Cognito JWKS)
+  SarvoAiEnabled:
+    Type: String
+    AllowedValues: ['false', 'true']
+    Default: 'false'
+  SarvoAiModelId:
+    Type: String
+    Default: global.anthropic.claude-haiku-5-5
+  SarvoAiRegion:
+    Type: String
+    Default: ap-southeast-1
+
+Conditions:
+  SarvoAiOn: !Equals [!Ref SarvoAiEnabled, 'true']
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Architectures: [arm64]
+    MemorySize: 1024
+    # API Gateway HTTP APIs wait at most 30 seconds.
+    Timeout: 29
+    Tracing: Active
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sarvodaya-api-${Stage}
+      CodeUri: ../../apps/api/.lambda/package
+      Handler: lambda.handler
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
+      VpcConfig:
+        SubnetIds: !Ref PrivateSubnetIds
+        SecurityGroupIds: [!Ref LambdaSecurityGroupId]
+      Environment:
+        Variables:
+          NODE_ENV: production
+          AUTH_PROVIDER: cognito
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoClientIds
+          COGNITO_TOKEN_USE: access
+          # Secrets are resolved from Secrets Manager when the stack is deployed;
+          # they never appear in the template or the repository.
+          DATABASE_URL: !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString}}'
+          NIC_ENCRYPTION_KEY: !Sub '{{resolve:secretsmanager:${NicKeySecretArn}:SecretString}}'
+          # Two connections per Lambda instance; RDS Proxy pools them across instances.
+          DATABASE_CONNECTION_LIMIT: '2'
+          STORAGE_DRIVER: s3
+          S3_BUCKET: !Ref DocumentsBucketName
+          S3_REGION: !Ref AWS::Region
+          STORAGE_URL_TTL_SECONDS: '900'
+          DOCUMENT_MAX_UPLOAD_BYTES: '10000000'
+          DISTRICT_ACCESS_MAX_DAYS: '14'
+          SARVOAI_ENABLED: !Ref SarvoAiEnabled
+          SARVOAI_MODEL_ID: !Ref SarvoAiModelId
+          SARVOAI_AWS_REGION: !Ref SarvoAiRegion
+          LOG_FORMAT: json
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            # Pre-signed upload, download and the HEAD check after an upload. Nothing else in the bucket.
+            - Sid: DocumentsReadWrite
+              Effect: Allow
+              Action: [s3:PutObject, s3:GetObject]
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/societies/*
+                - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/incidents/*
+        - !If
+          - SarvoAiOn
+          # The three statements AWS requires for a global inference profile; see sarvoai-bedrock-policy.json.
+          - Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}::foundation-model/anthropic.claude-haiku-5-5
+                Condition:
+                  StringEquals:
+                    bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Sub arn:${AWS::Partition}:bedrock:::foundation-model/anthropic.claude-haiku-5-5
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: unspecified
+                    bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
+          - !Ref AWS::NoValue
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      # The dashboard calls the API from its server (server components and
+      # actions) and the phone app is native, so browsers never call the API
+      # directly: no CORS rule is needed here. Uploads use the bucket's CORS.
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogs.Arn
+        # Request id, route and status only: no headers, tokens or bodies.
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","latencyMs":"$context.responseLatency","integrationError":"$context.integrationErrorMessage"}'
+
+  ApiAccessLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/sarvodaya-api-${Stage}
+      RetentionInDays: 90
+
+  ApiFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/sarvodaya-api-${Stage}
+      RetentionInDays: 90
+
+Outputs:
+  ApiBaseUrl:
+    Description: Set as API_BASE_URL on Amplify and API_BASE_URL in the phone build (append /api/v1)
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/api/v1

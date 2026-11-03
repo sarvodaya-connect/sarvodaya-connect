@@ -48,6 +48,21 @@ describe('S3DocumentStorage', () => {
     });
   });
 
+  it('uses path-style http URLs for a local S3-compatible store (MinIO)', async () => {
+    const storage = new S3DocumentStorage({
+      bucket: 'sarvodaya-documents-test',
+      region: 'ap-south-1',
+      urlTtlSeconds: 900,
+      credentials: () => ({ accessKeyId: 'minio-test-only', secretAccessKey: 'minio-test-only-secret' }),
+      endpointUrl: 'http://localhost:9000',
+      now: () => new Date('2026-10-18T10:00:00.000Z'),
+    });
+    const url = new URL((await storage.createUploadRequest({ key: KEY, contentType: 'application/pdf', sizeBytes: 10 })).url);
+    expect(url.protocol).toBe('http:');
+    expect(url.host).toBe('localhost:9000');
+    expect(url.pathname).toBe(`/sarvodaya-documents-test/${KEY}`);
+  });
+
   it('creates a pre-signed GET that downloads with a safe filename', async () => {
     const { storage } = createStorage();
 

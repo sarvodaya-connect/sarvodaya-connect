@@ -17,7 +17,7 @@ The prototype is the source of truth for screens and wording. Where V5 and a con
 | 7 | Temporary DDM district access and no-access screens | DM04, DM05, DD02, DD04, DD06, DD07, M05t, M30–M33, ST04 |
 | 8 | Disaster response | D30–D33, IR01–IR05 (SPC, DDM, DM), M40–M49, M48n |
 | 9 | SarvoAI dashboard and phone screens on the merged PR #74 API | D40–D49f, M80–M89f |
-| 10 | Cross-app integration and readiness review | All |
+| 10 | Cross-app integration and readiness review: coverage (`docs/v5-coverage.md`), security audit, AWS, Bedrock and store readiness | All |
 
 ## What PR 1 changes
 
@@ -165,11 +165,11 @@ Every PR keeps the agreed AWS shape. Nothing here creates AWS resources, adds cr
 | Service | Requirement for each PR | Current state on `main` |
 |---|---|---|
 | Amplify (Next.js 15 dashboard) | The dashboard stays a standard Next.js 15 app: server components and server actions only, no custom server, no file system writes. It reaches data only through the API (`API_BASE_URL`, server side). | Met. PR 1 adds no server code, no data access and no new environment variables. |
-| API Gateway + Lambda (NestJS) | Controllers stay stateless; no in-memory state shared between requests; uploads go to S3 by signed URL, not through Lambda. | No Lambda handler or packaging yet. Proposed for PR 10 (handler, build output, cold-start notes). |
+| API Gateway + Lambda (NestJS) | Controllers stay stateless; no in-memory state shared between requests; uploads go to S3 by signed URL, not through Lambda. | PR 10: `src/lambda.ts` (HTTP API, payload 2.0), `npm run package:lambda` (183 MB unzipped), `infrastructure/aws/template.yaml` (SAM, not deployed), local emulator and smoke test (11 checks passed against MinIO). |
 | RDS PostgreSQL via Prisma | Schema changes ship as Prisma migrations; the pool size stays within the RDS connection budget (two per instance today). | Migrations in `apps/api/prisma/migrations`. PR 1 has no schema change. |
-| Cognito | Identity stays behind `AuthenticationProvider` / `SessionAuthenticationProvider`; roles and scopes are loaded server-side, never trusted from the client. | Replacement points exist; local sessions fail closed outside development and test. PR 2 keeps account creation and passwords behind this boundary so Cognito can replace it. |
+| Cognito | Identity stays behind `AuthenticationProvider` / `SessionAuthenticationProvider`; roles and scopes are loaded server-side, never trusted from the client. | PR 10: `AUTH_PROVIDER=cognito` (default in production) verifies Cognito tokens and loads roles and scopes from the database by `provider_subject`. Still needed: Cognito sign-in in the dashboard and phone, and account provisioning (To Confirm). |
 | Private S3 | Documents only through the API's storage adapter and short-lived signed URLs after a permission check. | `S3DocumentStorage` and the presigner exist. PR 4 reuses them. |
-| Secrets Manager / environment variables | Secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`, session and Cognito settings) come from environment variables populated from Secrets Manager or Parameter Store; nothing in Git or in browser variables. | Read from environment variables. A Secrets Manager loader, if needed beyond Lambda environment injection, is proposed for PR 10. |
+| Secrets Manager / environment variables | Secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`, session and Cognito settings) come from environment variables populated from Secrets Manager or Parameter Store; nothing in Git or in browser variables. | PR 10: the SAM template resolves the two secrets from Secrets Manager at deployment; a run-time loader is To Confirm (only needed for rotation without redeploying). |
 | Bedrock (SarvoAI) | Keep `SARVOAI_ENABLED=false` until Sarvodaya approves global inference processing and an authorised person completes `docs/sarvoai-aws-setup.md`. | PR #74 merged and switched off by default. PR 9 adds only the screens. |
 
 ## Deviations from V5

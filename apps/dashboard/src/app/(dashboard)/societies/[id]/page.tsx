@@ -6,13 +6,15 @@ import { Icon } from "@/components/dashboard/icon";
 import { SocietyProfileTabs } from "@/components/dashboard/society-profile-tabs";
 import { Pill } from "@/components/dashboard/ui/pill";
 import { getMissingProfileInformation, societyDetails } from "@/lib/demo-registry";
+import { isDemoMode } from "@/lib/platform-api";
 import { demoSocietyAccess, societiesVisibleTo } from "@/lib/society-access";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
 import { RecordOverviewPage } from "./record-overview-page";
 
+// Fictional demonstration profiles exist only in demonstration mode (V5 PR 10).
 export function generateStaticParams() {
-  return societyDetails.map((society) => ({ id: society.id }));
+  return isDemoMode() ? societyDetails.map((society) => ({ id: society.id })) : [];
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -31,6 +33,8 @@ export default async function SocietyPage({ params, searchParams }: PageProps<"/
     const { panel, saved } = await searchParams;
     return <RecordOverviewPage id={id} panel={typeof panel === "string" ? panel : undefined} saved={saved === "1"} />;
   }
+  // V5 PR 10: the older fictional profiles are sample data, never shown outside demonstration mode.
+  if (!isDemoMode()) notFound();
   const society = societiesVisibleTo(societyDetails, demoSocietyAccess).find((item) => item.id === id);
   if (!society) notFound();
   const missingInformation = getMissingProfileInformation(society);

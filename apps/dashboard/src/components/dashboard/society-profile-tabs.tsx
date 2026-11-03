@@ -210,11 +210,9 @@ export function SocietyProfileTabs({
                 { label: "Life members", pct: 8, value: Math.round(members * 0.08) },
                 { label: "Invited members", pct: 2, value: Math.round(members * 0.02) },
               ].map((row) => (
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_72px] items-center gap-3 text-[12px]" key={row.label}>
+                <div className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-3 text-[12px]" key={row.label}>
                   <span className="text-ink-soft">{row.label}</span>
-                  <span className="h-2 overflow-hidden rounded-full bg-[#edf0e8]">
-                    <span className="block h-full rounded-full bg-brand-leaf" style={{ width: `${row.pct}%` }} />
-                  </span>
+                  <span className="text-right text-muted">{row.pct}%</span>
                   <strong className="text-right text-ink">{row.value.toLocaleString("en-GB")}</strong>
                 </div>
               ))}
@@ -373,13 +371,10 @@ function ActivityStatus() {
       </p>
       <ul className="mt-2 space-y-2">
         {activitySectors.map((sector) => (
-          <li className="grid grid-cols-[minmax(0,1fr)_96px_32px] items-center gap-3 text-[11px]" key={sector.label}>
+          <li className="grid grid-cols-[minmax(0,1fr)_48px] items-center gap-3 text-[11px]" key={sector.label}>
             <span className="flex min-w-0 items-center gap-2 text-ink-soft">
               <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: sector.color }} />
               <span className="truncate">{sector.label}</span>
-            </span>
-            <span aria-label={`${sector.done} of ${sector.plan} done`} className="h-1.5 overflow-hidden rounded-full bg-[#edf0e8]" role="img">
-              <span className="block h-full rounded-full" style={{ width: `${(sector.done / sector.plan) * 100}%`, backgroundColor: sector.color }} />
             </span>
             <span className="text-right text-muted">{sector.done} / {sector.plan}</span>
           </li>

@@ -11,8 +11,28 @@ class IdentityApi {
   IdentityApi({http.Client? client, String? baseUrl})
     : _client = client ?? http.Client(),
       baseUrl = baseUrl ?? defaultBaseUrl;
+  static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  /// V5 PR 10: why a release build cannot reach the API, or null when it can.
+  /// Release builds need `--dart-define=API_BASE_URL=https://…/api/v1`; they
+  /// never fall back to a developer machine, and never use plain HTTP.
+  static String? configurationProblem({
+    bool release = kReleaseMode,
+    String configured = _configuredBaseUrl,
+  }) {
+    if (!release) return null;
+    if (configured.isEmpty) {
+      return 'This build has no server address. Rebuild it with --dart-define=API_BASE_URL=https://<api>/api/v1.';
+    }
+    final uri = Uri.tryParse(configured);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      return 'The server address must start with https://.';
+    }
+    return null;
+  }
+
   static String get defaultBaseUrl {
-    const configured = String.fromEnvironment('API_BASE_URL');
+    const configured = _configuredBaseUrl;
     if (configured.isNotEmpty) return configured;
     if (kIsWeb) return 'http://localhost:3001/api/v1';
     return defaultTargetPlatform == TargetPlatform.android

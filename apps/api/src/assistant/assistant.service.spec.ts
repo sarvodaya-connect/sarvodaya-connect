@@ -103,6 +103,39 @@ describe('AssistantService', () => {
   });
 });
 
+describe('SarvoAI data limits (V5 PR 10)', () => {
+  it('reads only society profiles, Exco, yearly totals and submission status', async () => {
+    const { ASSISTANT_TOOLS } = await import('./assistant-tools.js');
+    expect(ASSISTANT_TOOLS.map((tool) => tool.name).sort()).toEqual([
+      'find_societies',
+      'get_exco_member',
+      'list_districts',
+      'societies_above_profit',
+      'societies_missing_yearly_figures',
+      'summarize_yearly_figure',
+    ]);
+    const schemas = JSON.stringify(ASSISTANT_TOOLS);
+    for (const word of ['savings', 'loan', 'nic', 'password', 'bank', 'share capital']) expect(schemas.toLowerCase()).not.toContain(word);
+    // The only yearly money figures are total profit and total expenses.
+    expect(schemas).toContain('"enum":["profit","expenses"]');
+  });
+
+  it('cuts an over-long model answer instead of showing it whole', async () => {
+    const { service } = setup([final({ kind: 'ANSWER', summary: 'x'.repeat(5000), options: ['y'.repeat(500)] })]);
+    const answer = await service.ask(hq, 'Average profit?', [], now);
+    expect(answer.summary).toHaveLength(1200);
+    expect(answer.options[0]).toHaveLength(200);
+  });
+
+  it('never returns the provider error or the prompt to the caller', async () => {
+    const { service, createMessage } = setup([]);
+    createMessage.mockRejectedValueOnce(new Error('AccessDeniedException: arn:aws:bedrock:ap-southeast-1:123456789012 system prompt …'));
+    const error = await service.ask(hq, 'Average profit?', [], now).catch((caught: unknown) => caught as Error);
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    expect(error.message).toBe('SarvoAI is not available right now. Your question was kept; try again in a minute.');
+  });
+});
+
 describe('assistantModelFromConfig', () => {
   const config = (values: Record<string, string>) => ({ get: (key: string) => values[key] }) as unknown as ConfigService;
 

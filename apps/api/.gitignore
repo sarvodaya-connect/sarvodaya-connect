@@ -3,3 +3,5 @@ node_modules
 /src/generated/
 # Files uploaded with the local document storage driver
 .local-storage/
+# Lambda deployment package (npm run package:lambda)
+.lambda/

@@ -13,6 +13,7 @@ import '../models/activity_draft.dart';
 import '../models/activity_report_data.dart';
 import '../validation/activity_validators.dart';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/widgets.dart';
 
 import '../auth/auth_service.dart';
@@ -139,9 +140,12 @@ class DemoStore extends ChangeNotifier {
         );
   }
 
+  /// Fictional demonstration data. On by default in debug builds and tests;
+  /// off by default in release builds (V5 PR 10), so a store build never
+  /// shows sample data unless it is built with --dart-define=SC_DEMO_MODE=true.
   static const demoMode = bool.fromEnvironment(
     'SC_DEMO_MODE',
-    defaultValue: true,
+    defaultValue: !kReleaseMode,
   );
   final IdentityApi identityApi = IdentityApi();
   final Duration loadDelay;

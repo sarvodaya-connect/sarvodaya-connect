@@ -10,6 +10,9 @@ import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind,
 
 /** Tool rounds per question; a normal answer needs one or two. */
 const MAX_ROUNDS = 6;
+/** Longest summary and suggestion the screens show (V5 PR 10 output limits). */
+const MAX_SUMMARY = 1200;
+const MAX_OPTION = 200;
 
 const systemPrompt = (now: Date) => {
   const latest = financialYear(latestCompletedFinancialYear(now));
@@ -122,7 +125,8 @@ export class AssistantService {
       const value = JSON.parse(raw) as { kind?: unknown; summary?: unknown; options?: unknown };
       if (!ASSISTANT_ANSWER_KINDS.includes(value.kind as AssistantAnswerKind) || typeof value.summary !== 'string') return undefined;
       const options = Array.isArray(value.options) ? value.options.filter((option): option is string => typeof option === 'string').slice(0, 5) : [];
-      return { kind: value.kind as AssistantAnswerKind, summary: value.summary.trim(), options };
+      // Output limit: one or two sentences are asked for; anything far longer is cut, never shown whole.
+      return { kind: value.kind as AssistantAnswerKind, summary: value.summary.trim().slice(0, MAX_SUMMARY), options: options.map((option) => option.slice(0, MAX_OPTION)) };
     } catch {
       return undefined;
     }
