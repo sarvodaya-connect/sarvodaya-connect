@@ -2,8 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +17,11 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { authProviderName } from '../auth/cognito-authentication.provider.js';
+import {
+  COGNITO_ACCOUNT_ADMIN,
+  CognitoAdminError,
+  type CognitoAccountAdmin,
+} from '../auth/cognito-account-admin.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   hasRole,
@@ -82,6 +90,7 @@ const AUDIT_ACTIONS: Record<AuditType, readonly string[]> = {
     'ACCOUNT_PASSWORD_CHANGED',
     'ACCOUNT_DISABLED',
     'LOCAL_HQ_BOOTSTRAPPED',
+    'COGNITO_HQ_LINKED',
   ],
   ACCESS: [
     'DISTRICT_ACCESS_GRANTED',
@@ -104,16 +113,59 @@ const AUDIT_TYPE_OF: Record<string, AuditType> = Object.fromEntries(
 );
 const LOCKOUT_MS = 15 * 60_000;
 
+/** HQ-facing messages for Cognito refusals; never the password or AWS detail. */
+function cognitoFailure(error: unknown): Error {
+  if (!(error instanceof CognitoAdminError)) return error as Error;
+  switch (error.reason) {
+    case 'INVALID_PASSWORD':
+      return new BadRequestException(
+        'The sign-in service did not accept this password. Use at least 10 characters with a number, and try again.',
+      );
+    case 'NOT_FOUND':
+      return new ConflictException(
+        'The sign-in for this account was removed while it was being set up. Set a new password to finish it.',
+      );
+    default:
+      return new ServiceUnavailableException(
+        'The sign-in service could not be reached. Nothing was changed for sign-in; try again in a few minutes.',
+      );
+  }
+}
+
 @Injectable()
 export class IdentityService {
+  private readonly logger = new Logger(IdentityService.name);
   /** Chosen once at start-up, like the authentication provider itself. */
   private readonly cognito: boolean;
 
   constructor(
     private readonly db: PrismaService,
     private readonly config: ConfigService,
+    @Inject(COGNITO_ACCOUNT_ADMIN)
+    private readonly cognitoAdmin: CognitoAccountAdmin,
   ) {
     this.cognito = authProviderName(config) === 'cognito';
+  }
+
+  /**
+   * After the database already refuses the account's tokens, also revoke its
+   * Cognito refresh tokens (and disable it, if asked). A failure here is logged
+   * by account id only: the API keeps refusing the old sign-in either way.
+   */
+  private async cognitoFollowUp(
+    accountId: string,
+    username: string,
+    disable = false,
+  ) {
+    if (!this.cognito) return;
+    try {
+      if (disable) await this.cognitoAdmin.disable(username);
+      await this.cognitoAdmin.signOut(username);
+    } catch (error) {
+      this.logger.warn(
+        `Cognito ${disable ? 'disable and ' : ''}sign-out did not finish for account ${accountId}: ${error instanceof CognitoAdminError ? error.reason : 'unknown error'}`,
+      );
+    }
   }
 
   /** Local passwords and accounts: development and tests only, and never alongside Cognito. */
@@ -215,6 +267,7 @@ export class IdentityService {
     };
   }
   async createAccount(input: CreateAccountDto, principal: Principal) {
+    if (this.cognito) return this.createCognitoAccount(input, principal);
     this.localOnly();
     this.hq(principal);
     await this.validateScope(input);
@@ -258,6 +311,127 @@ export class IdentityService {
     });
     return { account, delivery: 'MANUAL_HANDOVER' };
   }
+  /**
+   * V5 D16 with Amazon Cognito. The account row is saved first as PENDING (it
+   * cannot sign in), then the Cognito user is found or created, given HQ's
+   * permanent password and linked by its `sub`. Each step can be repeated, so
+   * if any step fails HQ submits the same form again and it resumes: no
+   * duplicate Cognito users and no account linked to someone else's sign-in.
+   */
+  private async createCognitoAccount(
+    input: CreateAccountDto,
+    principal: Principal,
+  ) {
+    this.hq(principal);
+    await this.validateScope(input);
+    this.validatePassword(input.password, input.username);
+    const details = {
+      displayName: input.displayName,
+      phone: input.phone,
+      email: input.email,
+      role: input.role,
+      districtId: input.districtId ?? null,
+      societyIds: input.societyIds,
+    };
+    const existing = await this.db.platformAccount.findUnique({
+      where: { username: input.username },
+    });
+    if (existing && (existing.status !== 'PENDING' || existing.providerSubject))
+      throw new ConflictException('Username is already in use');
+    // A PENDING row is an earlier attempt that did not finish: resume it.
+    const pending = existing
+      ? await this.db.platformAccount.update({
+          where: { id: existing.id },
+          data: details,
+        })
+      : await this.db.platformAccount.create({
+          data: {
+            ...details,
+            username: input.username,
+            status: 'PENDING',
+          },
+        });
+    const subject = await this.cognitoSignIn(pending, input.password);
+    const account = await this.db.$transaction(async (tx) => {
+      const created = await tx.platformAccount.update({
+        where: { id: pending.id },
+        data: {
+          providerSubject: subject,
+          passwordHash: null,
+          passwordSetAt: new Date(),
+          passwordSetCount: 1,
+          status: 'ACTIVE',
+        },
+      });
+      await tx.platformAuditEvent.create({
+        data: {
+          actorId: principal.id,
+          action: 'ACCOUNT_CREATED',
+          targetId: created.id,
+          districtId: created.districtId,
+          detail: `Role ${created.role}; initial password set by HQ`,
+        },
+      });
+      return {
+        id: created.id,
+        username: created.username,
+        status: created.status,
+      };
+    });
+    return { account, delivery: 'MANUAL_HANDOVER' };
+  }
+  /**
+   * Finds or creates the Cognito user for this account, checks it is not
+   * someone else's, then sets HQ's permanent password and enables it. Safe to
+   * repeat. Returns the Cognito `sub` to store in `provider_subject`.
+   */
+  private async cognitoSignIn(
+    account: { id: string; username: string; providerSubject: string | null },
+    password: string,
+  ): Promise<string> {
+    let subject: string;
+    try {
+      subject =
+        (await this.cognitoAdmin.findSubject(account.username)) ??
+        (await this.cognitoAdmin
+          .createUser(account.username)
+          .catch(async (error) => {
+            // Created by a parallel request a moment ago: use that user.
+            const raced =
+              error instanceof CognitoAdminError &&
+              error.reason === 'USERNAME_EXISTS'
+                ? await this.cognitoAdmin.findSubject(account.username)
+                : null;
+            if (!raced) throw error;
+            return raced;
+          }));
+    } catch (error) {
+      throw cognitoFailure(error);
+    }
+    const linked = await this.db.platformAccount.findUnique({
+      where: { providerSubject: subject },
+      select: { id: true },
+    });
+    if (
+      (linked && linked.id !== account.id) ||
+      (account.providerSubject && account.providerSubject !== subject)
+    ) {
+      // Never point two accounts at one sign-in; the password is left unchanged.
+      this.logger.warn(
+        `Cognito user for account ${account.id} does not match its link (linked account ${linked?.id ?? 'none'})`,
+      );
+      throw new ConflictException(
+        'This username belongs to a different person in the sign-in service. Choose a different username, or ask the AWS administrator to check the user pool.',
+      );
+    }
+    try {
+      await this.cognitoAdmin.setPassword(account.username, password);
+      await this.cognitoAdmin.enable(account.username);
+    } catch (error) {
+      throw cognitoFailure(error);
+    }
+    return subject;
+  }
   private validatePassword(password: string, username: string) {
     if (
       password.length < 10 ||
@@ -281,7 +455,7 @@ export class IdentityService {
     if (!current) throw new NotFoundException('Account not found');
     if (id === principal.id && input.role !== 'HQ_ADMIN')
       throw new BadRequestException('You cannot remove your own HQ access');
-    return this.db.$transaction(async (tx) => {
+    const result = await this.db.$transaction(async (tx) => {
       const account = await tx.platformAccount.update({
         where: { id },
         data: {
@@ -291,6 +465,7 @@ export class IdentityService {
           role: input.role,
           districtId: input.districtId ?? null,
           societyIds: input.societyIds,
+          sessionsRevokedAt: new Date(),
         },
       });
       await tx.accountSession.deleteMany({ where: { accountId: id } });
@@ -309,22 +484,31 @@ export class IdentityService {
       });
       return { id: account.id, role: account.role, status: account.status };
     });
+    await this.cognitoFollowUp(id, current.username);
+    return result;
   }
   async setPassword(
     id: string,
     input: SetAccountPasswordDto,
     principal: Principal,
   ) {
-    this.localOnly();
+    if (!this.cognito) this.localOnly();
     this.hq(principal);
     const account = await this.db.platformAccount.findUnique({ where: { id } });
     if (!account) throw new NotFoundException('Account not found');
     this.validatePassword(input.password, account.username);
+    // Cognito: permanent, so the person signs in with it straight away (V5 D16).
+    // This also finishes an account whose creation stopped part-way (PENDING).
+    const subject = this.cognito
+      ? await this.cognitoSignIn(account, input.password)
+      : undefined;
     await this.db.$transaction(async (tx) => {
       await tx.platformAccount.update({
         where: { id },
         data: {
-          passwordHash: passwordHash(input.password),
+          ...(subject ? { providerSubject: subject } : {}),
+          passwordHash: this.cognito ? null : passwordHash(input.password),
+          sessionsRevokedAt: new Date(),
           passwordSetAt: new Date(),
           passwordSetCount: { increment: 1 },
           failedLoginCount: 0,
@@ -343,18 +527,19 @@ export class IdentityService {
         },
       });
     });
+    await this.cognitoFollowUp(id, account.username);
     return { status: 'ACTIVE' };
   }
   async disableAccount(id: string, principal: Principal) {
     this.hq(principal);
     if (id === principal.id)
       throw new BadRequestException('You cannot disable your own account');
-    if (!(await this.db.platformAccount.findUnique({ where: { id } })))
-      throw new NotFoundException('Account not found');
-    return this.db.$transaction(async (tx) => {
+    const current = await this.db.platformAccount.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Account not found');
+    const result = await this.db.$transaction(async (tx) => {
       await tx.platformAccount.update({
         where: { id },
-        data: { status: 'INACTIVE' },
+        data: { status: 'INACTIVE', sessionsRevokedAt: new Date() },
       });
       await tx.accountSession.deleteMany({ where: { accountId: id } });
       await tx.platformAuditEvent.create({
@@ -366,6 +551,9 @@ export class IdentityService {
       });
       return { status: 'INACTIVE' };
     });
+    if (current.providerSubject)
+      await this.cognitoFollowUp(id, current.username, true);
+    return result;
   }
   async login(input: LoginDto, now = new Date()) {
     this.localOnly();
@@ -452,12 +640,24 @@ export class IdentityService {
     };
   }
   /** V5 PR 10: the account linked to a Cognito user (`provider_subject`), with roles and scope from the database. */
-  async principalForSubject(subject: string): Promise<Principal | null> {
+  async principalForSubject(
+    subject: string,
+    authTime?: number,
+  ): Promise<Principal | null> {
     const account = await this.db.platformAccount.findUnique({
       where: { providerSubject: subject },
-      select: { id: true },
+      select: { id: true, sessionsRevokedAt: true },
     });
-    return account ? this.principalFor(account.id) : null;
+    if (!account) return null;
+    // A sign-in from before a password reset, scope change or disable is over,
+    // even if Cognito has refreshed its access token since (auth_time is kept).
+    if (
+      account.sessionsRevokedAt &&
+      (authTime === undefined ||
+        authTime < Math.floor(account.sessionsRevokedAt.getTime() / 1000))
+    )
+      return null;
+    return this.principalFor(account.id);
   }
   async authenticate(token: string) {
     this.localOnly();
