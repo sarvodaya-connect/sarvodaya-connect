@@ -7,7 +7,7 @@ export const SIGN_IN_FAILED =
 export const SIGN_IN_LOCKED =
   "Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.";
 export const SOCIETY_OFFICER_ON_DESKTOP = "Society Officers use the Sarvodaya Connect phone app.";
-/** DDM and DM desktop dashboards open in PR 6 of the V5 plan; SPCs can approve activities. */
+/** Accounts with no desktop dashboard (HQ, DMs, DDMs and SPCs have one). */
 export const NOT_HQ_ON_DESKTOP = "This dashboard is for HQ. Please use the mobile app.";
 
 export type SignInLanguage = "si" | "ta" | "en";

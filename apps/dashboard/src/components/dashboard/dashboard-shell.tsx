@@ -10,6 +10,7 @@ import {
   headingFor,
   isActiveItem,
   navigationFor,
+  searchActionFor,
   searchPlaceholderFor,
   type NavigationItem,
 } from "@/lib/navigation";
@@ -97,7 +98,7 @@ export function DashboardShell({
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden w-[300px] md:block">
-              <GlobalSearchForm placeholder={searchPlaceholderFor(viewer)} />
+              <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
             </div>
             <Link
               aria-label={unreadCount > 0 ? `Alerts, ${unreadCount} new` : "Alerts"}
@@ -125,7 +126,7 @@ export function DashboardShell({
             </form>
           </div>
           <div className="w-full md:hidden">
-            <GlobalSearchForm placeholder={searchPlaceholderFor(viewer)} />
+            <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
           </div>
         </div>
       </header>
