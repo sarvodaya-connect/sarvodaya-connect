@@ -5,7 +5,7 @@ import '../models/society.dart';
 import '../models/user.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
-import '../widgets/map_preview.dart';
+import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
 import 'annual_summary_screen.dart';
 import 'document_upload_screen.dart';
@@ -326,7 +326,7 @@ class _OverviewTab extends StatelessWidget {
               ),
               if (record.latitude != null && record.longitude != null) ...[
                 const SizedBox(height: 10),
-                MapPreview(
+                SocietyStreetMap(
                   height: 110,
                   location: GeoLocation(
                     latitude: record.latitude!,

@@ -8,6 +8,7 @@
  * the yearly total profit and total expenses.
  */
 import type { ActivityDimension, RegistrarDocumentType } from "./activities.js";
+import type { SocietyStatus } from "./registry.js";
 
 export interface FinancialYearPeriod {
   /** 2025 means FY 2025/26 (1 Apr 2025 to 31 Mar 2026). */
@@ -131,7 +132,26 @@ export type MapSocietyClass = "A" | "B" | "C" | "UNGRADED" | "NOT_ACTIVE";
 /** D03 / M64: every society with a recorded position. */
 export interface SocietyMap {
   counts: { A: number; B: number; C: number; ungraded: number; notActive: number; withoutLocation: number };
-  points: { id: string; name: string; societyCode: string; class: MapSocietyClass; latitude: number; longitude: number }[];
+  points: { id: string; name: string; societyCode: string; class: MapSocietyClass; latitude: number; longitude: number; district: string }[];
+  /** True when more societies have a position than one request returns (10,000). */
+  truncated: boolean;
+}
+
+/** GET /societies/map: pins within the caller's scope. No contacts or other personal data. */
+export interface ScopedSocietyMap {
+  points: {
+    id: string;
+    name: string;
+    societyCode: string;
+    grade: "A" | "B" | "C" | null;
+    status: SocietyStatus;
+    latitude: number;
+    longitude: number;
+    district: string;
+  }[];
+  /** Active societies in scope with no recorded position; counted, never plotted. */
+  withoutLocation: number;
+  truncated: boolean;
 }
 
 /** D08 / M61: counts only, no personal data. */

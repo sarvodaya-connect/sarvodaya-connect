@@ -40,6 +40,11 @@ export class SocietiesController {
     return this.service.list(query, principal);
   }
 
+  @Get('map')
+  map(@CurrentPrincipal() principal: Principal) {
+    return this.service.map(principal);
+  }
+
   @Get('membership')
   @UseGuards(AuthenticationGuard, RolesGuard)
   membership(

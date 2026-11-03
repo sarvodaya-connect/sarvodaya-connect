@@ -7,7 +7,7 @@ import type { NationalOverview, ReportTable, SocietyAtAGlance } from "@sarvodaya
 import { reportCsv } from "@/lib/reports";
 
 const { loadSocietySummary } = vi.hoisted(() => ({ loadSocietySummary: vi.fn() }));
-vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary }));
+vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary, loadNationalMapPins: vi.fn() }));
 
 import { NationalOverviewView } from "./national-overview";
 import { ReportTableView } from "./report-table";
@@ -81,6 +81,17 @@ describe("V5 D02 National Dashboard", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
+  it("keeps the drawn district map, with a note and no error, when Mapbox is not set up", () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPBOX_TOKEN", "");
+    render(<NationalOverviewView demo={false} overview={overview} years={[2025]} />);
+    vi.unstubAllEnvs();
+    expect(screen.getByRole("img", { name: "Active societies in each district" })).toBeInTheDocument();
+    expect(screen.getByText("The street map is not set up yet, so a drawn map is shown.")).toBeInTheDocument();
+    expect(screen.queryByText("The map could not load")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "List view ›" })).toHaveAttribute("href", "/societies");
+    expect(screen.getByRole("link", { name: /12 active societies have no map position yet/ })).toHaveAttribute("href", "/reports?type=data-quality");
+  });
+
   it("labels sample figures in demonstration mode", () => {
     render(<NationalOverviewView demo overview={overview} years={[2025]} />);
     expect(screen.getByText("Demonstration data · sample figures, not real")).toBeInTheDocument();
@@ -125,7 +136,7 @@ describe("V5 D03 Map view", () => {
       <SocietyMapView
         counts={{ A: 1, B: 1, C: 0, ungraded: 0, notActive: 0, withoutLocation: 3 }}
         demo={false}
-        points={[{ id: "s1", name: "Pahala Kosgama SSS", societyCode: "S-104233", class: "B", latitude: 7.5, longitude: 80.4 }]}
+        points={[{ id: "s1", name: "Pahala Kosgama SSS", societyCode: "S-104233", class: "B", latitude: 7.5, longitude: 80.4, district: "Kurunegala" }]}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Pahala Kosgama SSS, S-104233" }));
@@ -143,7 +154,7 @@ describe("V5 D03 Map view", () => {
       <SocietyMapView
         counts={{ A: 0, B: 0, C: 0, ungraded: 1, notActive: 0, withoutLocation: 0 }}
         demo
-        points={[{ id: "s2", name: "Example", societyCode: "S-1", class: "UNGRADED", latitude: 7, longitude: 80 }]}
+        points={[{ id: "s2", name: "Example", societyCode: "S-1", class: "UNGRADED", latitude: 7, longitude: 80, district: "Kurunegala" }]}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Example, S-1" }));

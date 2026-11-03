@@ -8,6 +8,9 @@
 #   COGNITO_USER_POOL_ID  config  <region>_<id> of the Sarvodaya user pool
 #   COGNITO_CLIENT_ID     config  the public app client (no client secret) used by the dashboard
 #   COGNITO_REGION        config  optional; must match the user pool id
+#   NEXT_PUBLIC_MAPBOX_TOKEN  public config  Mapbox public token (pk.), URL-restricted in the
+#                         Mapbox account; built into the browser code. Optional: without it the
+#                         dashboard shows its drawn maps.
 # None of these are secrets. Never add AWS keys or a client secret here.
 # Amplify only passes variables to the server at run time when they are written
 # to .env.production during the build (see the build step below).
@@ -22,8 +25,8 @@ applications:
             - npm ci
         build:
           commands:
-            # Server-side variables only; nothing is exposed to the browser (no NEXT_PUBLIC_ values).
-            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE|AUTH_PROVIDER|COGNITO_USER_POOL_ID|COGNITO_CLIENT_ID|COGNITO_REGION)=' > .env.production || true
+            # Server-side variables, plus the one public browser value (the Mapbox pk. token).
+            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE|AUTH_PROVIDER|COGNITO_USER_POOL_ID|COGNITO_CLIENT_ID|COGNITO_REGION|NEXT_PUBLIC_MAPBOX_TOKEN)=' > .env.production || true
             - npm run build
       artifacts:
         baseDirectory: .next

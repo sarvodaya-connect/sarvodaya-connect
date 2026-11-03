@@ -9,6 +9,7 @@ import {
   isSelectableFinancialYear,
   latestCompletedFinancialYear,
 } from '../societies/financial-year.js';
+import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
 import { MEMBERSHIP_CATEGORY_VALUES } from '../societies/societies.service.js';
 import { auditPastDue, pageMeta, percent, period } from './national-rules.js';
 import { NationalRepository } from './national.repository.js';
@@ -231,7 +232,7 @@ export class NationalService {
     ]);
     return {
       counts,
-      points: points.map((point) => ({
+      points: points.slice(0, MAP_POINT_LIMIT).map((point) => ({
         id: point.id,
         name: point.nameEn,
         societyCode: point.societyCode,
@@ -241,7 +242,9 @@ export class NationalService {
             : (point.grade ?? ('UNGRADED' as const)),
         latitude: point.latitude!,
         longitude: point.longitude!,
+        district: point.district.nameEn,
       })),
+      truncated: points.length > MAP_POINT_LIMIT,
     };
   }
 
