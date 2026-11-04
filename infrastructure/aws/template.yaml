@@ -101,6 +101,8 @@ Resources:
       Environment:
         Variables:
           NODE_ENV: production
+          # Node reads extra trust anchors at process startup, before SSM loading.
+          NODE_EXTRA_CA_CERTS: !If [IsTest, /var/task/certificates/rds-ap-southeast-1.pem, !Ref AWS::NoValue]
           AUTH_PROVIDER: cognito
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
           COGNITO_REGION: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]

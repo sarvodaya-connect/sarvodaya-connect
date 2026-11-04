@@ -14,6 +14,9 @@ mkdir -p "$OUT/package"
 npx prisma generate >/dev/null
 npx nest build
 cp -R dist/. "$OUT/package/"
+# Public AWS RDS trust anchors, reviewed in Git; no network download at build time.
+mkdir -p "$OUT/package/certificates"
+cp certificates/rds-ap-southeast-1.pem "$OUT/package/certificates/"
 cp package.json package-lock.json "$OUT/package/"
 # Production dependencies only. Peer dependencies (the Prisma CLI, Studio, TypeScript) are
 # build tools, and no install scripts run (the Prisma client is already generated).
