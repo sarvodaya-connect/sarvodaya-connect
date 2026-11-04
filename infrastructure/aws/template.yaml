@@ -8,8 +8,9 @@
 #   sam validate --lint -t infrastructure/aws/template.yaml
 #   sam local start-api -t infrastructure/aws/template.yaml   # optional local check
 #
-# The VPC, subnets, RDS Proxy, Cognito user pool, documents bucket and the
-# Secrets Manager secrets are created separately and passed in as parameters.
+# The VPC, subnets, database, Cognito user pool and documents bucket are
+# provisioned separately. Test uses a NAT instance, direct private RDS and SSM
+# SecureStrings; existing stages retain their Secrets Manager configuration.
 # See docs/aws-configuration.md for every setting and the deployment steps.
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
@@ -18,7 +19,7 @@ Description: Sarvodaya Connect API (NestJS on Lambda behind API Gateway)
 Parameters:
   Stage:
     Type: String
-    AllowedValues: [staging, production]
+    AllowedValues: [test, staging, production]
   DocumentsBucketName:
     Type: String
     Description: Private S3 bucket for society documents and incident photos (blocks public access)
@@ -31,15 +32,17 @@ Parameters:
     Description: Comma-separated public app client ids (dashboard, phone app); no client secret. Access tokens must carry one of these as client_id
   DatabaseSecretArn:
     Type: String
-    Description: Secrets Manager secret whose SecretString is the RDS Proxy DATABASE_URL
+    Default: ''
+    Description: Staging/production only. Secrets Manager secret containing DATABASE_URL; unused for test
   NicKeySecretArn:
     Type: String
-    Description: Secrets Manager secret whose SecretString is NIC_ENCRYPTION_KEY (64 hex characters)
+    Default: ''
+    Description: Staging/production only. Secret containing NIC_ENCRYPTION_KEY; unused for test
   PrivateSubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
   LambdaSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Allowed to reach the RDS Proxy on 5432; outbound HTTPS through a NAT gateway or VPC endpoints (S3, Bedrock, Cognito user pool API and JWKS)
+    Description: "Test: private RDS on 5432 and outbound HTTPS through the approved NAT instance; S3 gateway endpoint. Other stages use their reviewed network"
   SarvoAiEnabled:
     Type: String
     AllowedValues: ['false', 'true']
@@ -51,7 +54,22 @@ Parameters:
     Type: String
     Default: ap-southeast-1
 
+Rules:
+  ExistingStageSecrets:
+    RuleCondition: !Not [!Equals [!Ref Stage, test]]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref DatabaseSecretArn, '']]
+        AssertDescription: Staging and production require the database secret ARN
+      - Assert: !Not [!Equals [!Ref NicKeySecretArn, '']]
+        AssertDescription: Staging and production require the NIC key secret ARN
+  TestAiDisabled:
+    RuleCondition: !Equals [!Ref Stage, test]
+    Assertions:
+      - Assert: !Equals [!Ref SarvoAiEnabled, 'false']
+        AssertDescription: Keep test SarvoAI disabled until a reviewed application monthly spending cap is implemented
+
 Conditions:
+  IsTest: !Equals [!Ref Stage, test]
   SarvoAiOn: !Equals [!Ref SarvoAiEnabled, 'true']
 
 Globals:
@@ -70,6 +88,9 @@ Resources:
       FunctionName: !Sub sarvodaya-api-${Stage}
       CodeUri: ../../apps/api/.lambda/package
       Handler: lambda.handler
+      # Initial test guardrail, subject to load and database-connection checks.
+      ReservedConcurrentExecutions: !If [IsTest, 2, !Ref AWS::NoValue]
+      Tracing: !If [IsTest, PassThrough, Active]
       LoggingConfig:
         LogFormat: JSON
         ApplicationLogLevel: INFO
@@ -85,12 +106,13 @@ Resources:
           COGNITO_REGION: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]
           COGNITO_CLIENT_ID: !Ref CognitoClientIds
           COGNITO_TOKEN_USE: access
-          # Secrets are resolved from Secrets Manager when the stack is deployed;
-          # they never appear in the template or the repository.
-          DATABASE_URL: !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString}}'
-          NIC_ENCRYPTION_KEY: !Sub '{{resolve:secretsmanager:${NicKeySecretArn}:SecretString}}'
-          # Two connections per Lambda instance; RDS Proxy pools them across instances.
-          DATABASE_CONNECTION_LIMIT: '2'
+          # Test loads encrypted SSM parameters at cold start. Other stages
+          # retain deployment-time Secrets Manager references; no values in Git.
+          DATABASE_URL: !If [IsTest, !Ref AWS::NoValue, !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString}}']
+          NIC_ENCRYPTION_KEY: !If [IsTest, !Ref AWS::NoValue, !Sub '{{resolve:secretsmanager:${NicKeySecretArn}:SecretString}}']
+          CONFIG_PARAMETER_PREFIX: !If [IsTest, /sarvodaya-connect/test, !Ref AWS::NoValue]
+          # Test: one connection per active instance, direct to private RDS.
+          DATABASE_CONNECTION_LIMIT: !If [IsTest, '1', '2']
           STORAGE_DRIVER: s3
           S3_BUCKET: !Ref DocumentsBucketName
           S3_REGION: !Ref AWS::Region
@@ -102,6 +124,17 @@ Resources:
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
           LOG_FORMAT: json
       Policies:
+        - !If
+          - IsTest
+          - Version: '2012-10-17'
+            Statement:
+              - Sid: ReadTestRuntimeParameters
+                Effect: Allow
+                Action: ssm:GetParameters
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/database-url
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/nic-encryption-key
+          - !Ref AWS::NoValue
         - Version: '2012-10-17'
           Statement:
             # Pre-signed upload, download and the HEAD check after an upload. Nothing else in the bucket.
@@ -164,8 +197,8 @@ Resources:
       # actions) and the phone app is native, so browsers never call the API
       # directly: no CORS rule is needed here. Uploads use the bucket's CORS.
       DefaultRouteSettings:
-        ThrottlingBurstLimit: 100
-        ThrottlingRateLimit: 50
+        ThrottlingBurstLimit: !If [IsTest, 10, 100]
+        ThrottlingRateLimit: !If [IsTest, 5, 50]
       AccessLogSettings:
         DestinationArn: !GetAtt ApiAccessLogs.Arn
         # Request id, route and status only: no headers, tokens or bodies.
@@ -175,13 +208,13 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/apigateway/sarvodaya-api-${Stage}
-      RetentionInDays: 90
+      RetentionInDays: !If [IsTest, 14, 90]
 
   ApiFunctionLogs:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/sarvodaya-api-${Stage}
-      RetentionInDays: 90
+      RetentionInDays: !If [IsTest, 14, 90]
 
 Outputs:
   ApiBaseUrl:
