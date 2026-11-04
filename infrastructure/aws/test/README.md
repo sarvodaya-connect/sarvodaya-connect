@@ -5,7 +5,35 @@ in **Singapore (`ap-southeast-1`)**. This is not evidence of an AWS deployment o
 successful integration. Follow the review process in `CONTRIBUTING.md` and the
 [cost and application plan](../../../docs/aws-test-environment.md).
 
-## First-stack resources and cost
+## Deployment order: bootstrap, then foundation
+
+The first owner-driven change-set attempt on 4 November 2026 failed with
+`ssm-secure:/sarvodaya-connect/test/database-master-password:1 cannot be found`.
+The parameter did not yet exist when CloudFormation prepared the change set.
+Putting the generator behind `DependsOn` in the same stack does not satisfy this
+preparation-time lookup. Local lint/smoke tests had not exercised this AWS behavior.
+No foundation change set was executed. The console may already have uploaded
+its template to S3 and created an automatic service role; inspect these separately
+rather than claiming the account is unchanged.
+
+Use two separately reviewed change sets, in this order:
+
+1. **`sarvodaya-connect-test-bootstrap`**, from `bootstrap.rendered.yaml`: only the
+   helper Lambda, its scoped role/log group, and generated encrypted parameters.
+   Wait for `CREATE_COMPLETE`, then verify parameter names, SecureString types
+   and master-password version 1 **without retrieving values**.
+2. **`sarvodaya-connect-test-foundation`**, from `foundation.rendered.yaml`: the
+   network, database, buckets and Cognito resources below. Prepare its change set
+   only after bootstrap succeeds. It imports the non-secret namespace exported
+   by bootstrap; no secret is exposed in the export. This dependency also blocks
+   bootstrap deletion while the foundation consumes the export.
+
+Do not bypass the error by typing a password, creating a plaintext parameter,
+removing encryption, disabling validations or granting broader permissions. Keep
+any unexecuted `REVIEW_IN_PROGRESS` placeholder intact until its state is checked;
+there is no automatic deletion/recreation step in this fix.
+
+## Foundation resources and cost
 
 | Resources | Configuration |
 | --- | --- |
@@ -16,12 +44,15 @@ successful integration. Follow the review process in `CONTRIBUTING.md` and the
 | Sign-in | Admin-only Cognito Essentials pool; public dashboard/mobile clients using the repository's password/refresh flows; no users or passwords |
 | Configuration | Small parameter-preparation Lambda, named execution role, 14-day log group and two Standard SecureStrings encrypted with managed `aws/ssm` |
 
-Standing compute/storage/network is approximately **USD 29.30/month**, plus small
+Standing foundation compute/storage/network is approximately **USD 29.30/month**, plus small
 storage/log/request charges. The full initial app estimate is **USD 35.93/month**,
 before credits/tax, assuming the usage in the cost plan. Forecasts are not caps.
 No RDS Proxy, NAT Gateway, Multi-AZ database, SQS, Bedrock access or organization
 changes are included. Amplify and the application Lambda/HTTP API come later.
-Cloudflare and production DNS are untouched.
+Cloudflare and production DNS are untouched. Splitting the existing helper into
+bootstrap creates no additional service or standing instance. Its small log,
+Lambda and managed-key request usage remains within the existing usage allowance;
+there is no extra paid database, NAT or fixed USD allocation.
 
 The owner confirmed PostgreSQL 17.11 and the class/gp3/20 GB combination using
 read-only Singapore RDS queries on 4 November 2026. The existing default VPC is
@@ -37,17 +68,19 @@ notify; they do not stop spending. The template deliberately has no budget resou
 
 ## Build and verify the upload file
 
-`foundation.yaml` contains an intentional code placeholder. **Do not upload the
-raw source.** Render the actual handler into the template, with no AWS calls:
+`bootstrap.yaml` contains an intentional code placeholder. **Do not upload its
+raw source.** Render both deployment files offline; the foundation is a direct
+copy and the bootstrap embeds the actual helper handler:
 
 ```sh
-python3 infrastructure/aws/test/render-foundation.py > /tmp/sarvodaya-test-foundation.yaml
-cfn-lint infrastructure/aws/template.yaml /tmp/sarvodaya-test-foundation.yaml
+python3 infrastructure/aws/test/render-foundation.py --bootstrap > /tmp/bootstrap.rendered.yaml
+python3 infrastructure/aws/test/render-foundation.py > /tmp/foundation.rendered.yaml
+cfn-lint infrastructure/aws/template.yaml /tmp/bootstrap.rendered.yaml /tmp/foundation.rendered.yaml
 node --test infrastructure/aws/test/secure-parameters.test.cjs
 python3 infrastructure/aws/test/test_foundation.py
 ```
 
-The AWS readiness workflow renders/lints both templates, checks the actual inline
+The AWS readiness workflow renders bootstrap/foundation and lints all three templates, checks the actual inline
 handler using SDK/HTTPS doubles, and saves a seven-day `sarvodaya-test-foundation`
 artifact. Download from the **exact reviewed commit**; no CI job deploys anything
 or receives AWS credentials. Packaged-handler smoke tests use temporary local
@@ -61,21 +94,30 @@ Cognito sign-in. These need separate AWS validation after provisioning.
 
 1. Have the PR reviewed and its checks pass before deployment. Preserve the commit
    SHA with a private operational record. Do not merge your own work without review.
-2. In the existing account's Singapore CloudFormation, upload the **rendered**
-   file. Name the stack `sarvodaya-connect-test-foundation`.
-3. Enter `ExpectedAccountId` from the current account. Keep the public AL2023 ARM64
-   SSM image path. Leave `DashboardOrigin` blank until Amplify provides its test
-   HTTPS origin. Account/region assertions must pass.
-4. Add stack tags `Project=SarvodayaConnect`, `Environment=test`. Enable termination
-   protection. Do not select an alternate service role unless separately reviewed.
-5. Prepare a **change set**, inspect every addition and the named IAM role below,
-   then acknowledge `CAPABILITY_NAMED_IAM` only after that review. Expect no changes
-   to existing resources. Stop on collisions, replacements, account mismatch or a
-   revised total above USD 70. Creating a change set does not create the proposed
-   application resources. The owner executes only when ready for charges to begin.
-6. Record Events/Outputs privately. NAT creation waits up to ten minutes for a
-   `cfn-signal` bootstrap result. This confirms the script finished, not that
-   traffic from a private subnet works. Verify that separately.
+2. In the existing account's Singapore CloudFormation, upload
+   `bootstrap.rendered.yaml`. Name the stack **exactly**
+   `sarvodaya-connect-test-bootstrap` so its export has the expected name.
+3. Enter `ExpectedAccountId` from the current account. Account/region assertions
+   must pass. Add tags `Project=SarvodayaConnect`, `Environment=test`, and enable
+   termination protection. Inspect the service role shown under Permissions.
+   If the account already uses role manager, the console can automatically create
+   a CloudFormation execution role. This is separate from the helper role and
+   its trust/permissions must be reviewed before execution. Do not change account
+   role-manager settings, reuse an unreviewed role or attach broad policies to
+   clear a failure. [AWS role-manager guidance](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_role-manager.html).
+4. Prepare a **change set** and inspect each addition and the one named helper
+   IAM role. Acknowledge `CAPABILITY_NAMED_IAM` only after this review. Expect no
+   existing-resource changes. Stop on collisions, replacements, account mismatch
+   or a revised total above USD 70. The owner executes the bootstrap change set
+   after review, then waits for `CREATE_COMPLETE` and checks parameter metadata.
+5. Only then upload `foundation.rendered.yaml` for the foundation stack. Keep the
+   public AL2023 ARM64 SSM image path and leave `DashboardOrigin` blank initially.
+   Apply the same tags/protection and service-role review. This template creates
+   no IAM helper role of its own. Prepare and inspect its separate change set
+   before executing; the owner must be ready for standing charges to begin.
+6. Record both stacks' Events/Outputs privately. NAT creation waits up to ten
+   minutes for a `cfn-signal` bootstrap result. This confirms the script finished,
+   not that traffic from a private subnet works. Verify that separately.
 7. If creation fails, inspect Events and retained-resource costs before retrying.
    Do not delete retained parameters or other resources to clear a collision.
 
@@ -91,7 +133,7 @@ on exactly these two parameter names, plus writing its own log streams:
 It cannot manage databases, buckets, users or IAM. There are no human users or
 access keys in this template. Parameters are generated inside Lambda and encrypted;
 values never enter CloudFormation outputs, shell arguments or logs. The SDK reads
-existing parameter metadata without decryption and requires this stack's ownership
+existing parameter metadata without decryption and requires the bootstrap stack's ownership
 tag. It inspects both names before writing, never overwrites, and preserves keys
 on retries/updates. Standard `aws/ssm` key request/free-tier charges remain subject
 to account-wide usage.
@@ -129,11 +171,14 @@ stack without an explicit recovery plan.
 
 ## Retention and eventual cleanup
 
-No cleanup is part of initial setup. On explicit owner instruction, use stack
+No cleanup is part of initial setup. On explicit owner instruction, use both stacks'
 membership/tags to identify only test resources. Disable deletion/termination
 protection through a reviewed cleanup change, preserve the agreed final snapshot
 and NIC key, and remove application resources in dependency order. Database
 replacement/deletion requests a snapshot; document/build buckets, Cognito pool
 and generated parameters are retained. Nonempty buckets need explicit, separate
 cleanup. Retained snapshots, objects, logs, IPs and disks can keep charging.
-Preserve the pre-existing default VPC, existing budget and organization resources.
+Remove the foundation before considering bootstrap removal: the non-secret
+cross-stack export deliberately prevents the reverse order. Keep retained keys
+and database recovery material as agreed. Preserve the pre-existing default VPC,
+existing budget and organization resources.

@@ -4,7 +4,10 @@ Pre-deployment plan, reviewed against the revised hosting proposal and the suppl
 architecture on 4 November 2026. This document and the `Stage=test` configuration
 are preparation for review. They do not establish that application infrastructure exists or that
 integration has passed. The owner created the budget below; application stacks
-have not been deployed. See the [foundation deployment guide](../infrastructure/aws/test/README.md).
+have not been deployed. The first foundation change-set attempt failed because
+CloudFormation needed the master-password parameter before the same stack could
+create it. Deploy the separate encrypted-parameter bootstrap to completion before
+preparing the foundation change set; see the guide below. See the [foundation deployment guide](../infrastructure/aws/test/README.md).
 
 ## Cost and architecture decisions
 
@@ -77,7 +80,7 @@ Price sources checked on 4 November 2026:
 | Cognito | Test pool, case-insensitive usernames, admin-only sign-up, no required email/phone, password policy matching `cognito-setup.md`, public dashboard/mobile clients with no client secret |
 | Lambda/API Gateway | Existing Node 24 arm64 NestJS handler and HTTP API; test settings below |
 | Amplify | Existing Next.js 15 monorepo build settings, default test hostname; connect GitHub through the account owner's authorised flow |
-| Parameter Store | Foundation creates master-password/NIC-key Standard SecureStrings; the later migration creates the runtime database URL. All under `/sarvodaya-connect/test/` using managed `aws/ssm` |
+| Parameter Store | Separate bootstrap creates master-password/NIC-key Standard SecureStrings; the later migration creates the runtime database URL. All under `/sarvodaya-connect/test/` using managed `aws/ssm` |
 | Logs/audit | 14-day API/function logs; inspect existing CloudTrail coverage and event history before adding a dedicated non-organization trail |
 | AWS Budgets | Owner created `sarvodaya-connect-test-monthly` on 4 November 2026: recurring USD 70, actual-cost USD 50/USD 70 alerts, unblended costs excluding Credit/Refund, no actions. Preserve this manually managed budget; the foundation does not create one |
 
@@ -142,7 +145,7 @@ AWS deployment plan.
    chose their current root console session after being advised to use an everyday
    identity. Never create keys or extract credentials. Preserve the existing
    organization-wide Identity Center settings.
-2. Review the template/code changes and foundation IaC, inspect the full
+2. Review the template/code changes and bootstrap/foundation IaC, inspect the full
    CloudFormation change set, verify account/region, and confirm current credit
    applicability and tax treatment. Create no resources if the estimate exceeds USD 70.
 3. Define automated backup retention and recovery, preserve the NIC key, and verify

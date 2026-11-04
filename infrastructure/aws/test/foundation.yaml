@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Sarvodaya Connect TEST foundation, Singapore only; render inline code before deployment
+Description: Sarvodaya Connect TEST foundation, Singapore only; deploy parameter bootstrap first
 Parameters:
   ExpectedAccountId:
     Type: String
@@ -180,56 +180,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: Private subnets for Sarvodaya Connect TEST only
       SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
-  ParameterLogs:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/sarvodaya-connect-test-parameters
-      RetentionInDays: 14
-  ParameterRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: sarvodaya-connect-test-parameters
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - {Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}
-      Policies:
-        - PolicyName: PrepareOnlyTestParameters
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: [ssm:GetParameter, ssm:ListTagsForResource, ssm:PutParameter, ssm:AddTagsToResource]
-                Resource:
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/database-master-password
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/nic-encryption-key
-              - Effect: Allow
-                Action: [logs:CreateLogStream, logs:PutLogEvents]
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sarvodaya-connect-test-parameters:*
-  ParameterFunction:
-    Type: AWS::Lambda::Function
-    DependsOn: ParameterLogs
-    Properties:
-      FunctionName: sarvodaya-connect-test-parameters
-      Runtime: nodejs24.x
-      Architectures: [arm64]
-      MemorySize: 128
-      Timeout: 60
-      Handler: index.handler
-      Role: !GetAtt ParameterRole.Arn
-      Code:
-        ZipFile: __PARAMETER_CODE__
-  SecureParameters:
-    Type: Custom::SarvodayaTestParameters
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      ServiceToken: !GetAtt ParameterFunction.Arn
-      Prefix: /sarvodaya-connect/test
-      ServiceTimeout: 120
   Database:
     Type: AWS::RDS::DBInstance
-    DependsOn: SecureParameters
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Properties:
@@ -243,7 +195,9 @@ Resources:
       StorageType: gp3
       StorageEncrypted: true
       MasterUsername: sc_test_admin
-      MasterUserPassword: '{{resolve:ssm-secure:/sarvodaya-connect/test/database-master-password:1}}'
+      MasterUserPassword: !Sub
+        - '{{resolve:ssm-secure:${Namespace}/database-master-password:1}}'
+        - Namespace: !ImportValue sarvodaya-connect-test-bootstrap-ConfigurationNamespace
       DBSubnetGroupName: !Ref DatabaseSubnets
       VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
       PubliclyAccessible: false
