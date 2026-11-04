@@ -28,12 +28,29 @@ class FoundationSafety(unittest.TestCase):
         rendered = subprocess.check_output([sys.executable, str(ROOT / 'render-foundation.py')], text=True)
         cls.template = yaml.load(rendered, Loader=TemplateLoader)
         cls.resources = cls.template['Resources']
+        rendered_bootstrap = subprocess.check_output([sys.executable, str(ROOT / 'render-foundation.py'), '--bootstrap'], text=True)
+        cls.bootstrap = yaml.load(rendered_bootstrap, Loader=TemplateLoader)
+        cls.bootstrap_resources = cls.bootstrap['Resources']
 
     def test_render_embeds_exact_handler(self):
-        self.assertEqual(self.resources['ParameterFunction']['Properties']['Code']['ZipFile'].rstrip(),
+        self.assertEqual(self.bootstrap_resources['ParameterFunction']['Properties']['Code']['ZipFile'].rstrip(),
                          (ROOT / 'secure-parameters.cjs').read_text().rstrip())
 
+    def test_bootstrap_has_no_dynamic_secret_prerequisite_or_application_resources(self):
+        text = (ROOT / 'bootstrap.yaml').read_text()
+        self.assertNotIn('{{resolve:ssm-secure:', text)
+        self.assertEqual({r['Type'] for r in self.bootstrap_resources.values()}, {
+            'AWS::IAM::Role', 'AWS::Logs::LogGroup', 'AWS::Lambda::Function',
+            'Custom::SarvodayaTestParameters',
+        })
+        output = self.bootstrap['Outputs']['ConfigurationNamespace']
+        self.assertEqual(output['Value'], '/sarvodaya-connect/test')
+        self.assertEqual(output['Export']['Name'], {'Sub': '${AWS::StackName}-ConfigurationNamespace'})
+        self.assertNotIn('ParameterFunction', self.resources)
+        self.assertNotIn('ParameterRole', self.resources)
+
     def test_region_and_account_rules(self):
+        self.assertEqual(self.template['Rules'], self.bootstrap['Rules'])
         rules = self.template['Rules']
         self.assertEqual(rules['SingaporeOnly']['Assertions'][0]['Assert'],
                          {'Equals': [{'Ref': 'AWS::Region'}, 'ap-southeast-1']})
@@ -47,7 +64,10 @@ class FoundationSafety(unittest.TestCase):
                                'DBInstanceClass': 'db.t4g.micro', 'AllocatedStorage': '20',
                                'EngineVersion': '17.11', 'StorageType': 'gp3'}.items():
             self.assertEqual(db[name], expected, name)
-        self.assertEqual(self.resources['Database']['DependsOn'], 'SecureParameters')
+        self.assertNotIn('SecureParameters', self.resources)
+        password = db['MasterUserPassword']['Sub']
+        self.assertEqual(password[0], '{{resolve:ssm-secure:${Namespace}/database-master-password:1}}')
+        self.assertEqual(password[1], {'Namespace': {'ImportValue': 'sarvodaya-connect-test-bootstrap-ConfigurationNamespace'}})
         self.assertEqual(self.resources['Database']['DeletionPolicy'], 'Snapshot')
 
     def test_no_duplicate_budget_or_unapproved_paid_products(self):
@@ -96,7 +116,7 @@ class FoundationSafety(unittest.TestCase):
             self.assertIn(rule['FromPort'], [80, 443])
 
     def test_ssm_role_scoped_and_no_secret_outputs(self):
-        role = self.resources['ParameterRole']['Properties']
+        role = self.bootstrap_resources['ParameterRole']['Properties']
         trust = role['AssumeRolePolicyDocument']['Statement'][0]
         self.assertEqual(trust['Principal'], {'Service': 'lambda.amazonaws.com'})
         access = role['Policies'][0]['PolicyDocument']['Statement'][0]
@@ -106,8 +126,8 @@ class FoundationSafety(unittest.TestCase):
         for arn in arns:
             self.assertIn(':parameter/sarvodaya-connect/test/', arn)
             self.assertNotIn('*', arn)
-        self.assertEqual(self.resources['SecureParameters']['DeletionPolicy'], 'Retain')
-        for name in self.template['Outputs']:
+        self.assertEqual(self.bootstrap_resources['SecureParameters']['DeletionPolicy'], 'Retain')
+        for name in [*self.template['Outputs'], *self.bootstrap['Outputs']]:
             self.assertNotIn('password', name.lower())
             self.assertNotIn('key', name.lower())
 

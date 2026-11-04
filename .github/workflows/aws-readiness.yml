@@ -39,9 +39,11 @@ jobs:
       - name: Install CloudFormation linter
         run: python -m pip install cfn-lint==1.59.0
       - name: Render foundation template without AWS access
-        run: python infrastructure/aws/test/render-foundation.py > foundation.rendered.yaml
+        run: |
+          python infrastructure/aws/test/render-foundation.py --bootstrap > bootstrap.rendered.yaml
+          python infrastructure/aws/test/render-foundation.py > foundation.rendered.yaml
       - name: Validate API and foundation templates
-        run: cfn-lint infrastructure/aws/template.yaml foundation.rendered.yaml
+        run: cfn-lint infrastructure/aws/template.yaml bootstrap.rendered.yaml foundation.rendered.yaml
       - name: Check foundation safety settings
         run: python infrastructure/aws/test/test_foundation.py
       - uses: actions/setup-node@v4
@@ -53,7 +55,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sarvodaya-test-foundation
-          path: foundation.rendered.yaml
+          path: |
+            bootstrap.rendered.yaml
+            foundation.rendered.yaml
           retention-days: 7
 
   package-smoke:
