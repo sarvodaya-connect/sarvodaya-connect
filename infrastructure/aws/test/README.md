@@ -5,6 +5,16 @@ in **Singapore (`ap-southeast-1`)**. This is not evidence of an AWS deployment o
 successful integration. Follow the review process in `CONTRIBUTING.md` and the
 [cost and application plan](../../../docs/aws-test-environment.md).
 
+## Current failed-foundation recovery
+
+The owner completed bootstrap and verified both encrypted parameters. The first
+foundation execution then failed because `dnf` exhausted memory on the NAT; the
+stack is `ROLLBACK_FAILED` with a database/network and retained buckets/pool.
+See [RECOVERY.md](RECOVERY.md) before any retry. Do not apply a fresh CREATE over
+retained resource names or delete anything without explicit owner approval.
+The template now provisions 2 GiB disk-backed swap before package work and waits
+for NAT bootstrap before creating RDS; AWS verification remains outstanding.
+
 ## Deployment order: bootstrap, then foundation
 
 The first owner-driven change-set attempt on 4 November 2026 failed with
@@ -38,7 +48,7 @@ there is no automatic deletion/recreation step in this fix.
 | Resources | Configuration |
 | --- | --- |
 | Network | New `10.77.0.0/16` VPC; one public and two private subnets in two AZs; internet gateway, routes and security groups; S3 gateway endpoint |
-| NAT | One AL2023 ARM64 `t4g.nano`, encrypted 8 GB gp3, one public IPv4; Standard CPU credits, IMDSv2; no SSH, key pair or instance profile |
+| NAT | One AL2023 ARM64 `t4g.nano`, encrypted 8 GB gp3 with 2 GiB disk-backed swap before package installation, one public IPv4; Standard CPU credits, IMDSv2; no SSH, key pair or instance profile |
 | Database | Private PostgreSQL 17.11 `db.t4g.micro`, Single-AZ, encrypted 20 GB gp3; seven-day backups, deletion protection, final snapshot, no paid extended-support enrollment |
 | Files | Private document/build buckets; AES256 encryption, HTTPS enforcement, public-access blocks; document versioning and old-version cleanup after 30 days |
 | Sign-in | Admin-only Cognito Essentials pool; public dashboard/mobile clients using the repository's password/refresh flows; no users or passwords |
@@ -75,12 +85,14 @@ copy and the bootstrap embeds the actual helper handler:
 ```sh
 python3 infrastructure/aws/test/render-foundation.py --bootstrap > /tmp/bootstrap.rendered.yaml
 python3 infrastructure/aws/test/render-foundation.py > /tmp/foundation.rendered.yaml
-cfn-lint infrastructure/aws/template.yaml /tmp/bootstrap.rendered.yaml /tmp/foundation.rendered.yaml
+# Recovery only, after owner approval: render an IMPORT file, not a CREATE file.
+python3 infrastructure/aws/test/render-foundation.py --retained-import > /tmp/retained.import.yaml
+cfn-lint infrastructure/aws/template.yaml /tmp/bootstrap.rendered.yaml /tmp/foundation.rendered.yaml /tmp/retained.import.yaml
 node --test infrastructure/aws/test/secure-parameters.test.cjs
 python3 infrastructure/aws/test/test_foundation.py
 ```
 
-The AWS readiness workflow renders bootstrap/foundation and lints all three templates, checks the actual inline
+The AWS readiness workflow renders bootstrap/foundation and lints the API plus all three deployment/recovery files, checks the actual inline
 handler using SDK/HTTPS doubles, and saves a seven-day `sarvodaya-test-foundation`
 artifact. Download from the **exact reviewed commit**; no CI job deploys anything
 or receives AWS credentials. Packaged-handler smoke tests use temporary local
