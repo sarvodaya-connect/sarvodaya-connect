@@ -115,6 +115,44 @@ class FoundationSafety(unittest.TestCase):
         for rule in self.resources['NatSecurityGroup']['Properties']['SecurityGroupIngress']:
             self.assertIn(rule['FromPort'], [80, 443])
 
+    def test_disk_swap_is_enabled_before_packages_and_persists(self):
+        nat = self.resources['NatInstance']['Properties']
+        script = nat['UserData']['Fn::Base64']['Sub']
+        commands = [
+            'dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none',
+            'chmod 600 /swapfile', 'mkswap /swapfile', 'swapon /swapfile',
+            "echo '/swapfile none swap sw 0 0' >> /etc/fstab",
+            'dnf --setopt=install_weak_deps=False install -y aws-cfn-bootstrap iptables-services',
+        ]
+        offsets = [script.index(command) for command in commands]
+        self.assertEqual(offsets, sorted(offsets))
+        disk = nat['BlockDeviceMappings'][0]['Ebs']
+        self.assertTrue(disk['Encrypted'])
+        self.assertEqual(disk['VolumeSize'], 8)
+        self.assertEqual(nat['InstanceType'], 't4g.nano')
+
+    def test_database_waits_for_nat_creation_policy(self):
+        self.assertEqual(self.resources['Database']['DependsOn'], 'NatInstance')
+        self.assertEqual(self.resources['NatInstance']['CreationPolicy']['ResourceSignal']['Count'], 1)
+        self.assertEqual(self.resources['Database']['DeletionPolicy'], 'Snapshot')
+        self.assertTrue(self.resources['Database']['Properties']['DeletionProtection'])
+
+    def test_nat_startup_script_has_valid_bash_syntax(self):
+        script = self.resources['NatInstance']['Properties']['UserData']['Fn::Base64']['Sub']
+        subprocess.run(['bash', '-n'], input=script, text=True, check=True)
+
+    def test_recovery_import_has_only_identical_retained_bucket_and_pool_definitions(self):
+        rendered = subprocess.check_output([sys.executable, str(ROOT / 'render-foundation.py'), '--retained-import'], text=True)
+        template = yaml.load(rendered, Loader=TemplateLoader)
+        self.assertEqual(set(template['Resources']), {'Documents', 'Artifacts', 'UserPool'})
+        for name, resource in template['Resources'].items():
+            self.assertEqual(resource, self.resources[name])
+            self.assertEqual(resource['DeletionPolicy'], 'Retain')
+        self.assertEqual(template['Rules'], self.template['Rules'])
+        self.assertNotIn('NatImage', template['Parameters'])
+        self.assertNotIn('Outputs', template)
+        self.assertNotIn('ssm-secure', rendered)
+
     def test_ssm_role_scoped_and_no_secret_outputs(self):
         role = self.bootstrap_resources['ParameterRole']['Properties']
         trust = role['AssumeRolePolicyDocument']['Statement'][0]

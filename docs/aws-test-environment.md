@@ -1,13 +1,14 @@
 # Sarvodaya Connect TEST environment
 
-Pre-deployment plan, reviewed against the revised hosting proposal and the supplied
-architecture on 4 November 2026. This document and the `Stage=test` configuration
-are preparation for review. They do not establish that application infrastructure exists or that
-integration has passed. The owner created the budget below; application stacks
-have not been deployed. The first foundation change-set attempt failed because
-CloudFormation needed the master-password parameter before the same stack could
-create it. Deploy the separate encrypted-parameter bootstrap to completion before
-preparing the foundation change set; see the guide below. See the [foundation deployment guide](../infrastructure/aws/test/README.md).
+Deployment plan and observed status, 4 November 2026. Bootstrap completed and the
+owner verified both SecureStrings at version 1. The first foundation execution
+failed during NAT package installation (out-of-memory), then entered
+`ROLLBACK_FAILED` because RDS was not Available for its required rollback snapshot.
+The new private database/network and retained buckets/Cognito pool remain and can
+incur charges. See the [recovery plan](../infrastructure/aws/test/RECOVERY.md) and
+[foundation guide](../infrastructure/aws/test/README.md). No API/dashboard AWS
+end-to-end integration is established. Recovery deletion/protection changes require
+explicit owner approval under the original account-safety constraints.
 
 ## Cost and architecture decisions
 
@@ -74,7 +75,7 @@ Price sources checked on 4 November 2026:
 | Product | Test setup |
 | --- | --- |
 | VPC/network | Separate test VPC, public NAT subnet, private Lambda/database subnets, explicit route tables and least-privilege security groups; preserve the existing default VPC |
-| EC2 NAT | One t4g.nano with encrypted 8 GB gp3, IMDSv2 required, no SSH ingress, source/destination checking disabled, one public IPv4; maintain its OS; monitor availability |
+| EC2 NAT | One t4g.nano with encrypted 8 GB gp3 and 2 GiB disk-backed swap before package work, IMDSv2 required, no SSH ingress, source/destination checking disabled, one public IPv4; maintain its OS; monitor availability |
 | RDS | Private PostgreSQL 17.11 db.t4g.micro, Single-AZ, 20 GB encrypted gp3, automated backups and reviewed final-snapshot policy; no public address, Proxy or Multi-AZ |
 | S3 | Private test documents bucket, block all public access, encryption, HTTPS, dashboard-specific CORS and the existing signed PUT/GET flow |
 | Cognito | Test pool, case-insensitive usernames, admin-only sign-up, no required email/phone, password policy matching `cognito-setup.md`, public dashboard/mobile clients with no client secret |

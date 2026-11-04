@@ -42,8 +42,9 @@ jobs:
         run: |
           python infrastructure/aws/test/render-foundation.py --bootstrap > bootstrap.rendered.yaml
           python infrastructure/aws/test/render-foundation.py > foundation.rendered.yaml
+          python infrastructure/aws/test/render-foundation.py --retained-import > retained.import.yaml
       - name: Validate API and foundation templates
-        run: cfn-lint infrastructure/aws/template.yaml bootstrap.rendered.yaml foundation.rendered.yaml
+        run: cfn-lint infrastructure/aws/template.yaml bootstrap.rendered.yaml foundation.rendered.yaml retained.import.yaml
       - name: Check foundation safety settings
         run: python infrastructure/aws/test/test_foundation.py
       - uses: actions/setup-node@v4
@@ -58,6 +59,7 @@ jobs:
           path: |
             bootstrap.rendered.yaml
             foundation.rendered.yaml
+            retained.import.yaml
           retention-days: 7
 
   package-smoke:
