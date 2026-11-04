@@ -1,6 +1,6 @@
 # Amazon Cognito sign-in: setup and local development
 
-How staff sign in to the dashboard and the phone app with Amazon Cognito, how HQ manages accounts, and how to run each mode locally. Nothing in this repository creates the user pool, holds AWS credentials or deploys anything.
+How staff sign in to the dashboard and the phone app with Amazon Cognito, how HQ manages accounts, and how to run each mode locally. The test foundation in `infrastructure/aws/test/` can create an admin-only test pool after review and manual deployment; see `docs/aws-test-environment.md`. No workflow deploys it or stores AWS credentials.
 
 ## How it works
 
@@ -60,7 +60,7 @@ These match the app's own rules. Set them when the pool is created; this reposit
   - access token 60 minutes, ID token 60 minutes, refresh token **8 hours**, matching the previous 8-hour sessions and the dashboard's refresh cookie.
 - **Lockout:** Cognito applies its own temporary lockout after repeated wrong passwords. Both clients then show "Too many attempts…". Its timing is Cognito's, not the API's 15 minutes.
 - **IAM:** the API function needs only the six actions in `infrastructure/aws/template.yaml` (`CognitoAccountAdmin`), on this one pool: `AdminGetUser`, `AdminCreateUser`, `AdminSetUserPassword`, `AdminEnableUser`, `AdminDisableUser`, `AdminUserGlobalSignOut`. It does not need delete, user listing or pool changes.
-- **Network:** the API Lambda runs in the VPC, so it needs outbound HTTPS to `cognito-idp.<region>.amazonaws.com` (for JWKS and the admin calls) through the NAT gateway, or an interface VPC endpoint for Cognito user pools where it supports these calls.
+- **Network:** the API Lambda runs in the VPC, so it needs outbound HTTPS to `cognito-idp.<region>.amazonaws.com` (for JWKS and the admin calls) through the approved NAT instance or gateway, or an interface VPC endpoint for Cognito user pools where it supports these calls.
 
 ### First HQ account
 
@@ -127,4 +127,4 @@ Everything above is tested with Cognito replaced or its keys generated locally. 
 4. HQ sets a new password. The SPC's open dashboard session ends at its next page load, and the new password works.
 5. HQ disables the account. The SPC is refused at once, and the user shows as disabled in the pool.
 6. A refreshed access token keeps the original `auth_time`. Step 4 relies on this, and it is Cognito's documented behaviour.
-7. The Lambda reaches Cognito from inside the VPC (JWKS and admin calls) through the chosen NAT gateway or endpoint.
+7. The Lambda reaches Cognito from inside the VPC (JWKS and admin calls) through the chosen NAT instance, gateway or endpoint.

@@ -1,6 +1,8 @@
 # AWS configuration
 
-How the platform is configured for the agreed AWS shape: the Next.js 15 dashboard on AWS Amplify, the NestJS API on AWS Lambda behind API Gateway, PostgreSQL on Amazon RDS (through RDS Proxy) with Prisma, Cognito for production identity, and a private S3 bucket for documents. Nothing in the repository creates AWS resources, holds credentials or deploys.
+**TEST environment:** [aws-test-environment.md](aws-test-environment.md) defines the approved low-cost test shape: direct private RDS, a NAT instance and standard Parameter Store SecureStrings. Use `Stage=test`; the settings below describing RDS Proxy/Secrets Manager apply to the earlier staging/production shape. The test configuration remains undeployed until review and account preflight are complete.
+
+How the platform is configured for the agreed AWS shape: the Next.js 15 dashboard on AWS Amplify, the NestJS API on AWS Lambda behind API Gateway, PostgreSQL on Amazon RDS (through RDS Proxy) with Prisma, Cognito for production identity, and a private S3 bucket for documents. Reviewed infrastructure templates describe resources for owner-driven deployment; no workflow deploys them or stores AWS credentials. The test foundation is documented in `infrastructure/aws/test/README.md`.
 
 Every setting is an environment variable with a safe development default (`.env.example`). **Secret** values come from AWS Secrets Manager in production; **config** values are plain Lambda or Amplify environment variables.
 
@@ -8,8 +10,9 @@ Every setting is an environment variable with a safe development default (`.env.
 
 | Variable | Kind | Default (development) | Purpose |
 |---|---|---|---|
-| `DATABASE_URL` | Secret | local PostgreSQL | RDS connection through RDS Proxy |
-| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; keep within the RDS Proxy budget |
+| `DATABASE_URL` | Secret | local PostgreSQL | PostgreSQL URL; direct private RDS for test, earlier RDS Proxy shape for other deployed stages |
+| `CONFIG_PARAMETER_PREFIX` | Config | unset | Lambda test: `/sarvodaya-connect/test`; cold-start loading of the two encrypted settings described in `aws-test-environment.md`. Leave unset locally |
+| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; test uses 1 with reserved concurrency 2, direct to private RDS |
 | `NIC_ENCRYPTION_KEY` | Secret | — | NIC vault key (64 hex characters) |
 | `STORAGE_DRIVER` | Config | `local` (`s3` in production) | Document storage driver |
 | `S3_BUCKET` | Config | — | Private documents bucket |

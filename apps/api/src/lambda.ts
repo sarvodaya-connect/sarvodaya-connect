@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, Context } from 'aws-lambda';
 
 import { AppModule } from './app.module.js';
+import { loadRuntimeParameters } from './config/runtime-parameters.js';
 import { configureApp, createLogger } from './app.setup.js';
 
 /** Promise-style only: the Node.js 24 Lambda runtime no longer supports callback handlers. */
@@ -14,11 +15,12 @@ type ApiGatewayHandler = (event: APIGatewayProxyEventV2, context: Context) => Pr
  * The Nest app is built once per Lambda instance and reused by later
  * invocations of the same instance; it holds no request or user state, so any
  * instance can serve any request. Database connections stay within
- * DATABASE_CONNECTION_LIMIT and go through RDS Proxy.
+ * DATABASE_CONNECTION_LIMIT. The test environment connects directly to private RDS.
  */
 let ready: Promise<ApiGatewayHandler> | undefined;
 
 async function bootstrap(): Promise<ApiGatewayHandler> {
+  await loadRuntimeParameters();
   const app = await NestFactory.create(AppModule, { logger: createLogger() });
   configureApp(app, app.get(ConfigService));
   await app.init();

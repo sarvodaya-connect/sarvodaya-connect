@@ -1,0 +1,379 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Sarvodaya Connect TEST foundation, Singapore only; render inline code before deployment
+Parameters:
+  ExpectedAccountId:
+    Type: String
+    AllowedPattern: '^[0-9]{12}$'
+    Description: Existing signed-in account ID checked before deployment, not a new account
+  NatImage:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  DashboardOrigin:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^https://[a-zA-Z0-9.-]+$'
+    Description: Leave blank until Amplify provides its test HTTPS origin; then update this stack for browser signed uploads
+Rules:
+  ExistingAccountOnly:
+    Assertions:
+      - Assert: !Equals [!Ref 'AWS::AccountId', !Ref ExpectedAccountId]
+        AssertDescription: Deploy into the existing account you reviewed
+  SingaporeOnly:
+    Assertions:
+      - Assert: !Equals [!Ref 'AWS::Region', ap-southeast-1]
+        AssertDescription: Deploy this TEST foundation in Singapore only
+Conditions:
+  HasDashboardOrigin: !Not [!Equals [!Ref DashboardOrigin, '']]
+Resources:
+  Network:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.77.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{Key: Name, Value: sarvodaya-connect-test}]
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Network
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Network
+      CidrBlock: 10.77.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{Key: Name, Value: sarvodaya-connect-test-public-a}]
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Network
+      CidrBlock: 10.77.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{Key: Name, Value: sarvodaya-connect-test-private-a}]
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Network
+      CidrBlock: 10.77.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{Key: Name, Value: sarvodaya-connect-test-private-b}]
+  PublicRoutes:
+    Type: AWS::EC2::RouteTable
+    Properties: {VpcId: !Ref Network}
+  PublicAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PublicSubnet, RouteTableId: !Ref PublicRoutes}
+  PublicInternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRoutes
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PrivateRoutes:
+    Type: AWS::EC2::RouteTable
+    Properties: {VpcId: !Ref Network}
+  PrivateAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PrivateSubnetA, RouteTableId: !Ref PrivateRoutes}
+  PrivateAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PrivateSubnetB, RouteTableId: !Ref PrivateRoutes}
+  NatSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test NAT only; HTTP/HTTPS from private network; no SSH
+      VpcId: !Ref Network
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 10.77.0.0/16}
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 10.77.0.0/16}
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 0.0.0.0/0}
+  NatInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal: {Count: 1, Timeout: PT10M}
+    DependsOn: PublicInternetRoute
+    Properties:
+      InstanceType: t4g.nano
+      ImageId: !Ref NatImage
+      SourceDestCheck: false
+      CreditSpecification: {CPUCredits: standard}
+      MetadataOptions: {HttpTokens: required, HttpEndpoint: enabled, HttpPutResponseHopLimit: 1}
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref PublicSubnet
+          GroupSet: [!Ref NatSecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: {VolumeType: gp3, VolumeSize: 8, Encrypted: true, DeleteOnTermination: true}
+      Tags: [{Key: Name, Value: sarvodaya-connect-test-nat}]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          trap '/opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource NatInstance --region "${AWS::Region}"' EXIT
+          dnf --setopt=install_weak_deps=False install -y aws-cfn-bootstrap iptables-services
+          systemctl enable --now iptables
+          iptables -F FORWARD
+          echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-sarvodaya-nat.conf
+          sysctl --system
+          iface=$(ip route show default | awk '{print $5; exit}')
+          iptables -t nat -A POSTROUTING -o "$iface" -j MASQUERADE
+          iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+          iptables -A FORWARD -s 10.77.0.0/16 -j ACCEPT
+          iptables -P FORWARD DROP
+          service iptables save
+          systemctl enable iptables
+  NatAddress:
+    Type: AWS::EC2::EIP
+    DependsOn: GatewayAttachment
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref NatInstance
+  PrivateInternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: NatAddress
+    Properties:
+      RouteTableId: !Ref PrivateRoutes
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatInstance
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Network
+      VpcEndpointType: Gateway
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      RouteTableIds: [!Ref PrivateRoutes]
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test API and temporary migration shell; no inbound access
+      VpcId: !Ref Network
+      SecurityGroupEgress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSecurityGroup}
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test PostgreSQL; inbound only from test application group
+      VpcId: !Ref Network
+      SecurityGroupEgress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 10.77.0.0/16}
+  DatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DatabaseSecurityGroup
+      SourceSecurityGroupId: !Ref AppSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+  DatabaseSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for Sarvodaya Connect TEST only
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+  ParameterLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/sarvodaya-connect-test-parameters
+      RetentionInDays: 14
+  ParameterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sarvodaya-connect-test-parameters
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - {Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}
+      Policies:
+        - PolicyName: PrepareOnlyTestParameters
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [ssm:GetParameter, ssm:ListTagsForResource, ssm:PutParameter, ssm:AddTagsToResource]
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/database-master-password
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/sarvodaya-connect/test/nic-encryption-key
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sarvodaya-connect-test-parameters:*
+  ParameterFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: ParameterLogs
+    Properties:
+      FunctionName: sarvodaya-connect-test-parameters
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 60
+      Handler: index.handler
+      Role: !GetAtt ParameterRole.Arn
+      Code:
+        ZipFile: __PARAMETER_CODE__
+  SecureParameters:
+    Type: Custom::SarvodayaTestParameters
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      ServiceToken: !GetAtt ParameterFunction.Arn
+      Prefix: /sarvodaya-connect/test
+      ServiceTimeout: 120
+  Database:
+    Type: AWS::RDS::DBInstance
+    DependsOn: SecureParameters
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: sarvodaya-connect-test-db
+      DBName: sarvodaya_test
+      Engine: postgres
+      EngineVersion: '17.11'
+      EngineLifecycleSupport: open-source-rds-extended-support-disabled
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: '20'
+      StorageType: gp3
+      StorageEncrypted: true
+      MasterUsername: sc_test_admin
+      MasterUserPassword: '{{resolve:ssm-secure:/sarvodaya-connect/test/database-master-password:1}}'
+      DBSubnetGroupName: !Ref DatabaseSubnets
+      VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      Port: '5432'
+      BackupRetentionPeriod: 7
+      DeleteAutomatedBackups: false
+      DeletionProtection: true
+      AutoMinorVersionUpgrade: true
+      AllowMajorVersionUpgrade: false
+      MonitoringInterval: 0
+      EnablePerformanceInsights: false
+      CopyTagsToSnapshot: true
+      Tags: [{Key: Name, Value: sarvodaya-connect-test-db}]
+  Documents:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub sarvodaya-connect-test-documents-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]
+      CorsConfiguration: !If
+        - HasDashboardOrigin
+        - CorsRules:
+            - AllowedOrigins: [!Ref DashboardOrigin]
+              AllowedMethods: [GET, PUT, HEAD]
+              AllowedHeaders: [content-type, x-amz-checksum-sha256]
+              ExposedHeaders: [ETag]
+              MaxAge: 300
+        - !Ref AWS::NoValue
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: RemoveOldTestVersions
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+  DocumentsHttps:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Documents
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt Documents.Arn, !Sub '${Documents.Arn}/*']
+            Condition: {Bool: {'aws:SecureTransport': 'false'}}
+  Artifacts:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub sarvodaya-connect-test-build-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]
+  ArtifactsHttps:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Artifacts
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt Artifacts.Arn, !Sub '${Artifacts.Arn}/*']
+            Condition: {Bool: {'aws:SecureTransport': 'false'}}
+  UserPool:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: sarvodaya-connect-test
+      UserPoolTier: ESSENTIALS
+      UsernameConfiguration: {CaseSensitive: false}
+      AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
+      MfaConfiguration: 'OFF'
+      DeletionProtection: ACTIVE
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 10
+          RequireNumbers: true
+          RequireLowercase: false
+          RequireUppercase: false
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 3
+      UserPoolTags: {Project: SarvodayaConnect, Environment: test}
+  DashboardClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: sarvodaya-connect-test-dashboard
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 8
+      TokenValidityUnits: {AccessToken: minutes, IdToken: minutes, RefreshToken: hours}
+  MobileClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: sarvodaya-connect-test-mobile
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 8
+      TokenValidityUnits: {AccessToken: minutes, IdToken: minutes, RefreshToken: hours}
+Outputs:
+  VpcId: {Value: !Ref Network}
+  NatInstanceId: {Value: !Ref NatInstance}
+  PrivateSubnetId: {Value: !Ref PrivateSubnetA}
+  SecondPrivateSubnetId: {Value: !Ref PrivateSubnetB}
+  ApplicationSecurityGroupId: {Value: !Ref AppSecurityGroup}
+  DatabaseHost: {Value: !GetAtt Database.Endpoint.Address}
+  DatabaseIdentifier: {Value: !Ref Database}
+  DocumentsBucketName: {Value: !Ref Documents}
+  DeploymentBucketName: {Value: !Ref Artifacts}
+  CognitoUserPoolId: {Value: !Ref UserPool}
+  DashboardClientId: {Value: !Ref DashboardClient}
+  MobileClientId: {Value: !Ref MobileClient}
