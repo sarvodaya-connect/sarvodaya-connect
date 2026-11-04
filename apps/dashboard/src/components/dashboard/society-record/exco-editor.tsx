@@ -8,6 +8,8 @@ import { Icon } from "../icon";
 
 export const OFFICE_BEARERS = ["President", "Secretary", "Treasurer"] as const;
 
+export const EXCO_SEATS = 25;
+
 /** Names for the seat groups the API requires (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders). */
 export const SEAT_GROUP_LABELS: Record<MembershipCategory, string> = {
   CHILDREN: "Children (7–14)",
@@ -57,13 +59,27 @@ export function emptyExco(): ExcoRow[] {
   }));
 }
 
+/**
+ * The 25 seats for Edit Exco: members already entered keep their seat and
+ * group; each empty seat gets a group that still has room, so filling it can
+ * never go over 3 children, 3 youth, 3 mothers, 9 ordinary or 7 elders.
+ */
 export function excoFromCommittee(members: CommitteeMember[]): ExcoRow[] {
   const active = members.filter((member) => member.isActive && member.seatNumber);
-  return Array.from({ length: 25 }, (_, index) => {
+  const room = new Map<MembershipCategory, number>();
+  for (const seatType of NEW_SOCIETY_SEATS) room.set(seatType, (room.get(seatType) ?? 0) + 1);
+  for (const member of active) if (member.seatType) room.set(member.seatType, (room.get(member.seatType) ?? 0) - 1);
+  const groupForEmptySeat = (index: number) => {
+    const preferred = NEW_SOCIETY_SEATS[index]!;
+    const seatType = (room.get(preferred) ?? 0) > 0 ? preferred : (NEW_SOCIETY_SEATS.find((type) => (room.get(type) ?? 0) > 0) ?? preferred);
+    room.set(seatType, (room.get(seatType) ?? 0) - 1);
+    return seatType;
+  };
+  return Array.from({ length: EXCO_SEATS }, (_, index) => {
     const member = active.find((item) => item.seatNumber === index + 1);
     return {
       seatNumber: index + 1,
-      seatType: member?.seatType ?? NEW_SOCIETY_SEATS[index]!,
+      seatType: member?.seatType ?? groupForEmptySeat(index),
       fullName: member?.fullName ?? "",
       position: member?.position ?? "Member",
       dateOfBirth: member?.dateOfBirth ?? "",
@@ -80,18 +96,21 @@ export function excoFromCommittee(members: CommitteeMember[]): ExcoRow[] {
 
 const NIC = /^(?:[0-9]{9}[vVxX]|[0-9]{12})$/;
 
-/**
- * "create": a new society's seats must be complete records (V5 D05c, M07e).
- * "edit": older societies may lack some details, so a name and date of birth
- * are enough to save.
- */
-export type ExcoMode = "create" | "edit";
+/** A seat with nothing typed in it: it is left out when the Exco is saved. */
+export function rowEmpty(row: ExcoRow) {
+  return ![row.fullName, row.dateOfBirth, row.profession, row.phone, row.addressLine, row.nic].some((value) => value.trim());
+}
 
-export function rowComplete(row: ExcoRow, mode: ExcoMode = "edit") {
-  const basic = row.fullName.trim().length >= 2 && Boolean(row.dateOfBirth);
-  if (mode === "edit") return basic;
+/** A seat that will be saved: it has the member's full name. */
+export function rowFilled(row: ExcoRow) {
+  return row.fullName.trim().length >= 2;
+}
+
+/** A filled seat with every detail the Exco keeps (V5 M07e): name, NIC, date of birth, profession, phone and address. */
+export function rowComplete(row: ExcoRow) {
   return (
-    basic &&
+    rowFilled(row) &&
+    Boolean(row.dateOfBirth) &&
     Boolean(row.nic.trim() || row.nicMasked) &&
     Boolean(row.profession.trim()) &&
     Boolean(row.addressLine.trim()) &&
@@ -99,15 +118,24 @@ export function rowComplete(row: ExcoRow, mode: ExcoMode = "edit") {
   );
 }
 
-/** Problems that stop saving, in plain words (V5 D05c error banner). */
-export function excoProblems(rows: ExcoRow[], mode: ExcoMode = "edit", today = new Date().toISOString().slice(0, 10)) {
+/**
+ * Problems that stop saving, in plain words (V5 D05c error banner). The Exco
+ * can be saved while it is still being entered: empty seats are left out.
+ * Office bearers are required once all 25 seats are filled. The API checks
+ * the same rules, plus each seat group's number and age range.
+ */
+export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().slice(0, 10)) {
   const problems: string[] = [];
-  const filled = rows.filter((row) => rowComplete(row, mode)).length;
-  if (filled < 25)
-    problems.push(`Every society must have exactly 25 Exco members. ${filled} are entered — enter the rest to continue.`);
+  const filled = rows.filter(rowFilled).length;
+  for (const row of rows) {
+    if (!rowFilled(row) && !rowEmpty(row)) problems.push(`Seat ${row.seatNumber}: enter the full name, or clear the seat.`);
+  }
   for (const office of OFFICE_BEARERS) {
-    const count = rows.filter((row) => row.position === office).length;
-    if (count !== 1) problems.push(count ? `Choose only one ${office}.` : `Choose the ${office} from the 25 members.`);
+    const holders = rows.filter((row) => row.position === office);
+    if (holders.length > 1) problems.push(`Choose only one ${office}.`);
+    const empty = holders.find((row) => !rowFilled(row));
+    if (empty) problems.push(`Seat ${empty.seatNumber} is the ${office}: enter their name, or choose another member.`);
+    else if (filled === EXCO_SEATS && holders.length === 0) problems.push(`Choose the ${office} from the 25 members.`);
   }
   for (const row of rows) {
     if (row.dateOfBirth && row.dateOfBirth > today) problems.push(`Seat ${row.seatNumber}: the date of birth is in the future.`);
@@ -116,9 +144,9 @@ export function excoProblems(rows: ExcoRow[], mode: ExcoMode = "edit", today = n
   return problems;
 }
 
-/** Ready for the API: seat rows without display-only fields. */
+/** Ready for the API: the filled seats, without display-only fields. Empty seats are left out. */
 export function excoPayload(rows: ExcoRow[]) {
-  return rows.map((row) => ({
+  return rows.filter(rowFilled).map((row) => ({
     seatNumber: row.seatNumber,
     seatType: row.seatType,
     fullName: row.fullName.trim(),
@@ -147,26 +175,25 @@ function ageFrom(dateOfBirth: string) {
 const cell = "w-full rounded-md border border-line bg-surface px-2 py-1.5 text-[12px] outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring";
 
 /**
- * V5 D05c / Edit Exco: all 25 seats in one table. Office bearers are chosen
- * from the 25 members. Saving is blocked until every seat is filled; the API
- * checks the same rules.
+ * Edit Exco: all 25 seats in one table. Office bearers are chosen from the
+ * members. The Society Officer can save at any time and come back to fill the
+ * rest; the record shows the Exco as incomplete until all 25 seats are filled.
  */
 export function ExcoEditor({
   focusOffices = false,
-  mode = "edit",
   name = "council",
   rows,
   setRows,
 }: {
   focusOffices?: boolean;
-  mode?: ExcoMode;
   /** The hidden form field that carries the seats as JSON. */
   name?: string;
   rows: ExcoRow[];
   setRows: (rows: ExcoRow[]) => void;
 }) {
   const [showAll, setShowAll] = useState(true);
-  const filled = rows.filter((row) => rowComplete(row, mode)).length;
+  const filled = rows.filter(rowFilled).length;
+  const toFill = EXCO_SEATS - filled;
   const payload = useMemo(() => JSON.stringify(excoPayload(rows)), [rows]);
   const update = (seat: number, key: keyof ExcoRow, value: string) =>
     setRows(rows.map((row) => (row.seatNumber === seat ? { ...row, [key]: value } : row)));
@@ -181,7 +208,7 @@ export function ExcoEditor({
             : row,
       ),
     );
-  const visible = showAll ? rows : rows.filter((row) => !rowComplete(row, mode) || OFFICE_BEARERS.includes(row.position as never));
+  const visible = showAll ? rows : rows.filter((row) => !rowComplete(row) || OFFICE_BEARERS.includes(row.position as never));
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -190,7 +217,7 @@ export function ExcoEditor({
         <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-[15px] font-bold text-ink">Exco · 25 members</h3>
           <button className="text-[12px] text-ink-soft underline underline-offset-2" onClick={() => setShowAll((all) => !all)} type="button">
-            {showAll ? "Show only office bearers and empty seats" : "Show all 25"}
+            {showAll ? "Show only office bearers and seats still to complete" : "Show all 25"}
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -204,14 +231,17 @@ export function ExcoEditor({
             </thead>
             <tbody className="divide-y divide-line-soft">
               {visible.map((row) => {
-                const complete = rowComplete(row, mode);
+                const complete = rowComplete(row);
+                const filledSeat = rowFilled(row);
+                // Typed details without a name stop saving; an empty seat is simply left for later.
+                const needsName = !filledSeat && !rowEmpty(row);
                 const label = (field: string) => `Seat ${row.seatNumber} ${field}`;
                 return (
-                  <tr className={complete ? "" : "bg-[var(--banner-incident-bg)]"} key={row.seatNumber}>
-                    <td className={`py-1.5 pl-4 pr-2 font-semibold ${complete ? "text-ink-soft" : "text-danger-text"}`}>{row.seatNumber}</td>
+                  <tr className={needsName ? "bg-[var(--banner-incident-bg)]" : ""} key={row.seatNumber}>
+                    <td className={`py-1.5 pl-4 pr-2 font-semibold ${needsName ? "text-danger-text" : "text-ink-soft"}`}>{row.seatNumber}</td>
                     <td className="px-2 py-1.5 text-[11px] text-ink-soft">{SEAT_GROUP_LABELS[row.seatType]}</td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("full name")} className={`${cell} min-w-[160px]`} maxLength={150} onChange={(event) => update(row.seatNumber, "fullName", event.target.value)} placeholder="Required" value={row.fullName} />
+                      <input aria-label={label("full name")} className={`${cell} min-w-[160px]`} maxLength={150} onChange={(event) => update(row.seatNumber, "fullName", event.target.value)} placeholder={filledSeat ? undefined : "Not entered yet"} value={row.fullName} />
                     </td>
                     <td className="px-2 py-1.5">
                       <select
@@ -256,8 +286,12 @@ export function ExcoEditor({
                           <Icon className="size-4" name="success" strokeWidth={2} />
                           <span className="sr-only">Complete</span>
                         </span>
+                      ) : needsName ? (
+                        <span className="text-[11px] font-semibold text-danger-text">Name needed</span>
+                      ) : filledSeat ? (
+                        <span className="whitespace-nowrap text-[11px] font-semibold text-warn-text">Details to add</span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-danger-text">Required</span>
+                        <span className="text-[11px] text-muted">Empty</span>
                       )}
                     </td>
                   </tr>
@@ -267,19 +301,19 @@ export function ExcoEditor({
           </table>
         </div>
         <p className="border-t border-line-soft px-4 py-2 text-[11px] text-ink-soft">
-          {mode === "create"
-            ? "Every seat needs a full name, NIC, date of birth, profession, phone and address."
-            : "A full name and date of birth are needed for each seat."}{" "}
-          The age is worked out from the date of birth. NICs are stored encrypted and shown only on request.
+          Save at any time: empty seats are left for later. Each seat needs a full name to be saved, and should also have the NIC, date of birth,
+          profession, phone and address. The age is worked out from the date of birth. NICs are stored encrypted and shown only on request.
         </p>
       </section>
       <aside className="flex flex-col gap-4">
         <section className="rounded-card border border-line bg-surface p-4">
           <h3 className="text-[15px] font-bold text-ink">Progress</h3>
-          <p className={`mt-2 text-[26px] font-bold ${filled === 25 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
+          <p className={`mt-2 text-[26px] font-bold ${toFill === 0 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
           {/* V5 PR 10: the count as words, never a progress bar. */}
           <p className="mt-1 text-[12px] text-ink-soft">
-            {filled === 25 ? "All 25 seats are filled." : `${25 - filled} ${25 - filled === 1 ? "seat" : "seats"} still to fill. All 25 are required.`}
+            {toFill === 0
+              ? "All 25 seats are filled."
+              : `${toFill} ${toFill === 1 ? "seat" : "seats"} still to fill. You can save now and add the rest later; the Exco shows as incomplete until all 25 are filled.`}
           </p>
         </section>
         <section className="rounded-card border border-line bg-surface p-4">
@@ -294,7 +328,7 @@ export function ExcoEditor({
               );
             })}
           </ul>
-          <p className="mt-3 text-[12px] text-ink-soft">Chosen from the 25 members.</p>
+          <p className="mt-3 text-[12px] text-ink-soft">Chosen from the Exco members. All three are needed once the 25 seats are filled.</p>
         </section>
       </aside>
     </div>

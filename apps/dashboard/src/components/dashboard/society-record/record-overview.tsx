@@ -10,6 +10,7 @@ import { SocietyLocationMap } from "../maps/society-location-map";
 import { Pill } from "../ui/pill";
 import {
   actorLabel,
+  excoProgress,
   formatDate,
   formatLkr,
   gradeBadgeClass,
@@ -103,6 +104,7 @@ export function RecordOverview({
     });
   const staff = [...record.staff].sort((a, b) => STAFF_ORDER.indexOf(a.role as never) - STAFF_ORDER.indexOf(b.role as never));
   const request = record.openGradeRequest;
+  const exco = excoProgress(record);
   const token = mapboxToken();
 
   return (
@@ -155,15 +157,21 @@ export function RecordOverview({
           <Card
             action={
               <Link className="text-[11px] font-semibold text-brand-leaf underline underline-offset-2" href={`${base}/exco`}>
-                All {committee.length} members
+                {committee.length === 0 ? (record.permissions.canEdit ? "Add Exco members" : "Open Exco") : `All ${committee.length} members`}
               </Link>
             }
             eyebrow="Exco"
-            title={`Exco · ${committee.length} members`}
+            title={`Exco · ${exco.filled} of 25 seats filled`}
           >
-            {committee.length === 0 ? (
-              <p className="text-[12px] text-muted">No Exco members recorded yet.</p>
-            ) : (
+            {!exco.complete && (
+              <p className="mb-2 text-[11.5px] text-warn-text">
+                {exco.filled === 0
+                  ? "No Exco members have been entered yet."
+                  : `Incomplete: ${exco.toFill} ${exco.toFill === 1 ? "seat" : "seats"} still to fill.`}{" "}
+                The Society Officer enters the Exco and can save it as they go.
+              </p>
+            )}
+            {committee.length === 0 ? null : (
               <table className="w-full text-left text-[11px]">
                 <thead className="bg-[#f6f7f4] text-[10px] text-muted">
                   <tr>

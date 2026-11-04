@@ -1,5 +1,7 @@
 import type {
   ActorReference,
+  ExcoStatus,
+  SocietyRecord,
   SocietyGrade,
   SocietyHistoryCategory,
   UserRole,
@@ -10,6 +12,25 @@ import type {
  * The dashboard imports only types from the shared contracts, so the few
  * values it needs are repeated here and checked against those types.
  */
+
+/**
+ * How much of the 25-seat Exco is entered. A new society starts with none
+ * (its Society Officer enters them), so zero and partial Excos are normal.
+ * Falls back to counting the members if the API did not send excoStatus.
+ */
+export function excoProgress(record: Pick<SocietyRecord, "committee"> & { excoStatus?: ExcoStatus }) {
+  const filled =
+    record.excoStatus?.filledSeats ??
+    new Set(record.committee.filter((member) => member.isActive && member.seatNumber).map((member) => member.seatNumber)).size;
+  const toFill = Math.max(0, 25 - filled);
+  return {
+    filled,
+    toFill,
+    complete: toFill === 0,
+    /** "Exco not entered yet", "Exco incomplete · 12 of 25" or "Exco complete". */
+    label: filled === 0 ? "Exco not entered yet" : toFill === 0 ? "Exco complete" : `Exco incomplete · ${filled} of 25`,
+  };
+}
 
 export const SOCIETY_GRADE_LABELS = {
   A: "Strong",

@@ -1155,11 +1155,9 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
         status: 403,
       );
     }
-    if (members.length != 25) {
-      throw const SocietyRecordException(
-        'Every society must have exactly 25 Exco members',
-        status: 400,
-      );
+    // A partly entered Exco can be saved (0–25 seats), as on the API.
+    if (members.length > 25) {
+      throw const SocietyRecordException('The Exco has 25 seats', status: 400);
     }
     final before = {
       for (final member in society.exco) member.seatNumber: member,

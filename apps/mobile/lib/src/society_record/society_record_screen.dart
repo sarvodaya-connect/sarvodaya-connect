@@ -817,13 +817,15 @@ class _ExcoTabState extends State<_ExcoTab> {
     final record = widget.record;
     final members = [...record.exco]
       ..sort((a, b) => a.seatNumber.compareTo(b.seatNumber));
-    if (members.isEmpty) {
+    final canEdit = record.permissions.canEdit;
+    if (members.isEmpty && !canEdit) {
       return const StateMessage(
         icon: Icons.groups_outlined,
         title: 'No Exco members yet',
-        message: 'The 25 Exco members will appear here once they are entered.',
+        message: 'The Society Officer enters the 25 Exco members. They will appear here as they are added.',
       );
     }
+    final emptySeats = emptyExcoSeats(members);
     final query = _query.trim().toLowerCase();
     bool matches(ExcoMember m) =>
         query.isEmpty ||
@@ -835,8 +837,8 @@ class _ExcoTabState extends State<_ExcoTab> {
     final shownOthers = _showAll || query.isNotEmpty
         ? others
         : others.take(8).toList();
-    final complete = members.length == 25;
-    final canEdit = record.permissions.canEdit;
+    final complete = emptySeats.isEmpty;
+    final toFill = emptySeats.length;
 
     Widget row(ExcoMember member, {String? office}) => InkWell(
       onTap: () =>
@@ -927,18 +929,19 @@ class _ExcoTabState extends State<_ExcoTab> {
               ),
             ),
             RecordChip(
-              complete ? '✓ 25 / 25' : '${25 - members.length} missing',
-              tone: complete ? ChipTone.success : ChipTone.danger,
+              complete ? '✓ 25 / 25' : 'Incomplete · $toFill to fill',
+              tone: complete ? ChipTone.success : ChipTone.warning,
             ),
           ],
         ),
         if (!complete) ...[
           const SizedBox(height: 8),
-          const RecordNote(
-            icon: Icons.error_outline,
-            tone: NoteTone.error,
-            title: 'All 25 are required',
-            message: 'Every society must have exactly 25 Exco members. Ask HQ to complete the Exco.',
+          RecordNote(
+            icon: Icons.info_outline,
+            title: 'Exco incomplete',
+            message: canEdit
+                ? 'Add the remaining $toFill ${toFill == 1 ? 'member' : 'members'} under "Empty seats". Each member is saved as you go, so you can finish later.'
+                : 'The Society Officer is still entering the Exco: $toFill of 25 seats to fill.',
           ),
         ],
         const SizedBox(height: 10),
@@ -985,6 +988,45 @@ class _ExcoTabState extends State<_ExcoTab> {
             onPressed: () => setState(() => _showAll = true),
             child: Text('Show all ${others.length} members'),
           ),
+        if (canEdit && emptySeats.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'EMPTY SEATS · ${emptySeats.length}',
+            style: RecordStyle.sectionLabel,
+          ),
+          const SizedBox(height: 6),
+          RecordCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            children: [
+              for (final seat in emptySeats)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(
+                    'Seat ${seat.seatNumber}',
+                    style: RecordStyle.value,
+                  ),
+                  subtitle: Text(
+                    seatGroupLabels[seat.seatType] ?? seat.seatType,
+                    style: RecordStyle.caption,
+                  ),
+                  trailing: TextButton(
+                    onPressed: () => widget.open(
+                      ExcoMemberFormScreen(
+                        record: record,
+                        member: seat,
+                        replace: true,
+                      ),
+                    ),
+                    child: Text(
+                      'Add',
+                      semanticsLabel: 'Add a member to seat ${seat.seatNumber}',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }

@@ -20,6 +20,7 @@ import {
   period,
   staleCutoff,
 } from './national-rules.js';
+import { EXCO_SEATS } from '../societies/societies.service.js';
 import { chosenYear } from './national.service.js';
 
 const NONE: Prisma.SocietyWhereInput = { id: { in: [] } };
@@ -204,6 +205,7 @@ export class DirectoryService {
             ? { name: officer.displayName, status: officer.status }
             : null,
           figuresAdded: figuresAdded(record),
+          excoSeatsFilled: Math.min(record._count.councilMembers, EXCO_SEATS),
           updatedAt: record.updatedAt.toISOString(),
           notUpdatedIn90Days: record.updatedAt.getTime() < cutoff,
         };

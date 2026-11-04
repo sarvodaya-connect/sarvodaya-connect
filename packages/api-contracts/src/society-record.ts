@@ -147,6 +147,17 @@ export interface SocietyRecordPermissions {
   viewOnlyUntil?: IsoDateTime;
 }
 
+/**
+ * A new society starts with no Exco members: HQ creates it, assigns a Society
+ * Officer, and the officer enters the 25 seats, saving as they go. The Exco is
+ * incomplete until every seat is filled.
+ */
+export interface ExcoStatus {
+  filledSeats: number;
+  totalSeats: 25;
+  complete: boolean;
+}
+
 export interface SocietyRecord extends SocietyDetails {
   memberCount: number | null;
   landline: string | null;
@@ -155,6 +166,8 @@ export interface SocietyRecord extends SocietyDetails {
   gradeChangedAt?: IsoDateTime;
   gradeChangedBy?: ActorReference;
   openGradeRequest: GradeChangeRequest | null;
+  /** How much of the 25-seat Exco has been entered. */
+  excoStatus: ExcoStatus;
   staff: SocietyStaffMember[];
   annualSummary: AnnualFinancialSummary;
   lastChange?: { at: IsoDateTime; by: ActorReference };

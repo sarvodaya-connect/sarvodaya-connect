@@ -288,6 +288,66 @@ class RecordPermissions {
 /// The three Exco offices; every other seat holder is a "Member".
 const officeBearers = ['President', 'Secretary', 'Treasurer'];
 
+/// Every society's Exco has 25 seats. A new society starts with none: HQ
+/// creates it, and its Society Officer enters the members one at a time.
+const excoSeats = 25;
+
+/// The seat groups and how many seats each has (the API checks the same).
+const seatGroupLabels = {
+  'CHILDREN': 'Children (7–14)',
+  'YOUTH': 'Youth (15–25)',
+  'MOTHERS': 'Mothers',
+  'ORDINARY': 'Ordinary',
+  'ELDERS_COUNCIL': "Elders' council",
+};
+
+/// A new Exco's seat groups in seat order, as on the dashboard.
+final List<String> _newExcoSeatGroups = [
+  for (final (group, seats) in const [
+    ('ORDINARY', 9),
+    ('ELDERS_COUNCIL', 7),
+    ('MOTHERS', 3),
+    ('YOUTH', 3),
+    ('CHILDREN', 3),
+  ])
+    for (var i = 0; i < seats; i++) group,
+];
+
+/// The seats not filled yet, each with a group that still has room, so
+/// filling one never goes over a group's number of seats. Each is an empty
+/// [ExcoMember] (no id) for the add form.
+List<ExcoMember> emptyExcoSeats(List<ExcoMember> exco) {
+  final room = <String, int>{};
+  for (final group in _newExcoSeatGroups) {
+    room[group] = (room[group] ?? 0) + 1;
+  }
+  for (final member in exco) {
+    room[member.seatType] = (room[member.seatType] ?? 0) - 1;
+  }
+  final taken = {for (final member in exco) member.seatNumber};
+  return [
+    for (var seat = 1; seat <= excoSeats; seat++)
+      if (!taken.contains(seat))
+        () {
+          final preferred = _newExcoSeatGroups[seat - 1];
+          final group = (room[preferred] ?? 0) > 0
+              ? preferred
+              : _newExcoSeatGroups.firstWhere(
+                  (type) => (room[type] ?? 0) > 0,
+                  orElse: () => preferred,
+                );
+          room[group] = (room[group] ?? 0) - 1;
+          return ExcoMember(
+            id: '',
+            seatNumber: seat,
+            fullName: '',
+            position: 'Member',
+            seatType: group,
+          );
+        }(),
+  ];
+}
+
 class ExcoMember {
   const ExcoMember({
     required this.id,
@@ -340,7 +400,11 @@ class ExcoMember {
 
   bool get isOfficeBearer => officeBearers.contains(position);
 
-  /// The seat as the council update expects it (V5 M07e saves all 25 together).
+  /// A seat nobody fills yet (see [emptyExcoSeats]).
+  bool get isEmptySeat => id.isEmpty;
+
+  /// The seat as the council update expects it: the filled seats (0–25) are
+  /// saved together, and a seat left out stays empty.
   Map<String, Object?> toCouncilJson() => {
     'seatNumber': seatNumber,
     'fullName': fullName,

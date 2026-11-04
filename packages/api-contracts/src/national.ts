@@ -231,6 +231,8 @@ export interface DirectorySociety {
   spc: { id: string; name: string } | null;
   societyOfficer: { name: string; status: string } | null;
   figuresAdded: boolean;
+  /** Exco seats filled so far, 0–25. Below 25 the Exco is incomplete. */
+  excoSeatsFilled: number;
   updatedAt: string;
   notUpdatedIn90Days: boolean;
 }

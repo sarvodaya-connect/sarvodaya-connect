@@ -71,13 +71,16 @@ All paths are under `/api/v1`. DTO validation rejects unsupported body fields.
 | `POST /identity/district-access/:id/revoke` | District DM or HQ; immediate early revoke |
 | `GET /identity/audit` | V5 D24: up to 500 entries in the viewer's society/district scope (HQ national), filtered by `q`, `districtId`, `type`, `role` and `days`; names people, societies and accounts; never NICs or credentials |
 | `GET /grade-requests`, `GET /grade-requests/:id` | V5 D22/D22r, HQ only: the national grade queue with counts, and one request with the society at a glance and its grade history |
-| `POST /societies` | V5 D05n/D05c, HQ only: a society with details, starting grade and all 25 complete Exco members including the office bearers; NICs go through the NIC vault |
+| `POST /societies` | V5 D05n, HQ only: a society with its basic details and starting grade. No Exco is needed: HQ then assigns a Society Officer (D05a), who enters the Exco. An optional `council` (0–25 seats, same rules as `PUT .../council`) is still accepted; NICs go through the NIC vault |
+| `PUT /societies/:id/council` | Assigned Society Officer, SPC or DDM, or HQ: the filled Exco seats (0–25), saved together so the Exco can be entered gradually. Each seat group stays within its number (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders' council), children's and youth ages match, and each office has at most one holder. With all 25 seats, every group is full and the President, Secretary and Treasurer are chosen |
 | `GET /societies/:id/staff-options`, `PUT /societies/:id/assignments` | V5 D05a, HQ only: one DDM, SPC and Society Officer from the district; accounts whose access changes are signed out |
 | `GET /societies`, `GET /societies/:id` | Authenticated scoped reads; inaccessible details return 404 |
 | `PUT /societies/:id/council/:memberId/nic` | Assigned editors or HQ; encrypted at rest |
 | `POST /societies/:id/council/:memberId/nic/reveal` | Anyone with current society read scope; no-store response, logged reveal |
 
 NIC storage uses AES-256-GCM with a unique random IV and society/member IDs as authenticated associated data. The ordinary registry response includes only the final four characters. Mobile hides reveals after 30 seconds and when backgrounded. Audit records contain the actor, action and record IDs, never the full NIC or credentials. Profile/council/membership edits write their audit event in the same transaction. Council updates preserve encrypted NIC data only when the seat and member identity remain unchanged; replacing a member requires recording the new NIC.
+
+**Exco completion.** A society can exist with no Exco or a partly entered one. `GET /societies/:id` returns `excoStatus` (`filledSeats`, `totalSeats: 25`, `complete`), and the society directory (`GET /society-directory`) returns `excoSeatsFilled` for each row. The dashboard marks the record, its Exco tab and the Societies list as "Exco not entered yet" or "Exco incomplete · N of 25" until all 25 seats are filled; the phone lists the empty seats with "Add" for those who may edit. Nothing fills seats automatically.
 
 ## AWS integration handoff
 

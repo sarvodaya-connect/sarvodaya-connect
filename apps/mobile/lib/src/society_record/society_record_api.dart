@@ -77,7 +77,8 @@ abstract interface class SocietyRecordApi {
   /// The member's full NIC. The server checks scope and records the reveal.
   Future<String> revealNic(String societyId, String memberId);
 
-  /// V5 M07e / M07o: saves all 25 Exco seats together and returns the record.
+  /// V5 M07e / M07o: saves the filled Exco seats (0–25) together and returns
+  /// the record. A seat left out stays empty.
   Future<SocietyRecord> updateCouncil(
     String societyId,
     List<Map<String, Object?>> members,
