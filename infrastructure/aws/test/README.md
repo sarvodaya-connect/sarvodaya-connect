@@ -166,8 +166,15 @@ stack without an explicit recovery plan.
   Create a dedicated runtime PostgreSQL user with required DML/sequence rights,
   not the RDS master account. Securely create `/sarvodaya-connect/test/database-url`.
   The foundation does not run migrations or create this runtime URL.
-- Finish certificate-verified RDS TLS packaging and test connectivity before
-  deploying the application Lambda/API stack.
+- Package the API with `npm run package:lambda`. The package includes the public
+  Singapore RDS CA bundle; `Stage=test` sets `NODE_EXTRA_CA_CERTS` to its absolute
+  Lambda path before Node starts. The runtime `/database-url` must use
+  `?sslmode=verify-full`, without a temporary CloudShell `sslrootcert` path.
+  This verifies both the server certificate chain and database hostname. Never
+  disable verification with `NODE_TLS_REJECT_UNAUTHORIZED=0` or
+  `rejectUnauthorized: false`. See `apps/api/certificates/README.md` for provenance
+  and refresh instructions. Confirm the deployed API connects before claiming
+  application readiness; a successful CloudShell connection alone is insufficient.
 - Connect Amplify through the owner's GitHub authorization flow and use the
   repository's Next.js 15 build settings. Once its test hostname exists, update
   `DashboardOrigin` to that exact HTTPS origin for signed document PUT/GET/HEAD.
