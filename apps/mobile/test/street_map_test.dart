@@ -88,7 +88,24 @@ void main() {
     expect(picked!.longitude, closeTo(_kandy.longitude, 0.001));
   });
 
-  testWidgets('falls back to the drawn map when tiles cannot load', (
+  testWidgets('keeps the street map when a tile fails but Mapbox answers', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SocietyStreetMap(
+        location: _kandy,
+        token: _token,
+        tileProvider: _LocalTiles(broken: true),
+        checkTiles: (_) async => true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.byType(MapPreview), findsNothing);
+  });
+
+  testWidgets('falls back to the drawn map when Mapbox cannot be reached', (
     tester,
   ) async {
     GeoLocation? picked;
@@ -100,6 +117,7 @@ void main() {
         tileProvider: _LocalTiles(broken: true),
         onPick: (location) => picked = location,
         pickOnDrawnMap: true,
+        checkTiles: (_) async => false,
       ),
     );
     await tester.pumpAndSettle();

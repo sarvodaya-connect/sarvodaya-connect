@@ -1,13 +1,13 @@
 /**
  * A stand-in for mapbox-gl in tests (`vi.mock("mapbox-gl", () => import(...))`).
  * jsdom has no WebGL, so the fake map only keeps the HTML markers it is given
- * in its container and returns `fakeMapbox.features` from the clustered source.
+ * in its container and returns `fakeMapbox.features` as the drawn features.
  */
 type Handler = (event?: unknown) => void;
 type LngLat = [number, number];
 
 export const fakeMapbox = {
-  /** What querySourceFeatures returns: points and clusters as Mapbox would. */
+  /** What queryRenderedFeatures returns: points and clusters as Mapbox would draw them. */
   features: [] as { properties: Record<string, unknown>; geometry: { coordinates: LngLat } }[],
   /** Fail the next maps before "load", as a refused token or no network would. */
   failLoad: false,
@@ -58,12 +58,8 @@ export class Map {
     return { getClusterExpansionZoom: (_id: number, done: (error: Error | null, zoom: number) => void) => done(null, 12) };
   }
 
-  querySourceFeatures() {
+  queryRenderedFeatures() {
     return fakeMapbox.features;
-  }
-
-  isSourceLoaded() {
-    return true;
   }
 
   getCanvas() {

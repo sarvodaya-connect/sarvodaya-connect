@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../models/society.dart';
@@ -25,12 +26,30 @@ class MapboxConfig {
   );
 
   static bool usable(String token) => token.trim().startsWith('pk.');
+
+  /// Whether Mapbox answers at all: one small tile, within 8 seconds.
+  static Future<bool> reachable(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.mapbox.com/styles/v1/$style/tiles/256/0/0/0?access_token=${token.trim()}',
+            ),
+          )
+          .timeout(const Duration(seconds: 8));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 /// One society's location on a Mapbox street map, read-only or, with
 /// [onPick], tap to set the pin. Map tiles load straight from Mapbox; only the
-/// map position is sent. With no token, or when tiles cannot load (offline),
-/// the drawn [MapPreview] is shown instead.
+/// map position is sent. With no token, or when Mapbox cannot be reached
+/// (offline or a refused token), the drawn [MapPreview] is shown instead. A
+/// single failed tile is not enough: one tile can fail on a slow connection
+/// while the rest of the map loads.
 class SocietyStreetMap extends StatefulWidget {
   const SocietyStreetMap({
     super.key,
@@ -41,6 +60,7 @@ class SocietyStreetMap extends StatefulWidget {
     this.pickOnDrawnMap = false,
     this.token = MapboxConfig.token,
     this.tileProvider,
+    this.checkTiles,
   });
 
   final GeoLocation? location;
@@ -49,8 +69,8 @@ class SocietyStreetMap extends StatefulWidget {
   final String? semanticLabel;
 
   /// Whether a tap on the drawn demonstration map (no token) also sets the
-  /// pin, as "Place pin manually" always has. Never once tiles have failed: the
-  /// drawn map is not the society's real area.
+  /// pin, as "Place pin manually" always has. Never once Mapbox has failed:
+  /// the drawn map is not the society's real area.
   final bool pickOnDrawnMap;
   final String token;
 
@@ -58,12 +78,27 @@ class SocietyStreetMap extends StatefulWidget {
   @visibleForTesting
   final TileProvider? tileProvider;
 
+  /// Tests replace the reachability check made after a tile fails.
+  @visibleForTesting
+  final Future<bool> Function(String token)? checkTiles;
+
   @override
   State<SocietyStreetMap> createState() => _SocietyStreetMapState();
 }
 
 class _SocietyStreetMapState extends State<SocietyStreetMap> {
   bool _tilesFailed = false;
+  bool _checked = false;
+
+  /// After the first failed tile, checks once whether Mapbox answers at all.
+  Future<void> _onTileError() async {
+    if (_checked) return;
+    _checked = true;
+    final reachable = await (widget.checkTiles ?? MapboxConfig.reachable)(
+      widget.token,
+    );
+    if (mounted && !reachable) setState(() => _tilesFailed = true);
+  }
 
   void _pick(LatLng point) {
     double round(double value) => (value * 1000000).roundToDouble() / 1000000;
@@ -116,11 +151,7 @@ class _SocietyStreetMapState extends State<SocietyStreetMap> {
                 additionalOptions: {'accessToken': widget.token.trim()},
                 userAgentPackageName: 'lk.sarvodaya.connect',
                 tileProvider: widget.tileProvider,
-                errorTileCallback: (_, _, _) {
-                  if (mounted && !_tilesFailed) {
-                    setState(() => _tilesFailed = true);
-                  }
-                },
+                errorTileCallback: (_, _, _) => _onTileError(),
               ),
               if (pin != null)
                 MarkerLayer(

@@ -17,6 +17,7 @@ import { type Mapbox, useMapbox } from "./use-mapbox";
 type Pin = SocietyMap["points"][number];
 type SourceFeature = { properties: Record<string, unknown> | null; geometry: { coordinates: [number, number] } };
 const SOURCE = "societies";
+const INDEX_LAYER = "societies-index";
 
 const LEGEND: { label: string; classes: MapSocietyClass[] }[] = [
   { label: "A · Strong", classes: ["A"] },
@@ -111,14 +112,15 @@ export function SocietyPinsMap({ token }: { token: string }) {
       clusterRadius: 44,
       clusterProperties: { societies: ["+", ["get", "count"]] },
     });
-    // Invisible: it only makes Mapbox load the clustered source; the markers below are HTML, so they can take keyboard focus.
-    map.addLayer({ id: `${SOURCE}-index`, type: "circle", source: SOURCE, paint: { "circle-opacity": 0, "circle-radius": 1 } });
+    // Invisible: it tells the markers below which points and clusters are drawn at this zoom. The markers are HTML, so they can take keyboard focus.
+    map.addLayer({ id: INDEX_LAYER, type: "circle", source: SOURCE, paint: { "circle-opacity": 0, "circle-radius": 1 } });
 
     const open = (id: string) => router.push(`/societies/${id}`);
     let markers = new Map<string, Marker>();
     const sync = () => {
       const next = new Map<string, Marker>();
-      for (const feature of map.querySourceFeatures(SOURCE) as unknown as SourceFeature[]) {
+      // Rendered features only: querySourceFeatures also returns clusters from tiles of the previous zoom.
+      for (const feature of map.queryRenderedFeatures({ layers: [INDEX_LAYER] }) as unknown as SourceFeature[]) {
         const properties = feature.properties ?? {};
         const [lng, lat] = feature.geometry.coordinates;
         const id = properties.cluster ? `cluster-${properties.cluster_id}` : `place-${properties.key}`;
@@ -150,19 +152,17 @@ export function SocietyPinsMap({ token }: { token: string }) {
       for (const [id, marker] of markers) if (!next.has(id)) marker.remove();
       markers = next;
     };
-    map.on("moveend", sync);
-    map.on("sourcedata", (event) => {
-      if (event.sourceId === SOURCE && map.isSourceLoaded(SOURCE)) sync();
-    });
+    // "idle" follows every move and tile load once the map has finished drawing.
+    map.on("idle", sync);
     sync();
   }
 
-  const { container, phase, retry } = useMapbox(token, setup, { maxZoom: 16, minZoom: 6.3 });
+  const { container, phase, retry } = useMapbox(token, setup, { maxZoom: 16, minZoom: 5 });
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="relative h-[340px] overflow-hidden rounded-lg bg-[#e9eef1]">
-        <div aria-label="Map of societies in Sri Lanka, coloured by grade" className="absolute inset-0" ref={container} role="region" />
+        <div aria-label="Map of societies in Sri Lanka, coloured by grade" className="h-full w-full" ref={container} role="region" />
         <MapStatus phase={phase} retry={retry} />
       </div>
       {chooser && (
