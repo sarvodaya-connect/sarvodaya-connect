@@ -265,6 +265,8 @@ export interface SocietyAtAGlance {
   expenses: string | null;
   hasSocietyOfficer: boolean;
   spcName: string | null;
+  /** Exco seats filled so far, 0–25. Below 25 the Exco is incomplete. */
+  excoSeatsFilled: number;
   registrarDocuments: { documentType: RegistrarDocumentType; uploaded: boolean }[];
   auditReportPastDue: boolean;
   gradeRequest: { fromGrade: string | null; toGrade: string; requestedAt: string } | null;

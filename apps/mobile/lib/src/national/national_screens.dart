@@ -4,6 +4,8 @@ import '../format.dart';
 import '../society_record/society_record_models.dart'
     show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
 import '../sarvoai/sarvoai_screen.dart';
+import '../society_admin/assign_staff_screen.dart';
+import '../society_admin/create_society_screen.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -418,6 +420,13 @@ class _Pill extends StatelessWidget {
     ),
   );
 }
+
+/// " · Exco 3 of 25" for an incomplete Exco, nothing once it is complete.
+String _excoNote(int? filled) => filled == null || filled >= 25
+    ? ''
+    : filled == 0
+    ? ' · Exco not entered'
+    : ' · Exco $filled of 25';
 
 void _push(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
@@ -1000,7 +1009,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}',
+                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}${_excoNote(row.excoSeatsFilled)}',
                         style: const TextStyle(fontSize: 12),
                       ),
                       trailing: row.requestedGrade != null
@@ -1084,6 +1093,19 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         : 'Filtered to ${_query.districtName}';
     if (widget.asTab) {
       return Scaffold(
+        // V5 D05n on the phone: HQ creates a society, then assigns its staff.
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const CreateSocietyScreen(),
+              ),
+            );
+            if (mounted) setState(() => _version++);
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Create society'),
+        ),
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1246,8 +1268,20 @@ class SocietySummaryScreen extends StatelessWidget {
                 icon: Icons.warning_amber_outlined,
                 title: '${society.name} has no Society Officer',
                 message: society.spcName == null
-                    ? 'Its SPC adds the yearly figures and the audit report.'
-                    : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report.',
+                    ? 'Its SPC adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.'
+                    : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.',
+              ),
+            ],
+            if (society.excoSeatsFilled != null &&
+                society.excoSeatsFilled! < 25) ...[
+              const SizedBox(height: 8),
+              NoticeBanner(
+                icon: Icons.groups_outlined,
+                tone: NoticeTone.warning,
+                title: society.excoSeatsFilled == 0
+                    ? 'Exco not entered yet'
+                    : 'Exco incomplete · ${society.excoSeatsFilled} of 25',
+                message: 'The Society Officer enters the Exco and can save it as they go. HQ can also add members from the society record.',
               ),
             ],
             const SizedBox(height: 8),
@@ -1289,6 +1323,23 @@ class SocietySummaryScreen extends StatelessWidget {
               onPressed: () =>
                   _push(context, SocietyRecordScreen(societyId: society.id)),
               child: const Text('Open society record'),
+            ),
+            const SizedBox(height: 8),
+            // V5 D05a on the phone. The server allows it to HQ only.
+            OutlinedButton.icon(
+              onPressed: () => _push(
+                context,
+                AssignStaffScreen(
+                  societyId: society.id,
+                  societyName: society.name,
+                ),
+              ),
+              icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+              label: Text(
+                society.hasSocietyOfficer
+                    ? 'Change assigned staff'
+                    : 'Assign staff',
+              ),
             ),
           ],
         );

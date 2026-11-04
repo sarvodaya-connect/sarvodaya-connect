@@ -272,6 +272,7 @@ class DirectoryRow {
     required this.figuresAdded,
     required this.updatedAt,
     required this.notUpdatedIn90Days,
+    this.excoSeatsFilled,
   });
 
   factory DirectoryRow.fromJson(Json json) => DirectoryRow(
@@ -284,6 +285,7 @@ class DirectoryRow {
     figuresAdded: json['figuresAdded'] == true,
     updatedAt: DateTime.parse(json['updatedAt'] as String),
     notUpdatedIn90Days: json['notUpdatedIn90Days'] == true,
+    excoSeatsFilled: (json['excoSeatsFilled'] as num?)?.toInt(),
   );
 
   final String id;
@@ -295,6 +297,10 @@ class DirectoryRow {
   final bool figuresAdded;
   final DateTime updatedAt;
   final bool notUpdatedIn90Days;
+
+  /// Exco seats filled, 0–25 (null from an older server). A new society
+  /// starts with none; its Society Officer enters them.
+  final int? excoSeatsFilled;
 }
 
 class DirectoryPage {
@@ -378,6 +384,7 @@ class SocietyAtAGlance {
     required this.approved,
     required this.latestActivity,
     required this.latestSdgs,
+    this.excoSeatsFilled,
   });
 
   factory SocietyAtAGlance.fromJson(Json json) {
@@ -404,6 +411,7 @@ class SocietyAtAGlance {
           : num.parse(json['expenses'] as String),
       hasSocietyOfficer: json['hasSocietyOfficer'] == true,
       spcName: json['spcName'] as String?,
+      excoSeatsFilled: (json['excoSeatsFilled'] as num?)?.toInt(),
       uploaded: {
         for (final row in json['registrarDocuments'] as List)
           (row as Json)['documentType'] as String: row['uploaded'] == true,
@@ -445,6 +453,9 @@ class SocietyAtAGlance {
   final int approved;
   final String? latestActivity;
   final List<int> latestSdgs;
+
+  /// Exco seats filled, 0–25 (null from an older server).
+  final int? excoSeatsFilled;
 }
 
 /// M63: done vs planned by sector, dimension and UN SDG.

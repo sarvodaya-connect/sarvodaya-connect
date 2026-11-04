@@ -257,6 +257,7 @@ export class DirectoryService {
         (account) => account.role === 'SOCIETY_OFFICER',
       ),
       spcName: spc?.displayName ?? null,
+      excoSeatsFilled: Math.min(record._count.councilMembers, EXCO_SEATS),
       registrarDocuments: REGISTRAR_DOCUMENT_TYPES.map((documentType) => ({
         documentType,
         uploaded: uploaded.has(documentType),

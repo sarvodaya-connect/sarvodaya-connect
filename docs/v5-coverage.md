@@ -192,8 +192,8 @@ How a row was checked:
 | M63 | M63 HQ: profit and expenses | HQ | Phone | `national/national_screens.dart` | 5 | Done | Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
 | M64 | M64 HQ: activities | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
 | M65 | M65 HQ: districts | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
-| M66 | M66 HQ: societies | HQ | Phone | `national/national_screens.dart` | 5 | Done | Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
-| M67 | M67 HQ: society summary | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
+| M66 | M66 HQ: societies | HQ | Phone | `national/national_screens.dart` | 5 | Done | HQ can also create a society here (Create society → Assign staff), as on the dashboard; rows show "Exco N of 25" until the Exco is complete. Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
+| M67 | M67 HQ: society summary | HQ | Phone | `national/national_screens.dart` | 5 | Done | Shows the Exco state and Assign staff, as on the dashboard. Tests: `mobile/test/national_v5_test.dart` |
 | M67x | M67x HQ: society, figures not added | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |
 | M68 | M68 HQ: map | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |
 | M69a | M69a HQ: dashboard loading | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |
