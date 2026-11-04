@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
@@ -108,7 +109,17 @@ const lkr = (value: number) => `LKR ${value.toLocaleString('en-US')}`;
 
 @Injectable()
 export class AssistantTools {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly config?: ConfigService) {}
+
+  private get fictionalOnly(): boolean {
+    return this.config?.get<string>('SARVOAI_FICTIONAL_ONLY') === 'true';
+  }
+
+  private get societyScope() {
+    return this.fictionalOnly
+      ? { societyCode: { startsWith: 'TEST-' }, district: { code: 'TEST-ONLY' } }
+      : {};
+  }
 
   async run(name: string, input: unknown, now = new Date()): Promise<ToolOutcome> {
     const args = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
@@ -119,6 +130,7 @@ export class AssistantTools {
         case 'find_societies':
           return await this.findSocieties(text(args, 'query'));
         case 'get_exco_member':
+          if (this.fictionalOnly) return { content: 'Exco personal details are not available in the fictional pilot.', isError: true };
           return await this.excoMember(text(args, 'societyCode', 20), text(args, 'position', 100));
         case 'summarize_yearly_figure':
           return await this.summarize(this.year(args.financialYear, now), this.metric(args.metric), text(args, 'district'));
@@ -148,16 +160,16 @@ export class AssistantTools {
   }
 
   private async listDistricts(): Promise<ToolOutcome> {
-    const districts = await this.prisma.district.findMany({ select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
+    const districts = await this.prisma.district.findMany({ where: this.fictionalOnly ? { code: 'TEST-ONLY' } : {}, select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
     return { content: JSON.stringify({ districts: districts.map((district) => district.nameEn) }) };
   }
 
   /** Resolves a district name; unknown names are an input error that lists the real ones. */
   private async districtFilter(name: string) {
     if (!name) return { districtId: undefined, label: undefined };
-    const district = await this.prisma.district.findFirst({ where: { nameEn: { equals: name, mode: 'insensitive' } }, select: { id: true, nameEn: true } });
+    const district = await this.prisma.district.findFirst({ where: { nameEn: { equals: name, mode: 'insensitive' }, ...(this.fictionalOnly ? { code: 'TEST-ONLY' } : {}) }, select: { id: true, nameEn: true } });
     if (!district) {
-      const names = await this.prisma.district.findMany({ select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
+      const names = await this.prisma.district.findMany({ where: this.fictionalOnly ? { code: 'TEST-ONLY' } : {}, select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
       throw new ToolInputError(`No district called "${name}". Districts: ${names.map((row) => row.nameEn).join(', ')}`);
     }
     return { districtId: district.id, label: district.nameEn };
@@ -165,7 +177,7 @@ export class AssistantTools {
 
   private async activeSocieties(districtId?: string): Promise<SocietyRef[]> {
     const rows = await this.prisma.society.findMany({
-      where: { status: 'ACTIVE', ...(districtId ? { districtId } : {}) },
+      where: { ...this.societyScope, status: 'ACTIVE', ...(districtId ? { districtId } : {}) },
       select: { id: true, societyCode: true, nameEn: true, district: { select: { nameEn: true } } },
       orderBy: { nameEn: 'asc' },
     });
@@ -192,6 +204,7 @@ export class AssistantTools {
     if (query.length < 2) throw new ToolInputError('query must be at least 2 characters');
     const rows = await this.prisma.society.findMany({
       where: {
+        ...this.societyScope,
         OR: [
           { nameEn: { contains: query, mode: 'insensitive' } },
           { nameLocal: { contains: query, mode: 'insensitive' } },

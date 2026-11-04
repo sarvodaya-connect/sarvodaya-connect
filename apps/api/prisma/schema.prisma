@@ -45,6 +45,15 @@ enum MembershipCategory {
   @@map("membership_category")
 }
 
+// Admission ledger managed only by the security-definer spending function.
+model SarvoAiMonthlyAllowance {
+  periodStart    DateTime @id @map("period_start") @db.Date
+  reservedCents  Int      @map("reserved_cents")
+  attemptedCalls Int      @map("attempted_calls")
+
+  @@map("sarvoai_monthly_allowance")
+}
+
 model District {
   id                  String               @id @default(uuid()) @db.Uuid
   code                String               @unique @db.VarChar(10)

@@ -1,67 +1,116 @@
-# SarvoAI: AWS setup
+# SarvoAI: controlled TEST pilot
 
-SarvoAI is the HQ-only question assistant (`POST /api/v1/assistant/questions`). It calls Claude Haiku 5.5 on Amazon Bedrock. These steps are done once per AWS account by someone with administrator access. The code needs no AWS keys: it signs requests with the API task's IAM role.
+SarvoAI is HQ-only (`POST /api/v1/assistant/questions`). It is **disabled by
+default**. This change prepares a fictional-data pilot; merging it does not
+apply migrations, enable Bedrock, accept Marketplace terms or deploy anything.
 
-## How it connects
+## Reviewed scope
 
-| Setting | Value |
-|---|---|
-| Endpoint | `bedrock-runtime` in `ap-southeast-1` (Singapore), InvokeModel |
-| Model ID | `global.anthropic.claude-haiku-5-5` (global inference profile) |
-| IAM action | `bedrock:InvokeModel` only |
+- The route and service both require `HQ_ADMIN` before tools/model access.
+- Tools select explicit fields and have no arbitrary SQL, write, document-reader,
+  NIC, contact, password or account-secret tool. Financial tools expose only total
+  profit and total expenses; arithmetic and displayed tables come from code.
+- TEST sets `SARVOAI_FICTIONAL_ONLY=true`: only district code `TEST-ONLY` and
+  societies whose code starts `TEST-` are accessible to model tools. Exco lookups
+  are unavailable. Only synthetic values belong in these records.
+- Questions/history, tool text and model summaries get best-effort scrubbing of
+  obvious NICs, phone numbers, emails, credential-bearing URLs, JWTs, AWS key IDs
+  and labelled secrets. This is **not** a general personal-data classifier:
+  unlabelled passwords and personal names cannot reliably be recognized.
+  Enter fictional questions only; real-data use needs a separate privacy review.
+- Audit events retain actor, outcome kind and allowed tool names, not raw prompts
+  or answers. Provider/database errors are not copied into logs or responses.
+  This change does not delete historical audit events.
 
-In Singapore, Claude Haiku 5.5 is available only through the **global** inference profile on `bedrock-runtime`. There is no Singapore-only option and no `bedrock-mantle` option for this model. A global profile means **requests can be processed in any supported AWS commercial Region**, not only in Singapore. Sarvodaya should approve this before SarvoAI is switched on, because questions and the tool results sent to the model include society names, Exco names and yearly totals. NICs, phone numbers, emails and passwords are never sent.
+## Shared monthly admission allowance
 
-## 1. Turn on the model
+Migration `20261107090000_sarvoai_monthly_allowance` adds an isolated ledger and a
+security-definer function. It changes no existing society/member rows. The runtime
+`sc_test_app` receives only EXECUTE on that function, with direct ledger access
+revoked, including grants inherited from the migration owner's default privileges.
+The migration owner remains able to inspect the ledger. Other runtime roles need
+separately reviewed grants; they fail closed until those are supplied.
 
-1. Sign in to the AWS console as an administrator and switch the Region to **Asia Pacific (Singapore)**.
-2. Open **Amazon Bedrock → Model catalog** and choose **Claude Haiku 5.5**.
-3. If asked, submit Anthropic's first-time use form. Claude models are sold through AWS Marketplace, so the account subscribes on first use. The person doing this needs `aws-marketplace:Subscribe` and `aws-marketplace:ViewSubscriptions`; the API role does not.
-4. Try a prompt in the console playground to confirm access.
+Before **each** provider request, a single PostgreSQL INSERT/conditional UPSERT
+reserves **USD 2 (200 cents)** from a **USD 20 (2,000 cents) UTC-month allowance**.
+The shared row lock serializes concurrent Lambda admissions, including first use
+of the month. A denied reservation makes no provider call. No caller-supplied
+month, cap or amount is accepted. There is no runtime reset or refund API.
 
-## 2. Give the API role permission
+At most **10 provider attempts per UTC month** are admitted in this initial pilot.
+A question can need several attempts/rounds (up to six), so this is not ten
+questions. Every retry from the browser needs fresh reservations. SDK automatic
+retries are disabled. Errors, timeouts, aborts, process crashes and ambiguous
+outcomes keep their full reservation; no unsafe refund occurs after a possibly
+billable request. Database errors or missing migration/grants block inference.
+A new month creates a fresh row rather than clearing historical accounting.
 
-Attach [`infrastructure/aws/sarvoai-bedrock-policy.json`](../infrastructure/aws/sarvoai-bedrock-policy.json) to the IAM role the API code runs as (for example an ECS task role or an App Runner instance role; not a role used only to pull images or start the service). Replace `ACCOUNT_ID` with the 12-digit account ID first.
+This is deliberately conservative admission accounting, **not the actual bill**,
+and reserving USD 2 does not charge USD 2. Before enabling, the owner must confirm
+that the standard on-demand global-profile price is no higher than **USD 1 per
+million input tokens and USD 5 per million output tokens**, including long-context
+rates, and that no fixed commitment or extra paid feature is enabled. These are
+review ceilings, not a claim about today's account-specific rate. The reviewed
+model has a maximum 1M-token context; even charging a full 1M input at the ceiling
+plus 2,048 output tokens costs at most USD 1.01024, below the USD 2 reservation.
+The application also limits request JSON to 64 KiB, disables explicit prompt
+caching and extended thinking, bounds tool calls to four per round, uses a
+22-second question deadline and limits output to 2,048 tokens per model call.
 
-The policy has the three parts AWS requires for a global inference profile and allows only this one model:
+`SARVOAI_PRICE_REVIEW_UNTIL` must contain a valid, future UTC date at most 31 days
+away. It expires at midnight **starting** that date. Empty, expired or excessively
+future values block calls. Recheck prices and model limits before renewing it.
+A changed model ID is refused; enabling a different model needs a new cost review.
+The original USD 70 AWS budget remains an alert, not an enforcement mechanism.
+The gate covers attempts admitted through this application, not console/other
+Bedrock callers, taxes, infrastructure charges or AWS invoice posting dates.
 
-1. the inference profile in Singapore
-2. the model in Singapore, only when called through that profile
-3. the Region-less model ARN that lets the global profile route to other Regions, again only through that profile
+## Model, endpoint and processing location
 
-If the organisation uses a Service Control Policy that blocks unused Regions, it must allow `"aws:RequestedRegion": "unspecified"` for Bedrock, or global routing is denied.
+- Model/profile: `global.anthropic.claude-haiku-5-5`.
+- Endpoint: `bedrock-runtime`, invoked from Singapore (`ap-southeast-1`).
+- Credentials: Lambda execution role, no embedded keys or bearer token.
+- IAM: `bedrock:InvokeModel` on only the reviewed inference profile/model ARNs,
+  conditional on `SarvoAiEnabled=true`; no permission for new tools or services.
+- The **global** profile can process requests outside Singapore. Obtain owner
+  approval for this fictional-data pilot before enabling. Real society/Exco data
+  needs a separate processing-location and privacy decision.
 
-## 3. Configure the API
+## Owner-led rollout (after PR review)
 
-Set these on the API service (see `.env.example`):
+1. Keep `SARVOAI_ENABLED=false`. Apply the reviewed migration through the secure
+   private migration session as the migration owner, not `sc_test_app`.
+2. Verify concurrently, with a disposable local database and fictional data, that
+   exactly ten reservations are admitted and that an eleventh is refused; verify
+   runtime direct SELECT/INSERT/UPDATE/DELETE and reset attempts are denied.
+   Verify month rollover and DB/provider failure paths. No automated tests were
+   added or run as part of this change; this verification is outstanding.
+3. In Bedrock's model catalog, inspect this account's actual model offer/prices
+   and current model limits. Complete Anthropic's first-time-use form if needed.
+   Do not invoke the playground as a shortcut: it bypasses the application cap.
+   Marketplace prerequisites/terms are an owner action; do not add Marketplace
+   subscription permissions to the Lambda runtime role.
+4. Approve fictional-data global routing and the price ceilings above. Set a short
+   `SarvoAiPriceReviewUntil` expiry and `SarvoAiEnabled=true` in a reviewed API
+   change set. TEST forces fictional-only tools. Preview IAM/environment changes
+   before execution; do not replace the foundation or database.
+5. Package/deploy the API, then ask **one** HQ question: `What districts are
+   available?` The answer should contain only the fictional test district. Start
+   with one question; inspect the allowance row as the migration owner afterward.
+   Do not fill the monthly ledger just to test exhaustion on the live database.
+6. Inspect logs for safe failure reporting and confirm non-HQ access is denied.
+   A 503 allowance message means a missing/expired review, missing permissions,
+   ledger failure or exhaustion; operator inspection must distinguish these.
+7. Roll back enablement with `SarvoAiEnabled=false`. Keep the ledger/history;
+   never reset the allowance to work around failures or redeployments.
 
-```
-SARVOAI_ENABLED=true
-SARVOAI_MODEL_ID=global.anthropic.claude-haiku-5-5
-SARVOAI_AWS_REGION=ap-southeast-1
-```
+## Sources reviewed 5 November 2026
 
-While `SARVOAI_ENABLED` is not `true`, the endpoint answers 503 and nothing is sent to AWS. Keep it `false` for local development.
+- [AWS model card (context/output limits, global profile and tiers)](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-haiku-5-5.html)
+- [AWS Bedrock pricing (verify account offer before enabling)](https://aws.amazon.com/bedrock/pricing/)
+- [AWS model access and Marketplace prerequisites](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html)
+- [AWS token counting limitations for CRIS models](https://docs.aws.amazon.com/bedrock/latest/userguide/count-tokens.html)
 
-## 4. Set a budget alert
-
-In **AWS Budgets**, create a monthly cost budget of **USD 20** filtered to the Claude Haiku 5.5 Marketplace charges (they appear under the model provider, not under Amazon Bedrock), with alerts at 80% and 100%. At about 1,000 questions a month the model costs about USD 2.
-
-## 5. Check it works
-
-As an HQ user, ask a question through the API:
-
-```
-curl -X POST "$API_BASE_URL/assistant/questions" \
-  -H "Authorization: Bearer $HQ_TOKEN" -H "Content-Type: application/json" \
-  -d '{"question":"How many districts are there?"}'
-```
-
-| Response | Meaning |
-|---|---|
-| 200 with `kind` and `summary` | Working |
-| 503 "not switched on" | `SARVOAI_ENABLED` is not `true` |
-| 503 "not available right now" | The Bedrock call failed: check the API logs for `AccessDeniedException` (policy or model access) or `ValidationException` (model ID or Region) |
-| 403 | The signed-in user is not HQ |
-
-Each question is recorded as a `SARVOAI_QUESTION` audit event (who asked, the question, and which tools ran). Answers are not stored.
+More efficient exact-token reservation/reconciliation can follow after the pilot.
+It must preserve pessimistic accounting for failed/ambiguous attempts and atomic
+admission; average historical costs or Budget alerts are not safe substitutes.

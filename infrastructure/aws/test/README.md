@@ -182,9 +182,12 @@ stack without an explicit recovery plan.
 - Obtain specific owner instruction before creating fictional test/staff sign-ins
   or setting passwords. Test real Cognito tokens, roles/society restrictions,
   private documents and refresh/revocation. Pool creation alone proves none of these.
-- Keep SarvoAI disabled until reviewed code implements the monthly application
-  spending limit across concurrent requests/retries and validates restricted-data
-  protections. Do not reserve USD 20 as expected usage or treat budget alerts as a cap.
+- Keep SarvoAI disabled until the reviewed allowance migration is applied, runtime
+  ledger privileges and concurrent admission are verified, and current account
+  pricing/global routing are approved. The initial pilot reserves USD 2 per
+  model attempt from a shared USD 20 UTC-month allowance (at most ten model calls;
+  a question can use several). See `docs/sarvoai-aws-setup.md`. No budget alert
+  replaces the admission gate and the allowance is not expected actual spending.
 - Inspect existing CloudTrail coverage/event history before adding a dedicated
   test trail; no organization trail changes or audit-completeness claim is made.
 

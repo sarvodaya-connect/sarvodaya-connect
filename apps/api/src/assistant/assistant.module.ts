@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 import { ASSISTANT_MODEL, assistantModelFromConfig } from './assistant-model.js';
 import { AssistantTools } from './assistant-tools.js';
@@ -11,7 +12,7 @@ import { AssistantService } from './assistant.service.js';
   providers: [
     AssistantService,
     AssistantTools,
-    { provide: ASSISTANT_MODEL, inject: [ConfigService], useFactory: assistantModelFromConfig },
+    { provide: ASSISTANT_MODEL, inject: [ConfigService, PrismaService], useFactory: assistantModelFromConfig },
   ],
 })
 export class AssistantModule {}
