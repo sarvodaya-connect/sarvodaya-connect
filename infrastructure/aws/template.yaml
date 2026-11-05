@@ -98,8 +98,9 @@ Resources:
       FunctionName: !Sub sarvodaya-api-${Stage}
       CodeUri: ../../apps/api/.lambda/package
       Handler: lambda.handler
-      # Initial test guardrail, subject to load and database-connection checks.
-      ReservedConcurrentExecutions: !If [IsTest, 2, !Ref AWS::NoValue]
+      # Test capacity budget: docs/aws-test-environment.md. Raise this only with the
+      # database role limit in infrastructure/aws/test/runtime-database-role.sql.
+      ReservedConcurrentExecutions: !If [IsTest, 4, !Ref AWS::NoValue]
       Tracing: !If [IsTest, PassThrough, Active]
       LoggingConfig:
         LogFormat: JSON
@@ -212,8 +213,8 @@ Resources:
       # actions) and the phone app is native, so browsers never call the API
       # directly: no CORS rule is needed here. Uploads use the bucket's CORS.
       DefaultRouteSettings:
-        ThrottlingBurstLimit: !If [IsTest, 10, 100]
-        ThrottlingRateLimit: !If [IsTest, 5, 50]
+        ThrottlingBurstLimit: !If [IsTest, 20, 100]
+        ThrottlingRateLimit: !If [IsTest, 10, 50]
       AccessLogSettings:
         DestinationArn: !GetAtt ApiAccessLogs.Arn
         # Request id, route and status only: no headers, tokens or bodies.

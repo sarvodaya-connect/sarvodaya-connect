@@ -1,7 +1,8 @@
-import { AssignStaffPanel } from "@/components/dashboard/society-record/assign-staff-panel";
+import { AssignStaffPanel, AssignStaffUnavailable } from "@/components/dashboard/society-record/assign-staff-panel";
 import { EditSocietyPanel } from "@/components/dashboard/society-record/edit-society-panel";
 import { RecordOverview } from "@/components/dashboard/society-record/record-overview";
 import { getDesktopViewer } from "@/lib/current-viewer";
+import { isTransientPlatformError } from "@/lib/platform-api";
 import { getSocietyRecord, getStaffOptions, getWorkPlan } from "@/lib/society-record-api";
 
 import { assignStaff, updateSocietyRecord } from "./record-actions";
@@ -13,7 +14,13 @@ export async function RecordOverviewPage({ id, panel, saved }: { id: string; pan
   const [record, plan, staffOptions] = await Promise.all([
     getSocietyRecord(id),
     getWorkPlan(id).catch(() => null),
-    panel === "assign" && isHq ? getStaffOptions(id) : null,
+    // A busy API keeps the overview and offers a retry; a refusal still goes to the error page.
+    panel === "assign" && isHq
+      ? getStaffOptions(id).catch((error: unknown) => {
+          if (isTransientPlatformError(error)) return "unavailable" as const;
+          throw error;
+        })
+      : null,
   ]);
   return (
     <>
@@ -26,7 +33,8 @@ export async function RecordOverviewPage({ id, panel, saved }: { id: string; pan
       {panel === "edit" && record.permissions.canEdit && (
         <EditSocietyPanel action={updateSocietyRecord.bind(null, id)} hqName={viewer.displayName} record={record} />
       )}
-      {staffOptions && <AssignStaffPanel action={assignStaff.bind(null, id)} options={staffOptions} record={record} />}
+      {staffOptions === "unavailable" && <AssignStaffUnavailable record={record} />}
+      {staffOptions && staffOptions !== "unavailable" && <AssignStaffPanel action={assignStaff.bind(null, id)} options={staffOptions} record={record} />}
     </>
   );
 }

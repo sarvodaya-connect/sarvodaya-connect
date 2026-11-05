@@ -104,8 +104,8 @@ SQS without an implemented background-task producer and consumer.
 production settings continue using their Secrets Manager inputs. Test uses:
 
 - function `sarvodaya-api-test` and separate test log groups;
-- one PostgreSQL connection per active Lambda instance and reserved concurrency 2;
-- HTTP API throttle 5 requests/second and burst 10 (best-effort throttling, not a monthly spending cap);
+- one PostgreSQL connection per active Lambda instance and reserved concurrency 4 (see the capacity budget below);
+- HTTP API throttle 10 requests/second and burst 20 (best-effort throttling, not a monthly spending cap);
 - 14-day log retention and no active X-Ray tracing;
 - `CONFIG_PARAMETER_PREFIX=/sarvodaya-connect/test`;
 - `AUTH_PROVIDER=cognito`, S3 storage and `NODE_ENV=production`, to disable local/demo adapters even in this test environment;
@@ -139,6 +139,91 @@ command-line literals. The dashboard needs only the public pool/client identifie
 and the server-side API URL. Staff/test identity creation and password setting need
 the owner's specific instruction; there is no automated staff bootstrap in this
 AWS deployment plan.
+
+## Test API capacity budget
+
+The dashboard server calls the API several times for each page. These limits are set together, for **two testers navigating at the same time**. `test_foundation.py` fails if the first three stop agreeing.
+
+| Limit | Value | Where | Why |
+|---|---|---|---|
+| Reads at once, per page render | 2 | `READ_SLOTS_PER_RENDER`, `apps/dashboard/src/lib/platform-read.ts` | 2 testers × 2 reads = 4, so normal use cannot exceed the Lambda limit |
+| Lambda reserved concurrency | 4 | `infrastructure/aws/template.yaml` | Was 2, which one tester could exceed alone |
+| PostgreSQL connections per Lambda instance | 1 | `DATABASE_CONNECTION_LIMIT` in the template | Unchanged |
+| `sc_test_app` connection limit | 10 | `infrastructure/aws/test/runtime-database-role.sql` | 2 × 4 × 1 + 2 spare. A frozen Lambda instance keeps its connection, because its idle timer does not run, so old and new instances can both hold connections during a deployment |
+| HTTP API rate and burst | 10/s, burst 20 | `infrastructure/aws/template.yaml` | Two page loads at once need about 14 requests, and the measured workload averaged about 9 requests/second |
+
+`db.t4g.micro` allows more connections than 10 by default, so the role limit is the one to watch. Confirm the value with the query in the SQL file. Use a separate owner login for migrations and for that script, so they don't count against the role limit.
+
+### What a page costs
+
+Measured against a local build through a proxy adding 120 ms per request.
+
+| Page, one tester | API reads | At once, before | At once, after |
+|---|---|---|---|
+| Societies list | 5 | 4 | 2 |
+| Society record, Edit Society | 6 | 3 | 2 |
+| Assign Responsible Staff | 7 | 4 | 2 |
+
+The number of reads is unchanged: a full render already had no duplicates, because Next.js shares identical fetches. Sidebar link prefetching added no API reads in headless Chrome. Pages take about 0.15–0.2 seconds longer at this latency, because reads now queue.
+
+### Local reproduction
+
+The proxy imitated the Lambda and HTTP API limits, against a local API and fictional data. **This is not evidence about AWS.**
+
+The workload was 2 testers opening Societies list, record, Edit Society and Assign Responsible Staff, 10 rounds, pausing 0.5–1 second between pages (80 pages).
+
+| Run | API requests | 200 | 503 (Lambda limit) | 429 (HTTP API limit) | Assign form shown |
+|---|---|---|---|---|---|
+| Before, old limits | 351 | 155 | 49 | 147 | 0 of 20 |
+| After, new limits | 480 | 480 | 0 | 0 | 20 of 20 |
+| After, new limits, 400 ms latency (5 rounds) | 240 | 240 | 0 | 0 | 10 of 10 |
+| After, **old** limits, so retries alone | 959 | 337 | 10 | 612 | 13 of 20 |
+
+The last row is why the limits must change with the code: retries alone do not fix this. Without any pause between pages, the new limits had no 503s, but the HTTP API limit returned 429 to 487 of 904 requests and some pages showed errors. That is above this budget.
+
+### Retries
+
+Dashboard reads (GET only) try up to 3 times within 12 seconds, including queueing, waiting between 100 ms and 1.5 s with random variation and honouring `Retry-After`. They retry on 429, 502, 503, 504 and on no response. Other refusals, including 401, 403, 404 and 500, are not retried. Writes are never retried.
+
+Each retry logs `Retrying API read <route>`, without the query string or any token.
+
+### What this does not cover
+
+- **The phone app** has no read limit or retries. The HQ home builds its tabs together, so one phone may run several reads at once and use capacity the budget gives to the dashboard. This has not been measured.
+- **More than two active testers**, a third browser, or scripts can exceed the budget. Retries absorb short overlaps. Raise the limits together rather than one at a time.
+- **Slow pages:** at worst each read has 12 seconds, so a page that fails repeatedly can take far longer than usual before showing its error.
+
+### Cost
+
+Reserved concurrency has no charge of its own. Normal use is unchanged, because requests are billed as used. The limit does raise the most that can be spent if something hammers the API: at the sustained rate of 10 requests/second, about 26 million requests a month, or about USD 32 of HTTP API charges at the rate above, up from about USD 16, plus Lambda time. This is a ceiling, not an estimate, and the AWS Budgets alert still applies.
+
+### Deployment
+
+The project owner does this after review. Change these through source and the stack, not by hand in the console.
+
+1. Check the Lambda concurrency quota: reserving 4 must still leave the account's required unreserved concurrency.
+2. Record current values: reserved concurrency, HTTP API limits and the query in `runtime-database-role.sql`.
+3. **Apply the role limit first**, with an owner login: `psql "$OWNER_URL" -v ON_ERROR_STOP=1 -f infrastructure/aws/test/runtime-database-role.sql`.
+4. Deploy the stack, then the dashboard. Either order works for those two.
+
+**Rollback:** redeploy the previous dashboard and stack first. Lower the role limit last, back to the recorded value, once `pg_stat_activity` shows the connections have fallen below it. Lowering it first could refuse connections from running instances.
+
+### Validation after deployment
+
+Local tests do not show that AWS throttling is resolved. With two fictional testers, repeat the workload above by hand or by script for at least 5 minutes, on the dashboard, then check a phone separately. Record the workload, duration, and counts before and after.
+
+- **HTTP API access logs:** there should be no throttling entries.
+  ```
+  fields @timestamp, routeKey, status, integrationError
+  | filter status = "503" or status = "429" or integrationError like /throttled/
+  | stats count() by status, integrationError
+  ```
+- **Lambda metrics:** `Throttles` stays 0 and `ConcurrentExecutions` stays at 4 or below.
+- **Database:** `DatabaseConnections` and the SQL file's query stay below the limits, with no `too many connections for role` in the PostgreSQL or Lambda logs. Repeat after an idle period, and during a deployment if possible.
+- **Dashboard logs:** few or no `Retrying API read` lines.
+- **Behaviour:** no duplicated societies or assignments.
+
+If the workload cannot run cleanly, record what limited it rather than raising limits to pass. The next step would be concurrency 6 and a role limit of 14, after checking database CPU credits.
 
 ## Remaining deployment and validation gates
 
