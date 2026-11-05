@@ -46,7 +46,7 @@ subtracted: eligibility, depletion and expiry must be tracked separately.
 | Transfer, temporary migration job and backup contingency | Planning allowance; no standing migration instance | 2.00 |
 | Parameter Store, IAM, VPC, S3 gateway endpoint | Standard parameters/throughput, managed aws/ssm key, ordinary IAM/VPC and gateway endpoint | 0.00 |
 | SQS | No current producer/consumer requires a queue | 0.00 |
-| SarvoAI initially | Disabled until its application spending control is reviewed | 0.00 |
+| SarvoAI initially | Off (`SarvoAiEnabled=false`) until the reviewed TEST pilot below is deployed | 0.00 |
 | **Initial estimate** | | **35.93** |
 | SarvoAI after enablement | Illustrative light-use allowance, not a verified model token forecast | 2.00–4.00 |
 | **Illustrative later estimate** | | **37.93–39.93** |
@@ -109,7 +109,7 @@ production settings continue using their Secrets Manager inputs. Test uses:
 - 14-day log retention and no active X-Ray tracing;
 - `CONFIG_PARAMETER_PREFIX=/sarvodaya-connect/test`;
 - `AUTH_PROVIDER=cognito`, S3 storage and `NODE_ENV=production`, to disable local/demo adapters even in this test environment;
-- a template rule refusing `SarvoAiEnabled=true` for test until a reviewed monthly application spending control replaces this restriction.
+- SarvoAI off by default (`SarvoAiEnabled=false`); the template refuses `SarvoAiEnabled=true` without a pricing approval, and `SARVOAI_FICTIONAL_ONLY` is always `true`. See [SarvoAI TEST pilot](#sarvoai-test-pilot).
 
 Reserved concurrency reduces simultaneous database pressure. It does not guarantee
 a maximum number of idle backend connections, zero timeouts or a fixed bill.
@@ -156,13 +156,49 @@ AWS deployment plan.
    fictional test identities or have the owner create them. Test real sign-in,
    token refresh/revocation, role/society scope, database connectivity and private
    document upload/download.
-5. Keep Bedrock disabled until reviewed application code enforces the monthly USD 20
-   maximum across concurrent instances and retries, with atomic pre-call spending
-   reservations and conservative failure accounting. Budget emails are insufficient.
-   Review restricted-data handling and global processing before enabling the model.
+5. Keep Bedrock off until the SarvoAI TEST pilot checks below pass. The application
+   spending ledger (atomic pre-call reservations across instances, conservative
+   failure accounting) is implemented and its migrations are deployed; its runtime
+   privileges are not yet verified. Budget emails are insufficient on their own.
 
 No AWS end-to-end test is implied by the local tests. After provisioning, record
 resource IDs, validation evidence and actual costs in a private operational record.
+
+## SarvoAI TEST pilot
+
+A controlled pilot of SarvoAI on fictional TEST data. Not enabled yet; enabling it
+is a separate deployment by the owner that follows the
+[TEST pilot plan](sarvoai-test-pilot-plan.md). Summary:
+
+| | |
+| --- | --- |
+| Model | Claude Haiku 5.5, global inference profile `global.anthropic.claude-haiku-5-5`, called from `ap-southeast-1`. Bedrock reports the agreement `AVAILABLE` there |
+| Processing | Global (any supported AWS commercial Region), approved by the owner for fictional TEST data only |
+| Users | `HQ_ADMIN` only |
+| Data | Societies whose S number starts `TEST-` in district `TEST-ONLY`. `99999TEST` is outside this scope |
+| Prices (USD per million tokens, Global standard tier) | Input 0.10, output 0.50, 5-minute cache write 0.125, cache read 0.01; prompts over 100,000 tokens 0.50, 2.50, 0.625 and 0.05. AWS Price List, publication 2026-10-12, checked 5 November 2026 |
+| Limit | `SarvoAiMonthlyLimitUsd` (USD 20 default, or a lower pilot figure the owner chooses). A question reserves at most about USD 0.056 |
+
+Steps:
+
+1. Owner approves the plan, the monthly limit and the pricing approval line.
+2. As the database owner, add the `TEST-ONLY` district
+   ([`sarvoai-pilot-district.sql`](../infrastructure/aws/test/sarvoai-pilot-district.sql)).
+   HQ creates fictional `TEST-` societies in it through Create society.
+3. Run [`sarvoai-pilot-checks.sql`](../infrastructure/aws/test/sarvoai-pilot-checks.sql)
+   (read-only) and record: both ledger migrations applied; SELECT, INSERT and
+   UPDATE for the runtime role on all three spending tables; no holds; only
+   fictional societies in scope.
+4. Review Lambda throttling and capacity with issue #104 (PR #105): a question
+   holds one Lambda environment for up to about 22 seconds. Deploy only from a
+   `main` with the agreed TEST capacity settings.
+5. Create a change set with `SarvoAiEnabled=true`, the pricing approval and the
+   limit, other parameters unchanged. Review it, then execute.
+6. Smoke-test with fictional questions as HQ and as a non-HQ user, then check the
+   ledger, logs and API Gateway 503s.
+
+Rollback: a reviewed change set with `SarvoAiEnabled=false`. Do not edit the
+function's environment in the console.
 
 ## Cleanup plan
 
