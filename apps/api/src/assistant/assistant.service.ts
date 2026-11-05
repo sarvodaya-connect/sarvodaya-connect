@@ -5,6 +5,7 @@ import { hasRole, type Principal } from '../auth/principal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
 import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError, DisabledAssistantModel, type ModelRequest } from './assistant-model.js';
+import { SpendingBlockedError } from './assistant-cost.js';
 import { AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import { ASSISTANT_TOOLS, AssistantTools, type ToolOutcome } from './assistant-tools.js';
 import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind, type AssistantTurn } from './assistant.types.js';
@@ -55,6 +56,7 @@ const ANSWER_SCHEMA = {
 };
 
 const UNAVAILABLE = 'SarvoAI is not available right now. Your question was kept; try again in a minute.';
+const PAUSED = 'SarvoAI is paused until its spending settings have been reviewed. Society records are not affected, and you can still find the figures in Reports.';
 
 @Injectable()
 export class AssistantService {
@@ -85,6 +87,8 @@ export class AssistantService {
             system: [{ type: 'text', text: systemPrompt(now), cache_control: { type: 'ephemeral' } }],
             tools: ASSISTANT_TOOLS,
             messages,
+            // Off so that the reservation's upper bound holds (issue #96): see assertBillableRequest.
+            thinking: { type: 'disabled' },
             output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
           },
           now,
@@ -119,6 +123,12 @@ export class AssistantService {
       if (error instanceof SpendingLimitReachedException) {
         await this.audit(principal, question, toolsUsed, 'SPENDING_LIMIT');
         throw error;
+      }
+      if (error instanceof SpendingBlockedError) {
+        // The reason names settings only. Asking again cannot help, so the caller is told so.
+        this.logger.error(JSON.stringify({ event: 'sarvoai_calls_blocked', reason: error.message }));
+        await this.audit(principal, question, toolsUsed, 'SPENDING_REVIEW');
+        throw new ServiceUnavailableException(PAUSED);
       }
       // The name and status only: a provider's message can repeat part of the prompt.
       const status = (error as { status?: unknown } | null)?.status;
@@ -181,7 +191,7 @@ export class AssistantService {
   }
 
   /** Records who asked what and which tools ran; answers and figures are not stored. */
-  private async audit(principal: Principal, question: string, toolsUsed: string[], kind: AssistantAnswerKind | 'SPENDING_LIMIT') {
+  private async audit(principal: Principal, question: string, toolsUsed: string[], kind: AssistantAnswerKind | 'SPENDING_LIMIT' | 'SPENDING_REVIEW') {
     try {
       await this.prisma.platformAuditEvent.create({
         data: {

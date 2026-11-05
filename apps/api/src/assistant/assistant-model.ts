@@ -15,6 +15,9 @@ export const ASSISTANT_MODEL = Symbol('ASSISTANT_MODEL');
 /** Below the API's 29-second Lambda timeout, so a slow call is reconciled, not cut off. */
 export const MODEL_TIMEOUT_MS = 25_000;
 
+export const DEFAULT_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
+export const DEFAULT_REGION = 'ap-southeast-1';
+
 export class AssistantNotConfiguredError extends Error {}
 
 /** Used when SARVOAI_ENABLED is not "true": the endpoint answers 503 instead of calling AWS. */
@@ -52,7 +55,7 @@ export class BedrockAssistantModel implements AssistantModel {
 export function assistantModelFromConfig(config: ConfigService): AssistantModel {
   if (config.get<string>('SARVOAI_ENABLED') !== 'true') return new DisabledAssistantModel();
   return new BedrockAssistantModel(
-    config.get<string>('SARVOAI_MODEL_ID') ?? 'global.anthropic.claude-haiku-5-5',
-    config.get<string>('SARVOAI_AWS_REGION') ?? 'ap-southeast-1',
+    config.get<string>('SARVOAI_MODEL_ID') ?? DEFAULT_MODEL_ID,
+    config.get<string>('SARVOAI_AWS_REGION') ?? DEFAULT_REGION,
   );
 }

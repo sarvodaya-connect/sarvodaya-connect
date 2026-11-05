@@ -9,6 +9,7 @@ import type { PrismaService } from '../prisma/prisma.service.js';
 import type Anthropic from '@anthropic-ai/sdk';
 
 import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, MODEL_TIMEOUT_MS } from './assistant-model.js';
+import { assertBillableRequest, SpendingBlockedError } from './assistant-cost.js';
 import { type AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
@@ -29,7 +30,7 @@ function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content:
   const run = vi.fn().mockResolvedValue(outcome);
   const auditCreate = vi.fn().mockResolvedValue({});
   const prisma = { platformAuditEvent: { create: auditCreate } } as unknown as PrismaService;
-  const reservation = { id: 'reservation-1', prices: { inputMicroUsdPerMTok: 1n, outputMicroUsdPerMTok: 1n } };
+  const reservation = { id: 'reservation-1' };
   const spending = { reserve: vi.fn().mockResolvedValue(reservation), settle: vi.fn().mockResolvedValue(undefined), failed: vi.fn().mockResolvedValue(undefined) };
   const service = new AssistantService(prisma, { run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
   return { service, createMessage, run, auditCreate, spending, reservation };
@@ -212,6 +213,37 @@ describe('SarvoAI spending limit (issue #96)', () => {
     await expect(service.ask(hq, 'Fictional private question', [], now)).rejects.toThrow(ServiceUnavailableException);
     const text = JSON.stringify(logged.mock.calls);
     expect(text).toContain('status 400');
+    expect(text).not.toContain('Fictional private question');
+    logged.mockRestore();
+  });
+
+  it('turns thinking off, and every real request passes the billing check', async () => {
+    const { service, createMessage } = setup([
+      { ...toolUse('list_districts', {}), usage } as unknown as Anthropic.Message,
+      billed({ kind: 'ANSWER', summary: 'Done.', options: [] }),
+    ]);
+    await service.ask(hq, 'Average profit?', [{ role: 'user', text: 'Earlier' }, { role: 'assistant', text: 'Reply' }], now);
+    expect(createMessage).toHaveBeenCalledTimes(2);
+    for (const [request] of createMessage.mock.calls) {
+      expect(request.thinking).toEqual({ type: 'disabled' });
+      expect(() => assertBillableRequest(request)).not.toThrow();
+    }
+  });
+
+  it('says SarvoAI is paused, without calling the model, when no safe limit can be set', async () => {
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const { service, createMessage, spending, auditCreate } = setup([]);
+    spending.reserve.mockRejectedValue(new SpendingBlockedError('SARVOAI_PRICING_APPROVAL has expired'));
+
+    const error = (await service.ask(hq, 'Fictional private question', [], now).catch((caught: unknown) => caught)) as Error;
+
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    expect(error.message).toContain('paused');
+    expect(error.message).not.toContain('SARVOAI_PRICING_APPROVAL');
+    expect(createMessage).not.toHaveBeenCalled();
+    expect(auditCreate.mock.calls[0][0].data.detail).toContain('SPENDING_REVIEW');
+    const text = JSON.stringify(logged.mock.calls);
+    expect(text).toContain('SARVOAI_PRICING_APPROVAL has expired');
     expect(text).not.toContain('Fictional private question');
     logged.mockRestore();
   });

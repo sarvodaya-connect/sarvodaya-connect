@@ -206,6 +206,24 @@ void main() {
     expect(find.text('Try again'), findsNothing);
   });
 
+  testWidgets('explains a spending review pause and offers no retry', (
+    tester,
+  ) async {
+    const message =
+        'SarvoAI is paused until its spending settings have been reviewed. Society records are not affected, and you can still find the figures in Reports.';
+    await _pump(
+      tester,
+      const SarvoAiScreen(),
+      api: _FakeApi(
+        (_) async => throw const SarvoAiException(message, status: 503),
+      ),
+    );
+    await _ask(tester, 'Average profit in Kurunegala?');
+    expect(find.text('SarvoAI is paused'), findsOneWidget);
+    expect(find.text(message), findsOneWidget);
+    expect(find.text('Try again'), findsNothing);
+  });
+
   testWidgets('stops waiting and lets HQ ask again', (tester) async {
     await _pump(
       tester,

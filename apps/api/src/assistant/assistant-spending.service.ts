@@ -7,16 +7,19 @@ import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   actualMicroUsd,
+  assertBillableRequest,
   definitelyNotBilled,
-  type ModelPrices,
-  modelPrices,
   monthlyLimitMicroUsd,
   nextSpendingMonth,
-  reservationMicroUsd,
+  type PricingApproval,
+  pricingApproval,
+  reservationBound,
+  SpendingBlockedError,
   spendingMonth,
+  unpricedBilling,
   usageCounts,
 } from './assistant-cost.js';
-import type { ModelRequest } from './assistant-model.js';
+import { DEFAULT_REGION, type ModelRequest } from './assistant-model.js';
 
 /** The answer when a call would pass the limit. No model call is made. */
 export class SpendingLimitReachedException extends HttpException {
@@ -38,15 +41,21 @@ export class SpendingLimitReachedException extends HttpException {
 
 export interface SpendReservation {
   id: string;
-  prices: ModelPrices;
+  approval: PricingApproval;
+  reservedMicroUsd: bigint;
+  /** What the reservation assumed; a response above either breaks its assumptions. */
+  promptTokenBound: number;
+  outputTokenBound: number;
 }
 
 /**
  * Issue #96: the application's monthly spending limit for SarvoAI, in PostgreSQL so it
  * holds across API instances. One atomic statement reserves a high estimate before each
  * model call; afterwards the reservation becomes the estimated actual cost. Anything that
- * may have been billed stays counted until the month ends. Holds counts and model IDs
- * only: never prompts, answers or who asked.
+ * may have been billed stays counted until the month ends. A call that breaks the
+ * reservation's assumptions places a hold that stops all further calls, across instances
+ * and months, until it is reviewed. Holds counts and model IDs only: never prompts,
+ * answers or who asked.
  */
 @Injectable()
 export class AssistantSpendingService {
@@ -57,7 +66,11 @@ export class AssistantSpendingService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Throws SpendingLimitReachedException when the call would pass the limit. */
+  /**
+   * Throws SpendingBlockedError when no safe limit can be put on the call, or when a hold
+   * is waiting for review, and SpendingLimitReachedException when the call would pass the
+   * limit. Either way the model is not called.
+   */
   async reserve(
     modelId: string,
     request: ModelRequest,
@@ -66,12 +79,18 @@ export class AssistantSpendingService {
     const limit = monthlyLimitMicroUsd(
       this.config.get<string>('SARVOAI_MONTHLY_LIMIT_USD'),
     );
-    const prices = modelPrices(
-      modelId,
-      this.config.get<string>('SARVOAI_INPUT_USD_PER_MTOK'),
-      this.config.get<string>('SARVOAI_OUTPUT_USD_PER_MTOK'),
+    const approval = pricingApproval(
+      this.config.get<string>('SARVOAI_PRICING_APPROVAL'),
+      {
+        modelId,
+        region: this.config.get<string>('SARVOAI_AWS_REGION') ?? DEFAULT_REGION,
+      },
+      now,
     );
-    const amount = reservationMicroUsd(request, prices);
+    assertBillableRequest(request);
+    const bound = reservationBound(request, approval);
+    const amount = bound.microUsd;
+    const through = approval.overageReviewedThrough;
     const month = spendingMonth(now);
     const id = randomUUID();
     // One statement, so simultaneous requests on any API instance queue on the month's
@@ -82,6 +101,10 @@ export class AssistantSpendingService {
           INSERT INTO assistant_monthly_spend (month, committed_micro_usd, updated_at)
           SELECT ${month}, ${amount}::bigint, now()
           WHERE ${amount}::bigint <= ${limit}::bigint
+            AND NOT EXISTS (
+              SELECT 1 FROM assistant_spend_holds
+              WHERE ${through}::timestamptz IS NULL OR detected_at > ${through}::timestamptz
+            )
           ON CONFLICT (month) DO UPDATE
             SET committed_micro_usd = assistant_monthly_spend.committed_micro_usd + EXCLUDED.committed_micro_usd,
                 updated_at = now()
@@ -94,15 +117,37 @@ export class AssistantSpendingService {
         RETURNING id::text`,
     );
     if (reserved.length === 0) {
+      const held = await executeDatabaseOperation(
+        () => this.prisma.$queryRaw<{ held: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1 FROM assistant_spend_holds
+            WHERE ${through}::timestamptz IS NULL OR detected_at > ${through}::timestamptz
+          ) AS held`,
+      );
+      if (held[0]?.held)
+        throw new SpendingBlockedError(
+          'A SarvoAI call broke its reservation assumptions and has not been reviewed',
+        );
       this.logger.warn(
         JSON.stringify({ event: 'sarvoai_spending_limit_reached', month }),
       );
       throw new SpendingLimitReachedException(now);
     }
-    return { id, prices };
+    return {
+      id,
+      approval,
+      reservedMicroUsd: amount,
+      promptTokenBound: bound.promptTokens,
+      outputTokenBound: request.max_tokens,
+    };
   }
 
-  /** Replaces the reservation with the cost of the tokens the provider reported. */
+  /**
+   * Replaces the reservation with the cost of the tokens the provider reported. If the
+   * response breaks the reservation's assumptions, the same statement records the full
+   * cost and places a hold. A charge the approved prices do not cover counts at no less
+   * than the reservation, because its true cost is unknown.
+   */
   async settle(
     reservation: SpendReservation,
     usage: Anthropic.Usage | undefined,
@@ -112,11 +157,30 @@ export class AssistantSpendingService {
       await this.keepAsUncertain(reservation, 'usage_missing');
       return;
     }
-    const actual = actualMicroUsd(counts, reservation.prices);
+    const estimated = actualMicroUsd(counts, reservation.approval);
+    const unpriced = unpricedBilling(usage);
+    const actual =
+      unpriced.length > 0 && estimated < reservation.reservedMicroUsd
+        ? reservation.reservedMicroUsd
+        : estimated;
+    const promptTokens =
+      counts.inputTokens + counts.cacheWriteTokens + counts.cacheReadTokens;
+    const reasons = [
+      ...(estimated > reservation.reservedMicroUsd
+        ? ['cost_above_reservation']
+        : []),
+      ...(promptTokens > reservation.promptTokenBound
+        ? ['prompt_above_bound']
+        : []),
+      ...(counts.outputTokens > reservation.outputTokenBound
+        ? ['output_above_bound']
+        : []),
+      ...unpriced,
+    ].join(',');
     await this.close(
       reservation,
       'settled',
-      () => this.prisma.$queryRaw<{ over: boolean }[]>`
+      () => this.prisma.$queryRaw<{ detectedAt: Date | null }[]>`
         WITH closed AS (
           UPDATE assistant_spend_reservations
           SET status = 'SETTLED'::assistant_spend_status, actual_micro_usd = ${actual}::bigint,
@@ -124,14 +188,24 @@ export class AssistantSpendingService {
               cache_read_tokens = ${counts.cacheReadTokens}, output_tokens = ${counts.outputTokens},
               closed_at = now()
           WHERE id = ${reservation.id}::uuid AND status = 'RESERVED'::assistant_spend_status
-          RETURNING month, reserved_micro_usd
+          RETURNING id, month, reserved_micro_usd
+        ), spend AS (
+          UPDATE assistant_monthly_spend AS spend
+          SET committed_micro_usd = spend.committed_micro_usd - closed.reserved_micro_usd + ${actual}::bigint,
+              updated_at = now()
+          FROM closed
+          WHERE spend.month = closed.month
+          RETURNING spend.month
+        ), hold AS (
+          INSERT INTO assistant_spend_holds (reservation_id, reasons, reserved_micro_usd, actual_micro_usd)
+          SELECT closed.id, ${reasons}::varchar, closed.reserved_micro_usd, ${actual}::bigint
+          FROM closed
+          WHERE ${reasons}::varchar <> ''
+          RETURNING detected_at
         )
-        UPDATE assistant_monthly_spend AS spend
-        SET committed_micro_usd = spend.committed_micro_usd - closed.reserved_micro_usd + ${actual}::bigint,
-            updated_at = now()
-        FROM closed
-        WHERE spend.month = closed.month
-        RETURNING ${actual}::bigint > closed.reserved_micro_usd AS over`,
+        SELECT hold.detected_at AS "detectedAt" FROM spend LEFT JOIN hold ON true`,
+      undefined,
+      { reasons, actual },
     );
   }
 
@@ -144,7 +218,7 @@ export class AssistantSpendingService {
     await this.close(
       reservation,
       'released',
-      () => this.prisma.$queryRaw<{ over: boolean }[]>`
+      () => this.prisma.$queryRaw<{ detectedAt: Date | null }[]>`
         WITH closed AS (
           UPDATE assistant_spend_reservations
           SET status = 'RELEASED'::assistant_spend_status, actual_micro_usd = 0, closed_at = now()
@@ -156,7 +230,7 @@ export class AssistantSpendingService {
             updated_at = now()
         FROM closed
         WHERE spend.month = closed.month
-        RETURNING false AS over`,
+        RETURNING NULL::timestamptz AS "detectedAt"`,
     );
   }
 
@@ -165,11 +239,11 @@ export class AssistantSpendingService {
     await this.close(
       reservation,
       'uncertain',
-      () => this.prisma.$queryRaw<{ over: boolean }[]>`
+      () => this.prisma.$queryRaw<{ detectedAt: Date | null }[]>`
         UPDATE assistant_spend_reservations
         SET status = 'UNCERTAIN'::assistant_spend_status, closed_at = now()
         WHERE id = ${reservation.id}::uuid AND status = 'RESERVED'::assistant_spend_status
-        RETURNING false AS over`,
+        RETURNING NULL::timestamptz AS "detectedAt"`,
       reason,
     );
   }
@@ -181,16 +255,22 @@ export class AssistantSpendingService {
   private async close(
     reservation: SpendReservation,
     outcome: string,
-    update: () => Promise<{ over: boolean }[]>,
+    update: () => Promise<{ detectedAt: Date | null }[]>,
     reason?: string,
+    breach?: { reasons: string; actual: bigint },
   ) {
     try {
       const rows = await executeDatabaseOperation(update);
-      if (rows[0]?.over) {
+      const detectedAt = rows[0]?.detectedAt;
+      if (detectedAt && breach) {
         this.logger.warn(
           JSON.stringify({
-            event: 'sarvoai_spend_above_reservation',
+            event: 'sarvoai_calls_held_for_review',
             reservationId: reservation.id,
+            reasons: breach.reasons,
+            reservedMicroUsd: reservation.reservedMicroUsd.toString(),
+            actualMicroUsd: breach.actual.toString(),
+            detectedAt: detectedAt.toISOString(),
           }),
         );
       }

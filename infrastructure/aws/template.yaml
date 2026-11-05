@@ -58,6 +58,10 @@ Parameters:
     AllowedPattern: '^[0-9]{1,6}(\.[0-9]{1,6})?$'
     Default: '20'
     Description: Application spending limit for SarvoAI per UTC month. Not an AWS billing cap.
+  SarvoAiPricingApproval:
+    Type: String
+    Default: ''
+    Description: Reviewed Bedrock prices for this model and Region as one line of JSON (docs/sarvoai-aws-setup.md). Empty, invalid or expired refuses every model call.
 
 Rules:
   ExistingStageSecrets:
@@ -72,6 +76,10 @@ Rules:
     Assertions:
       - Assert: !Equals [!Ref SarvoAiEnabled, 'false']
         AssertDescription: Keep test SarvoAI disabled until a reviewed application monthly spending cap is implemented
+  AiPricingApproved:
+    Assertions:
+      - Assert: !Or [!Equals [!Ref SarvoAiEnabled, 'false'], !Not [!Equals [!Ref SarvoAiPricingApproval, '']]]
+        AssertDescription: SarvoAI cannot be enabled without a reviewed pricing approval
 
 Conditions:
   IsTest: !Equals [!Ref Stage, test]
@@ -130,6 +138,7 @@ Resources:
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
           SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd
+          SARVOAI_PRICING_APPROVAL: !Ref SarvoAiPricingApproval
           LOG_FORMAT: json
       Policies:
         - !If

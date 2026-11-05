@@ -873,7 +873,21 @@ model AssistantSpendReservation {
   outputTokens     Int?                  @map("output_tokens")
   createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   closedAt         DateTime?             @map("closed_at") @db.Timestamptz(3)
+  hold             AssistantSpendHold?
 
   @@index([month, status])
   @@map("assistant_spend_reservations")
+}
+
+// A call broke its reservation's assumptions. Calls stop until an approval reviews it.
+model AssistantSpendHold {
+  reservationId    String                    @id @map("reservation_id") @db.Uuid
+  reservation      AssistantSpendReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  reasons          String                    @db.VarChar(200)
+  reservedMicroUsd BigInt                    @map("reserved_micro_usd")
+  actualMicroUsd   BigInt                    @map("actual_micro_usd")
+  detectedAt       DateTime                  @default(now()) @map("detected_at") @db.Timestamptz(3)
+
+  @@index([detectedAt])
+  @@map("assistant_spend_holds")
 }

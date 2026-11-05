@@ -27,7 +27,7 @@ Every setting is an environment variable with a safe development default (`.env.
 | `SARVOAI_MODEL_ID` | Config | `global.anthropic.claude-haiku-5-5` | Bedrock model or inference profile SarvoAI calls; the IAM policy must allow this one model |
 | `SARVOAI_AWS_REGION` | Config | `ap-southeast-1` | Bedrock Region; requests are signed with the API's IAM role (no API key) |
 | `SARVOAI_MONTHLY_LIMIT_USD` | Config | `20` | Most SarvoAI may spend per UTC month, estimated by the application (0–1000; 0 or an invalid value refuses every call). Not an AWS billing cap; see `sarvoai-aws-setup.md` |
-| `SARVOAI_INPUT_USD_PER_MTOK`, `SARVOAI_OUTPUT_USD_PER_MTOK` | Config | Claude Haiku 5.5 list price (`0.10`, `0.50`) | USD per million tokens used for the estimate. Required for any other model |
+| `SARVOAI_PRICING_APPROVAL` | Config | empty | Reviewed Bedrock prices for this exact model and Region, as one line of JSON, lasting at most 31 days. Empty, invalid or expired refuses every model call. See `sarvoai-aws-setup.md` |
 | `NODE_ENV` | Config | `development` | `production` on AWS; turns off development-only drivers and demonstration users |
 | `API_PORT` | Config | `3001` | Local only; Lambda does not listen on a port |
 | `API_PUBLIC_URL` | Config | `http://localhost:3001` | Development storage links only |
