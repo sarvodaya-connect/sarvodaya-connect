@@ -836,3 +836,58 @@ model InformationRequestSociety {
   @@index([requestId, respondedAt])
   @@map("information_request_societies")
 }
+
+// Issue #96: SarvoAI's application spending limit. `committed` is settled cost plus
+// reservations still open, per UTC calendar month. Estimates only, in millionths of a
+// US dollar. No prompts, answers, people or societies are stored here.
+enum AssistantSpendStatus {
+  RESERVED
+  SETTLED
+  RELEASED
+  UNCERTAIN
+
+  @@map("assistant_spend_status")
+}
+
+model AssistantMonthlySpend {
+  // UTC calendar month as YYYY-MM.
+  month             String                      @id @db.VarChar(7)
+  committedMicroUsd BigInt                      @default(0) @map("committed_micro_usd")
+  updatedAt         DateTime                    @default(now()) @map("updated_at") @db.Timestamptz(3)
+  reservations      AssistantSpendReservation[]
+
+  @@map("assistant_monthly_spend")
+}
+
+model AssistantSpendReservation {
+  id               String                @id @db.Uuid
+  month            String                @db.VarChar(7)
+  monthlySpend     AssistantMonthlySpend @relation(fields: [month], references: [month], onDelete: Restrict)
+  modelId          String                @map("model_id") @db.VarChar(120)
+  status           AssistantSpendStatus  @default(RESERVED)
+  reservedMicroUsd BigInt                @map("reserved_micro_usd")
+  actualMicroUsd   BigInt?               @map("actual_micro_usd")
+  inputTokens      Int?                  @map("input_tokens")
+  cacheWriteTokens Int?                  @map("cache_write_tokens")
+  cacheReadTokens  Int?                  @map("cache_read_tokens")
+  outputTokens     Int?                  @map("output_tokens")
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  closedAt         DateTime?             @map("closed_at") @db.Timestamptz(3)
+  hold             AssistantSpendHold?
+
+  @@index([month, status])
+  @@map("assistant_spend_reservations")
+}
+
+// A call broke its reservation's assumptions. Calls stop until an approval reviews it.
+model AssistantSpendHold {
+  reservationId    String                    @id @map("reservation_id") @db.Uuid
+  reservation      AssistantSpendReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  reasons          String                    @db.VarChar(200)
+  reservedMicroUsd BigInt                    @map("reserved_micro_usd")
+  actualMicroUsd   BigInt                    @map("actual_micro_usd")
+  detectedAt       DateTime                  @default(now()) @map("detected_at") @db.Timestamptz(3)
+
+  @@index([detectedAt])
+  @@map("assistant_spend_holds")
+}

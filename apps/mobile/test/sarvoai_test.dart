@@ -188,6 +188,42 @@ void main() {
     expect(calls, 2);
   });
 
+  testWidgets('explains the monthly spending limit and offers no retry', (
+    tester,
+  ) async {
+    const message =
+        'SarvoAI has reached its spending limit for this month. It will be available again on 1 December 2026 (5:30 a.m. Sri Lanka time).';
+    await _pump(
+      tester,
+      const SarvoAiScreen(),
+      api: _FakeApi(
+        (_) async => throw const SarvoAiException(message, status: 429),
+      ),
+    );
+    await _ask(tester, 'Average profit in Kurunegala?');
+    expect(find.text('SarvoAI has reached this month’s limit'), findsOneWidget);
+    expect(find.text(message), findsOneWidget);
+    expect(find.text('Try again'), findsNothing);
+  });
+
+  testWidgets('explains a spending review pause and offers no retry', (
+    tester,
+  ) async {
+    const message =
+        'SarvoAI is paused until its spending settings have been reviewed. Society records are not affected, and you can still find the figures in Reports.';
+    await _pump(
+      tester,
+      const SarvoAiScreen(),
+      api: _FakeApi(
+        (_) async => throw const SarvoAiException(message, status: 503),
+      ),
+    );
+    await _ask(tester, 'Average profit in Kurunegala?');
+    expect(find.text('SarvoAI is paused'), findsOneWidget);
+    expect(find.text(message), findsOneWidget);
+    expect(find.text('Try again'), findsNothing);
+  });
+
   testWidgets('stops waiting and lets HQ ask again', (tester) async {
     await _pump(
       tester,
