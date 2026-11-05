@@ -6,6 +6,8 @@ export default defineConfig({
   resolve: {
     // Resolves the `@/` and `@sarvodaya-connect/api-contracts` aliases from tsconfig.json.
     tsconfigPaths: true,
+    // Next.js provides this marker when it builds; it has no package to resolve in tests.
+    alias: { "server-only": new URL("./vitest.server-only.ts", import.meta.url).pathname },
   },
   test: {
     environment: "jsdom",

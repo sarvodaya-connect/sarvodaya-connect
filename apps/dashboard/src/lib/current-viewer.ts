@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { demoViewers, type DemoViewer } from "./access";
-import { isDemoMode, platformApi } from "./platform-api";
+import { isDemoMode, isTransientPlatformError, platformApi } from "./platform-api";
 
 /** Roles with a desktop dashboard. Society Officers use the phone app. */
 export const DESKTOP_ROLES = ["HQ_ADMIN", "DISTRICT_MANAGER", "DEPUTY_DISTRICT_MANAGER", "PROGRAMME_COORDINATOR"] as const;
@@ -22,7 +22,9 @@ function initialsOf(name: string) {
 async function signedInUser(): Promise<SignedInUser> {
   try {
     return await platformApi("/identity/me");
-  } catch {
+  } catch (error) {
+    // A busy API has not signed anyone out: show the page's retryable error instead.
+    if (isTransientPlatformError(error)) throw error;
     redirect("/");
   }
 }

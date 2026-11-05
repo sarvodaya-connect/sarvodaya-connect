@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useState, useTransition } from "react";
 
 import type { SocietyRecord, StaffOption, StaffOptions } from "@sarvodaya-connect/api-contracts";
 
@@ -19,6 +20,49 @@ type Field = {
   options: StaffOption[];
   hint: string;
 };
+
+/**
+ * The staff choices could not be loaded. Shown in place of the form, so nothing
+ * can be submitted and no one mistakes this for a district without staff.
+ */
+export function AssignStaffUnavailable({ record }: { record: SocietyRecord }) {
+  const router = useRouter();
+  const [retrying, startRetry] = useTransition();
+  const close = `/societies/${record.id}`;
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end">
+      <Link aria-label="Close" className="absolute inset-0 bg-[#1b261f]/45" href={close} />
+      <aside
+        aria-labelledby="assign-staff-heading"
+        aria-modal="true"
+        className="relative h-full w-full max-w-[560px] overflow-y-auto bg-surface px-6 py-5 shadow-2xl"
+        role="dialog"
+      >
+        <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign responsible staff</h2>
+        <p className="text-[12px] text-ink-soft">{record.nameEn} · {record.societyCode}</p>
+        <div className="mt-5 rounded-card border border-[#ead9a7] bg-warn-bg px-4 py-3" role="alert">
+          <p className="text-[13px] font-semibold text-warn-text">We couldn’t load the staff choices</p>
+          <p className="mt-1 text-[12px] text-warn-text">
+            The service is busy. Nothing has been changed, and the current assignments are as they were. Try again in a moment.
+          </p>
+        </div>
+        <div className="mt-4 flex gap-2">
+          <button
+            className="rounded-button bg-brand-action px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed disabled:opacity-60"
+            disabled={retrying}
+            onClick={() => startRetry(() => router.refresh())}
+            type="button"
+          >
+            {retrying ? "Trying again…" : "Try again"}
+          </button>
+          <Link className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft" href={close}>
+            Close
+          </Link>
+        </div>
+      </aside>
+    </div>
+  );
+}
 
 function current(options: StaffOption[]) {
   return options.find((option) => option.assignedHere)?.id ?? "";
