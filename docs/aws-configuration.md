@@ -12,7 +12,7 @@ Every setting is an environment variable with a safe development default (`.env.
 |---|---|---|---|
 | `DATABASE_URL` | Secret | local PostgreSQL | PostgreSQL URL; direct private RDS for test, earlier RDS Proxy shape for other deployed stages |
 | `CONFIG_PARAMETER_PREFIX` | Config | unset | Lambda test: `/sarvodaya-connect/test`; cold-start loading of the two encrypted settings described in `aws-test-environment.md`. Leave unset locally |
-| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; test uses 1 with reserved concurrency 2, direct to private RDS |
+| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; test uses 1 with reserved concurrency 4, direct to private RDS; see the capacity budget in `aws-test-environment.md` |
 | `NODE_EXTRA_CA_CERTS` | Config | unset | Test Lambda: `/var/task/certificates/rds-ap-southeast-1.pem`; public AWS RDS CA bundle included by `package:lambda`, loaded by Node at startup |
 | `NIC_ENCRYPTION_KEY` | Secret | — | NIC vault key (64 hex characters) |
 | `STORAGE_DRIVER` | Config | `local` (`s3` in production) | Document storage driver |

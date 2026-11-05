@@ -1,5 +1,6 @@
 """Offline safety assertions on the actual deployment templates (PyYAML via cfn-lint)."""
 from pathlib import Path
+import re
 import subprocess
 import sys
 import unittest
@@ -168,6 +169,39 @@ class FoundationSafety(unittest.TestCase):
         for name in [*self.template['Outputs'], *self.bootstrap['Outputs']]:
             self.assertNotIn('password', name.lower())
             self.assertNotIn('key', name.lower())
+
+class ApiCapacityBudget(unittest.TestCase):
+    """The limits in docs/aws-test-environment.md live in three places and must agree."""
+
+    TESTERS = 2
+
+    @classmethod
+    def setUpClass(cls):
+        repo = ROOT.parents[2]
+        template = yaml.load((ROOT.parent / 'template.yaml').read_text(), Loader=TemplateLoader)
+        function = template['Resources']['ApiFunction']['Properties']
+        cls.concurrency = function['ReservedConcurrentExecutions']['If'][1]
+        cls.pool = int(function['Environment']['Variables']['DATABASE_CONNECTION_LIMIT']['If'][1])
+        cls.role_limit = int(re.search(
+            r'ALTER ROLE sc_test_app CONNECTION LIMIT (\d+);',
+            (ROOT / 'runtime-database-role.sql').read_text(),
+        ).group(1))
+        cls.read_slots = int(re.search(
+            r'READ_SLOTS_PER_RENDER = (\d+);',
+            (repo / 'apps/dashboard/src/lib/platform-read.ts').read_text(),
+        ).group(1))
+
+    def test_two_testers_stay_within_lambda_concurrency(self):
+        self.assertLessEqual(self.TESTERS * self.read_slots, self.concurrency)
+
+    def test_database_role_covers_a_deployment_with_room_to_operate(self):
+        # Old and new Lambda instances can both hold connections during a deployment.
+        self.assertGreaterEqual(self.role_limit, 2 * self.concurrency * self.pool + 2)
+
+    def test_test_capacity_stays_small(self):
+        self.assertEqual(self.pool, 1)
+        self.assertLessEqual(self.concurrency, 4)
+        self.assertLessEqual(self.role_limit, 10)
 
 if __name__ == '__main__':
     unittest.main()
