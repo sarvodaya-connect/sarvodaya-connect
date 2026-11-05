@@ -187,7 +187,8 @@ stack without an explicit recovery plan.
   Bedrock pricing/global routing are approved. There is one shared token-priced
   spending ledger, not the former flat-USD-2 allowance. TEST tools are restricted
   to synthetic `TEST-*` societies in district `TEST-ONLY`; personal Exco lookups
-  are disabled. See `docs/sarvoai-aws-setup.md`. No budget alert replaces the
+  are disabled. See `docs/sarvoai-aws-setup.md`, and `docs/sarvoai-test-pilot-plan.md`
+  for the pilot checks (`sarvoai-pilot-checks.sql`, read-only). No budget alert replaces the
   application's admission gate, and the limit is not expected actual spending.
 - Inspect existing CloudTrail coverage/event history before adding a dedicated
   test trail; no organization trail changes or audit-completeness claim is made.

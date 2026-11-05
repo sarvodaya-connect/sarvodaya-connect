@@ -22,6 +22,43 @@ def intrinsic(loader, tag, node):
 
 TemplateLoader.add_multi_constructor('!', intrinsic)
 
+class SarvoAiGuardrails(unittest.TestCase):
+    """The API template keeps SarvoAI off by default and fictional-only in TEST."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.template = yaml.load((ROOT.parent / 'template.yaml').read_text(), Loader=TemplateLoader)
+        cls.env = cls.template['Resources']['ApiFunction']['Properties']['Environment']['Variables']
+
+    def test_off_by_default(self):
+        self.assertEqual(self.template['Parameters']['SarvoAiEnabled']['Default'], 'false')
+        self.assertEqual(self.template['Parameters']['SarvoAiPricingApproval']['Default'], '')
+        self.assertEqual(self.env['SARVOAI_ENABLED'], {'Ref': 'SarvoAiEnabled'})
+
+    def test_enabling_requires_a_pricing_approval(self):
+        rule = self.template['Rules']['AiPricingApproved']
+        self.assertNotIn('RuleCondition', rule)
+        self.assertEqual(rule['Assertions'][0]['Assert'], {'Or': [
+            {'Equals': [{'Ref': 'SarvoAiEnabled'}, 'false']},
+            {'Not': [{'Equals': [{'Ref': 'SarvoAiPricingApproval'}, '']}]},
+        ]})
+
+    def test_obsolete_test_disable_rule_removed(self):
+        self.assertNotIn('TestAiDisabled', self.template['Rules'])
+
+    def test_test_stage_is_fictional_only(self):
+        self.assertEqual(self.env['SARVOAI_FICTIONAL_ONLY'], {'If': ['IsTest', 'true', 'false']})
+        self.assertEqual(self.template['Conditions']['IsTest'], {'Equals': [{'Ref': 'Stage'}, 'test']})
+
+    def test_model_permission_only_when_enabled(self):
+        policies = self.template['Resources']['ApiFunction']['Properties']['Policies']
+        bedrock = [p for p in policies if isinstance(p, dict) and 'bedrock' in str(p)]
+        self.assertEqual(len(bedrock), 1)
+        self.assertEqual(bedrock[0]['If'][0], 'SarvoAiOn')
+        self.assertEqual(bedrock[0]['If'][2], {'Ref': 'AWS::NoValue'})
+        actions = {s['Action'] for s in bedrock[0]['If'][1]['Statement']}
+        self.assertEqual(actions, {'bedrock:InvokeModel'})
+
 class FoundationSafety(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
