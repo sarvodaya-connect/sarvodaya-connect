@@ -53,6 +53,11 @@ Parameters:
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
+  SarvoAiMonthlyLimitUsd:
+    Type: String
+    AllowedPattern: '^[0-9]{1,6}(\.[0-9]{1,6})?$'
+    Default: '20'
+    Description: Application spending limit for SarvoAI per UTC month. Not an AWS billing cap.
 
 Rules:
   ExistingStageSecrets:
@@ -124,6 +129,7 @@ Resources:
           SARVOAI_ENABLED: !Ref SarvoAiEnabled
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
+          SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd
           LOG_FORMAT: json
       Policies:
         - !If

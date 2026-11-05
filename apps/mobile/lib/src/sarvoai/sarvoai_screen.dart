@@ -408,6 +408,30 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
     final error = turn.error;
     if (error != null) {
       if (error.status == 400) return _Box(child: Text(error.message));
+      // Issue #96: the API's own wording, with the date SarvoAI returns. No retry.
+      if (error.status == 429) {
+        return _Box(
+          border: const Color(0xFFECD9A0),
+          colour: const Color(0xFFFFFAF0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'SarvoAI has reached this month’s limit',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                error.message,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.inkBody,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
       return _Box(
         border: const Color(0xFFF0CFCB),
         child: Column(

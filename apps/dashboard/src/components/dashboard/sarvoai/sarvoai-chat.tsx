@@ -315,6 +315,18 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
       </div>
     );
   }
+  if (result.status === 429) {
+    // The API's own wording, with the date SarvoAI is available again (issue #96).
+    return (
+      <div className="rounded-card border border-[#ecd9a0] bg-[#fffaf0] p-4" role="alert">
+        <p className="text-[14px] font-bold text-ink">SarvoAI has reached this month’s limit</p>
+        <p className="text-[12px] text-ink-soft">{result.message}</p>
+        <div className="mt-3">
+          <Link className={secondaryButtonClass} href="/reports">Open Reports</Link>
+        </div>
+      </div>
+    );
+  }
   if (result.status === 400) {
     return (
       <div className="rounded-card border border-line bg-surface p-4" role="alert">

@@ -4,12 +4,15 @@ import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableExcep
 import { hasRole, type Principal } from '../auth/principal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
-import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError } from './assistant-model.js';
+import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError, DisabledAssistantModel, type ModelRequest } from './assistant-model.js';
+import { AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import { ASSISTANT_TOOLS, AssistantTools, type ToolOutcome } from './assistant-tools.js';
 import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind, type AssistantTurn } from './assistant.types.js';
 
 /** Tool rounds per question; a normal answer needs one or two. */
 const MAX_ROUNDS = 6;
+/** Output allowance per model call; also what each call reserves (issue #96). */
+export const MAX_OUTPUT_TOKENS = 8000;
 /** Longest summary and suggestion the screens show (V5 PR 10 output limits). */
 const MAX_SUMMARY = 1200;
 const MAX_OPTION = 200;
@@ -61,6 +64,7 @@ export class AssistantService {
     private readonly prisma: PrismaService,
     private readonly tools: AssistantTools,
     @Inject(ASSISTANT_MODEL) private readonly model: AssistantModel,
+    private readonly spending: AssistantSpendingService,
   ) {}
 
   async ask(principal: Principal, question: string, history: AssistantTurn[] = [], now = new Date()): Promise<AssistantAnswer> {
@@ -75,13 +79,16 @@ export class AssistantService {
 
     try {
       for (let round = 0; round < MAX_ROUNDS; round += 1) {
-        const response = await this.model.createMessage({
-          max_tokens: 8000,
-          system: [{ type: 'text', text: systemPrompt(now), cache_control: { type: 'ephemeral' } }],
-          tools: ASSISTANT_TOOLS,
-          messages,
-          output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
-        });
+        const response = await this.callModel(
+          {
+            max_tokens: MAX_OUTPUT_TOKENS,
+            system: [{ type: 'text', text: systemPrompt(now), cache_control: { type: 'ephemeral' } }],
+            tools: ASSISTANT_TOOLS,
+            messages,
+            output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
+          },
+          now,
+        );
 
         if (response.stop_reason === 'refusal') {
           return this.finish(principal, question, toolsUsed, now, { kind: 'UNSUPPORTED', summary: 'SarvoAI can’t answer this question.', options: [] });
@@ -109,11 +116,32 @@ export class AssistantService {
       }
     } catch (error) {
       if (error instanceof AssistantNotConfiguredError) throw new ServiceUnavailableException('SarvoAI is not switched on for this environment');
-      this.logger.error(`SarvoAI model call failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof SpendingLimitReachedException) {
+        await this.audit(principal, question, toolsUsed, 'SPENDING_LIMIT');
+        throw error;
+      }
+      // The name and status only: a provider's message can repeat part of the prompt.
+      const status = (error as { status?: unknown } | null)?.status;
+      this.logger.error(`SarvoAI model call failed: ${error instanceof Error ? error.name : 'unknown'} (status ${typeof status === 'number' ? status : 'none'})`);
       throw new ServiceUnavailableException(UNAVAILABLE);
     }
     this.logger.warn('SarvoAI did not reach an answer');
     throw new ServiceUnavailableException(UNAVAILABLE);
+  }
+
+  /** Every model call is paid for in the ledger first, and reconciled afterwards. */
+  private async callModel(request: ModelRequest, now: Date) {
+    if (this.model instanceof DisabledAssistantModel) return this.model.createMessage();
+    const reservation = await this.spending.reserve(this.model.modelId, request, now);
+    let response: Anthropic.Message;
+    try {
+      response = await this.model.createMessage(request);
+    } catch (error) {
+      await this.spending.failed(reservation, error);
+      throw error;
+    }
+    await this.spending.settle(reservation, response.usage);
+    return response;
   }
 
   private parse(content: Anthropic.ContentBlock[]): { kind: AssistantAnswerKind; summary: string; options: string[] } | undefined {
@@ -153,7 +181,7 @@ export class AssistantService {
   }
 
   /** Records who asked what and which tools ran; answers and figures are not stored. */
-  private async audit(principal: Principal, question: string, toolsUsed: string[], kind: AssistantAnswerKind) {
+  private async audit(principal: Principal, question: string, toolsUsed: string[], kind: AssistantAnswerKind | 'SPENDING_LIMIT') {
     try {
       await this.prisma.platformAuditEvent.create({
         data: {
