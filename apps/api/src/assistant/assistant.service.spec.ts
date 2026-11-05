@@ -110,12 +110,15 @@ describe('AssistantService', () => {
 });
 
 describe('SarvoAI data limits (V5 PR 10)', () => {
-  it('reads only society profiles, Exco, yearly totals and submission status', async () => {
+  it('exposes only the approved society, financial, upload and follow-up tools', async () => {
     const { ASSISTANT_TOOLS } = await import('./assistant-tools.js');
     expect(ASSISTANT_TOOLS.map((tool) => tool.name).sort()).toEqual([
+      'find_compliance_gaps',
       'find_societies',
       'get_exco_member',
+      'get_society_overview',
       'list_districts',
+      'list_outstanding_work',
       'societies_above_profit',
       'societies_missing_yearly_figures',
       'summarize_yearly_figure',
@@ -158,7 +161,7 @@ describe('SarvoAI spending limit (issue #96)', () => {
     await service.ask(hq, 'Average profit?', [], now);
 
     expect(order).toEqual(['reserve', 'settle', 'reserve', 'settle']);
-    expect(spending.reserve).toHaveBeenCalledWith('fake', expect.objectContaining({ max_tokens: 8000 }), now);
+    expect(spending.reserve).toHaveBeenCalledWith('fake', expect.objectContaining({ max_tokens: 2048 }));
     expect(spending.settle).toHaveBeenCalledWith(reservation, usage);
     expect(spending.reserve.mock.invocationCallOrder[0]).toBeLessThan(createMessage.mock.invocationCallOrder[0]);
   });
@@ -253,6 +256,91 @@ describe('SarvoAI spending limit (issue #96)', () => {
     expect(model['client'].maxRetries).toBe(0);
     expect(model['client'].timeout).toBe(MODEL_TIMEOUT_MS);
     expect(MODEL_TIMEOUT_MS).toBeLessThan(29_000);
+  });
+});
+
+describe('consolidated privacy, tools and spending', () => {
+  it('reserves the exact scrubbed payload that reaches the model, once per call', async () => {
+    const { service, spending, createMessage, auditCreate } = setup([
+      final({ kind: 'ANSWER', summary: 'Contact a@b.co', options: ['Email a@b.co'] }),
+    ]);
+    const answer = await service.ask(hq, 'Email a@b.co', [{ role: 'user', text: 'password=fixture-secret' }], now);
+    const reserved = spending.reserve.mock.calls[0][1];
+    expect(createMessage.mock.calls[0][0]).toBe(reserved);
+    expect(JSON.stringify(reserved)).toContain('[REDACTED EMAIL]');
+    expect(JSON.stringify(reserved)).not.toContain('fixture-secret');
+    expect(JSON.stringify(reserved)).not.toContain('a@b.co');
+    expect(createMessage.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    expect(reserved).toMatchObject({ max_tokens: 2048, thinking: { type: 'disabled' } });
+    expect(spending.reserve).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(answer)).not.toContain('a@b.co');
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('Email a@b.co');
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('fixture-secret');
+  });
+
+  it.each(['limit', 'review'])('does not audit the prompt on a spending %s refusal', async (kind) => {
+    const { service, spending, auditCreate, createMessage } = setup([]);
+    spending.reserve.mockRejectedValue(kind === 'limit' ? new SpendingLimitReachedException(now) : new SpendingBlockedError('Approval expired'));
+    await expect(service.ask(hq, 'Fictional confidential question', [], now)).rejects.toThrow();
+    expect(createMessage).not.toHaveBeenCalled();
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('Fictional confidential question');
+    expect(auditCreate.mock.calls[0][0].data.detail).toContain(kind === 'limit' ? 'SPENDING_LIMIT' : 'SPENDING_REVIEW');
+  });
+
+  it('rejects an oversized scrubbed payload before reserving or calling the model', async () => {
+    const { service, spending, createMessage } = setup([]);
+    await expect(service.ask(hq, 'x'.repeat(66_000), [], now)).rejects.toThrow('paused');
+    expect(spending.reserve).not.toHaveBeenCalled();
+    expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps source evidence from multiple tools and the latest tool table', async () => {
+    const first = { content: '{}', answer: { details: { recordsUsed: ['Profile'], sources: [{ label: 'Profile', href: '/societies/00000000-0000-4000-8000-000000000001' }] } } };
+    const last = { content: '{}', answer: { table: { columns: ['Queue'], rows: [['Pending']], totalRows: 1 }, details: { recordsUsed: ['Queues'], sources: [{ label: 'Requests', href: '/requests' }] } } };
+    const { service, run } = setup([
+      toolUse('get_society_overview', { societyCode: 'TEST-A', financialYear: 2025 }),
+      toolUse('list_outstanding_work', { district: '' }),
+      final({ kind: 'ANSWER', summary: 'Recorded results.', options: [] }),
+    ]);
+    run.mockResolvedValueOnce(first).mockResolvedValueOnce(last);
+    const answer = await service.ask(hq, 'Fictional overview and work?', [], now);
+    expect(answer.table).toEqual(last.answer.table);
+    expect(answer.details.recordsUsed).toEqual(['Profile', 'Queues']);
+    expect(answer.details.sources).toEqual([...first.answer.details.sources, ...last.answer.details.sources]);
+  });
+
+  it('does not execute an unapproved tool or more than four tools per round', async () => {
+    for (const content of [
+      [{ type: 'tool_use', id: 'bad', name: 'arbitrary_sql', input: {} }],
+      Array.from({ length: 5 }, (_, i) => ({ type: 'tool_use', id: `call-${i}`, name: 'list_districts', input: {} })),
+    ]) {
+      const { service, run } = setup([message('tool_use', content)]);
+      await expect(service.ask(hq, 'Fictional question', [], now)).rejects.toThrow();
+      expect(run).not.toHaveBeenCalled();
+    }
+  });
+
+  it('does not call the provider after cancellation during reservation and keeps the attempt counted', async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    const { service, spending, createMessage, reservation } = setup([]);
+    spending.reserve.mockImplementation(async () => { controller.abort(); return reservation; });
+    try {
+      await expect(service.ask(hq, 'Fictional question', [], now)).rejects.toThrow();
+      expect(createMessage).not.toHaveBeenCalled();
+      expect(spending.failed).toHaveBeenCalledWith(reservation, expect.any(Error));
+    } finally { timeout.mockRestore(); }
+  });
+
+  it('forwards the cancellation signal to the SDK without changing the reserved request', async () => {
+    const model = new BedrockAssistantModel('global.anthropic.claude-haiku-5-5', 'ap-southeast-1');
+    const sent = vi.spyOn(model['client'].messages, 'create').mockResolvedValue(final({ kind: 'ANSWER' }) as never);
+    const signal = AbortSignal.timeout(22_000);
+    const payload = { max_tokens: 2048, thinking: { type: 'disabled' }, messages: [{ role: 'user', content: 'Fictional' }] } as Parameters<AssistantModel['createMessage']>[0];
+    await model.createMessage(payload, signal);
+    expect(sent).toHaveBeenCalledWith({ ...payload, model: model.modelId }, { signal });
+    expect(model['client'].logLevel).toBe('off');
+    sent.mockRestore();
   });
 });
 

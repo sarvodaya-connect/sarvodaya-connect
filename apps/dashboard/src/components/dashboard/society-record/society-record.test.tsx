@@ -185,7 +185,7 @@ describe("D05e HQ edit society information", () => {
   it("fills the latitude and longitude fields from a click on the street map", async () => {
     fakeMapbox.reset();
     vi.stubEnv("NEXT_PUBLIC_MAPBOX_TOKEN", "pk.test-only");
-    onTestFinished(() => vi.unstubAllEnvs());
+    onTestFinished(() => { vi.unstubAllEnvs(); });
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={{ ...record, location: { latitude: 7.5, longitude: 80.4 } }} />);
     await screen.findByRole("img", { name: /Map pin for Pahala Kosgama SSS/ });
     act(() => fakeMapbox.maps[0]!.emit("click", { lngLat: { lat: 7.6123, lng: 80.2354 } }));

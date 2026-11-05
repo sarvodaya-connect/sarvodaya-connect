@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
@@ -14,10 +15,12 @@ import {
   type ThresholdMode,
 } from './assistant-calculations.js';
 import type { AssistantDetails, AssistantScope, AssistantTable } from './assistant.types.js';
+import { AssistantInsights } from './assistant-insights.js';
 
 /**
- * The only ways SarvoAI can read data. Each tool is read-only, covers active societies
- * only, and selects named fields: never NICs, phone numbers, emails or passwords, and
+ * The only ways SarvoAI can read data. Each tool is read-only; national queues
+ * cover active societies, while profile/search can show other statuses. Tools
+ * select named fields: never NICs, phone numbers, emails or passwords, and
  * of the yearly figures only total profit and total expenses.
  */
 
@@ -37,6 +40,21 @@ const yearProperty = { type: 'integer', description: 'Start year of the financia
 const districtProperty = { type: 'string', description: 'District name, e.g. "Kurunegala". Leave empty for all districts.' };
 
 export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'get_society_overview',
+    description: 'Brief one society: status, grade, Exco seat count (no names), four annual Registrar upload gaps, yearly profit/expenses, five recent approved activities, pending grade decisions and overdue unanswered requests. Find its exact S number first. Requires a completed financial year; ask which year if unclear. Includes record timestamps and source links; missing values are not zero.',
+    input_schema: { type: 'object', properties: { societyCode: { type: 'string', description: 'Exact S number from find_societies' }, financialYear: yearProperty }, required: ['societyCode', 'financialYear'], additionalProperties: false },
+  },
+  {
+    name: 'find_compliance_gaps',
+    description: 'Active societies missing one or more of the four Registrar uploads for a completed financial year. Returns total counts and up to 20 societies, ordered by S number, with missing types and source links. Upload presence does not establish approval or legal compliance; do not call missing files overdue without a recorded deadline.',
+    input_schema: { type: 'object', properties: { financialYear: yearProperty, district: districtProperty }, required: ['financialYear', 'district'], additionalProperties: false },
+  },
+  {
+    name: 'list_outstanding_work',
+    description: 'HQ follow-up queues for active societies: overdue unanswered society-request pairs, HQ grade decisions pending, activities awaiting their SPC (HQ follow-up only), and profiles older than 90 days. Returns exact queue counts, five oldest examples per queue and source links. Counts overlap; never add them as unique societies. This is a rule-based list, not an AI risk score.',
+    input_schema: { type: 'object', properties: { district: districtProperty }, required: ['district'], additionalProperties: false },
+  },
   {
     name: 'list_districts',
     description: 'List the district names. Use it to check a district name before other tools.',
@@ -108,7 +126,17 @@ const lkr = (value: number) => `LKR ${value.toLocaleString('en-US')}`;
 
 @Injectable()
 export class AssistantTools {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly config?: ConfigService) {}
+
+  private get fictionalOnly(): boolean {
+    return this.config?.get<string>('SARVOAI_FICTIONAL_ONLY') === 'true';
+  }
+
+  private get societyScope() {
+    return this.fictionalOnly
+      ? { societyCode: { startsWith: 'TEST-' }, district: { code: 'TEST-ONLY' } }
+      : {};
+  }
 
   async run(name: string, input: unknown, now = new Date()): Promise<ToolOutcome> {
     const args = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
@@ -119,6 +147,7 @@ export class AssistantTools {
         case 'find_societies':
           return await this.findSocieties(text(args, 'query'));
         case 'get_exco_member':
+          if (this.fictionalOnly) return { content: 'Exco personal details are not available in the fictional pilot.', isError: true };
           return await this.excoMember(text(args, 'societyCode', 20), text(args, 'position', 100));
         case 'summarize_yearly_figure':
           return await this.summarize(this.year(args.financialYear, now), this.metric(args.metric), text(args, 'district'));
@@ -126,6 +155,20 @@ export class AssistantTools {
           return await this.aboveProfit(args, now);
         case 'societies_missing_yearly_figures':
           return await this.missing(this.year(args.financialYear, now), text(args, 'district'));
+        case 'get_society_overview': {
+          const code = text(args, 'societyCode', 20);
+          if (!code) throw new ToolInputError('societyCode is required; use find_societies first');
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).overview(code, this.year(args.financialYear, now), now);
+        }
+        case 'find_compliance_gaps': {
+          const year = this.year(args.financialYear, now);
+          const district = await this.districtFilter(text(args, 'district'));
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).compliance(year, now, district.districtId, district.label);
+        }
+        case 'list_outstanding_work': {
+          const district = await this.districtFilter(text(args, 'district'));
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).outstanding(now, district.districtId, district.label);
+        }
         default:
           return { content: `Unknown tool ${name}`, isError: true };
       }
@@ -148,16 +191,16 @@ export class AssistantTools {
   }
 
   private async listDistricts(): Promise<ToolOutcome> {
-    const districts = await this.prisma.district.findMany({ select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
+    const districts = await this.prisma.district.findMany({ where: this.fictionalOnly ? { code: 'TEST-ONLY' } : {}, select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
     return { content: JSON.stringify({ districts: districts.map((district) => district.nameEn) }) };
   }
 
   /** Resolves a district name; unknown names are an input error that lists the real ones. */
   private async districtFilter(name: string) {
     if (!name) return { districtId: undefined, label: undefined };
-    const district = await this.prisma.district.findFirst({ where: { nameEn: { equals: name, mode: 'insensitive' } }, select: { id: true, nameEn: true } });
+    const district = await this.prisma.district.findFirst({ where: { nameEn: { equals: name, mode: 'insensitive' }, ...(this.fictionalOnly ? { code: 'TEST-ONLY' } : {}) }, select: { id: true, nameEn: true } });
     if (!district) {
-      const names = await this.prisma.district.findMany({ select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
+      const names = await this.prisma.district.findMany({ where: this.fictionalOnly ? { code: 'TEST-ONLY' } : {}, select: { nameEn: true }, orderBy: { nameEn: 'asc' } });
       throw new ToolInputError(`No district called "${name}". Districts: ${names.map((row) => row.nameEn).join(', ')}`);
     }
     return { districtId: district.id, label: district.nameEn };
@@ -165,7 +208,7 @@ export class AssistantTools {
 
   private async activeSocieties(districtId?: string): Promise<SocietyRef[]> {
     const rows = await this.prisma.society.findMany({
-      where: { status: 'ACTIVE', ...(districtId ? { districtId } : {}) },
+      where: { ...this.societyScope, status: 'ACTIVE', ...(districtId ? { districtId } : {}) },
       select: { id: true, societyCode: true, nameEn: true, district: { select: { nameEn: true } } },
       orderBy: { nameEn: 'asc' },
     });
@@ -192,6 +235,7 @@ export class AssistantTools {
     if (query.length < 2) throw new ToolInputError('query must be at least 2 characters');
     const rows = await this.prisma.society.findMany({
       where: {
+        ...this.societyScope,
         OR: [
           { nameEn: { contains: query, mode: 'insensitive' } },
           { nameLocal: { contains: query, mode: 'insensitive' } },

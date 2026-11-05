@@ -139,9 +139,15 @@ describe('SarvoAI spending limit (PostgreSQL)', () => {
     };
     process.env.SARVOAI_MONTHLY_LIMIT_USD = limit;
     process.env.SARVOAI_PRICING_APPROVAL = approvalFor(now);
+    // Production reads the clock at each reservation, not at question start.
+    // Give just this ledger a deterministic clock without aging HTTP sessions.
+    const spending = app.get(AssistantSpendingService);
+    const reserve = spending.reserve.bind(spending);
+    const clock = vi.spyOn(spending, 'reserve').mockImplementation((modelId, request) => reserve(modelId, request, now));
     try {
       return await run();
     } finally {
+      clock.mockRestore();
       process.env.SARVOAI_MONTHLY_LIMIT_USD = original.limit;
       if (original.approval === undefined)
         delete process.env.SARVOAI_PRICING_APPROVAL;
@@ -452,8 +458,8 @@ describe('SarvoAI spending limit (PostgreSQL)', () => {
       },
       '0.10',
     );
-    expect(outcomes.at(-1)).toBeInstanceOf(SpendingLimitReachedException);
     model.createMessage = realCreate;
+    expect(outcomes.at(-1)).toBeInstanceOf(SpendingLimitReachedException);
     expect(calls).toBe(outcomes.length - 1);
     expect((await committed(now))!).toBeLessThanOrEqual(100_000n);
   });
