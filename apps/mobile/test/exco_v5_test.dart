@@ -75,7 +75,7 @@ void main() {
     await _openExco(tester, UserRole.societyOfficer);
 
     expect(find.text('All 25 positions filled'), findsOneWidget);
-    expect(find.textContaining('25 / 25'), findsOneWidget);
+    expect(find.text('● Complete'), findsOneWidget);
     expect(find.text('Show all 22 members'), findsOneWidget);
 
     await _tap(tester, find.text('N. Wijesinghe'));

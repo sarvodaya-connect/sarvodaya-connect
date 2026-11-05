@@ -556,7 +556,8 @@ class _OfficeBearersCard extends StatelessWidget {
             .firstOrNull
             ?.fullName ??
         'Not chosen';
-    final complete = record.exco.length == 25;
+    final status = record.excoStatus;
+    final complete = status.complete;
     return RecordCard(
       title: 'Exco · office bearers',
       trailing: record.exco.isEmpty
@@ -585,10 +586,8 @@ class _OfficeBearersCard extends StatelessWidget {
           KeyValue('Treasurer', bearer('Treasurer')),
           KeyValue(
             'Exco',
-            record.exco.isEmpty
-                ? 'Not entered yet'
-                : '${record.exco.length} of 25',
-            missing: record.exco.isEmpty,
+            complete ? '25 of 25 · complete' : status.shortLabel,
+            missing: !complete,
             trailing: complete
                 ? const Icon(Icons.check, size: 13, color: AppColors.leaf)
                 : null,
@@ -837,7 +836,9 @@ class _ExcoTabState extends State<_ExcoTab> {
     final shownOthers = _showAll || query.isNotEmpty
         ? others
         : others.take(8).toList();
-    final complete = emptySeats.isEmpty;
+    // The API's completion: 25 seats, the seat groups and the three offices.
+    final status = record.excoStatus;
+    final complete = status.complete;
     final toFill = emptySeats.length;
 
     Widget row(ExcoMember member, {String? office}) => InkWell(
@@ -929,7 +930,11 @@ class _ExcoTabState extends State<_ExcoTab> {
               ),
             ),
             RecordChip(
-              complete ? '✓ 25 / 25' : 'Incomplete · $toFill to fill',
+              complete
+                  ? 'Complete'
+                  : toFill > 0
+                  ? 'Incomplete · $toFill to fill'
+                  : 'Incomplete',
               tone: complete ? ChipTone.success : ChipTone.warning,
             ),
           ],
@@ -939,9 +944,16 @@ class _ExcoTabState extends State<_ExcoTab> {
           RecordNote(
             icon: Icons.info_outline,
             title: 'Exco incomplete',
-            message: canEdit
-                ? 'Add the remaining $toFill ${toFill == 1 ? 'member' : 'members'} under "Empty seats". Each member is saved as you go, so you can finish later.'
-                : 'The Society Officer is still entering the Exco: $toFill of 25 seats to fill.',
+            // What is missing, in the API's words (seats, groups, offices).
+            message: [
+              ...status.problems,
+              if (canEdit && toFill > 0)
+                'Add members under "Empty seats". Each one is saved as you go, so you can finish later.'
+              else if (canEdit && status.missingOffices.isNotEmpty)
+                'Choose them under "Office bearers".'
+              else if (!canEdit)
+                'The Society Officer completes the Exco.',
+            ].join(' '),
           ),
         ],
         const SizedBox(height: 10),

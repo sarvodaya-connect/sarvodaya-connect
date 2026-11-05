@@ -147,15 +147,26 @@ export interface SocietyRecordPermissions {
   viewOnlyUntil?: IsoDateTime;
 }
 
+/** The offices chosen from the Exco members. */
+export type ExcoOffice = "President" | "Secretary" | "Treasurer";
+
 /**
  * A new society starts with no Exco members: HQ creates it, assigns a Society
- * Officer, and the officer enters the 25 seats, saving as they go. The Exco is
- * incomplete until every seat is filled.
+ * Officer, and the officer enters the 25 seats, saving as they go. The API
+ * works this out; the dashboard and the phone show it as it is.
+ *
+ * `complete` is true only with 25 seats each held by one active member, the
+ * agreed groups (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders'
+ * council) and exactly one President, one Secretary and one Treasurer.
  */
 export interface ExcoStatus {
   filledSeats: number;
   totalSeats: 25;
   complete: boolean;
+  /** Offices nobody holds yet. */
+  missingOffices: ExcoOffice[];
+  /** What is still missing, in plain words, e.g. "No Treasurer chosen yet." Empty when complete. */
+  problems: string[];
 }
 
 export interface SocietyRecord extends SocietyDetails {

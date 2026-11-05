@@ -382,6 +382,8 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       filledSeats: 0,
       totalSeats: 25,
       complete: false,
+      missingOffices: ['President', 'Secretary', 'Treasurer'],
+      problems: ['No Exco members have been entered yet.'],
     });
     const directory = await call(
       'get',
@@ -391,6 +393,7 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
     expect(directory.body.data[0]).toMatchObject({
       id: newId,
       excoSeatsFilled: 0,
+      excoComplete: false,
     });
 
     // Before HQ assigns them, the officer cannot touch the Exco.
@@ -423,6 +426,8 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       filledSeats: 3,
       totalSeats: 25,
       complete: false,
+      missingOffices: [],
+      problems: ['22 of 25 seats are still to fill.'],
     });
 
     // The seat rules still hold while it is incomplete.
@@ -444,8 +449,21 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       .map((member, index) =>
         index === 1 ? { ...member, position: 'President' } : member,
       );
+    const twoHolders = await call(
+      'put',
+      `/societies/${newId}/council`,
+      officer,
+      {
+        members: twoPresidents,
+      },
+    ).expect(400);
+    expect(twoHolders.body.error.message).toBe('Choose only one President');
+    // The same on a full Exco: a second Treasurer is refused.
+    const twoTreasurers = seats.map((member) =>
+      member.seatNumber === 10 ? { ...member, position: 'Treasurer' } : member,
+    );
     await call('put', `/societies/${newId}/council`, officer, {
-      members: twoPresidents,
+      members: twoTreasurers,
     }).expect(400);
     await call('put', `/societies/${newId}/council`, officer, {
       members: [...seats, { ...seats[0]!, seatNumber: 26 }],
@@ -456,7 +474,55 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       members: seats,
     }).expect(403);
 
-    // Later, the officer completes all 25 seats.
+    // The officer cannot assign staff: that stays with HQ.
+    await call('put', `/societies/${newId}/assignments`, officer, {
+      deputyId: ids.ddm,
+      coordinatorId: ids.spc2,
+      officerId: ids.so3,
+    }).expect(403);
+
+    // All 25 seats but no Treasurer: saved, and still incomplete.
+    const noTreasurer = seats.map((member) =>
+      member.position === 'Treasurer'
+        ? { ...member, position: 'Member' }
+        : member,
+    );
+    const almost = await call('put', `/societies/${newId}/council`, officer, {
+      members: noTreasurer,
+    }).expect(200);
+    expect(almost.body.committee).toHaveLength(25);
+    expect(almost.body.excoStatus).toEqual({
+      filledSeats: 25,
+      totalSeats: 25,
+      complete: false,
+      missingOffices: ['Treasurer'],
+      problems: ['No Treasurer chosen yet.'],
+    });
+    const listed = async () =>
+      (
+        await call(
+          'get',
+          `/society-directory?q=SN-${suffix}`,
+          tokens.hq,
+        ).expect(200)
+      ).body.data[0];
+    expect(await listed()).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: false,
+      excoMissingOffices: ['Treasurer'],
+    });
+    const summary = await call(
+      'get',
+      `/societies/${newId}/summary`,
+      tokens.hq,
+    ).expect(200);
+    expect(summary.body).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: false,
+      excoMissingOffices: ['Treasurer'],
+    });
+
+    // Later, the officer chooses the Treasurer: now it is complete.
     const full = await call('put', `/societies/${newId}/council`, officer, {
       members: seats,
     }).expect(200);
@@ -465,6 +531,13 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       filledSeats: 25,
       totalSeats: 25,
       complete: true,
+      missingOffices: [],
+      problems: [],
+    });
+    expect(await listed()).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: true,
+      excoMissingOffices: [],
     });
     const seat = full.body.committee.find(
       (member: { seatNumber: number }) => member.seatNumber === 4,

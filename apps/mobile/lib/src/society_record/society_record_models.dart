@@ -301,6 +301,156 @@ const seatGroupLabels = {
   'ELDERS_COUNCIL': "Elders' council",
 };
 
+/// How many seats each group has.
+const _seatGroupSizes = {
+  'CHILDREN': 3,
+  'YOUTH': 3,
+  'MOTHERS': 3,
+  'ORDINARY': 9,
+  'ELDERS_COUNCIL': 7,
+};
+
+const _seatGroupNames = {
+  'CHILDREN': "children's",
+  'YOUTH': 'youth',
+  'MOTHERS': "mothers'",
+  'ORDINARY': 'ordinary',
+  'ELDERS_COUNCIL': "elders' council",
+};
+
+/// Whether the Exco is complete, as the API reports it (`excoStatus`).
+/// Complete means 25 seats each held by one member, the agreed groups and
+/// exactly one President, Secretary and Treasurer. A partly entered or older
+/// Exco is incomplete, with [problems] saying what is missing.
+class ExcoStatus {
+  const ExcoStatus({
+    required this.filledSeats,
+    required this.complete,
+    this.missingOffices = const [],
+    this.problems = const [],
+  });
+
+  factory ExcoStatus.fromJson(Map<String, dynamic> json) => ExcoStatus(
+    filledSeats: (json['filledSeats'] as num?)?.toInt() ?? 0,
+    complete: json['complete'] == true,
+    missingOffices: [
+      for (final office in (json['missingOffices'] as List?) ?? const [])
+        office as String,
+    ],
+    problems: [
+      for (final problem in (json['problems'] as List?) ?? const [])
+        problem as String,
+    ],
+  );
+
+  /// The API's rules, for demonstration data (which has no server) and an
+  /// older server that does not send `excoStatus`.
+  factory ExcoStatus.of(List<ExcoMember> exco) {
+    final seated = [
+      for (final member in exco)
+        if (member.seatNumber >= 1 && member.seatNumber <= excoSeats) member,
+    ];
+    final filled = {for (final member in seated) member.seatNumber}.length;
+    final toFill = excoSeats - filled;
+    final problems = <String>[
+      if (filled == 0)
+        'No Exco members have been entered yet.'
+      else if (toFill > 0)
+        '$toFill of $excoSeats ${toFill == 1 ? 'seat is' : 'seats are'} still to fill.',
+      if (seated.length > filled)
+        'More than one active member holds the same seat.',
+    ];
+    for (final MapEntry(key: group, value: size) in _seatGroupSizes.entries) {
+      final total = seated.where((member) => member.seatType == group).length;
+      if (total > size || (toFill <= 0 && total != size)) {
+        problems.add(
+          '$total ${_seatGroupNames[group]} seats are recorded; the Exco has $size.',
+        );
+      }
+    }
+    final missing = <String>[];
+    for (final office in officeBearers) {
+      final holders = seated
+          .where(
+            (member) =>
+                member.position.trim().toLowerCase() == office.toLowerCase(),
+          )
+          .length;
+      if (holders == 0) missing.add(office);
+      if (holders > 1) {
+        problems.add('$holders members are recorded as $office; choose one.');
+      }
+    }
+    if (missing.isNotEmpty && filled > 0) {
+      problems.add('No ${_orList(missing)} chosen yet.');
+    }
+    return ExcoStatus(
+      filledSeats: filled,
+      complete: problems.isEmpty && missing.isEmpty,
+      missingOffices: missing,
+      problems: problems,
+    );
+  }
+
+  final int filledSeats;
+  final bool complete;
+  final List<String> missingOffices;
+  final List<String> problems;
+
+  int get toFill => excoSeats - filledSeats;
+
+  /// "Exco not entered yet", "12 of 25", "no Treasurer" or "Complete".
+  String get shortLabel => complete
+      ? 'Complete'
+      : filledSeats == 0
+      ? 'Not entered yet'
+      : toFill > 0
+      ? '$filledSeats of $excoSeats'
+      : missingOffices.isNotEmpty
+      ? 'No ${missingOffices.join(', ')}'
+      : 'Needs checking';
+}
+
+/// Why the API would refuse to save these seats, or null when it would
+/// accept them (demonstration data has no server, so it checks the same
+/// rules). A partly entered Exco, or 25 seats without an office bearer, saves.
+String? excoSaveProblem(List<Map<String, Object?>> seats) {
+  final numbers = <int>{};
+  final groups = <String, int>{};
+  for (final seat in seats) {
+    final number = seat['seatNumber'] as int? ?? 0;
+    if (number < 1 || number > excoSeats) return 'Seats are numbered 1 to 25';
+    if (!numbers.add(number)) return 'Each seat can have only one member';
+    final group = seat['seatType'] as String? ?? 'ORDINARY';
+    groups[group] = (groups[group] ?? 0) + 1;
+  }
+  for (final MapEntry(key: group, value: size) in _seatGroupSizes.entries) {
+    final total = groups[group] ?? 0;
+    if (total > size) {
+      return 'Council can have only $size ${_seatGroupNames[group]} seats';
+    }
+    if (seats.length == excoSeats && total != size) {
+      return 'Council must contain $size ${_seatGroupNames[group]} seats';
+    }
+  }
+  for (final office in officeBearers) {
+    final holders = seats
+        .where(
+          (seat) =>
+              (seat['position'] as String? ?? '').trim().toLowerCase() ==
+              office.toLowerCase(),
+        )
+        .length;
+    if (holders > 1) return 'Choose only one $office';
+  }
+  return null;
+}
+
+/// "President, Secretary or Treasurer"
+String _orList(List<String> items) => items.length == 1
+    ? items.single
+    : '${items.sublist(0, items.length - 1).join(', ')} or ${items.last}';
+
 /// A new Exco's seat groups in seat order, as on the dashboard.
 final List<String> _newExcoSeatGroups = [
   for (final (group, seats) in const [
@@ -464,6 +614,7 @@ class SocietyRecord {
     this.exco = const [],
     this.lastChangeAt,
     this.lastChangeBy,
+    this.reportedExcoStatus,
   });
 
   factory SocietyRecord.fromJson(Map<String, dynamic> json) {
@@ -507,6 +658,9 @@ class SocietyRecord {
           .where((row) => row['isActive'] != false)
           .map((row) => ExcoMember.fromJson(row as Map<String, dynamic>))
           .toList(),
+      reportedExcoStatus: json['excoStatus'] is Map<String, dynamic>
+          ? ExcoStatus.fromJson(json['excoStatus'] as Map<String, dynamic>)
+          : null,
       annualSummary: AnnualSummary.fromJson(
         json['annualSummary'] as Map<String, dynamic>,
       ),
@@ -539,6 +693,13 @@ class SocietyRecord {
   final GradeRequest? openGradeRequest;
   final List<StaffMember> staff;
   final List<ExcoMember> exco;
+
+  /// `excoStatus` as the server sent it, if it did.
+  final ExcoStatus? reportedExcoStatus;
+
+  /// The API's completion for this Exco; worked out with the same rules when
+  /// the server did not send it (demonstration data).
+  ExcoStatus get excoStatus => reportedExcoStatus ?? ExcoStatus.of(exco);
   final AnnualSummary annualSummary;
   final RecordPermissions permissions;
   final DateTime? lastChangeAt;

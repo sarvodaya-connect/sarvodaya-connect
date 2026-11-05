@@ -104,7 +104,7 @@ export function RecordOverview({
     });
   const staff = [...record.staff].sort((a, b) => STAFF_ORDER.indexOf(a.role as never) - STAFF_ORDER.indexOf(b.role as never));
   const request = record.openGradeRequest;
-  const exco = excoProgress(record);
+  const exco = excoProgress(record.excoStatus, record.committee);
   const token = mapboxToken();
 
   return (
@@ -165,9 +165,7 @@ export function RecordOverview({
           >
             {!exco.complete && (
               <p className="mb-2 text-[11.5px] text-warn-text">
-                {exco.filled === 0
-                  ? "No Exco members have been entered yet."
-                  : `Incomplete: ${exco.toFill} ${exco.toFill === 1 ? "seat" : "seats"} still to fill.`}{" "}
+                {exco.problems.join(" ")}{" "}
                 The Society Officer enters the Exco and can save it as they go.
               </p>
             )}

@@ -206,23 +206,83 @@ export function assertValidCouncil(
   }
 }
 
+const GROUP_NAMES: Record<MembershipCategory, string> = {
+  CHILDREN: "children's",
+  YOUTH: 'youth',
+  MOTHERS: "mothers'",
+  ORDINARY: 'ordinary',
+  ELDERS_COUNCIL: "elders' council",
+};
+
 /**
- * How far the Exco has been entered: seats held by an active member. A
- * society is "incomplete" until all 25 are filled; zero is a normal state
- * for a society HQ has just created.
+ * Whether the Exco is complete, and what is still missing, in plain words.
+ * Complete means all of:
+ * - 25 seats (1–25), each held by one active member;
+ * - the agreed groups: 3 children, 3 youth, 3 mothers, 9 ordinary and
+ *   7 elders' council;
+ * - exactly one President, one Secretary and one Treasurer.
+ * An Exco can be saved before then (a new society starts with none), so a
+ * partly entered or older record is reported as incomplete, never refused.
+ * The dashboard and the phone show this status rather than working it out.
  */
 export function excoStatus(
-  members: { seatNumber: number | null; isActive: boolean }[],
+  members: {
+    seatNumber: number | null;
+    isActive: boolean;
+    seatType?: MembershipCategory | null;
+    position?: string | null;
+  }[],
 ) {
-  const filledSeats = new Set(
-    members
-      .filter((member) => member.isActive && member.seatNumber != null)
-      .map((member) => member.seatNumber),
-  ).size;
+  const active = members.filter(
+    (member) =>
+      member.isActive &&
+      member.seatNumber != null &&
+      member.seatNumber >= 1 &&
+      member.seatNumber <= EXCO_SEATS,
+  );
+  const seats = new Set(active.map((member) => member.seatNumber));
+  const filledSeats = seats.size;
+  const problems: string[] = [];
+  const toFill = EXCO_SEATS - filledSeats;
+  if (filledSeats === 0)
+    problems.push('No Exco members have been entered yet.');
+  else if (toFill > 0)
+    problems.push(
+      `${toFill} of ${EXCO_SEATS} ${toFill === 1 ? 'seat is' : 'seats are'} still to fill.`,
+    );
+  if (active.length > filledSeats)
+    problems.push('More than one active member holds the same seat.');
+  for (const [category, expected] of Object.entries(expectedCouncilSeats)) {
+    const total = active.filter(
+      (member) => member.seatType === category,
+    ).length;
+    if (total > expected || (toFill <= 0 && total !== expected))
+      problems.push(
+        `${total} ${GROUP_NAMES[category as MembershipCategory]} seats are recorded; the Exco has ${expected}.`,
+      );
+  }
+  const missingOffices: string[] = [];
+  for (const office of OFFICE_BEARERS) {
+    const holders = active.filter(
+      (member) =>
+        member.position?.trim().toLowerCase() === office.toLowerCase(),
+    ).length;
+    if (holders === 0) missingOffices.push(office);
+    if (holders > 1)
+      problems.push(
+        `${holders} members are recorded as ${office}; choose one.`,
+      );
+  }
+  if (missingOffices.length && filledSeats > 0)
+    problems.push(
+      `No ${missingOffices.join(', ').replace(/, ([^,]*)$/, ' or $1')} chosen yet.`,
+    );
   return {
     filledSeats,
     totalSeats: EXCO_SEATS,
-    complete: filledSeats >= EXCO_SEATS,
+    complete: problems.length === 0 && missingOffices.length === 0,
+    missingOffices,
+    problems,
   };
 }
 

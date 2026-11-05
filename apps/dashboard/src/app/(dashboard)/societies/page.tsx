@@ -196,9 +196,17 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
                     <Link className="font-semibold text-brand-forest underline underline-offset-2" href={`/societies/${society.id}`}>{society.name}</Link>
                     {society.nameLocal && <span className="block text-[10px] text-muted">{society.nameLocal}</span>}
                     {/* A new society's Exco is entered by its Society Officer after HQ creates it. */}
-                    {society.excoSeatsFilled !== undefined && society.excoSeatsFilled < 25 && (
+                    {society.excoComplete === false && (
                       <span className="mt-0.5 block">
-                        <Pill tone="fast-target">{society.excoSeatsFilled === 0 ? "Exco not entered" : `Exco ${society.excoSeatsFilled} of 25`}</Pill>
+                        <Pill tone="fast-target">
+                          {society.excoSeatsFilled === 0
+                            ? "Exco not entered"
+                            : society.excoSeatsFilled < 25
+                              ? `Exco ${society.excoSeatsFilled} of 25`
+                              : society.excoMissingOffices?.length
+                                ? `Exco: no ${society.excoMissingOffices.join(", ")}`
+                                : "Exco needs checking"}
+                        </Pill>
                       </span>
                     )}
                   </Td>

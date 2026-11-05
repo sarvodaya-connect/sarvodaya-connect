@@ -25,7 +25,7 @@ export function RecordHeader({
   tabs: RecordTab[];
 }) {
   const base = `/societies/${record.id}`;
-  const exco = excoProgress(record);
+  const exco = excoProgress(record.excoStatus, record.committee);
   const location = [record.societyCode, record.district.nameEn, record.address.dsDivision && `${record.address.dsDivision} DS`]
     .filter(Boolean)
     .join(" · ");

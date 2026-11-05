@@ -18,8 +18,17 @@ export const directoryInclude = (startYear: number) =>
       where: { financialYear: startYear },
       select: { totalProfit: true, totalExpenses: true },
     },
-    // Exco seats filled so far, so incomplete Excos stand out in the list.
-    _count: { select: { councilMembers: { where: { isActive: true } } } },
+    // The Exco's seats, groups and offices, so the list can show whether it
+    // is complete (25 rows at most per society).
+    councilMembers: {
+      where: { isActive: true },
+      select: {
+        seatNumber: true,
+        seatType: true,
+        position: true,
+        isActive: true,
+      },
+    },
   }) satisfies Prisma.SocietyInclude;
 
 export type DirectoryRecord = Prisma.SocietyGetPayload<{

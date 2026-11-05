@@ -273,6 +273,8 @@ class DirectoryRow {
     required this.updatedAt,
     required this.notUpdatedIn90Days,
     this.excoSeatsFilled,
+    this.excoComplete,
+    this.excoMissingOffices = const [],
   });
 
   factory DirectoryRow.fromJson(Json json) => DirectoryRow(
@@ -286,6 +288,11 @@ class DirectoryRow {
     updatedAt: DateTime.parse(json['updatedAt'] as String),
     notUpdatedIn90Days: json['notUpdatedIn90Days'] == true,
     excoSeatsFilled: (json['excoSeatsFilled'] as num?)?.toInt(),
+    excoComplete: json['excoComplete'] as bool?,
+    excoMissingOffices: [
+      for (final office in (json['excoMissingOffices'] as List?) ?? const [])
+        office as String,
+    ],
   );
 
   final String id;
@@ -301,6 +308,11 @@ class DirectoryRow {
   /// Exco seats filled, 0–25 (null from an older server). A new society
   /// starts with none; its Society Officer enters them.
   final int? excoSeatsFilled;
+
+  /// The API's completion: 25 seats, the seat groups and the three office
+  /// bearers (null from an older server).
+  final bool? excoComplete;
+  final List<String> excoMissingOffices;
 }
 
 class DirectoryPage {
@@ -385,6 +397,8 @@ class SocietyAtAGlance {
     required this.latestActivity,
     required this.latestSdgs,
     this.excoSeatsFilled,
+    this.excoComplete,
+    this.excoMissingOffices = const [],
   });
 
   factory SocietyAtAGlance.fromJson(Json json) {
@@ -412,6 +426,11 @@ class SocietyAtAGlance {
       hasSocietyOfficer: json['hasSocietyOfficer'] == true,
       spcName: json['spcName'] as String?,
       excoSeatsFilled: (json['excoSeatsFilled'] as num?)?.toInt(),
+      excoComplete: json['excoComplete'] as bool?,
+      excoMissingOffices: [
+        for (final office in (json['excoMissingOffices'] as List?) ?? const [])
+          office as String,
+      ],
       uploaded: {
         for (final row in json['registrarDocuments'] as List)
           (row as Json)['documentType'] as String: row['uploaded'] == true,
@@ -456,6 +475,10 @@ class SocietyAtAGlance {
 
   /// Exco seats filled, 0–25 (null from an older server).
   final int? excoSeatsFilled;
+
+  /// The API's completion (null from an older server).
+  final bool? excoComplete;
+  final List<String> excoMissingOffices;
 }
 
 /// M63: done vs planned by sector, dimension and UN SDG.

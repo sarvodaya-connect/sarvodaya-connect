@@ -64,6 +64,23 @@ const fullCouncil = () =>
     ),
   );
 
+/** A stored council row, as the repository returns it. */
+const baseRecordMember = {
+  societyId,
+  nicCiphertext: null,
+  nicLastFour: null,
+  phone: null,
+  email: null,
+  age: null,
+  dateOfBirth: null,
+  profession: null,
+  addressLine: null,
+  appointedOn: null,
+  endedOn: null,
+  isActive: true,
+  isPrimaryContact: false,
+};
+
 describe('SocietiesService profile, council and membership', () => {
   const repository = {
     findById: vi.fn(),
@@ -176,6 +193,58 @@ describe('SocietiesService profile, council and membership', () => {
       service.updateCouncil(societyId, { members: [] }, otherOfficer),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.replaceCouncil).not.toHaveBeenCalled();
+  });
+
+  it('saves 25 seats without an office bearer, so an older record can be corrected later', async () => {
+    const noTreasurer = fullCouncil().map((seat) =>
+      seat.position === 'Treasurer'
+        ? member(seat.seatNumber, 'ORDINARY')
+        : seat,
+    );
+    await service.updateCouncil(societyId, { members: noTreasurer }, officer);
+    expect(repository.replaceCouncil).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the record incomplete until the 25 seats and three offices are in', async () => {
+    const saved = (seats: Seat[]) =>
+      seats.map((seat, index) => ({
+        ...baseRecordMember,
+        id: `m${index}`,
+        seatNumber: seat.seatNumber,
+        fullName: seat.fullName,
+        position: seat.position,
+        seatType: seat.seatType,
+      }));
+    const noTreasurer = fullCouncil().map((seat) =>
+      seat.position === 'Treasurer'
+        ? member(seat.seatNumber, 'ORDINARY')
+        : seat,
+    );
+    repository.findById.mockResolvedValue({
+      ...baseRecord,
+      councilMembers: saved(noTreasurer),
+    });
+    const incomplete = await service.getById(societyId, officer);
+    expect(incomplete.excoStatus).toEqual({
+      filledSeats: 25,
+      totalSeats: 25,
+      complete: false,
+      missingOffices: ['Treasurer'],
+      problems: ['No Treasurer chosen yet.'],
+    });
+
+    repository.findById.mockResolvedValue({
+      ...baseRecord,
+      councilMembers: saved(fullCouncil()),
+    });
+    const complete = await service.getById(societyId, officer);
+    expect(complete.excoStatus).toEqual({
+      filledSeats: 25,
+      totalSeats: 25,
+      complete: true,
+      missingOffices: [],
+      problems: [],
+    });
   });
 
   it('adds category and gender counts to an overall membership total', async () => {

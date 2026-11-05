@@ -9,7 +9,8 @@ import { auditCsv, parseAuditFilters } from "@/lib/audit-log";
 import { GradeReviewDecision } from "../grade-queue/grade-review-decision";
 import { AssignStaffPanel } from "./assign-staff-panel";
 import { CreateSocietyForm } from "./create-society-form";
-import { emptyExco, excoFromCommittee, excoPayload, excoProblems, rowComplete, rowFilled } from "./exco-editor";
+import { ExcoEditForm } from "./exco-edit-form";
+import { emptyExco, excoFromCommittee, excoPayload, excoProblems, excoStillMissing, rowComplete, rowFilled } from "./exco-editor";
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
@@ -51,14 +52,21 @@ describe("Exco editor rules (V5 D05c, Edit Exco)", () => {
     );
   });
 
-  it("asks for the office bearers once all 25 seats are filled", () => {
+  it("saves 25 seats without an office bearer, and says the Exco stays incomplete", () => {
     const noOffices = filledExco(false).map((row) => ({ ...row, position: "Member" }));
-    expect(excoProblems(noOffices)).toEqual([
-      "Choose the President from the 25 members.",
-      "Choose the Secretary from the 25 members.",
-      "Choose the Treasurer from the 25 members.",
-    ]);
-    expect(excoProblems(filledExco(false))).toEqual([]);
+    // Not a reason to block the save: an older record can be corrected later.
+    expect(excoProblems(noOffices)).toEqual([]);
+    expect(excoStillMissing(noOffices)).toEqual(["No President, Secretary or Treasurer chosen yet."]);
+    const noTreasurer = filledExco(false).map((row) => (row.position === "Treasurer" ? { ...row, position: "Member" } : row));
+    expect(excoStillMissing(noTreasurer)).toEqual(["No Treasurer chosen yet."]);
+    expect(excoStillMissing(filledExco(false))).toEqual([]);
+    expect(excoStillMissing(excoFromCommittee([]))).toEqual(["No Exco members have been entered yet."]);
+  });
+
+  it("rejects a second holder of an office", () => {
+    const rows = filledExco(false);
+    rows[5] = { ...rows[5]!, position: "Treasurer" };
+    expect(excoProblems(rows)).toEqual(["Choose only one Treasurer."]);
   });
 
   it("marks seats with a name but missing details, without blocking the save", () => {
@@ -102,6 +110,36 @@ describe("Exco editor rules (V5 D05c, Edit Exco)", () => {
     const payload = excoPayload(rows);
     expect(payload[0]).toMatchObject({ position: "President", isPrimaryContact: true });
     expect(payload[1]).toMatchObject({ position: "Secretary", isPrimaryContact: false, nic: "901234567V" });
+  });
+});
+
+describe("Edit Exco form", () => {
+  const members = (offices: string[]) =>
+    Array.from({ length: 25 }, (_, index) => ({
+      id: `m${index + 1}`,
+      seatNumber: index + 1,
+      fullName: `Fictional Member ${index + 1}`,
+      position: offices[index] ?? "Member",
+      isActive: true,
+    }));
+
+  it("lets the officer save 25 seats without office bearers, saying the Exco stays incomplete", () => {
+    render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members([])} societyId="s1" />);
+    expect(screen.getByRole("button", { name: "Save Exco" })).toBeEnabled();
+    expect(screen.getByText("No President, Secretary or Treasurer chosen yet.")).toBeInTheDocument();
+  });
+
+  it("says saving completes the Exco once the three office bearers are chosen", () => {
+    render(
+      <ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President", "Secretary", "Treasurer"])} societyId="s1" />,
+    );
+    expect(screen.getByText(/Saving completes the Exco/)).toBeInTheDocument();
+  });
+
+  it("lets the officer save a partial Exco", () => {
+    render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President"]).slice(0, 4)} societyId="s1" />);
+    expect(screen.getByRole("button", { name: "Save Exco" })).toBeEnabled();
+    expect(screen.getByText("21 of 25 seats are still to fill.")).toBeInTheDocument();
   });
 });
 

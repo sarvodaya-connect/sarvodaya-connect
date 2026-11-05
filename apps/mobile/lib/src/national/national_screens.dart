@@ -421,12 +421,18 @@ class _Pill extends StatelessWidget {
   );
 }
 
-/// " · Exco 3 of 25" for an incomplete Exco, nothing once it is complete.
-String _excoNote(int? filled) => filled == null || filled >= 25
+/// " · Exco 3 of 25" or " · Exco: no Treasurer" for an incomplete Exco
+/// (the API's completion), nothing once it is complete.
+String _excoNote(int? filled, bool? complete, List<String> missingOffices) =>
+    complete != false || filled == null
     ? ''
     : filled == 0
     ? ' · Exco not entered'
-    : ' · Exco $filled of 25';
+    : filled < 25
+    ? ' · Exco $filled of 25'
+    : missingOffices.isNotEmpty
+    ? ' · Exco: no ${missingOffices.join(', ')}'
+    : ' · Exco needs checking';
 
 void _push(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
@@ -1009,7 +1015,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}${_excoNote(row.excoSeatsFilled)}',
+                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}${_excoNote(row.excoSeatsFilled, row.excoComplete, row.excoMissingOffices)}',
                         style: const TextStyle(fontSize: 12),
                       ),
                       trailing: row.requestedGrade != null
@@ -1272,15 +1278,18 @@ class SocietySummaryScreen extends StatelessWidget {
                     : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.',
               ),
             ],
-            if (society.excoSeatsFilled != null &&
-                society.excoSeatsFilled! < 25) ...[
+            if (society.excoComplete == false) ...[
               const SizedBox(height: 8),
               NoticeBanner(
                 icon: Icons.groups_outlined,
                 tone: NoticeTone.warning,
                 title: society.excoSeatsFilled == 0
                     ? 'Exco not entered yet'
-                    : 'Exco incomplete · ${society.excoSeatsFilled} of 25',
+                    : (society.excoSeatsFilled ?? 0) < 25
+                    ? 'Exco incomplete · ${society.excoSeatsFilled} of 25'
+                    : society.excoMissingOffices.isNotEmpty
+                    ? 'Exco incomplete · no ${society.excoMissingOffices.join(', ')} chosen'
+                    : 'Exco incomplete · needs checking',
                 message: 'The Society Officer enters the Exco and can save it as they go. HQ can also add members from the society record.',
               ),
             ],

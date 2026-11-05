@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import type { CommitteeMember } from "@sarvodaya-connect/api-contracts";
+import type { CommitteeMember, ExcoStatus } from "@sarvodaya-connect/api-contracts";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
@@ -88,6 +88,7 @@ export function ExcoTable({
   editHref,
   members,
   revealNic,
+  status,
 }: {
   /** Why the viewer can see personal details, e.g. "HQ has national access". */
   accessNote: string;
@@ -95,11 +96,13 @@ export function ExcoTable({
   editHref?: string;
   members: CommitteeMember[];
   revealNic: (memberId: string) => Promise<{ nic?: string; error?: string }>;
+  /** The API's completion for this Exco (record.excoStatus). */
+  status?: ExcoStatus;
 }) {
   const active = members
     .filter((member) => member.isActive)
     .sort((a, b) => (a.seatNumber ?? 99) - (b.seatNumber ?? 99));
-  const exco = excoProgress({ committee: members });
+  const exco = excoProgress(status, members);
   return (
     <>
       <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#c6e2cd] bg-[#eef6ef] px-3 py-2 text-[11px] text-ink-soft">
@@ -116,7 +119,7 @@ export function ExcoTable({
             exco.complete ? "bg-success-bg text-success-text" : "bg-warn-bg text-warn-text"
           }`}
         >
-          {exco.complete ? "✓ Complete" : `Incomplete · ${exco.toFill} to fill`}
+          {exco.complete ? "✓ Complete" : exco.toFill ? `Incomplete · ${exco.toFill} to fill` : "Incomplete"}
         </span>
         {editHref && (
           <span className="ml-auto flex flex-wrap gap-2.5">
@@ -131,6 +134,16 @@ export function ExcoTable({
           </span>
         )}
       </div>
+      {!exco.complete && active.length > 0 && (
+        <div className="mt-3 rounded-lg border border-[var(--warn-ring)] bg-warn-bg px-3 py-2 text-[12px] text-warn-text" role="status">
+          <strong className="block">Still missing</strong>
+          <ul className="mt-0.5 list-disc pl-4">
+            {exco.problems.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {active.length === 0 ? (
         <p className="mt-3 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
           No Exco members have been entered for this society yet. The Society Officer assigned to it adds the 25 members
@@ -173,7 +186,7 @@ export function ExcoTable({
             </tbody>
           </table>
           <p className="border-t border-line-soft px-4 py-2 text-[10px] text-muted">
-            {exco.complete ? "All 25 seats are filled" : `${exco.toFill} of 25 seats still to fill`} · ages are worked out from the date of birth · office bearers are chosen from these members · every NIC shown is recorded in the change &amp; access log.
+            {exco.complete ? "Complete: 25 seats and all three office bearers" : `${exco.toFill} of 25 seats still to fill`} · ages are worked out from the date of birth · office bearers are chosen from these members · every NIC shown is recorded in the change &amp; access log.
           </p>
         </div>
       )}

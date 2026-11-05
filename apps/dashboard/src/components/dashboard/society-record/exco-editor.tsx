@@ -120,13 +120,13 @@ export function rowComplete(row: ExcoRow) {
 
 /**
  * Problems that stop saving, in plain words (V5 D05c error banner). The Exco
- * can be saved while it is still being entered: empty seats are left out.
- * Office bearers are required once all 25 seats are filled. The API checks
- * the same rules, plus each seat group's number and age range.
+ * can be saved while it is still being entered: empty seats are left out, and
+ * a missing office bearer leaves it incomplete rather than blocking the save
+ * (see excoStillMissing). The API checks the same rules, plus each seat
+ * group's number and age range.
  */
 export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().slice(0, 10)) {
   const problems: string[] = [];
-  const filled = rows.filter(rowFilled).length;
   for (const row of rows) {
     if (!rowFilled(row) && !rowEmpty(row)) problems.push(`Seat ${row.seatNumber}: enter the full name, or clear the seat.`);
   }
@@ -135,13 +135,28 @@ export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().s
     if (holders.length > 1) problems.push(`Choose only one ${office}.`);
     const empty = holders.find((row) => !rowFilled(row));
     if (empty) problems.push(`Seat ${empty.seatNumber} is the ${office}: enter their name, or choose another member.`);
-    else if (filled === EXCO_SEATS && holders.length === 0) problems.push(`Choose the ${office} from the 25 members.`);
   }
   for (const row of rows) {
     if (row.dateOfBirth && row.dateOfBirth > today) problems.push(`Seat ${row.seatNumber}: the date of birth is in the future.`);
     if (row.nic && !NIC.test(row.nic.trim())) problems.push(`Seat ${row.seatNumber}: enter a valid NIC (9 digits and V or X, or 12 digits).`);
   }
   return problems;
+}
+
+/**
+ * What would still keep the Exco incomplete after saving these seats, in the
+ * API's words: seats to fill and office bearers not chosen. It does not stop
+ * saving; the record shows the API's own status once saved.
+ */
+export function excoStillMissing(rows: ExcoRow[]) {
+  const filled = rows.filter(rowFilled);
+  const missing: string[] = [];
+  const toFill = EXCO_SEATS - filled.length;
+  if (filled.length === 0) return ["No Exco members have been entered yet."];
+  if (toFill > 0) missing.push(`${toFill} of ${EXCO_SEATS} ${toFill === 1 ? "seat is" : "seats are"} still to fill.`);
+  const offices = OFFICE_BEARERS.filter((office) => !filled.some((row) => row.position === office));
+  if (offices.length) missing.push(`No ${offices.join(", ").replace(/, ([^,]*)$/, " or $1")} chosen yet.`);
+  return missing;
 }
 
 /** Ready for the API: the filled seats, without display-only fields. Empty seats are left out. */
@@ -177,7 +192,8 @@ const cell = "w-full rounded-md border border-line bg-surface px-2 py-1.5 text-[
 /**
  * Edit Exco: all 25 seats in one table. Office bearers are chosen from the
  * members. The Society Officer can save at any time and come back to fill the
- * rest; the record shows the Exco as incomplete until all 25 seats are filled.
+ * rest; the record shows the Exco as incomplete until all 25 seats and the
+ * three office bearers are in.
  */
 export function ExcoEditor({
   focusOffices = false,
@@ -193,7 +209,7 @@ export function ExcoEditor({
 }) {
   const [showAll, setShowAll] = useState(true);
   const filled = rows.filter(rowFilled).length;
-  const toFill = EXCO_SEATS - filled;
+  const stillMissing = excoStillMissing(rows);
   const payload = useMemo(() => JSON.stringify(excoPayload(rows)), [rows]);
   const update = (seat: number, key: keyof ExcoRow, value: string) =>
     setRows(rows.map((row) => (row.seatNumber === seat ? { ...row, [key]: value } : row)));
@@ -308,13 +324,20 @@ export function ExcoEditor({
       <aside className="flex flex-col gap-4">
         <section className="rounded-card border border-line bg-surface p-4">
           <h3 className="text-[15px] font-bold text-ink">Progress</h3>
-          <p className={`mt-2 text-[26px] font-bold ${toFill === 0 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
+          <p className={`mt-2 text-[26px] font-bold ${stillMissing.length === 0 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
           {/* V5 PR 10: the count as words, never a progress bar. */}
-          <p className="mt-1 text-[12px] text-ink-soft">
-            {toFill === 0
-              ? "All 25 seats are filled."
-              : `${toFill} ${toFill === 1 ? "seat" : "seats"} still to fill. You can save now and add the rest later; the Exco shows as incomplete until all 25 are filled.`}
-          </p>
+          {stillMissing.length === 0 ? (
+            <p className="mt-1 text-[12px] text-ink-soft">All 25 seats and the three office bearers are in. Saving completes the Exco.</p>
+          ) : (
+            <>
+              <ul className="mt-1 list-disc pl-4 text-[12px] text-ink-soft">
+                {stillMissing.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <p className="mt-1 text-[12px] text-ink-soft">You can save now and finish later. The Exco shows as incomplete until all of this is done.</p>
+            </>
+          )}
         </section>
         <section className="rounded-card border border-line bg-surface p-4">
           <h3 className="text-[15px] font-bold text-ink">Office bearers</h3>
@@ -328,7 +351,7 @@ export function ExcoEditor({
               );
             })}
           </ul>
-          <p className="mt-3 text-[12px] text-ink-soft">Chosen from the Exco members. All three are needed once the 25 seats are filled.</p>
+          <p className="mt-3 text-[12px] text-ink-soft">Chosen from the Exco members. The Exco is not complete until all three are chosen.</p>
         </section>
       </aside>
     </div>
