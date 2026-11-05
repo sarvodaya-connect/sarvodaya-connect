@@ -104,12 +104,15 @@ describe('AssistantService', () => {
 });
 
 describe('SarvoAI data limits (V5 PR 10)', () => {
-  it('reads only society profiles, Exco, yearly totals and submission status', async () => {
+  it('exposes only the approved society, financial, upload and follow-up tools', async () => {
     const { ASSISTANT_TOOLS } = await import('./assistant-tools.js');
     expect(ASSISTANT_TOOLS.map((tool) => tool.name).sort()).toEqual([
+      'find_compliance_gaps',
       'find_societies',
       'get_exco_member',
+      'get_society_overview',
       'list_districts',
+      'list_outstanding_work',
       'societies_above_profit',
       'societies_missing_yearly_figures',
       'summarize_yearly_figure',

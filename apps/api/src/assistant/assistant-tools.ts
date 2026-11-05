@@ -15,10 +15,12 @@ import {
   type ThresholdMode,
 } from './assistant-calculations.js';
 import type { AssistantDetails, AssistantScope, AssistantTable } from './assistant.types.js';
+import { AssistantInsights } from './assistant-insights.js';
 
 /**
- * The only ways SarvoAI can read data. Each tool is read-only, covers active societies
- * only, and selects named fields: never NICs, phone numbers, emails or passwords, and
+ * The only ways SarvoAI can read data. Each tool is read-only; national queues
+ * cover active societies, while profile/search can show other statuses. Tools
+ * select named fields: never NICs, phone numbers, emails or passwords, and
  * of the yearly figures only total profit and total expenses.
  */
 
@@ -38,6 +40,21 @@ const yearProperty = { type: 'integer', description: 'Start year of the financia
 const districtProperty = { type: 'string', description: 'District name, e.g. "Kurunegala". Leave empty for all districts.' };
 
 export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'get_society_overview',
+    description: 'Brief one society: status, grade, Exco seat count (no names), four annual Registrar upload gaps, yearly profit/expenses, five recent approved activities, pending grade decisions and overdue unanswered requests. Find its exact S number first. Requires a completed financial year; ask which year if unclear. Includes record timestamps and source links; missing values are not zero.',
+    input_schema: { type: 'object', properties: { societyCode: { type: 'string', description: 'Exact S number from find_societies' }, financialYear: yearProperty }, required: ['societyCode', 'financialYear'], additionalProperties: false },
+  },
+  {
+    name: 'find_compliance_gaps',
+    description: 'Active societies missing one or more of the four Registrar uploads for a completed financial year. Returns total counts and up to 20 societies, ordered by S number, with missing types and source links. Upload presence does not establish approval or legal compliance; do not call missing files overdue without a recorded deadline.',
+    input_schema: { type: 'object', properties: { financialYear: yearProperty, district: districtProperty }, required: ['financialYear', 'district'], additionalProperties: false },
+  },
+  {
+    name: 'list_outstanding_work',
+    description: 'HQ follow-up queues for active societies: overdue unanswered society-request pairs, HQ grade decisions pending, activities awaiting their SPC (HQ follow-up only), and profiles older than 90 days. Returns exact queue counts, five oldest examples per queue and source links. Counts overlap; never add them as unique societies. This is a rule-based list, not an AI risk score.',
+    input_schema: { type: 'object', properties: { district: districtProperty }, required: ['district'], additionalProperties: false },
+  },
   {
     name: 'list_districts',
     description: 'List the district names. Use it to check a district name before other tools.',
@@ -138,6 +155,20 @@ export class AssistantTools {
           return await this.aboveProfit(args, now);
         case 'societies_missing_yearly_figures':
           return await this.missing(this.year(args.financialYear, now), text(args, 'district'));
+        case 'get_society_overview': {
+          const code = text(args, 'societyCode', 20);
+          if (!code) throw new ToolInputError('societyCode is required; use find_societies first');
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).overview(code, this.year(args.financialYear, now), now);
+        }
+        case 'find_compliance_gaps': {
+          const year = this.year(args.financialYear, now);
+          const district = await this.districtFilter(text(args, 'district'));
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).compliance(year, now, district.districtId, district.label);
+        }
+        case 'list_outstanding_work': {
+          const district = await this.districtFilter(text(args, 'district'));
+          return await new AssistantInsights(this.prisma, this.fictionalOnly).outstanding(now, district.districtId, district.label);
+        }
         default:
           return { content: `Unknown tool ${name}`, isError: true };
       }

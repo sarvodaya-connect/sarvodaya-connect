@@ -22,6 +22,43 @@ apply migrations, enable Bedrock, accept Marketplace terms or deploy anything.
   or answers. Provider/database errors are not copied into logs or responses.
   This change does not delete historical audit events.
 
+## Operational tools added for HQ
+
+Three additional read-only tools use explicit selected fields and the same TEST
+fictional scope. They create no tasks, send no messages and make no decisions.
+
+| Tool | Inputs | Evidence and limits |
+| --- | --- | --- |
+| `get_society_overview` | Exact S number and completed financial year | Profile/status/grade, active named Exco row count (no identities), annual profit/expenses with missing values preserved, Registrar upload gaps, five most recently updated approved activities, pending grades and overdue unanswered requests. Profiles in any status may be viewed. |
+| `find_compliance_gaps` | Completed financial year and optional district name | All-scope counts for active societies missing any of the four Registrar upload types. Up to 20 matching societies ordered by S number; explicitly reports truncation. Matches the existing Registrar screen's `uploadedAt` rule; it does not certify approval or legal compliance. |
+| `list_outstanding_work` | Optional district name | Four queues for active societies: overdue unanswered society-request pairs, pending HQ grade decisions, activities awaiting SPC review (HQ follow-up only), and profiles older than 90 days. Up to five oldest examples per queue. Due dates use Sri Lanka local today; due today is not overdue. |
+
+Database transactions use repeatable-read snapshots so counts and examples for a
+tool agree during concurrent updates. Queue order is fixed and explained, not an
+AI-generated risk score. Counts can overlap and must not be summed as unique
+societies. No legal deadline is invented for a missing upload. A profile update
+timestamp does not describe every related record. Missing yearly totals remain
+null, never zero. An Exco row count does not validate committee composition.
+
+Optional `details.sources` contains backend-generated dashboard paths and record
+update timestamps where the schema provides them. The model cannot supply these
+links. The dashboard displays them in **How was this answered?** and restricts
+navigation to the known internal record routes. Evidence from multiple tool
+calls is retained (up to 50 links); the displayed table remains the latest tool's
+table. Existing mobile readers can ignore the optional field; a mobile evidence
+links panel can follow separately. Nothing reads or signs document contents.
+
+Example questions after enablement with synthetic records:
+
+- Give me an overview of society TEST-UPLOAD-001 for FY 2025/26.
+- Which societies are missing Registrar uploads for FY 2025/26?
+- What outstanding work should HQ follow up on today?
+
+The tools return honest empty results if no fictional societies exist yet. They
+must not substitute demonstration rows into a production-mode answer. Dedicated
+behavioral/database verification for these additions is still outstanding; build
+and lint results alone do not establish authorization or query correctness.
+
 ## Shared monthly admission allowance
 
 Migration `20261107090000_sarvoai_monthly_allowance` adds an isolated ledger and a
