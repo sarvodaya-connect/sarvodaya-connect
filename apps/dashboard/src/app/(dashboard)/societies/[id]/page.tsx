@@ -12,10 +12,9 @@ import { isSocietyRecordId } from "@/lib/society-record-format";
 
 import { RecordOverviewPage } from "./record-overview-page";
 
-// Fictional demonstration profiles exist only in demonstration mode (V5 PR 10).
-export function generateStaticParams() {
-  return isDemoMode() ? societyDetails.map((society) => ({ id: society.id })) : [];
-}
+// Authenticated records and query-driven panels must render per request.
+// An empty generateStaticParams list made new UUID records use static fallback.
+export const dynamic = "force-dynamic";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
