@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../models/user.dart';
 import '../society_record/society_record_models.dart'
     show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
 import '../sarvoai/sarvoai_screen.dart';
@@ -9,6 +10,7 @@ import '../society_admin/create_society_screen.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/masthead.dart';
 import '../widgets/state_views.dart';
 import 'national_api.dart';
 import 'national_models.dart';
@@ -224,10 +226,14 @@ class _Eyebrow extends StatelessWidget {
   final VoidCallback? onLink;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Text(
+  // One line when it fits; the link drops below at larger text sizes.
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
           text.toUpperCase(),
           style: const TextStyle(
             fontSize: 11,
@@ -236,20 +242,20 @@ class _Eyebrow extends StatelessWidget {
             color: AppColors.leaf,
           ),
         ),
-      ),
-      if (link != null)
-        TextButton(
-          onPressed: onLink,
-          style: TextButton.styleFrom(
-            minimumSize: const Size(48, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+        if (link != null)
+          TextButton(
+            onPressed: onLink,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+            ),
+            child: Text(
+              '$link ›',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
-          child: Text(
-            '$link ›',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-          ),
-        ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -449,93 +455,171 @@ class NationalDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = DemoScope.of(context);
-    final name = store.user?.displayName.split(' ').first ?? 'HQ';
     return Scaffold(
-      body: SafeArea(
-        child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Semantics(
-                header: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'National Dashboard',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      '${_greeting(DateTime.now())}, $name · HQ · National',
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
+            // At the largest text sizes the header scrolls within this limit, so
+            // the figures below always keep their share of the screen.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight * 0.6,
               ),
-            ),
-            // V5 M05h: the SarvoAI entry point (HQ only; the API checks it too).
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Material(
-                color: AppColors.pine,
-                shape: const StadiumBorder(),
-                child: InkWell(
-                  customBorder: const StadiumBorder(),
-                  onTap: () => _push(context, const SarvoAiScreen()),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 18,
-                          color: Color(0xFFF3C44E),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text.rich(
-                            const TextSpan(
-                              children: [
-                                TextSpan(text: 'Ask Sarvo'),
-                                TextSpan(
-                                  text: 'AI',
-                                  style: TextStyle(color: Color(0xFFF0A040)),
-                                ),
-                              ],
-                            ),
-                            semanticsLabel: 'Ask SarvoAI',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const Text(
-                          'HQ only',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              child: const SingleChildScrollView(child: _NationalHeader()),
             ),
             Expanded(
               child: _Loader<NationalOverview>(
                 loadingLabel: 'Loading national figures',
                 load: (api) => api.fetchOverview(),
                 builder: (context, overview, _) => _Overview(overview),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// V5 M05h masthead: logo, search and bell, heading and greeting, the SarvoAI
+/// entry point (HQ only; the API checks it too) and the hills.
+class _NationalHeader extends StatelessWidget {
+  const _NationalHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoScope.of(context);
+    final user = store.user;
+    final name = user?.displayName.split(' ').first;
+    final role = user == null
+        ? null
+        : user.primaryRole == UserRole.hqAdmin
+        ? 'HQ · National'
+        : user.primaryRole.label;
+    return ColoredBox(
+      color: AppColors.surface,
+      child: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: ExcludeSemantics(
+                child: CustomPaint(painter: HillsPainter()),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 12, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const MastheadLogo(),
+                      const Spacer(),
+                      // The phone has no search across all records (D18 is on
+                      // the dashboard), so this says what it searches.
+                      MastheadButton(
+                        tooltip: 'Search societies',
+                        icon: const Icon(
+                          Icons.search,
+                          size: 19,
+                          color: AppColors.ink,
+                        ),
+                        onPressed: () => _push(
+                          context,
+                          const NationalSocietiesScreen(autofocusSearch: true),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const NotificationsButton(),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Semantics(
+                    header: true,
+                    child: const Text(
+                      'National Dashboard',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    [
+                      name == null
+                          ? _greeting(store.now)
+                          : '${_greeting(store.now)}, $name',
+                      ?role,
+                    ].join(' · '),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Material(
+                    color: AppColors.pine,
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () => _push(context, const SarvoAiScreen()),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome,
+                              size: 18,
+                              color: Color(0xFFF3C44E),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text.rich(
+                                    const TextSpan(
+                                      children: [
+                                        TextSpan(text: 'Ask Sarvo'),
+                                        TextSpan(
+                                          text: 'AI',
+                                          style: TextStyle(
+                                            color: Color(0xFFF0A040),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    semanticsLabel: 'Ask SarvoAI',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const Text(
+                                    'HQ only',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -940,10 +1024,14 @@ class NationalSocietiesScreen extends StatefulWidget {
     super.key,
     this.initial = const DirectoryQuery(),
     this.asTab = false,
+    this.autofocusSearch = false,
   });
 
   final DirectoryQuery initial;
   final bool asTab;
+
+  /// Opened from the masthead's search button: ready to type.
+  final bool autofocusSearch;
 
   @override
   State<NationalSocietiesScreen> createState() =>
@@ -1048,6 +1136,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
+            autofocus: widget.autofocusSearch,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.search),
               hintText: 'Name or S number',
@@ -1064,6 +1153,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                 InputChip(
                   label: Text('District: ${_query.districtName ?? 'chosen'}'),
                   selected: true,
+                  deleteIconColor: Colors.white,
                   onDeleted: () => _set(_query.copyWith(district: () => null)),
                   deleteButtonTooltipMessage: 'Remove the district filter',
                 ),

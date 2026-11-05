@@ -7,10 +7,9 @@ import '../society_record/society_record_models.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
-import '../widgets/brand.dart';
+import '../widgets/masthead.dart';
 import '../widgets/state_views.dart';
 import '../incidents/incident_screens.dart';
-import 'notifications_screen.dart';
 
 /// Number of Exco seats a society fills.
 const _excoSeats = 25;
@@ -276,7 +275,7 @@ class _OfficerHeader extends StatelessWidget {
         children: [
           const Positioned.fill(
             child: ExcludeSemantics(
-              child: CustomPaint(painter: _HillsPainter()),
+              child: CustomPaint(painter: HillsPainter()),
             ),
           ),
           Padding(
@@ -285,21 +284,7 @@ class _OfficerHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Row(
-                  children: [
-                    // Lifts the logo's off-white JPEG background to the
-                    // header's white so no box shows around it.
-                    ColorFiltered(
-                      colorFilter: ColorFilter.matrix([
-                        1.06, 0, 0, 0, 0, //
-                        0, 1.06, 0, 0, 0, //
-                        0, 0, 1.06, 0, 0, //
-                        0, 0, 0, 1, 0, //
-                      ]),
-                      child: BrandMark(width: 104),
-                    ),
-                    Spacer(),
-                    _NotificationsButton(),
-                  ],
+                  children: [MastheadLogo(), Spacer(), NotificationsButton()],
                 ),
                 const SizedBox(height: 10),
                 Semantics(
@@ -330,52 +315,6 @@ class _OfficerHeader extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Pale hills and a cluster of trees at the right of the M05 header.
-class _HillsPainter extends CustomPainter {
-  const _HillsPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final far = Path()
-      ..moveTo(w * 0.50, h)
-      ..lineTo(w * 0.80, h * 0.40)
-      ..lineTo(w * 0.92, h * 0.58)
-      ..lineTo(w, h * 0.50)
-      ..lineTo(w, h)
-      ..close();
-    canvas.drawPath(far, Paint()..color = const Color(0xFFE2ECDC));
-    final middle = Path()
-      ..moveTo(w * 0.30, h)
-      ..quadraticBezierTo(w * 0.62, h * 0.80, w, h * 0.80)
-      ..lineTo(w, h)
-      ..close();
-    canvas.drawPath(middle, Paint()..color = const Color(0xFFC9DEBE));
-    final front = Path()
-      ..moveTo(w * 0.52, h)
-      ..quadraticBezierTo(w * 0.80, h * 0.90, w, h * 0.90)
-      ..lineTo(w, h)
-      ..close();
-    canvas.drawPath(front, Paint()..color = const Color(0xFF9CC48C));
-    final r = h / 9;
-    for (final (x, y, radius, color) in <(double, double, double, int)>[
-      (0.885, 0.77, 0.75, 0xFF2F6B45),
-      (0.935, 0.64, 1.15, 0xFF2F6B45),
-      (0.965, 0.73, 0.80, 0xFF1F5236),
-      (1.005, 0.64, 1.00, 0xFF2F6B45),
-    ]) {
-      canvas.drawCircle(
-        Offset(w * x, h * y),
-        r * radius,
-        Paint()..color = Color(color),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HillsPainter oldDelegate) => false;
 }
 
 /// "Your access: Pahala Kosgama SSS only · view and edit".
@@ -755,41 +694,4 @@ class _LinkCard extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Opens M16 Notifications. The badge shows how many are unread.
-class _NotificationsButton extends StatelessWidget {
-  const _NotificationsButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final unread = DemoScope.of(context).unreadNotificationCount;
-    return Semantics(
-      value: unread == 0 ? null : '$unread unread',
-      child: Material(
-        color: AppColors.surface,
-        shape: const CircleBorder(side: BorderSide(color: AppColors.line)),
-        child: IconButton(
-          constraints: const BoxConstraints.tightFor(width: 38, height: 38),
-          padding: EdgeInsets.zero,
-          tooltip: 'Notifications',
-          icon: Badge(
-            isLabelVisible: unread > 0,
-            label: Text('$unread'),
-            backgroundColor: const Color(0xFFC0392B),
-            child: const Icon(
-              Icons.notifications_none,
-              size: 19,
-              color: AppColors.ink,
-            ),
-          ),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const NotificationsScreen(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

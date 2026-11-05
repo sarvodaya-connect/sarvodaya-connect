@@ -23,11 +23,12 @@ class MoreScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('More'),
         actions: [
-          IconButton(
-            tooltip: 'Demo options',
-            icon: const Icon(Icons.tune),
-            onPressed: () => showDemoOptions(context),
-          ),
+          if (store.isDemo)
+            IconButton(
+              tooltip: 'Demo options',
+              icon: const Icon(Icons.tune),
+              onPressed: () => showDemoOptions(context),
+            ),
         ],
       ),
       body: ListView(
@@ -190,7 +191,11 @@ class MoreScreen extends StatelessWidget {
     final societies = user.societyIds.length;
     final count = '$societies ${societies == 1 ? 'society' : 'societies'}';
     return switch (user.primaryRole) {
-      UserRole.societyOfficer => 'Society Officer · ${store.society.nameEn}',
+      // The store's society is fictional, so only a demonstration shows it.
+      UserRole.societyOfficer =>
+        store.isDemo
+            ? 'Society Officer · ${store.society.nameEn}'
+            : 'Society Officer · $count',
       UserRole.programmeCoordinator =>
         'Society Program Coordinator (SPC) · $count',
       UserRole.deputyDistrictManager =>

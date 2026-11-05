@@ -87,41 +87,45 @@ class DemoStore extends ChangeNotifier {
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
-  }) : _clock = clock ?? DateTime.now {
-    identityApi.onUnauthorized = signOut;
+    bool? demo,
+    IdentityApi? identityApi,
+  }) : isDemo = demo ?? demoMode,
+       identityApi = identityApi ?? IdentityApi(),
+       _clock = clock ?? DateTime.now {
+    this.identityApi.onUnauthorized = signOut;
     _authService =
         authService ??
-        (demoMode
+        (isDemo
             ? DemoAuthService(isOnline: () => !offline)
-            : ApiAuthService(identityApi, cognito: _cognitoClient()));
+            : ApiAuthService(this.identityApi, cognito: _cognitoClient()));
     societyRecords =
         societyRecordApi ??
-        (demoMode
+        (isDemo
             ? DemoSocietyRecordApi(
                 user: () => _user,
                 clock: _clock,
                 delay: loadDelay,
                 isOnline: () => !offline,
               )
-            : HttpSocietyRecordApi(identityApi));
+            : HttpSocietyRecordApi(this.identityApi));
     national =
         nationalApi ??
-        (demoMode
+        (isDemo
             ? DemoNationalApi(user: () => _user, delay: loadDelay)
-            : HttpNationalApi(identityApi));
+            : HttpNationalApi(this.identityApi));
     societyAdmin =
         societyAdminApi ??
-        (demoMode
+        (isDemo
             ? const DemoSocietyAdminApi()
-            : HttpSocietyAdminApi(identityApi));
+            : HttpSocietyAdminApi(this.identityApi));
     sarvoAi =
         sarvoAiApi ??
-        (demoMode
+        (isDemo
             ? DemoSarvoAiApi(user: () => _user, delay: loadDelay)
-            : HttpSarvoAiApi(identityApi));
+            : HttpSarvoAiApi(this.identityApi));
     home =
         homeApi ??
-        (demoMode
+        (isDemo
             ? DemoHomeApi(
                 user: () => _user,
                 clock: _clock,
@@ -129,20 +133,20 @@ class DemoStore extends ChangeNotifier {
                 failing: () => failLoads,
                 empty: () => emptyRecords,
               )
-            : HttpHomeApi(identityApi));
+            : HttpHomeApi(this.identityApi));
     districtAccess =
         districtAccessApi ??
-        (demoMode
+        (isDemo
             ? DemoDistrictAccessApi(clock: _clock)
-            : HttpDistrictAccessApi(identityApi));
+            : HttpDistrictAccessApi(this.identityApi));
     incidents =
         incidentApi ??
-        (demoMode
+        (isDemo
             ? DemoIncidentApi(clock: _clock)
-            : HttpIncidentApi(identityApi));
+            : HttpIncidentApi(this.identityApi));
     this.documentPicker =
         documentPicker ??
-        (demoMode ? const DemoDocumentPicker() : const DeviceDocumentPicker());
+        (isDemo ? const DemoDocumentPicker() : const DeviceDocumentPicker());
     _uploadService =
         uploadService ??
         DemoDocumentUploadService(
@@ -159,7 +163,12 @@ class DemoStore extends ChangeNotifier {
     'SC_DEMO_MODE',
     defaultValue: !kReleaseMode,
   );
-  final IdentityApi identityApi = IdentityApi();
+
+  /// Whether this store is a demonstration: [demoMode], unless a test says
+  /// otherwise. When false, the user comes only from the authenticated account
+  /// and the demonstration tools do nothing.
+  final bool isDemo;
+  final IdentityApi identityApi;
   final Duration loadDelay;
   final DateTime Function() _clock;
   late final AuthService _authService;
@@ -247,8 +256,10 @@ class DemoStore extends ChangeNotifier {
   UserRole get activeRole => _user?.primaryRole ?? UserRole.societyOfficer;
 
   /// Changes the fictional signed-in user so every role home can be reviewed
-  /// without using real accounts. This control is exposed only in Demo options.
+  /// without using real accounts. This control is exposed only in Demo options,
+  /// and does nothing outside a demonstration.
   void switchDemoRole(UserRole role) {
+    if (!isDemo) return;
     _user = switch (role) {
       UserRole.societyOfficer => demoOfficer,
       UserRole.programmeCoordinator => demoSpc,
@@ -370,7 +381,7 @@ class DemoStore extends ChangeNotifier {
   }
 
   Future<void> refreshIdentity() async {
-    if (demoMode || identityApi.token == null) return;
+    if (isDemo || identityApi.token == null) return;
     final data = await identityApi.request('/identity/me');
     _user = AuthenticatedUser.fromJson(data as Map<String, dynamic>);
     notifyListeners();
@@ -391,6 +402,11 @@ class DemoStore extends ChangeNotifier {
     identityApi.token = null;
     _user = null;
     _selectedTab = 0;
+    if (!isDemo) {
+      // The next account must not see this account's notifications or count.
+      _notifications.clear();
+      _serverUnreadCount = null;
+    }
     notifyListeners();
   }
 
@@ -402,6 +418,7 @@ class DemoStore extends ChangeNotifier {
     bool? emptyRecords,
     bool? failNextUpload,
   }) {
+    if (!isDemo) return;
     this.offline = offline ?? this.offline;
     this.failLoads = failLoads ?? this.failLoads;
     this.emptyTracker = emptyTracker ?? this.emptyTracker;
@@ -731,16 +748,25 @@ class DemoStore extends ChangeNotifier {
 
   // Demonstration mode starts with fictional notifications; otherwise they
   // are the signed-in user's own, loaded from the API (V5 M16).
-  late final List<AppNotification> _notifications = demoMode
+  late final List<AppNotification> _notifications = isDemo
       ? demoNotifications(now)
       : <AppNotification>[];
 
   /// Set when the last API load failed; the screen offers to try again.
   String? notificationsError;
 
+  /// All of the user's unread notifications, from the API. The list holds only
+  /// the newest page, so it can have fewer than this.
+  int? _serverUnreadCount;
+  Future<void>? _notificationsLoading;
+
   /// Loads the signed-in user's notifications from the API (not in demo mode).
-  Future<void> loadNotifications() async {
-    if (demoMode) return;
+  /// Calls made while one is in progress share it.
+  Future<void> loadNotifications() => _notificationsLoading ??=
+      _loadNotifications().whenComplete(() => _notificationsLoading = null);
+
+  Future<void> _loadNotifications() async {
+    if (isDemo) return;
     try {
       final data = await identityApi.request('/notifications?pageSize=50');
       _notifications
@@ -749,6 +775,7 @@ class DemoStore extends ChangeNotifier {
           for (final row in (data['data'] as List).cast<Map<String, dynamic>>())
             AppNotification.fromApi(row),
         ]);
+      _serverUnreadCount = (data['meta']?['unreadCount'] as num?)?.toInt();
       notificationsError = null;
     } catch (_) {
       notificationsError = 'We couldn’t load your notifications. Check the connection and try again.';
@@ -764,14 +791,17 @@ class DemoStore extends ChangeNotifier {
   }
 
   int get unreadNotificationCount =>
+      _serverUnreadCount ??
       notifications.where((notification) => !notification.read).length;
 
   void markNotificationRead(String id) {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index < 0 || _notifications[index].read) return;
     _notifications[index] = _notifications[index].markedRead();
+    final total = _serverUnreadCount;
+    if (total != null && total > 0) _serverUnreadCount = total - 1;
     notifyListeners();
-    if (!demoMode) {
+    if (!isDemo) {
       identityApi
           .request('/notifications/$id/read', method: 'POST')
           .catchError((_) => null);
@@ -782,8 +812,9 @@ class DemoStore extends ChangeNotifier {
     for (var i = 0; i < _notifications.length; i++) {
       _notifications[i] = _notifications[i].markedRead();
     }
+    if (_serverUnreadCount != null) _serverUnreadCount = 0;
     notifyListeners();
-    if (!demoMode) {
+    if (!isDemo) {
       identityApi
           .request('/notifications/read-all', method: 'POST')
           .catchError((_) => null);
@@ -1028,6 +1059,7 @@ class DemoStore extends ChangeNotifier {
   /// Demo: the District Centre saves a newer version of the society record
   /// (here, a corrected society phone number) while the officer has a draft open.
   void demoNewerRecord() {
+    if (!isDemo) return;
     final nextPhone = recordVersion.isOdd
         ? '+94 00 000 0011'
         : '+94 00 000 0012';
