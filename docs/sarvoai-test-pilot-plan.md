@@ -29,7 +29,7 @@ If any gate fails, stop: SarvoAI stays off.
 | 3 | **Runtime database privileges.** The runtime role (`sc_test_app`) has SELECT, INSERT and UPDATE on `assistant_monthly_spend`, `assistant_spend_reservations` and `assistant_spend_holds`, and USAGE on the `assistant_spend_status` type. Both ledger migrations are applied | Output of checks 1–2 in [`sarvoai-pilot-checks.sql`](../infrastructure/aws/test/sarvoai-pilot-checks.sql), every value `true` |
 | 4 | **Ledger is clean.** No holds; no unexpected reservations | Check 3 of the same script |
 | 5 | **Fictional-only scope.** District `TEST-ONLY` exists; every society SarvoAI can see is fictional; nothing real is in that district | Checks 4–6 of the same script, reviewed row by row |
-| 6 | **Lambda capacity reviewed** with issue #104 (PR #105). See "Capacity" below | The #104 workload results, and the agreed limit on concurrent SarvoAI questions |
+| 6 | **Lambda capacity validated** for issue #104. PR #105's settings are deployed; the full two-tester and phone check has **not** been reported yet. See "Capacity" below | The reported two-tester and phone results, and the agreed limit on concurrent SarvoAI questions |
 | 7 | **Bedrock access.** Anthropic's first-use form and the Marketplace subscription are done by an administrator in the console (no model call needed to check) | Console screenshot or note |
 | 8 | **AWS Budgets** alert covers the Claude Haiku 5.5 Marketplace charges, as in `sarvoai-aws-setup.md` step 4 | Budget name and thresholds |
 
@@ -46,20 +46,39 @@ Then run the checks again. Grant nothing broader (no DELETE, TRUNCATE or ownersh
 
 A SarvoAI question keeps one Lambda execution environment busy for up to about
 22 seconds (the question's cancellation signal; the function timeout is 29 seconds)
-and can make up to 6 model calls. TEST reserved concurrency is 2 on `main` (PR #105
-proposes 4, with API Gateway rate 10/s, burst 20). While a question runs, the
-dashboard has one fewer environment, so a question during dashboard navigation can
-cause the 503 throttling described in #104.
+and can make up to 6 model calls.
+
+PR #105 (issue #104) is merged and deployed to AWS TEST:
+
+| Setting | TEST value |
+| --- | --- |
+| Lambda reserved concurrency | 4 |
+| API Gateway (HTTP API) | 10 requests/second, burst 20 |
+| `sc_test_app` database role | 10-connection limit |
+
+While a question runs, the dashboard and phone have one environment fewer (3 of
+4), so a question during navigation can still cause the 503 throttling described
+in #104.
+
+**Validation so far.** After the deployment, the Assign Responsible Staff panel
+loaded once, and the API Gateway log window that was checked had no 503 or 429
+responses. The full check from #104 has **not** been reported: two testers
+navigating at the same time, plus the phone app. Until it is reported, gate 6 is
+open and SarvoAI stays off.
 
 Before deploying:
 
-- #104 must be resolved, or its remaining constraint documented, and the pilot
-  deployed from a `main` that contains whatever TEST capacity settings were agreed.
-  Deploying from an older commit would silently undo them.
+- Report the two-tester and phone check from #104: the workload, its duration,
+  request and error counts, API Gateway 503s and 429s, Lambda throttles, and
+  database connections. If it shows throttling or connection errors, record the
+  constraint and do not enable SarvoAI.
+- Deploy the pilot from a `main` that contains PR #105, so the change set keeps
+  these values. Deploying from an older commit would silently undo them.
 - Agree how many questions may run at once (suggested: **one at a time**, by
-  arrangement between the testers) and include that in the #104 workload budget.
-- Do not raise Lambda concurrency for SarvoAI without the database connection
-  budget from #104.
+  arrangement between the testers) and include that in the #104 workload.
+- Do not raise Lambda concurrency for SarvoAI without raising the `sc_test_app`
+  connection limit with it (see `infrastructure/aws/test/runtime-database-role.sql`
+  and the capacity budget in `aws-test-environment.md`).
 
 ## Pricing approval
 
