@@ -370,6 +370,7 @@ class DemoStore extends ChangeNotifier {
         password: password,
       );
       if (session == null) return false;
+      _startNotificationSession();
       _user = session.user;
       notifyListeners();
       return true;
@@ -402,11 +403,7 @@ class DemoStore extends ChangeNotifier {
     identityApi.token = null;
     _user = null;
     _selectedTab = 0;
-    if (!isDemo) {
-      // The next account must not see this account's notifications or count.
-      _notifications.clear();
-      _serverUnreadCount = null;
-    }
+    _startNotificationSession();
     notifyListeners();
   }
 
@@ -760,25 +757,57 @@ class DemoStore extends ChangeNotifier {
   int? _serverUnreadCount;
   Future<void>? _notificationsLoading;
 
-  /// Loads the signed-in user's notifications from the API (not in demo mode).
-  /// Calls made while one is in progress share it.
-  Future<void> loadNotifications() => _notificationsLoading ??=
-      _loadNotifications().whenComplete(() => _notificationsLoading = null);
+  /// Increases whenever the signed-in session changes. A request remembers the
+  /// session it started in, and its result counts only while that is current.
+  int _notificationSession = 0;
 
-  Future<void> _loadNotifications() async {
+  /// Forgets the last session's notifications and abandons any load in progress,
+  /// so the next account can neither see its results nor share its request.
+  void _startNotificationSession() {
+    _notificationSession++;
+    _notificationsLoading = null;
     if (isDemo) return;
+    _notifications.clear();
+    _serverUnreadCount = null;
+    notificationsError = null;
+  }
+
+  /// Loads the signed-in user's notifications from the API (not in demo mode).
+  /// Calls made in the same session while one is in progress share it.
+  Future<void> loadNotifications() {
+    final session = _notificationSession;
+    return _notificationsLoading ??= _loadNotifications(session).whenComplete(
+      () {
+        if (session == _notificationSession) _notificationsLoading = null;
+      },
+    );
+  }
+
+  Future<void> _loadNotifications(int session) async {
+    if (isDemo) return;
+    List<AppNotification>? loaded;
+    int? unreadCount;
     try {
       final data = await identityApi.request('/notifications?pageSize=50');
+      loaded = [
+        for (final row in (data['data'] as List).cast<Map<String, dynamic>>())
+          AppNotification.fromApi(row),
+      ];
+      unreadCount = (data['meta']?['unreadCount'] as num?)?.toInt();
+    } catch (_) {
+      loaded = null;
+    }
+    // The account changed while this was on its way: neither its notifications
+    // nor its failure belong to whoever is signed in now.
+    if (session != _notificationSession) return;
+    if (loaded == null) {
+      notificationsError = 'We couldn’t load your notifications. Check the connection and try again.';
+    } else {
       _notifications
         ..clear()
-        ..addAll([
-          for (final row in (data['data'] as List).cast<Map<String, dynamic>>())
-            AppNotification.fromApi(row),
-        ]);
-      _serverUnreadCount = (data['meta']?['unreadCount'] as num?)?.toInt();
+        ..addAll(loaded);
+      _serverUnreadCount = unreadCount;
       notificationsError = null;
-    } catch (_) {
-      notificationsError = 'We couldn’t load your notifications. Check the connection and try again.';
     }
     notifyListeners();
   }

@@ -67,9 +67,13 @@ class IdentityApi {
     if (_clock().isBefore(expires.subtract(const Duration(minutes: 1)))) {
       return;
     }
+    final refreshing = token;
     if (!await refresh()) {
-      token = null;
-      onUnauthorized?.call();
+      // Another account may have signed in while this was on its way.
+      if (token == refreshing) {
+        token = null;
+        onUnauthorized?.call();
+      }
       throw const IdentityError(401, 'Sign in to continue');
     }
   }
@@ -100,7 +104,12 @@ class IdentityApi {
       } on FormatException {
         throw const AuthServiceException();
       }
-      if (response.statusCode == 401 && bearer == null && token != null) {
+      // A refusal ends the session only if it is for the token still in use,
+      // not one from an account that has since signed out.
+      if (response.statusCode == 401 &&
+          bearer == null &&
+          token != null &&
+          token == authorization) {
         token = null;
         onUnauthorized?.call();
       }
@@ -206,11 +215,14 @@ class ApiAuthService implements AuthService {
     final refreshToken = _refreshToken;
     if (cognito == null || refreshToken == null) return false;
     try {
-      _keep(await cognito.refresh(refreshToken));
+      final tokens = await cognito.refresh(refreshToken);
+      // Signed out while this was on its way: the session it renews has ended.
+      if (_refreshToken != refreshToken) return false;
+      _keep(tokens);
       return true;
     } on CognitoRefusedException {
       // Signed out elsewhere, password reset by HQ, disabled, or too old.
-      _refreshToken = null;
+      if (_refreshToken == refreshToken) _refreshToken = null;
       return false;
     }
   }
@@ -218,7 +230,8 @@ class ApiAuthService implements AuthService {
   /// Ends the sign-in on the server too, then forgets every token.
   Future<void> signOut() async {
     final refreshToken = _refreshToken;
-    final hadToken = api.token != null;
+    final signingOut = api.token;
+    final hadToken = signingOut != null;
     _refreshToken = null;
     api.refreshSession = null;
     api.tokenExpiresAt = null;
@@ -231,7 +244,8 @@ class ApiAuthService implements AuthService {
     } catch (_) {
       // Signing out on the phone still works without a connection.
     } finally {
-      api.token = null;
+      // The next account may have signed in by now; its token stays.
+      if (api.token == signingOut) api.token = null;
     }
   }
 }
