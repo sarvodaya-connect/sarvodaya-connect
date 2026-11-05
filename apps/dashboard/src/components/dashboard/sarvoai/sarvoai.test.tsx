@@ -75,6 +75,27 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(within(recent).getByRole("button", { name: /What was the average profit/ })).toBeInTheDocument();
   });
 
+  it("shows backend source links and timestamps and filters unsafe destinations", async () => {
+    askSarvoAi.mockResolvedValue({ ok: true, sample: false, answer: answer({
+      details: { recordsUsed: ["Fictional profile"], sources: [
+        { label: "Fictional profile", href: "/societies/00000000-0000-4000-8000-000000000001", updatedAt: "2026-11-03T04:35:00.000Z" },
+        { label: "Requests", href: "/requests" },
+        { label: "Unsafe external", href: "https://example.invalid" },
+        { label: "Unsafe script", href: "javascript:alert(1)" },
+        { label: "Unsafe relative", href: "//example.invalid" },
+      ] },
+    }) });
+    const user = userEvent.setup();
+    renderChat();
+    await ask(user, "Fictional overview?");
+    await user.click(await screen.findByRole("button", { name: "How was this answered?" }));
+    const dialog = within(screen.getByRole("dialog", { name: "How was this answered?" }));
+    expect(dialog.getByRole("link", { name: "Fictional profile" })).toHaveAttribute("href", "/societies/00000000-0000-4000-8000-000000000001");
+    expect(dialog.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
+    expect(dialog.getByText(/Record updated:/)).toBeInTheDocument();
+    expect(dialog.queryByRole("link", { name: /Unsafe/ })).not.toBeInTheDocument();
+  });
+
   it("sends earlier turns with a follow-up (D45)", async () => {
     askSarvoAi.mockResolvedValueOnce({ ok: true, sample: false, answer: answer({ summary: "Average was LKR 298,400." }) });
     askSarvoAi.mockResolvedValueOnce({ ok: true, sample: false, answer: answer({ summary: "Pahala Kosgama SSS had the highest." }) });

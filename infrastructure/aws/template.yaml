@@ -135,6 +135,7 @@ Resources:
           DOCUMENT_MAX_UPLOAD_BYTES: '10000000'
           DISTRICT_ACCESS_MAX_DAYS: '14'
           SARVOAI_ENABLED: !Ref SarvoAiEnabled
+          SARVOAI_FICTIONAL_ONLY: !If [IsTest, 'true', 'false']
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
           SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd

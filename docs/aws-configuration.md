@@ -25,6 +25,7 @@ Every setting is an environment variable with a safe development default (`.env.
 | `CORS_ALLOWED_ORIGINS` | Config | empty | Development driver only: dashboard origin allowed to PUT to local upload links (PR 4) |
 | `SARVOAI_ENABLED` | Config (feature flag) | `false` | SarvoAI on Bedrock; see `sarvoai-aws-setup.md`. While it is not `true`, `POST /assistant/questions` answers 503 and nothing is sent to AWS (PR 9 screens show "SarvoAI isn’t available right now") |
 | `SARVOAI_MODEL_ID` | Config | `global.anthropic.claude-haiku-5-5` | Bedrock model or inference profile SarvoAI calls; the IAM policy must allow this one model |
+| `SARVOAI_FICTIONAL_ONLY` | Config | `true` in TEST | Tools see only `TEST-*` societies in district `TEST-ONLY`; Exco personal lookups are disabled |
 | `SARVOAI_AWS_REGION` | Config | `ap-southeast-1` | Bedrock Region; requests are signed with the API's IAM role (no API key) |
 | `SARVOAI_MONTHLY_LIMIT_USD` | Config | `20` | Most SarvoAI may spend per UTC month, estimated by the application (0–1000; 0 or an invalid value refuses every call). Not an AWS billing cap; see `sarvoai-aws-setup.md` |
 | `SARVOAI_PRICING_APPROVAL` | Config | empty | Reviewed Bedrock prices for this exact model and Region, as one line of JSON, lasting at most 31 days. Empty, invalid or expired refuses every model call. See `sarvoai-aws-setup.md` |

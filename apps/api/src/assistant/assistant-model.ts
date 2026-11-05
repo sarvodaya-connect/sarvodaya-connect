@@ -7,7 +7,7 @@ export type ModelRequest = Omit<Anthropic.MessageCreateParamsNonStreaming, 'mode
 /** The model behind SarvoAI. An interface so the service can be tested with a fake model. */
 export interface AssistantModel {
   readonly modelId: string;
-  createMessage(request: ModelRequest): Promise<Anthropic.Message>;
+  createMessage(request: ModelRequest, signal?: AbortSignal): Promise<Anthropic.Message>;
 }
 
 export const ASSISTANT_MODEL = Symbol('ASSISTANT_MODEL');
@@ -44,11 +44,11 @@ export class BedrockAssistantModel implements AssistantModel {
     // apiKey null: never pick up a stray AWS_BEARER_TOKEN_BEDROCK; sign with IAM instead.
     // maxRetries 0: an SDK retry after a timeout could be billed twice under one
     // reservation of the spending limit (issue #96). Asking again reserves again.
-    this.client = new AnthropicBedrock({ awsRegion, apiKey: null, maxRetries: 0, timeout: MODEL_TIMEOUT_MS });
+    this.client = new AnthropicBedrock({ awsRegion, apiKey: null, maxRetries: 0, timeout: MODEL_TIMEOUT_MS, logLevel: 'off' });
   }
 
-  createMessage(request: ModelRequest): Promise<Anthropic.Message> {
-    return this.client.messages.create({ model: this.modelId, ...request });
+  createMessage(request: ModelRequest, signal?: AbortSignal): Promise<Anthropic.Message> {
+    return this.client.messages.create({ ...request, model: this.modelId }, { signal });
   }
 }
 

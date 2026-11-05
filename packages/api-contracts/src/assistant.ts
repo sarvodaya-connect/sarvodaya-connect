@@ -44,6 +44,8 @@ export interface AssistantTable {
 export interface AssistantDetails {
   recordsUsed: string[];
   calculation?: string;
+  /** Backend-generated dashboard paths; existing readers may omit this panel. */
+  sources?: { label: string; href: string; updatedAt?: IsoDateTime }[];
 }
 
 export interface AssistantAnswer {

@@ -126,6 +126,19 @@ function HowAnswered({ answer, onClose, question, sample }: { answer: AssistantA
             </div>
           ))}
         </dl>
+        {Boolean(answer.details.sources?.length) && (
+          <div className="mt-4 text-[12px]">
+            <h3 className="font-bold text-ink">Source records</h3>
+            <ul className="mt-2 space-y-2">
+              {answer.details.sources?.filter((source) => /^\/(?:societies\/[0-9a-f-]{36}(?:\/(?:documents|exco|work-plan|grade))?|requests|reviews)$/i.test(source.href)).map((source) => (
+                <li key={source.href}>
+                  <Link className="text-brand-leaf underline" href={source.href} prefetch={false}>{source.label}</Link>
+                  {source.updatedAt && <span className="mt-0.5 block text-muted">Record updated: {new Date(source.updatedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Colombo" })}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {answer.details.calculation && (
           <div className="mt-4 rounded-lg bg-[#eef6ef] p-3 text-[12px] text-ink">
             <p className="font-bold">Calculation</p>

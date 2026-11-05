@@ -2,6 +2,58 @@
 
 SarvoAI is the HQ-only question assistant (`POST /api/v1/assistant/questions`). It calls Claude Haiku 5.5 on Amazon Bedrock. These steps are done once per AWS account by someone with administrator access. The code needs no AWS keys: it signs requests with the API task's IAM role.
 
+## Reviewed scope
+
+- The route and service both require `HQ_ADMIN` before tools/model access.
+- Tools select explicit fields and have no arbitrary SQL, write, document-reader,
+  NIC, contact, password or account-secret tool. Financial tools expose only total
+  profit and total expenses; arithmetic and displayed tables come from code.
+- TEST sets `SARVOAI_FICTIONAL_ONLY=true`: only district code `TEST-ONLY` and
+  societies whose code starts `TEST-` are accessible to model tools. Exco lookups
+  are unavailable. Only synthetic values belong in these records.
+- Questions/history, tool text and model summaries get best-effort scrubbing of
+  obvious NICs, phone numbers, emails, credential-bearing URLs, JWTs, AWS key IDs
+  and labelled secrets. This is **not** a general personal-data classifier:
+  unlabelled passwords and personal names cannot reliably be recognized.
+  Enter fictional questions only; real-data use needs a separate privacy review.
+- Audit events retain actor, outcome kind and allowed tool names, not raw prompts
+  or answers. Provider/database errors are not copied into logs or responses.
+  This change does not delete historical audit events.
+
+## Operational tools added for HQ
+
+Three additional read-only tools use explicit selected fields and the same TEST
+fictional scope. They create no tasks, send no messages and make no decisions.
+
+| Tool | Inputs | Evidence and limits |
+| --- | --- | --- |
+| `get_society_overview` | Exact S number and completed financial year | Profile/status/grade, active named Exco row count (no identities), annual profit/expenses with missing values preserved, Registrar upload gaps, five most recently updated approved activities, pending grades and overdue unanswered requests. Profiles in any status may be viewed. |
+| `find_compliance_gaps` | Completed financial year and optional district name | All-scope counts for active societies missing any of the four Registrar upload types. Up to 20 matching societies ordered by S number; explicitly reports truncation. Matches the existing Registrar screen's `uploadedAt` rule; it does not certify approval or legal compliance. |
+| `list_outstanding_work` | Optional district name | Four queues for active societies: overdue unanswered society-request pairs, pending HQ grade decisions, activities awaiting SPC review (HQ follow-up only), and profiles older than 90 days. Up to five oldest examples per queue. Due dates use Sri Lanka local today; due today is not overdue. |
+
+Database transactions use repeatable-read snapshots so counts and examples for a
+tool agree during concurrent updates. Queue order is fixed and explained, not an
+AI-generated risk score. Counts can overlap and must not be summed as unique
+societies. No legal deadline is invented for a missing upload. A profile update
+timestamp does not describe every related record. Missing yearly totals remain
+null, never zero. An Exco row count does not validate committee composition.
+
+Optional `details.sources` contains backend-generated dashboard paths and record
+update timestamps where the schema provides them. The model cannot supply these
+links. The dashboard displays them in **How was this answered?** and restricts
+navigation to the known internal record routes. Evidence from multiple tool
+calls is retained (up to 50 links); the displayed table remains the latest tool's
+table. Existing mobile readers can ignore the optional field; a mobile evidence
+links panel can follow separately. Nothing reads or signs document contents.
+
+Example questions after enablement with synthetic records:
+
+- Give me an overview of society TEST-UPLOAD-001 for FY 2025/26.
+- Which societies are missing Registrar uploads for FY 2025/26?
+- What outstanding work should HQ follow up on today?
+
+The tools return honest empty results if no fictional societies exist yet. They never substitute demonstration rows into a production-mode answer.
+
 ## How it connects
 
 | Setting | Value |
@@ -10,14 +62,14 @@ SarvoAI is the HQ-only question assistant (`POST /api/v1/assistant/questions`). 
 | Model ID | `global.anthropic.claude-haiku-5-5` (global inference profile) |
 | IAM action | `bedrock:InvokeModel` only |
 
-In Singapore, Claude Haiku 5.5 is available only through the **global** inference profile on `bedrock-runtime`. There is no Singapore-only option and no `bedrock-mantle` option for this model. A global profile means **requests can be processed in any supported AWS commercial Region**, not only in Singapore. Sarvodaya should approve this before SarvoAI is switched on, because questions and the tool results sent to the model include society names, Exco names and yearly totals. NICs, phone numbers, emails and passwords are never sent.
+In Singapore, Claude Haiku 5.5 is available only through the **global** inference profile on `bedrock-runtime`. There is no Singapore-only option and no `bedrock-mantle` option for this model. A global profile means **requests can be processed in any supported AWS commercial Region**, not only in Singapore. Sarvodaya should approve this before SarvoAI is switched on, because questions and the tool results sent to the model include society names, Exco names and yearly totals. Explicit tool fields exclude NICs, phone numbers, emails and passwords; best-effort request scrubbing is an additional layer, not a guarantee for arbitrary user text. TEST disables personal Exco lookups and requires synthetic records/questions.
 
 ## 1. Turn on the model
 
 1. Sign in to the AWS console as an administrator and switch the Region to **Asia Pacific (Singapore)**.
 2. Open **Amazon Bedrock → Model catalog** and choose **Claude Haiku 5.5**.
 3. If asked, submit Anthropic's first-time use form. Claude models are sold through AWS Marketplace, so the account subscribes on first use. The person doing this needs `aws-marketplace:Subscribe` and `aws-marketplace:ViewSubscriptions`; the API role does not.
-4. Try a prompt in the console playground to confirm access.
+4. Before any live prompt, obtain owner approval for access, reviewed pricing and global processing. Console playground calls are billed outside the application ledger; they are not part of local regression checks.
 
 ## 2. Give the API role permission
 
@@ -47,7 +99,7 @@ While `SARVOAI_ENABLED` is not `true`, the endpoint answers 503 and nothing is s
 
 ## 4. Set a budget alert
 
-In **AWS Budgets**, create a monthly cost budget of **USD 20** filtered to the Claude Haiku 5.5 Marketplace charges (they appear under the model provider, not under Amazon Bedrock), with alerts at 80% and 100%. At about 1,000 questions a month the model costs about USD 2.
+In **AWS Budgets**, create a monthly cost budget of **USD 20** filtered to the Claude Haiku 5.5 Marketplace charges (they appear under the model provider, not under Amazon Bedrock), with alerts at 80% and 100%. Forecast usage only after Bedrock pricing and expected calls per question have been reviewed; there is no fixed cost per question.
 
 AWS Budgets only sends alerts. It does not stop model calls. The application's own limit, below, is what stops them.
 
@@ -71,9 +123,9 @@ SarvoAI refuses to call the model once its estimated spending would pass `SARVOA
 | Timeout, dropped connection, 5xx, or a response without usable token counts | The call may have been billed, so the full reservation stays counted until the month ends |
 | API instance stops mid-call, or the ledger update fails | The reservation stays open and stays counted until the month ends |
 
-The SDK's automatic retries are off (`maxRetries: 0`), because a retry after a timeout could be billed twice under one reservation. Asking again makes a new request with its own reservation, so repeated or duplicate questions each count. Model calls time out after 25 seconds, inside the API's 29-second Lambda timeout.
+The SDK's automatic retries are off (`maxRetries: 0`), because a retry after a timeout could be billed twice under one reservation. Asking again makes a new request with its own reservation, so repeated or duplicate questions each count. The SDK timeout is 25 seconds; this pilot also applies one 22-second cancellation signal across the question, including subsequent tool rounds. An aborted model call retains its reservation as uncertain. The API Lambda timeout is 29 seconds.
 
-The records are in `assistant_monthly_spend`, `assistant_spend_reservations` and `assistant_spend_holds`. They hold the month, model ID, amounts, token counts and status: no prompts, answers or who asked. The existing `SARVOAI_QUESTION` audit event is separate and records `SPENDING_LIMIT` or `SPENDING_REVIEW` when a question is refused.
+The records are in `assistant_monthly_spend`, `assistant_spend_reservations` and `assistant_spend_holds`. They hold the month, model ID, amounts, token counts and status: no prompts, answers or who asked. The separate `SARVOAI_QUESTION` audit retains actor, outcome and tool names only, including `SPENDING_LIMIT` or `SPENDING_REVIEW` on refusals. Raw questions and answers are not stored; historical audit records are not deleted by this change.
 
 To check the current month (amounts are in millionths of a US dollar):
 
@@ -132,12 +184,14 @@ The review date and source live in the approval, so the deployment's parameter h
 
 | Bound | Value |
 |---|---|
-| Output per model call | 8,000 tokens (`max_tokens`). With thinking off, this limits all billed output |
+| Output per model call | 2,048 tokens (`max_tokens`). With thinking off, this limits all billed output |
 | Model calls per question | 6 |
 | Question | 500 characters |
 | Earlier turns sent | 10, at most 2,000 characters each |
 
-Each reservation counts every UTF-8 byte of the whole request (system prompt, tools, messages and answer format) as one token, plus 1,000 tokens of overhead, all at the dearest input price (normally the cache write), plus the full 8,000 output tokens at the output price. If that estimate is over `aboveTokens`, the long-prompt prices apply to all of it. The upper bound relies on real tokens spanning at least one byte each, which is an assumption about the provider. It is checked against reported usage after every call, and a response above it places a hold.
+The exact request is scrubbed before it is measured and reserved. Requests above 65,536 UTF-8 bytes are refused before a reservation or provider call. No model-layer rewriting or second spending gate follows the reservation.
+
+Each reservation counts every UTF-8 byte of the whole request (system prompt, tools, messages and answer format) as one token, plus 1,000 tokens of overhead, all at the dearest input price (normally the cache write), plus the full 2,048 output tokens at the output price. If that estimate is over `aboveTokens`, the long-prompt prices apply to all of it. The upper bound relies on real tokens spanning at least one byte each, which is an assumption about the provider. It is checked against reported usage after every call, and a response above it places a hold.
 
 **Thinking is off.** Thinking is on by default for Claude Haiku 5.5. When it runs, thinking blocks are sent back on later tool rounds, and they may bill more input tokens than the visible bytes, so no safe limit can be worked out in advance. SarvoAI therefore sends `thinking: {"type": "disabled"}`, and this is enforced for every call.
 
@@ -191,4 +245,23 @@ curl -X POST "$API_BASE_URL/assistant/questions" \
 | 429 `LIMIT_REACHED` | The monthly spending limit is reached |
 | 503 "paused", with `sarvoai_calls_blocked` in the logs | The pricing approval or `SARVOAI_MONTHLY_LIMIT_USD` is missing, invalid or expired, the model is unsupported, the request has no safe limit, or a hold is waiting for review. The log gives the reason |
 
-Each question is recorded as a `SARVOAI_QUESTION` audit event (who asked, the question, and which tools ran). Answers are not stored.
+Each question produces a `SARVOAI_QUESTION` audit event containing the actor, outcome kind and tool names. Questions and answers are not stored in that event.
+
+## Consolidation and pilot readiness
+
+PR #97's `AssistantSpendingService` is the only spending mechanism. This branch
+removes the unmerged flat-USD-2 allowance, its SQL function/model and its separate
+review-date setting. That obsolete migration was never deployed by this work;
+if anyone applied it independently, review that environment before deploying.
+The two spending migrations from main remain unchanged; this PR adds no migration.
+
+The runtime role needs SELECT, INSERT and UPDATE on `assistant_monthly_spend`,
+`assistant_spend_reservations` and `assistant_spend_holds` for #97's ledger.
+This branch does not deploy grants or replace that ledger with a second mechanism.
+Direct table writes and API-clock month/expiry boundaries remain #97 limitations;
+review restricted SQL-function access and database clock handling separately.
+
+TEST remains disabled by the SAM `TestAiDisabled` rule, with fictional-only scope
+forced on. Enablement needs a separate reviewed change, owner approval of global
+processing and confirmed Bedrock pricing. Local fake-model and disposable-database
+checks do not establish live model access, answer quality or actual AWS billing.

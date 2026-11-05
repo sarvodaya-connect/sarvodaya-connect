@@ -31,6 +31,8 @@ export interface AssistantTable {
 export interface AssistantDetails {
   recordsUsed: string[];
   calculation?: string;
+  /** Backend-generated evidence links, never supplied by the model. */
+  sources?: { label: string; href: string; updatedAt?: string }[];
 }
 
 export interface AssistantAnswer {
