@@ -35,6 +35,35 @@ const otherOfficer: Principal = {
   societyIds: ['29000000-0000-4000-8000-000000000103'],
 };
 
+type Seat = Parameters<SocietiesService['updateCouncil']>[1]['members'][number];
+const member = (
+  seatNumber: number,
+  seatType: Seat['seatType'],
+  position = 'Member',
+): Seat => ({
+  seatNumber,
+  fullName: `Fictional Member ${seatNumber}`,
+  position,
+  seatType,
+  isActive: true,
+  isPrimaryContact: position === 'President',
+});
+/** 25 seats: 9 ordinary (with the three offices), 7 elders, 3 mothers, 3 youth, 3 children. */
+const fullCouncil = () =>
+  [
+    ...Array<Seat['seatType']>(9).fill('ORDINARY'),
+    ...Array<Seat['seatType']>(7).fill('ELDERS_COUNCIL'),
+    ...Array<Seat['seatType']>(3).fill('MOTHERS'),
+    ...Array<Seat['seatType']>(3).fill('YOUTH'),
+    ...Array<Seat['seatType']>(3).fill('CHILDREN'),
+  ].map((seatType, index) =>
+    member(
+      index + 1,
+      seatType,
+      ['President', 'Secretary', 'Treasurer'][index] ?? 'Member',
+    ),
+  );
+
 describe('SocietiesService profile, council and membership', () => {
   const repository = {
     findById: vi.fn(),
@@ -93,10 +122,59 @@ describe('SocietiesService profile, council and membership', () => {
     expect(repository.updateProfile).not.toHaveBeenCalled();
   });
 
+  it('saves a partly entered Exco, including none at all', async () => {
+    await service.updateCouncil(societyId, { members: [] }, officer);
+    expect(repository.replaceCouncil).toHaveBeenCalledWith(
+      societyId,
+      { members: [] },
+      officer,
+    );
+    const three = [1, 2, 3].map((seat) =>
+      member(seat, 'ORDINARY', seat === 1 ? 'President' : 'Member'),
+    );
+    await service.updateCouncil(societyId, { members: three }, officer);
+    expect(repository.replaceCouncil).toHaveBeenLastCalledWith(
+      societyId,
+      { members: three },
+      officer,
+    );
+  });
+
   it('rejects council updates with the wrong seat distribution', async () => {
+    // A fourth children's seat goes over the three the Exco has.
+    const children = [1, 2, 3, 4].map((seat) => member(seat, 'CHILDREN'));
     await expect(
-      service.updateCouncil(societyId, { members: [] }, officer),
+      service.updateCouncil(societyId, { members: children }, officer),
+    ).rejects.toThrow('Council can have only 3 children seats');
+    expect(repository.replaceCouncil).not.toHaveBeenCalled();
+  });
+
+  it('allows each office to only one member', async () => {
+    const twoPresidents = [1, 2].map((seat) =>
+      member(seat, 'ORDINARY', 'President'),
+    );
+    await expect(
+      service.updateCouncil(societyId, { members: twoPresidents }, officer),
+    ).rejects.toThrow('Choose only one President');
+    expect(repository.replaceCouncil).not.toHaveBeenCalled();
+  });
+
+  it('needs every seat group full once the 25 seats are filled', async () => {
+    // 25 seats, but one elders' seat recorded as ordinary: 10 ordinary, 6 elders.
+    const wrong = fullCouncil().map((seat) =>
+      seat.seatNumber === 10 ? member(10, 'ORDINARY') : seat,
+    );
+    await expect(
+      service.updateCouncil(societyId, { members: wrong }, officer),
     ).rejects.toBeInstanceOf(BadRequestException);
+    await service.updateCouncil(societyId, { members: fullCouncil() }, officer);
+    expect(repository.replaceCouncil).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses an Exco update from an officer of another society', async () => {
+    await expect(
+      service.updateCouncil(societyId, { members: [] }, otherOfficer),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.replaceCouncil).not.toHaveBeenCalled();
   });
 

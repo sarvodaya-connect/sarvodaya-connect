@@ -141,8 +141,9 @@ const expectedCouncilSeats: Record<MembershipCategory, number> = {
  *   (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders' council), and
  *   children's and youth seats within their age range;
  * - each office (President, Secretary, Treasurer) is held by at most one member;
- * - once all 25 seats are entered, each category has exactly its number and
- *   all three offices are held.
+ * - once all 25 seats are entered, each category has exactly its number.
+ * Choosing all three offices is asked for by the dashboard and phone, not
+ * enforced here, so existing full Excos without one keep saving as before.
  * Used when HQ creates a society (D05n) and whenever the Exco is edited.
  */
 export function assertValidCouncil(
@@ -202,10 +203,6 @@ export function assertValidCouncil(
       (member) => member.position.trim().toLowerCase() === office.toLowerCase(),
     ).length;
     if (holders > 1) throw new BadRequestException(`Choose only one ${office}`);
-    if (complete && holders === 0)
-      throw new BadRequestException(
-        `Choose the ${office} from the 25 Exco members`,
-      );
   }
 }
 

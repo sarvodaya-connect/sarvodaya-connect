@@ -206,8 +206,8 @@ describe("D05x Exco", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reveal = vi.fn().mockResolvedValue({ nic: "198400000012" });
     render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} />);
-    expect(screen.getByText("2 of 25 Exco members")).toBeInTheDocument();
-    expect(screen.getByText("23 missing")).toBeInTheDocument();
+    expect(screen.getByText("2 of 25 Exco seats filled")).toBeInTheDocument();
+    expect(screen.getByText("Incomplete · 23 to fill")).toBeInTheDocument();
     expect(screen.getByText("•••• •••• 0047")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Show" })[0]!);

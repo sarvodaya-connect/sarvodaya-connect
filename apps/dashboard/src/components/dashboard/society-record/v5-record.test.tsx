@@ -2,14 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GradeRequestDetail, SocietyRecord, StaffOptions } from "@sarvodaya-connect/api-contracts";
+import type { CommitteeMember, GradeRequestDetail, SocietyRecord, StaffOptions } from "@sarvodaya-connect/api-contracts";
 
 import { auditCsv, parseAuditFilters } from "@/lib/audit-log";
 
 import { GradeReviewDecision } from "../grade-queue/grade-review-decision";
 import { AssignStaffPanel } from "./assign-staff-panel";
 import { CreateSocietyForm } from "./create-society-form";
-import { emptyExco, excoPayload, excoProblems } from "./exco-editor";
+import { emptyExco, excoFromCommittee, excoPayload, excoProblems, rowComplete, rowFilled } from "./exco-editor";
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
@@ -31,29 +31,66 @@ function filledExco(complete: boolean) {
 }
 
 describe("Exco editor rules (V5 D05c, Edit Exco)", () => {
-  it("counts seats and names the missing office bearers", () => {
-    const rows = emptyExco();
-    rows[0]!.position = "Member";
-    expect(excoProblems(rows)).toEqual(
-      expect.arrayContaining([
-        "Every society must have exactly 25 Exco members. 0 are entered — enter the rest to continue.",
-        "Choose the President from the 25 members.",
-      ]),
+  it("saves a partly entered Exco, leaving empty seats for later", () => {
+    const rows = excoFromCommittee([]);
+    expect(excoProblems(rows)).toEqual([]);
+    expect(excoPayload(rows)).toEqual([]);
+
+    rows[0] = { ...rows[0]!, fullName: "Fictional Member 1", position: "President" };
+    rows[1] = { ...rows[1]!, fullName: "Fictional Member 2" };
+    expect(excoProblems(rows)).toEqual([]);
+    expect(excoPayload(rows).map((seat) => seat.seatNumber)).toEqual([1, 2]);
+  });
+
+  it("names what stops saving: details without a name, or an office on an empty seat", () => {
+    const rows = excoFromCommittee([]);
+    rows[5] = { ...rows[5]!, profession: "Farmer" };
+    expect(excoProblems(rows)).toEqual(["Seat 6: enter the full name, or clear the seat."]);
+    expect(excoProblems(emptyExco())).toEqual(
+      expect.arrayContaining(["Seat 1 is the President: enter their name, or choose another member."]),
     );
   });
 
-  it("needs every detail for a new society but only name and date of birth when editing", () => {
+  it("asks for the office bearers once all 25 seats are filled", () => {
+    const noOffices = filledExco(false).map((row) => ({ ...row, position: "Member" }));
+    expect(excoProblems(noOffices)).toEqual([
+      "Choose the President from the 25 members.",
+      "Choose the Secretary from the 25 members.",
+      "Choose the Treasurer from the 25 members.",
+    ]);
+    expect(excoProblems(filledExco(false))).toEqual([]);
+  });
+
+  it("marks seats with a name but missing details, without blocking the save", () => {
     const basic = filledExco(false);
-    expect(excoProblems(basic, "edit")).toEqual([]);
-    expect(excoProblems(basic, "create")[0]).toContain("0 are entered");
-    expect(excoProblems(filledExco(true), "create")).toEqual([]);
+    expect(basic.every(rowFilled)).toBe(true);
+    expect(basic.some(rowComplete)).toBe(false);
+    expect(filledExco(true).every(rowComplete)).toBe(true);
+    expect(excoProblems(basic)).toEqual([]);
+  });
+
+  it("gives each empty seat a group with room, so no group goes over its number", () => {
+    // Children entered in seats 1–3, where a new Exco puts ordinary members.
+    const members: CommitteeMember[] = [1, 2, 3].map((seatNumber) => ({
+      id: `m${seatNumber}`,
+      fullName: `Fictional Child ${seatNumber}`,
+      position: "Member",
+      isActive: true,
+      seatNumber,
+      seatType: "CHILDREN",
+    }));
+    const groups = excoFromCommittee(members).reduce<Record<string, number>>(
+      (all, row) => ({ ...all, [row.seatType]: (all[row.seatType] ?? 0) + 1 }),
+      {},
+    );
+    expect(groups).toEqual({ CHILDREN: 3, YOUTH: 3, MOTHERS: 3, ORDINARY: 9, ELDERS_COUNCIL: 7 });
   });
 
   it("rejects a future date of birth and a malformed NIC", () => {
     const rows = filledExco(true);
     rows[3]!.dateOfBirth = "2999-01-01";
     rows[4]!.nic = "1234";
-    expect(excoProblems(rows, "create", "2026-11-02")).toEqual([
+    expect(excoProblems(rows, "2026-11-02")).toEqual([
       "Seat 4: the date of birth is in the future.",
       "Seat 5: enter a valid NIC (9 digits and V or X, or 12 digits).",
     ]);
@@ -126,13 +163,18 @@ describe("D22r decision", () => {
 describe("D05n create a society", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("checks step 1 before moving to the 25 Exco seats", async () => {
+  it("saves the society details only; the Exco is entered later", async () => {
     const user = userEvent.setup();
-    render(<CreateSocietyForm action={vi.fn(async () => ({}))} districts={[{ id: "d1", nameEn: "Kurunegala" }]} />);
+    const action = vi.fn(async () => ({}));
+    render(<CreateSocietyForm action={action} districts={[{ id: "d1", nameEn: "Kurunegala" }]} />);
 
-    await user.click(screen.getByRole("button", { name: "Next: Exco members" }));
+    expect(screen.queryAllByRole("textbox", { name: /full name/ })).toHaveLength(0);
+    expect(screen.getByText(/The Exco is entered later\./)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save and assign staff" }));
     expect(screen.getByText("Enter the S number, for example S-104233.")).toBeInTheDocument();
     expect(screen.getByText("Choose the district.")).toBeInTheDocument();
+    expect(action).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText(/Society name/), "Fictional Wellawa Society");
     await user.type(screen.getByLabelText(/^S number/), "S-777001");
@@ -140,11 +182,13 @@ describe("D05n create a society", () => {
     await user.type(screen.getByLabelText(/^DS division/), "Fictional DS");
     await user.type(screen.getByLabelText(/^Address/), "Fictional Road");
     await user.type(screen.getByLabelText(/^Number of members/), "164");
-    await user.click(screen.getByRole("button", { name: "Next: Exco members" }));
+    await user.click(screen.getByRole("button", { name: "Save and assign staff" }));
 
-    expect(screen.getAllByRole("textbox", { name: /full name/ })).toHaveLength(25);
-    expect(screen.getByRole("button", { name: "Save and assign staff" })).toBeDisabled();
-    expect(screen.getByText(/Every seat needs a full name, NIC/)).toBeInTheDocument();
+    expect(action).toHaveBeenCalledTimes(1);
+    const form = (action.mock.calls[0] as unknown as [unknown, FormData])[1];
+    expect(form.get("nameEn")).toBe("Fictional Wellawa Society");
+    expect(form.get("districtId")).toBe("d1");
+    expect(form.has("council")).toBe(false);
   });
 });
 
