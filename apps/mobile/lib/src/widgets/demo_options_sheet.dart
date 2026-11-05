@@ -6,7 +6,10 @@ import '../models/user.dart';
 
 /// Lets the presenter show the offline, error, empty, location-permission and
 /// conflicting-update states during the demo.
+///
+/// Opens only in a demonstration, wherever it is called from.
 Future<void> showDemoOptions(BuildContext context) {
+  if (!DemoScope.read(context).isDemo) return Future<void>.value();
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,

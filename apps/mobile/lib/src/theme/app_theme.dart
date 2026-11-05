@@ -56,6 +56,21 @@ class AppColors {
 class AppTheme {
   const AppTheme._();
 
+  /// Flutter uses the theme's chip label style instead of its own default, not
+  /// merged with it, so this style must carry a colour or labels have none.
+  static final WidgetStateColor chipLabelColor = WidgetStateColor.resolveWith(
+    (states) => switch ((
+      states.contains(WidgetState.disabled),
+      states.contains(WidgetState.selected),
+    )) {
+      // A selected chip keeps its dark fill when disabled.
+      (true, true) => AppColors.bannerViewLine,
+      (true, false) => AppColors.muted,
+      (false, true) => Colors.white,
+      (false, false) => AppColors.ink,
+    },
+  );
+
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.leaf,
@@ -181,7 +196,13 @@ class AppTheme {
         side: const BorderSide(color: AppColors.line),
         selectedColor: AppColors.forest,
         backgroundColor: AppColors.surface,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        disabledColor: AppColors.stateGrey,
+        checkmarkColor: Colors.white,
+        labelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: chipLabelColor,
+        ),
       ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

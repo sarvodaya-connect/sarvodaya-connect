@@ -36,7 +36,7 @@ class NotificationsScreen extends StatelessWidget {
         children: [
           if (store.offline) const OfflineBanner(),
           Expanded(
-            child: DemoStore.demoMode
+            child: store.isDemo
                 ? DemoLoader(
                     loadingLabel: 'Loading notifications',
                     skeletonCards: 2,
