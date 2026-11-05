@@ -13,7 +13,7 @@ import type {
   AssignStaffDto,
   CreateSocietyDto,
 } from './dto/society-admin.dto.js';
-import { assertValidCouncil } from './societies.service.js';
+import { EXCO_SEATS, assertValidCouncil } from './societies.service.js';
 import { canViewSociety } from './society-access.policy.js';
 
 const STAFF_ROLES = [
@@ -34,17 +34,14 @@ const accountFields = {
   societyIds: true,
 } as const;
 
-/** The office bearers V5 D05c asks for before a new society can be saved. */
-const OFFICE_BEARERS = ['President', 'Secretary', 'Treasurer'] as const;
-
 function assertHq(principal: Principal) {
   if (!hasRole(principal, 'HQ_ADMIN'))
     throw new ForbiddenException('Only HQ can do this');
 }
 
 /**
- * V5 D05a "Assign responsible staff" and D05n/D05c "Create a society
- * record". Both are HQ only. The society record itself lists the staff.
+ * V5 D05a "Assign responsible staff" and D05n "Create a society record".
+ * Both are HQ only. The society record itself lists the staff.
  */
 @Injectable()
 export class SocietyAdminService {
@@ -186,7 +183,11 @@ export class SocietyAdminService {
     return { changedAccounts: changed.length };
   }
 
-  /** D05n / D05c: HQ creates a society with its details, starting grade and all 25 Exco members. */
+  /**
+   * D05n: HQ creates a society with its details and starting grade. The Exco
+   * starts empty; the Society Officer HQ assigns next (D05a) enters it, and the
+   * record shows it as incomplete until all 25 seats are filled.
+   */
   async create(input: CreateSocietyDto, principal: Principal) {
     assertHq(principal);
     const code = input.societyCode.trim().toUpperCase();
@@ -204,32 +205,9 @@ export class SocietyAdminService {
       }))
     )
       throw new BadRequestException('Select a valid district');
-    assertValidCouncil(input.council);
-    // V5 D05c / M07e: a new society's 25 seats are complete records.
-    for (const member of input.council) {
-      const missing = [
-        !member.nic && 'NIC',
-        !member.dateOfBirth && 'date of birth',
-        !member.addressLine && 'address',
-        !member.profession && 'profession',
-        !member.phone && 'phone number',
-      ].filter(Boolean);
-      if (missing.length)
-        throw new BadRequestException(
-          `Exco member ${member.seatNumber}: enter the ${missing.join(', ')}`,
-        );
-    }
-    for (const office of OFFICE_BEARERS) {
-      if (
-        !input.council.some(
-          (member) =>
-            member.position.trim().toLowerCase() === office.toLowerCase(),
-        )
-      )
-        throw new BadRequestException(
-          `Choose the ${office} from the 25 Exco members`,
-        );
-    }
+    // The Exco is entered later by the Society Officer HQ assigns (D05a).
+    const council = input.council ?? [];
+    assertValidCouncil(council);
     const now = new Date();
     const society = await this.prisma.$transaction(async (tx) => {
       const created = await tx.society.create({
@@ -253,25 +231,26 @@ export class SocietyAdminService {
           gradeChangedByRole: principal.roles[0] ?? null,
         },
       });
-      await tx.societyCouncilMember.createMany({
-        data: input.council.map((member) => ({
-          societyId: created.id,
-          seatNumber: member.seatNumber,
-          fullName: member.fullName,
-          position: member.position,
-          seatType: member.seatType,
-          phone: member.phone,
-          email: member.email,
-          age: member.age,
-          profession: member.profession,
-          addressLine: member.addressLine,
-          ...(member.dateOfBirth
-            ? { dateOfBirth: new Date(`${member.dateOfBirth}T00:00:00.000Z`) }
-            : {}),
-          isActive: true,
-          isPrimaryContact: member.isPrimaryContact,
-        })),
-      });
+      if (council.length)
+        await tx.societyCouncilMember.createMany({
+          data: council.map((member) => ({
+            societyId: created.id,
+            seatNumber: member.seatNumber,
+            fullName: member.fullName,
+            position: member.position,
+            seatType: member.seatType,
+            phone: member.phone,
+            email: member.email,
+            age: member.age,
+            profession: member.profession,
+            addressLine: member.addressLine,
+            ...(member.dateOfBirth
+              ? { dateOfBirth: new Date(`${member.dateOfBirth}T00:00:00.000Z`) }
+              : {}),
+            isActive: true,
+            isPrimaryContact: member.isPrimaryContact,
+          })),
+        });
       await tx.platformAuditEvent.create({
         data: {
           actorId: principal.id,
@@ -281,13 +260,15 @@ export class SocietyAdminService {
           targetId: created.id,
           societyId: created.id,
           districtId: created.districtId,
-          detail: `Society ${code} created with grade ${input.grade} and 25 Exco members`,
+          detail: council.length
+            ? `Society ${code} created with grade ${input.grade} and ${council.length} of ${EXCO_SEATS} Exco members`
+            : `Society ${code} created with grade ${input.grade}; Exco not entered yet`,
         },
       });
       return created;
     });
     // NICs are encrypted by the NIC vault; they never go into the audit log.
-    const withNic = input.council.filter((member) => member.nic);
+    const withNic = council.filter((member) => member.nic);
     if (withNic.length) {
       const members = await this.prisma.societyCouncilMember.findMany({
         where: { societyId: society.id },

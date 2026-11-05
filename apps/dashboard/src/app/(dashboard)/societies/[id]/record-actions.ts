@@ -133,10 +133,11 @@ export async function revealMemberNic(societyId: string, memberId: string): Prom
 
 type CouncilSeat = { seatNumber: number; nic?: string } & Record<string, unknown>;
 
+/** The filled Exco seats, 0–25: a partly entered Exco can be saved. */
 function readSeats(form: FormData, field = "council"): CouncilSeat[] | null {
   try {
     const seats = JSON.parse(String(form.get(field) ?? ""));
-    return Array.isArray(seats) && seats.length === 25 ? seats : null;
+    return Array.isArray(seats) && seats.length <= 25 ? seats : null;
   } catch {
     return null;
   }
@@ -163,11 +164,11 @@ async function storeNics(societyId: string, seats: CouncilSeat[], committee: { i
   return failed;
 }
 
-/** V5 Edit Exco: all 25 seats at once. The API checks scope, seat groups and ages. */
+/** V5 Edit Exco: the filled seats, saved together. The API checks scope, seat groups, offices and ages. */
 export async function updateExco(societyId: string, _previous: RecordFormResult, form: FormData): Promise<RecordFormResult> {
   await getDesktopViewer();
   const seats = readSeats(form);
-  if (!seats) return { error: "Every society must have exactly 25 Exco members." };
+  if (!seats) return { error: "The Exco could not be read. Reload the page and try again." };
   let committee: { id: string; seatNumber?: number }[];
   try {
     const record = await platformApi(`/societies/${societyId}/council`, {
@@ -188,12 +189,13 @@ export async function updateExco(societyId: string, _previous: RecordFormResult,
 
 export type CreateSocietyResult = RecordFormResult & { field?: "societyCode" };
 
-/** V5 D05n + D05c: HQ creates the society and its 25 Exco members, then assigns staff (D05a). */
+/**
+ * V5 D05n: HQ creates the society with its basic details, then assigns staff
+ * (D05a). The Society Officer enters the Exco afterwards.
+ */
 export async function createSociety(_previous: CreateSocietyResult, form: FormData): Promise<CreateSocietyResult> {
   const viewer = await getDesktopViewer();
   if (viewer.role !== "HQ_ADMIN") return { error: "Only HQ can create a society record." };
-  const seats = readSeats(form);
-  if (!seats) return { error: "Every society must have exactly 25 Exco members." };
   const text = (name: string) => String(form.get(name) ?? "").trim();
   const number = (name: string) => (text(name) === "" ? undefined : Number(text(name)));
   const body = {
@@ -210,7 +212,6 @@ export async function createSociety(_previous: CreateSocietyResult, form: FormDa
     businessDescription: text("businessDescription") || undefined,
     latitude: number("latitude"),
     longitude: number("longitude"),
-    council: seats,
   };
   let created: { id: string };
   try {

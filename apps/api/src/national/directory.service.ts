@@ -20,6 +20,7 @@ import {
   period,
   staleCutoff,
 } from './national-rules.js';
+import { excoStatus } from '../societies/societies.service.js';
 import { chosenYear } from './national.service.js';
 
 const NONE: Prisma.SocietyWhereInput = { id: { in: [] } };
@@ -47,6 +48,16 @@ export function recordFields(record: {
     record.latitude != null && record.longitude != null,
   ].filter(Boolean).length;
   return { present, total: 8 };
+}
+
+/** The Exco's completion, from the same rules as the society record. */
+function excoFields(members: DirectoryRecord['councilMembers']) {
+  const status = excoStatus(members);
+  return {
+    excoSeatsFilled: status.filledSeats,
+    excoComplete: status.complete,
+    excoMissingOffices: status.missingOffices,
+  };
 }
 
 function figuresAdded(record: DirectoryRecord) {
@@ -204,6 +215,7 @@ export class DirectoryService {
             ? { name: officer.displayName, status: officer.status }
             : null,
           figuresAdded: figuresAdded(record),
+          ...excoFields(record.councilMembers),
           updatedAt: record.updatedAt.toISOString(),
           notUpdatedIn90Days: record.updatedAt.getTime() < cutoff,
         };
@@ -255,6 +267,7 @@ export class DirectoryService {
         (account) => account.role === 'SOCIETY_OFFICER',
       ),
       spcName: spc?.displayName ?? null,
+      ...excoFields(record.councilMembers),
       registrarDocuments: REGISTRAR_DOCUMENT_TYPES.map((documentType) => ({
         documentType,
         uploaded: uploaded.has(documentType),

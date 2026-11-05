@@ -5,7 +5,7 @@ import type { SocietyRecord } from "@sarvodaya-connect/api-contracts";
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { Pill } from "../ui/pill";
-import { formatDate, gradeBadgeClass } from "@/lib/society-record-format";
+import { excoProgress, formatDate, gradeBadgeClass } from "@/lib/society-record-format";
 
 import { RecordTabs, type RecordTab } from "./record-tabs";
 
@@ -25,6 +25,7 @@ export function RecordHeader({
   tabs: RecordTab[];
 }) {
   const base = `/societies/${record.id}`;
+  const exco = excoProgress(record.excoStatus, record.committee);
   const location = [record.societyCode, record.district.nameEn, record.address.dsDivision && `${record.address.dsDivision} DS`]
     .filter(Boolean)
     .join(" · ");
@@ -58,6 +59,11 @@ export function RecordHeader({
                 <Pill tone={record.status === "ACTIVE" ? "on-time" : "inactive"}>
                   <span className="capitalize">{record.status.replaceAll("_", " ").toLowerCase()}</span>
                 </Pill>
+                {!exco.complete && (
+                  <Link className="rounded-pill focus-visible:outline-2" href={`${base}/exco`}>
+                    <Pill tone="fast-target">{exco.label}</Pill>
+                  </Link>
+                )}
                 {record.openGradeRequest && (
                   <Pill tone="fast-target">
                     Grade request {record.openGradeRequest.fromGrade ?? "–"} → {record.openGradeRequest.toGrade}

@@ -22,7 +22,7 @@ How a row was checked:
 | D05x | D05x Society record: Exco | HQ | Desktop | `/societies/[id]/exco` | 3 | Done | Tests: `dashboard/components/dashboard/society-record/society-record.test.tsx` |
 | D05w | D05w Society record: work plan | HQ | Desktop | `/societies/[id]/work-plan` | 4 | Done | Tests: `dashboard/components/dashboard/society-record/society-record.test.tsx`, `api/societies/society-record.service.spec.ts` |
 | D05n | D05n Create a society record | HQ | Desktop | `/societies/new` | 3 | Done | Tests: `dashboard/components/dashboard/society-record/v5-record.test.tsx`, `api/test/db/society-admin.db-spec.ts` |
-| D05c | D05c Create a society: Exco | HQ | Desktop | `/societies/new` | 3 | Done | Tests: `dashboard/components/dashboard/society-record/v5-record.test.tsx`, `api/test/db/society-admin.db-spec.ts` |
+| D05c | D05c Create a society: Exco | HQ | Desktop | `/societies/[id]/exco/edit` | 3 | Done | Deliberate deviation: HQ no longer enters the Exco when creating a society; after D05a the assigned Society Officer (or SPC, DDM or HQ) enters it and can save it partly, and the record shows "Exco incomplete" until all 25 seats are filled. Tests: `dashboard/components/dashboard/society-record/v5-record.test.tsx`, `api/test/db/society-admin.db-spec.ts` |
 | D05a | D05a Assign responsible staff | HQ | Desktop | `/societies/[id]?panel=assign` | 3 | Done | Tests: `dashboard/components/dashboard/society-record/v5-record.test.tsx`, `api/test/db/society-admin.db-spec.ts` |
 | D16 | D16 Accounts | HQ | Desktop | `/accounts` | 2 | Done | Tests: `dashboard/components/dashboard/identity-forms.test.tsx`, `dashboard/lib/accounts.test.ts` |
 | D16i | D16i Create an account | HQ | Desktop | `/accounts` | 2 | Done | Tests: `dashboard/components/dashboard/identity-forms.test.tsx`, `api/test/db/identity.db-spec.ts` |
@@ -138,7 +138,7 @@ How a row was checked:
 | M13 | M13 Documents | Society Officer, SPC | Phone | `society_record/society_record_screen.dart`, `document_upload_screen.dart` | 4 | Done | Tests: `dashboard/components/dashboard/activities/activities.test.tsx`, `mobile/test/document_library_test.dart` |
 | M06h | M06h Change history | All phone roles | Phone | `society_record/society_record_screen.dart` (change history) | 3 | Done | Tests: `mobile/test/society_record_test.dart`, `api/societies/society-record.service.spec.ts` |
 | M07 | M07 Exco members | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Tests: `mobile/test/exco_v5_test.dart` |
-| M07s | M07s Exco: all 25 required | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Named in `mobile/society_record/society_record_screen.dart` |
+| M07s | M07s Exco: 25 seats, incomplete until filled | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Named in `mobile/society_record/society_record_screen.dart` |
 | M07e | M07e Replace or edit a member | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Tests: `mobile/test/exco_v5_test.dart` |
 | M07o | M07o Choose an office bearer | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Tests: `mobile/test/exco_v5_test.dart` |
 | M07v | M07v Exco member | Society Officer, SPC, DDM, DM (M07d) | Phone | `society_record/exco_screens.dart` | 3 | Done | Tests: `mobile/test/exco_v5_test.dart` |
@@ -192,8 +192,8 @@ How a row was checked:
 | M63 | M63 HQ: profit and expenses | HQ | Phone | `national/national_screens.dart` | 5 | Done | Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
 | M64 | M64 HQ: activities | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
 | M65 | M65 HQ: districts | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
-| M66 | M66 HQ: societies | HQ | Phone | `national/national_screens.dart` | 5 | Done | Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
-| M67 | M67 HQ: society summary | HQ | Phone | `national/national_screens.dart` | 5 | Done | Tests: `mobile/test/national_v5_test.dart` |
+| M66 | M66 HQ: societies | HQ | Phone | `national/national_screens.dart` | 5 | Done | HQ can also create a society here (Create society → Assign staff), as on the dashboard; rows show "Exco N of 25" until the Exco is complete. Named in `mobile/national/national_screens.dart`, `mobile/national/national_models.dart` |
+| M67 | M67 HQ: society summary | HQ | Phone | `national/national_screens.dart` | 5 | Done | Shows the Exco state and Assign staff, as on the dashboard. Tests: `mobile/test/national_v5_test.dart` |
 | M67x | M67x HQ: society, figures not added | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |
 | M68 | M68 HQ: map | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |
 | M69a | M69a HQ: dashboard loading | HQ | Phone | `national/national_screens.dart` | 5 | Done | Covered by the PR 5 frame range (e.g. "D40–D49", "M81–M84") in its screens and tests |

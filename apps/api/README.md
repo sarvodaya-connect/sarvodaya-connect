@@ -270,7 +270,7 @@ The existing society registry endpoints continue to serve the dashboard and mobi
 |---|---|
 | `GET /api/v1/societies/membership?year=2026` | Membership summary, category and gender totals for societies in the signed-in user's scope |
 | `PATCH` or `PUT /api/v1/societies/:id/profile` | Create or update permitted society name, address, GPS, establishment date and primary contact fields |
-| `PUT /api/v1/societies/:id/council` | Replace the society's validated 25-seat council snapshot |
+| `PUT /api/v1/societies/:id/council` | Replace the society's council with the filled seats (0–25). A partly entered council can be saved; with all 25 seats every category is full. Each office has at most one holder. The response's `excoStatus.complete` is true only with 25 seats, the categories and exactly one President, Secretary and Treasurer |
 | `PUT /api/v1/societies/:id/membership` | Replace one year's five-category membership snapshot |
 
 These operations use the existing society routes and demo identity guard. HQ Administrators can update any society; Society Officers can update only their assigned society. District Managers can read aggregates for their districts but cannot edit profiles. The API validates GPS bounds and paired coordinates, council seat distribution and membership category counts before writing. PostgreSQL constraints enforce unique seat numbers, unique annual category rows, valid years and nonnegative counts. The `SC-29` local seed retains its existing fictional societies and contacts and adds a fictional 25-member council and 2026 membership snapshot for Example Sunrise Society.

@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsIn,
@@ -34,14 +33,17 @@ export class AssignStaffDto {
   @ValidateIf((_, value) => value !== null) @IsUUID() officerId!: string | null;
 }
 
-/** D05c: an Exco member entered while creating a society, with an optional NIC. */
+/** An Exco member sent with a new society (optional), with an optional NIC. */
 export class NewCouncilMemberDto extends CouncilMemberDto {
   @IsOptional()
   @Matches(/^(?:[0-9]{9}[vVxX]|[0-9]{12})$/, { message: 'Enter a valid NIC' })
   nic?: string;
 }
 
-/** D05n + D05c. */
+/**
+ * D05n: HQ creates a society with its basic details. The Exco is not needed
+ * here: HQ then assigns a Society Officer (D05a), who enters the 25 seats.
+ */
 export class CreateSocietyDto {
   @IsString()
   @Matches(/^[A-Za-z0-9][A-Za-z0-9-]{2,19}$/, {
@@ -60,15 +62,15 @@ export class CreateSocietyDto {
   @IsOptional() @IsString() @MaxLength(1000) businessDescription?: string;
   @IsOptional() @IsLatitude() latitude?: number;
   @IsOptional() @IsLongitude() longitude?: number;
+  /**
+   * Optional, for older clients: Exco seats already known, checked by the same
+   * rules as an Exco update. Leave it out to start with no Exco members.
+   */
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(25, {
-    message: 'Every society must have exactly 25 Exco members',
-  })
-  @ArrayMaxSize(25, {
-    message: 'Every society must have exactly 25 Exco members',
-  })
+  @ArrayMaxSize(25, { message: 'The Exco has 25 seats' })
   @ArrayUnique((member: NewCouncilMemberDto) => member.seatNumber)
   @ValidateNested({ each: true })
   @Type(() => NewCouncilMemberDto)
-  council!: NewCouncilMemberDto[];
+  council?: NewCouncilMemberDto[];
 }

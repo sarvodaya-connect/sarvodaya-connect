@@ -26,6 +26,7 @@ export default async function SocietyExcoPage({ params }: PageProps<"/societies/
       editHref={record.permissions.canEdit ? `/societies/${id}/exco/edit` : undefined}
       members={record.committee}
       revealNic={revealMemberNic.bind(null, id)}
+      status={record.excoStatus}
     />
   );
 }

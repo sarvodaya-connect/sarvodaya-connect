@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import type { CommitteeMember } from "@sarvodaya-connect/api-contracts";
+import type { CommitteeMember, ExcoStatus } from "@sarvodaya-connect/api-contracts";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
+import { excoProgress } from "@/lib/society-record-format";
 
 const dobFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -77,12 +78,17 @@ function NicCell({
   );
 }
 
-/** V5 D05x: the society's 25 Exco members, with NICs masked until shown. */
+/**
+ * V5 D05x: the society's Exco, with NICs masked until shown. The Exco has 25
+ * seats; until they are all filled it is shown as incomplete, with how many
+ * are left. A new society starts with none.
+ */
 export function ExcoTable({
   accessNote,
   editHref,
   members,
   revealNic,
+  status,
 }: {
   /** Why the viewer can see personal details, e.g. "HQ has national access". */
   accessNote: string;
@@ -90,11 +96,13 @@ export function ExcoTable({
   editHref?: string;
   members: CommitteeMember[];
   revealNic: (memberId: string) => Promise<{ nic?: string; error?: string }>;
+  /** The API's completion for this Exco (record.excoStatus). */
+  status?: ExcoStatus;
 }) {
   const active = members
     .filter((member) => member.isActive)
     .sort((a, b) => (a.seatNumber ?? 99) - (b.seatNumber ?? 99));
-  const complete = active.length === 25;
+  const exco = excoProgress(status, members);
   return (
     <>
       <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#c6e2cd] bg-[#eef6ef] px-3 py-2 text-[11px] text-ink-soft">
@@ -105,13 +113,13 @@ export function ExcoTable({
         </span>
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <h3 className="text-[15px] font-bold text-ink">{active.length} of 25 Exco members</h3>
+        <h3 className="text-[15px] font-bold text-ink">{exco.filled} of 25 Exco seats filled</h3>
         <span
           className={`rounded-pill px-2 py-0.5 text-[10px] font-semibold ${
-            complete ? "bg-success-bg text-success-text" : "bg-danger-bg text-danger-text"
+            exco.complete ? "bg-success-bg text-success-text" : "bg-warn-bg text-warn-text"
           }`}
         >
-          {complete ? "✓ Complete" : `${25 - active.length} missing`}
+          {exco.complete ? "✓ Complete" : exco.toFill ? `Incomplete · ${exco.toFill} to fill` : "Incomplete"}
         </span>
         {editHref && (
           <span className="ml-auto flex flex-wrap gap-2.5">
@@ -121,14 +129,25 @@ export function ExcoTable({
             </Link>
             <Link className={primaryButtonClass} href={editHref}>
               <Icon className="size-4" name="clipboard" strokeWidth={2} />
-              Edit Exco
+              {active.length === 0 ? "Add Exco members" : exco.complete ? "Edit Exco" : "Continue the Exco"}
             </Link>
           </span>
         )}
       </div>
+      {!exco.complete && active.length > 0 && (
+        <div className="mt-3 rounded-lg border border-[var(--warn-ring)] bg-warn-bg px-3 py-2 text-[12px] text-warn-text" role="status">
+          <strong className="block">Still missing</strong>
+          <ul className="mt-0.5 list-disc pl-4">
+            {exco.problems.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {active.length === 0 ? (
         <p className="mt-3 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
-          No Exco members have been recorded for this society yet.
+          No Exco members have been entered for this society yet. The Society Officer assigned to it adds the 25 members
+          {editHref ? " and can save them a few at a time." : "."}
         </p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-card border border-line bg-surface">
@@ -167,7 +186,7 @@ export function ExcoTable({
             </tbody>
           </table>
           <p className="border-t border-line-soft px-4 py-2 text-[10px] text-muted">
-            All 25 positions must be filled · ages are worked out from the date of birth · office bearers are chosen from these 25 members · every NIC shown is recorded in the change &amp; access log.
+            {exco.complete ? "Complete: 25 seats and all three office bearers" : `${exco.toFill} of 25 seats still to fill`} · ages are worked out from the date of birth · office bearers are chosen from these members · every NIC shown is recorded in the change &amp; access log.
           </p>
         </div>
       )}

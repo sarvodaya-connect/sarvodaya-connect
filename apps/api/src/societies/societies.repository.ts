@@ -383,8 +383,7 @@ export class SocietiesRepository {
             targetId: id,
             societyId: id,
             districtId: society.districtId,
-            detail:
-              'Council updated; NIC retained only for unchanged member identities',
+            detail: `Council updated: ${input.members.length} of 25 seats filled; NIC retained only for unchanged member identities`,
           },
         });
         return tx.societyCouncilMember.findMany({
