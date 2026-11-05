@@ -231,6 +231,12 @@ export interface DirectorySociety {
   spc: { id: string; name: string } | null;
   societyOfficer: { name: string; status: string } | null;
   figuresAdded: boolean;
+  /** Exco seats filled so far, 0–25. */
+  excoSeatsFilled: number;
+  /** As `ExcoStatus.complete`: 25 seats, the agreed groups and the three office bearers. */
+  excoComplete: boolean;
+  /** Offices nobody holds yet. */
+  excoMissingOffices: ("President" | "Secretary" | "Treasurer")[];
   updatedAt: string;
   notUpdatedIn90Days: boolean;
 }
@@ -263,6 +269,12 @@ export interface SocietyAtAGlance {
   expenses: string | null;
   hasSocietyOfficer: boolean;
   spcName: string | null;
+  /** Exco seats filled so far, 0–25. */
+  excoSeatsFilled: number;
+  /** As `ExcoStatus.complete`: 25 seats, the agreed groups and the three office bearers. */
+  excoComplete: boolean;
+  /** Offices nobody holds yet. */
+  excoMissingOffices: ("President" | "Secretary" | "Treasurer")[];
   registrarDocuments: { documentType: RegistrarDocumentType; uploaded: boolean }[];
   auditReportPastDue: boolean;
   gradeRequest: { fromGrade: string | null; toGrade: string; requestedAt: string } | null;

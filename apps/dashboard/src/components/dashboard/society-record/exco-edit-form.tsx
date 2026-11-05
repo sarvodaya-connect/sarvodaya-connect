@@ -12,7 +12,11 @@ import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { ExcoEditor, excoFromCommittee, excoProblems } from "./exco-editor";
 
-/** Edit Exco and Change office bearers (V5 D05x actions) for one society. */
+/**
+ * Edit Exco and Change office bearers (V5 D05x actions) for one society. The
+ * Society Officer (or anyone else who may edit the record) can save part of the
+ * Exco and finish it later.
+ */
 export function ExcoEditForm({
   action,
   focusOffices,
@@ -33,7 +37,9 @@ export function ExcoEditForm({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-[17px] font-bold text-ink">{focusOffices ? "Change office bearers" : "Edit Exco"}</h3>
-          <p className="text-[12px] text-ink-soft">Saving replaces the 25 seats. A changed member keeps their NIC only if the seat and name stay the same.</p>
+          <p className="text-[12px] text-ink-soft">
+            Save as you go: empty seats are kept for later. A changed member keeps their NIC only if the seat and name stay the same.
+          </p>
         </div>
         <div className="flex gap-2.5">
           <Link className={secondaryButtonClass} href={back}>Cancel</Link>

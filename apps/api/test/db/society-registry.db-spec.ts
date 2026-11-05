@@ -101,11 +101,19 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
       isActive: true,
       isPrimaryContact: index === 0,
     }));
-    await request(app.getHttpServer())
+    // An older-style Exco: 25 seats but only a President. It still saves,
+    // and is reported incomplete until the Secretary and Treasurer are chosen.
+    const legacy = await request(app.getHttpServer())
       .put(`/api/v1/societies/${societyId}/council`)
       .set('X-Demo-User', 'demo-hq-admin')
       .send({ members })
       .expect(200);
+    expect(legacy.body.excoStatus).toMatchObject({
+      filledSeats: 25,
+      complete: false,
+      missingOffices: ['Secretary', 'Treasurer'],
+      problems: ['No Secretary or Treasurer chosen yet.'],
+    });
 
     await request(app.getHttpServer())
       .put(`/api/v1/societies/${societyId}/membership`)
@@ -123,7 +131,8 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
       .expect(200);
 
     const detail = await request(app.getHttpServer())
-      .get(`/api/v1/societies/${societyId}`).set('X-Demo-User', 'demo-hq-admin')
+      .get(`/api/v1/societies/${societyId}`)
+      .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
     expect(detail.body).toMatchObject({
       nameEn: 'Fictional Registry Test Society Updated',
@@ -144,7 +153,8 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
     });
 
     const dashboard = await request(app.getHttpServer())
-      .get(`/api/v1/societies/membership?year=${year}`).set('X-Demo-User', 'demo-hq-admin')
+      .get(`/api/v1/societies/membership?year=${year}`)
+      .set('X-Demo-User', 'demo-hq-admin')
       .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
     expect(
@@ -154,7 +164,8 @@ describe('Society profile, council and membership persistence (PostgreSQL)', () 
     ).toMatchObject({ overallTotal: 171 });
 
     await request(app.getHttpServer())
-      .get('/api/v1/societies?page=1&pageSize=10').set('X-Demo-User', 'demo-hq-admin')
+      .get('/api/v1/societies?page=1&pageSize=10')
+      .set('X-Demo-User', 'demo-hq-admin')
       .expect(200);
   });
 

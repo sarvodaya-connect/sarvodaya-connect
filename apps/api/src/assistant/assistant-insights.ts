@@ -55,7 +55,7 @@ export class AssistantInsights {
         }),
         db.gradeChangeRequest.count({ where: { societyId: society.id, status: 'PENDING' } }),
         db.informationRequestSociety.count({ where: { societyId: society.id, respondedAt: null, request: { dueOn: { lt: day } } } }),
-        db.societyCouncilMember.count({ where: { societyId: society.id, isActive: true, endedOn: null, fullName: { not: '' } } }),
+        db.societyCouncilMember.count({ where: { societyId: society.id, isActive: true, endedOn: null, seatNumber: { gte: 1, lte: 25 }, fullName: { not: '' } } }),
       ]);
       const uploaded = new Set(documents.map((item) => item.documentType));
       const missing = REGISTRAR_DOCUMENT_TYPES.filter((type) => !uploaded.has(type)).map((type) => documentLabels[type]);

@@ -101,10 +101,13 @@ export class CouncilMemberDto {
   @IsBoolean() isPrimaryContact!: boolean;
 }
 
+/**
+ * The Exco seats entered so far: none up to all 25. A seat left out is empty.
+ * Saving replaces the society's seats (see assertValidCouncil for the rules).
+ */
 export class SocietyCouncilUpdateDto {
   @IsArray()
-  @ArrayMinSize(25)
-  @ArrayMaxSize(25)
+  @ArrayMaxSize(25, { message: 'The Exco has 25 seats' })
   @ArrayUnique((member: CouncilMemberDto) => member.seatNumber)
   @ValidateNested({ each: true })
   @Type(() => CouncilMemberDto)

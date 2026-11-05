@@ -1,5 +1,7 @@
 import type {
   ActorReference,
+  ExcoStatus,
+  SocietyRecord,
   SocietyGrade,
   SocietyHistoryCategory,
   UserRole,
@@ -10,6 +12,42 @@ import type {
  * The dashboard imports only types from the shared contracts, so the few
  * values it needs are repeated here and checked against those types.
  */
+
+/**
+ * The Exco's completion as the API reports it (`excoStatus`): complete only
+ * with 25 seats, the agreed seat groups and exactly one President, Secretary
+ * and Treasurer. The dashboard shows this; it does not work completion out
+ * from the seat count. A new society starts with no Exco, so zero and partial
+ * Excos are normal.
+ */
+export function excoProgress(status: ExcoStatus | undefined, committee: SocietyRecord["committee"] = []) {
+  // An older API without excoStatus: count the seats, and never claim complete.
+  const filled =
+    status?.filledSeats ??
+    new Set(committee.filter((member) => member.isActive && member.seatNumber).map((member) => member.seatNumber)).size;
+  const toFill = Math.max(0, 25 - filled);
+  const complete = status?.complete ?? false;
+  const missingOffices = status?.missingOffices ?? [];
+  const problems = status?.problems ?? (toFill ? [`${toFill} of 25 seats are still to fill.`] : []);
+  return {
+    filled,
+    toFill,
+    complete,
+    missingOffices,
+    /** What is still missing, in plain words. Empty when complete. */
+    problems,
+    /** "Exco not entered yet", "Exco incomplete · 12 of 25", "Exco incomplete · no Treasurer" or "Exco complete". */
+    label: complete
+      ? "Exco complete"
+      : filled === 0
+        ? "Exco not entered yet"
+        : toFill > 0
+          ? `Exco incomplete · ${filled} of 25`
+          : missingOffices.length
+            ? `Exco incomplete · no ${missingOffices.join(", ")}`
+            : "Exco incomplete · needs checking",
+  };
+}
 
 export const SOCIETY_GRADE_LABELS = {
   A: "Strong",

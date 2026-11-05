@@ -33,8 +33,9 @@ String initialsOf(String name) => name
     .map((part) => part[0].toUpperCase())
     .join();
 
-/// The 25 seats with one seat replaced or one office moved. An office is held
-/// by one member, so its previous holder becomes a member (V5 M07o).
+/// The filled seats with one seat replaced, one empty seat filled, or one
+/// office moved. An office is held by one member, so its previous holder
+/// becomes a member (V5 M07o).
 List<Map<String, Object?>> councilWith(
   List<ExcoMember> exco, {
   ExcoMember? replacement,
@@ -45,6 +46,10 @@ List<Map<String, Object?>> councilWith(
   return [
     for (final member in [
       ...exco,
+      // Filling an empty seat adds it.
+      if (replacement != null &&
+          !exco.any((seat) => seat.seatNumber == replacement.seatNumber))
+        replacement,
     ]..sort((a, b) => a.seatNumber.compareTo(b.seatNumber)))
       () {
         var seat = member.seatNumber == replacement?.seatNumber
@@ -101,7 +106,7 @@ class ExcoMemberScreen extends StatelessWidget {
   }
 
   Future<void> _confirmReplace(BuildContext context) async {
-    // V5 M07x: a member is replaced, never removed, so the Exco keeps 25.
+    // V5 M07x: a member is replaced, never removed, so a filled seat stays filled.
     final go = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -121,7 +126,7 @@ class ExcoMemberScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'The Exco must always have 25 members, so a member can\'t just be removed. Enter the person who takes this place — both changes are saved together.',
+                'A member can\'t just be removed from a filled seat. Enter the person who takes this place — both changes are saved together.',
                 style: TextStyle(color: AppColors.inkBody, height: 1.4),
               ),
               const SizedBox(height: 6),
@@ -289,7 +294,9 @@ class ExcoMemberScreen extends StatelessWidget {
   }
 }
 
-/// V5 M07e: replace a member (a new person in the seat) or correct their details.
+/// V5 M07e: add a member to an empty seat, replace a member (a new person in
+/// the seat) or correct their details. Each member is saved on its own, so the
+/// Society Officer can enter the Exco a few members at a time.
 class ExcoMemberFormScreen extends StatefulWidget {
   const ExcoMemberFormScreen({
     super.key,
@@ -302,6 +309,7 @@ class ExcoMemberFormScreen extends StatefulWidget {
   final ExcoMember member;
 
   /// true: a new person takes the seat (NIC required). false: edit details.
+  /// An empty seat ([ExcoMember.isEmptySeat]) is always a new person.
   final bool replace;
 
   @override
@@ -310,6 +318,7 @@ class ExcoMemberFormScreen extends StatefulWidget {
 
 class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
   final _form = GlobalKey<FormState>();
+  bool get _adding => widget.member.isEmptySeat;
   late final _nic = TextEditingController();
   late final _name = TextEditingController(
     text: widget.replace ? '' : widget.member.fullName,
@@ -440,11 +449,19 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.replace ? 'Replace Exco member' : 'Edit Exco member'),
             Text(
-              widget.replace
-                  ? 'Member ${member.seatNumber} of 25 · replacing ${member.fullName}'
-                  : 'Member ${member.seatNumber} of 25',
+              _adding
+                  ? 'Add Exco member'
+                  : widget.replace
+                  ? 'Replace Exco member'
+                  : 'Edit Exco member',
+            ),
+            Text(
+              _adding
+                  ? 'Seat ${member.seatNumber} of $excoSeats · ${seatGroupLabels[member.seatType] ?? member.seatType}'
+                  : widget.replace
+                  ? 'Member ${member.seatNumber} of $excoSeats · replacing ${member.fullName}'
+                  : 'Member ${member.seatNumber} of $excoSeats',
               style: RecordStyle.caption,
             ),
           ],
@@ -545,7 +562,9 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
               ],
               onChanged: (value) => setState(() => _office = value!),
             ),
-            if (officeBearers.contains(_office) && _office != member.position)
+            if (officeBearers.contains(_office) &&
+                _office != member.position &&
+                widget.record.exco.any((other) => other.position == _office))
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(

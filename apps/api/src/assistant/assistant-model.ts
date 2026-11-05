@@ -1,16 +1,6 @@
 import AnthropicBedrock from '@anthropic-ai/bedrock-sdk';
 import type Anthropic from '@anthropic-ai/sdk';
 import { ConfigService } from '@nestjs/config';
-import type { PrismaService } from '../prisma/prisma.service.js';
-import { reserveAssistantCall } from './assistant-budget.js';
-import { scrubAssistantText } from './assistant-privacy.js';
-
-const scrubPayload = (value: unknown): unknown => {
-  if (typeof value === 'string') return scrubAssistantText(value);
-  if (Array.isArray(value)) return value.map(scrubPayload);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'cache_control').map(([key, item]) => [key, scrubPayload(item)]));
-  return value;
-};
 
 export type ModelRequest = Omit<Anthropic.MessageCreateParamsNonStreaming, 'model'>;
 
@@ -21,6 +11,12 @@ export interface AssistantModel {
 }
 
 export const ASSISTANT_MODEL = Symbol('ASSISTANT_MODEL');
+
+/** Below the API's 29-second Lambda timeout, so a slow call is reconciled, not cut off. */
+export const MODEL_TIMEOUT_MS = 25_000;
+
+export const DEFAULT_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
+export const DEFAULT_REGION = 'ap-southeast-1';
 
 export class AssistantNotConfiguredError extends Error {}
 
@@ -43,39 +39,23 @@ export class BedrockAssistantModel implements AssistantModel {
 
   constructor(
     readonly modelId: string,
-    private readonly awsRegion: string,
-    private readonly reserve?: () => Promise<void>,
+    awsRegion: string,
   ) {
     // apiKey null: never pick up a stray AWS_BEARER_TOKEN_BEDROCK; sign with IAM instead.
-    this.client = new AnthropicBedrock({ awsRegion, apiKey: null, maxRetries: 0, timeout: 20_000, logLevel: 'off' });
+    // maxRetries 0: an SDK retry after a timeout could be billed twice under one
+    // reservation of the spending limit (issue #96). Asking again reserves again.
+    this.client = new AnthropicBedrock({ awsRegion, apiKey: null, maxRetries: 0, timeout: MODEL_TIMEOUT_MS, logLevel: 'off' });
   }
 
-  async createMessage(request: ModelRequest, signal?: AbortSignal): Promise<Anthropic.Message> {
-    if (this.modelId !== 'global.anthropic.claude-haiku-5-5' || this.awsRegion !== 'ap-southeast-1' || !this.reserve) {
-      throw new AssistantNotConfiguredError('SarvoAI requires its reviewed model and spending gate');
-    }
-    if (Buffer.byteLength(JSON.stringify(request), 'utf8') > 65_536 || !Number.isInteger(request.max_tokens) || request.max_tokens < 1 || request.max_tokens > 2048) {
-      throw new Error('SarvoAI request exceeds pilot limits');
-    }
-    const safe = scrubPayload(request) as ModelRequest;
-    if (Buffer.byteLength(JSON.stringify(safe), 'utf8') > 65_536) throw new Error('SarvoAI sanitized request exceeds pilot limits');
-    signal?.throwIfAborted();
-    await this.reserve();
-    signal?.throwIfAborted();
-    // No caller-controlled tier, model, cache settings or extended thinking.
-    return this.client.messages.create({
-      model: this.modelId, max_tokens: 2048,
-      system: safe.system, tools: safe.tools, messages: safe.messages,
-      output_config: safe.output_config, thinking: { type: 'disabled' },
-    }, { signal });
+  createMessage(request: ModelRequest, signal?: AbortSignal): Promise<Anthropic.Message> {
+    return this.client.messages.create({ ...request, model: this.modelId }, { signal });
   }
 }
 
-export function assistantModelFromConfig(config: ConfigService, prisma?: PrismaService): AssistantModel {
+export function assistantModelFromConfig(config: ConfigService): AssistantModel {
   if (config.get<string>('SARVOAI_ENABLED') !== 'true') return new DisabledAssistantModel();
   return new BedrockAssistantModel(
-    config.get<string>('SARVOAI_MODEL_ID') ?? 'global.anthropic.claude-haiku-5-5',
-    config.get<string>('SARVOAI_AWS_REGION') ?? 'ap-southeast-1',
-    () => reserveAssistantCall(config, prisma),
+    config.get<string>('SARVOAI_MODEL_ID') ?? DEFAULT_MODEL_ID,
+    config.get<string>('SARVOAI_AWS_REGION') ?? DEFAULT_REGION,
   );
 }

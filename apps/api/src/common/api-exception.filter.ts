@@ -23,7 +23,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
             ? 'NOT_FOUND'
             : status === 409
               ? 'CONFLICT'
-              : 'INTERNAL_ERROR';
+              : status === 429
+                ? 'LIMIT_REACHED'
+                : 'INTERNAL_ERROR';
     const message = Array.isArray(messages) ? 'Request validation failed' : typeof messages === 'string' ? messages : status === 500 ? 'Internal server error' : 'Request failed';
     const details = Array.isArray(messages) ? messages.map((m: unknown) => ({ field: typeof m === 'string' ? m.split(' ')[0] : 'request', messages: [String(m)] })) : undefined;
     const header = request.headers['x-request-id'];

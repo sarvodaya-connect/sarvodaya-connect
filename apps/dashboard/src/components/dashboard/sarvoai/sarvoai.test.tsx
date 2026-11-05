@@ -75,6 +75,27 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(within(recent).getByRole("button", { name: /What was the average profit/ })).toBeInTheDocument();
   });
 
+  it("shows backend source links and timestamps and filters unsafe destinations", async () => {
+    askSarvoAi.mockResolvedValue({ ok: true, sample: false, answer: answer({
+      details: { recordsUsed: ["Fictional profile"], sources: [
+        { label: "Fictional profile", href: "/societies/00000000-0000-4000-8000-000000000001", updatedAt: "2026-11-03T04:35:00.000Z" },
+        { label: "Requests", href: "/requests" },
+        { label: "Unsafe external", href: "https://example.invalid" },
+        { label: "Unsafe script", href: "javascript:alert(1)" },
+        { label: "Unsafe relative", href: "//example.invalid" },
+      ] },
+    }) });
+    const user = userEvent.setup();
+    renderChat();
+    await ask(user, "Fictional overview?");
+    await user.click(await screen.findByRole("button", { name: "How was this answered?" }));
+    const dialog = within(screen.getByRole("dialog", { name: "How was this answered?" }));
+    expect(dialog.getByRole("link", { name: "Fictional profile" })).toHaveAttribute("href", "/societies/00000000-0000-4000-8000-000000000001");
+    expect(dialog.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
+    expect(dialog.getByText(/Record updated:/)).toBeInTheDocument();
+    expect(dialog.queryByRole("link", { name: /Unsafe/ })).not.toBeInTheDocument();
+  });
+
   it("sends earlier turns with a follow-up (D45)", async () => {
     askSarvoAi.mockResolvedValueOnce({ ok: true, sample: false, answer: answer({ summary: "Average was LKR 298,400." }) });
     askSarvoAi.mockResolvedValueOnce({ ok: true, sample: false, answer: answer({ summary: "Pahala Kosgama SSS had the highest." }) });
@@ -132,10 +153,30 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(askSarvoAi).toHaveBeenCalledTimes(2);
   });
 
+  it("says SarvoAI is paused for a spending review and offers no retry", async () => {
+    const message = "SarvoAI is paused until its spending settings have been reviewed. Society records are not affected, and you can still find the figures in Reports.";
+    askSarvoAi.mockResolvedValue({ ok: false, status: 503, message });
+    renderChat("Average profit?");
+    expect(await screen.findByText("SarvoAI is paused")).toBeInTheDocument();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+  });
+
   it("says when the environment has SarvoAI switched off", async () => {
     askSarvoAi.mockResolvedValue({ ok: false, status: 503, message: "SarvoAI is not switched on for this environment" });
     renderChat("Average profit?");
     expect(await screen.findByText(/not switched on for this environment/)).toBeInTheDocument();
+  });
+
+  it("explains the monthly spending limit and offers no retry", async () => {
+    const message = "SarvoAI has reached its spending limit for this month. It will be available again on 1 December 2026 (5:30 a.m. Sri Lanka time).";
+    askSarvoAi.mockResolvedValue({ ok: false, status: 429, message });
+    renderChat("Average profit?");
+    expect(await screen.findByText("SarvoAI has reached this month’s limit")).toBeInTheDocument();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Reports" })).toHaveAttribute("href", "/reports");
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.queryByText("SarvoAI isn’t available right now")).not.toBeInTheDocument();
   });
 
   it("shows nothing when the API refuses the account", async () => {

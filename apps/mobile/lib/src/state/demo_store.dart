@@ -1,6 +1,8 @@
 import '../home/home_api.dart';
 import '../national/demo_national_api.dart';
 import '../national/national_api.dart';
+import '../society_admin/society_admin_api.dart'
+    show DemoSocietyAdminApi, HttpSocietyAdminApi, SocietyAdminApi;
 import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
@@ -77,6 +79,7 @@ class DemoStore extends ChangeNotifier {
     DocumentUploadService? uploadService,
     SocietyRecordApi? societyRecordApi,
     NationalApi? nationalApi,
+    SocietyAdminApi? societyAdminApi,
     SarvoAiApi? sarvoAiApi,
     HomeApi? homeApi,
     DistrictAccessApi? districtAccessApi,
@@ -106,6 +109,11 @@ class DemoStore extends ChangeNotifier {
         (demoMode
             ? DemoNationalApi(user: () => _user, delay: loadDelay)
             : HttpNationalApi(identityApi));
+    societyAdmin =
+        societyAdminApi ??
+        (demoMode
+            ? const DemoSocietyAdminApi()
+            : HttpSocietyAdminApi(identityApi));
     sarvoAi =
         sarvoAiApi ??
         (demoMode
@@ -162,6 +170,10 @@ class DemoStore extends ChangeNotifier {
 
   /// V5 PR 5 HQ National Dashboard (M05h, M61–M69): HQ only on the server.
   late final NationalApi national;
+
+  /// HQ creates a society and assigns its staff (V5 D05n, D05a): HQ only on
+  /// the server.
+  late final SocietyAdminApi societyAdmin;
 
   /// V5 PR 9 SarvoAI (M80–M89): HQ only on the server.
   late final SarvoAiApi sarvoAi;

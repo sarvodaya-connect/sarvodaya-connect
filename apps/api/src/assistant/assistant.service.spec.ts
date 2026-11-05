@@ -1,4 +1,4 @@
-import { ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,7 +8,9 @@ import { REQUIRED_ROLES } from '../auth/require-roles.decorator.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type Anthropic from '@anthropic-ai/sdk';
 
-import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel } from './assistant-model.js';
+import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, MODEL_TIMEOUT_MS } from './assistant-model.js';
+import { assertBillableRequest, SpendingBlockedError } from './assistant-cost.js';
+import { type AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
 import { AssistantService } from './assistant.service.js';
@@ -28,8 +30,10 @@ function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content:
   const run = vi.fn().mockResolvedValue(outcome);
   const auditCreate = vi.fn().mockResolvedValue({});
   const prisma = { platformAuditEvent: { create: auditCreate } } as unknown as PrismaService;
-  const service = new AssistantService(prisma, { run } as unknown as AssistantTools, model);
-  return { service, createMessage, run, auditCreate };
+  const reservation = { id: 'reservation-1' };
+  const spending = { reserve: vi.fn().mockResolvedValue(reservation), settle: vi.fn().mockResolvedValue(undefined), failed: vi.fn().mockResolvedValue(undefined) };
+  const service = new AssistantService(prisma, { run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
+  return { service, createMessage, run, auditCreate, spending, reservation };
 }
 
 const averageOutcome: ToolOutcome = {
@@ -92,8 +96,10 @@ describe('AssistantService', () => {
     await expect(garbled.service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(ServiceUnavailableException);
 
     const prisma = { platformAuditEvent: { create: vi.fn() } } as unknown as PrismaService;
-    const off = new AssistantService(prisma, { run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel());
+    const reserve = vi.fn();
+    const off = new AssistantService(prisma, { run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel(), { reserve } as unknown as AssistantSpendingService);
     await expect(off.ask(hq, 'Average profit?', [], now)).rejects.toThrow('not switched on');
+    expect(reserve).not.toHaveBeenCalled();
   });
 
   it('stops after a fixed number of tool rounds', async () => {
@@ -136,6 +142,205 @@ describe('SarvoAI data limits (V5 PR 10)', () => {
     const error = await service.ask(hq, 'Average profit?', [], now).catch((caught: unknown) => caught as Error);
     expect(error).toBeInstanceOf(ServiceUnavailableException);
     expect(error.message).toBe('SarvoAI is not available right now. Your question was kept; try again in a minute.');
+  });
+});
+
+describe('SarvoAI spending limit (issue #96)', () => {
+  const usage = { input_tokens: 10, output_tokens: 5 };
+  const billed = (answer: object) => ({ ...final(answer), usage }) as unknown as Anthropic.Message;
+
+  it('reserves before each model call and settles after it', async () => {
+    const { service, createMessage, spending, reservation } = setup([
+      { ...toolUse('list_districts', {}), usage } as unknown as Anthropic.Message,
+      billed({ kind: 'ANSWER', summary: 'Done.', options: [] }),
+    ]);
+    const order: string[] = [];
+    spending.reserve.mockImplementation(async () => (order.push('reserve'), reservation));
+    spending.settle.mockImplementation(async () => void order.push('settle'));
+
+    await service.ask(hq, 'Average profit?', [], now);
+
+    expect(order).toEqual(['reserve', 'settle', 'reserve', 'settle']);
+    expect(spending.reserve).toHaveBeenCalledWith('fake', expect.objectContaining({ max_tokens: 2048 }));
+    expect(spending.settle).toHaveBeenCalledWith(reservation, usage);
+    expect(spending.reserve.mock.invocationCallOrder[0]).toBeLessThan(createMessage.mock.invocationCallOrder[0]);
+  });
+
+  it('refuses before calling the model once the limit is reached, and audits it', async () => {
+    const { service, createMessage, spending, auditCreate } = setup([]);
+    spending.reserve.mockRejectedValue(new SpendingLimitReachedException(now));
+
+    const error = await service.ask(hq, 'Average profit?', [], now).catch((caught: unknown) => caught as SpendingLimitReachedException);
+
+    expect(error).toBeInstanceOf(SpendingLimitReachedException);
+    expect((error as SpendingLimitReachedException).getStatus()).toBe(429);
+    expect((error as SpendingLimitReachedException).message).toContain('1 December 2026');
+    expect(createMessage).not.toHaveBeenCalled();
+    expect(auditCreate.mock.calls[0][0].data.detail).toContain('SPENDING_LIMIT');
+  });
+
+  it('stops part-way through a question when a later call would pass the limit', async () => {
+    const { service, createMessage, spending, reservation } = setup([{ ...toolUse('list_districts', {}), usage } as unknown as Anthropic.Message]);
+    spending.reserve.mockResolvedValueOnce(reservation).mockRejectedValueOnce(new SpendingLimitReachedException(now));
+    await expect(service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(SpendingLimitReachedException);
+    expect(createMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands a failed call to the ledger and does not retry it', async () => {
+    const { service, createMessage, spending, reservation } = setup([]);
+    const failure = Object.assign(new Error('Request timed out.'), { status: undefined });
+    createMessage.mockRejectedValueOnce(failure);
+    await expect(service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(ServiceUnavailableException);
+    expect(spending.failed).toHaveBeenCalledWith(reservation, failure);
+    expect(spending.settle).not.toHaveBeenCalled();
+    expect(createMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses the call if the ledger cannot reserve', async () => {
+    const { service, createMessage, spending } = setup([]);
+    spending.reserve.mockRejectedValue(new ServiceUnavailableException('Database temporarily unavailable'));
+    await expect(service.ask(hq, 'Average profit?', [], now)).rejects.toThrow(ServiceUnavailableException);
+    expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('never reaches the ledger for a role other than HQ', async () => {
+    const { service, spending } = setup([]);
+    await expect(service.ask({ ...hq, roles: ['DISTRICT_MANAGER'] }, 'Average profit?', [], now)).rejects.toThrow(ForbiddenException);
+    expect(spending.reserve).not.toHaveBeenCalled();
+  });
+
+  it('keeps the question and the provider message out of the logs', async () => {
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const { service, createMessage } = setup([]);
+    createMessage.mockRejectedValueOnce(Object.assign(new Error('ValidationException: echoed Fictional private question'), { status: 400 }));
+    await expect(service.ask(hq, 'Fictional private question', [], now)).rejects.toThrow(ServiceUnavailableException);
+    const text = JSON.stringify(logged.mock.calls);
+    expect(text).toContain('status 400');
+    expect(text).not.toContain('Fictional private question');
+    logged.mockRestore();
+  });
+
+  it('turns thinking off, and every real request passes the billing check', async () => {
+    const { service, createMessage } = setup([
+      { ...toolUse('list_districts', {}), usage } as unknown as Anthropic.Message,
+      billed({ kind: 'ANSWER', summary: 'Done.', options: [] }),
+    ]);
+    await service.ask(hq, 'Average profit?', [{ role: 'user', text: 'Earlier' }, { role: 'assistant', text: 'Reply' }], now);
+    expect(createMessage).toHaveBeenCalledTimes(2);
+    for (const [request] of createMessage.mock.calls) {
+      expect(request.thinking).toEqual({ type: 'disabled' });
+      expect(() => assertBillableRequest(request)).not.toThrow();
+    }
+  });
+
+  it('says SarvoAI is paused, without calling the model, when no safe limit can be set', async () => {
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const { service, createMessage, spending, auditCreate } = setup([]);
+    spending.reserve.mockRejectedValue(new SpendingBlockedError('SARVOAI_PRICING_APPROVAL has expired'));
+
+    const error = (await service.ask(hq, 'Fictional private question', [], now).catch((caught: unknown) => caught)) as Error;
+
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    expect(error.message).toContain('paused');
+    expect(error.message).not.toContain('SARVOAI_PRICING_APPROVAL');
+    expect(createMessage).not.toHaveBeenCalled();
+    expect(auditCreate.mock.calls[0][0].data.detail).toContain('SPENDING_REVIEW');
+    const text = JSON.stringify(logged.mock.calls);
+    expect(text).toContain('SARVOAI_PRICING_APPROVAL has expired');
+    expect(text).not.toContain('Fictional private question');
+    logged.mockRestore();
+  });
+
+  it('turns off the SDK retries, which could bill twice under one reservation', () => {
+    const model = new BedrockAssistantModel('global.anthropic.claude-haiku-5-5', 'ap-southeast-1');
+    expect(model['client'].maxRetries).toBe(0);
+    expect(model['client'].timeout).toBe(MODEL_TIMEOUT_MS);
+    expect(MODEL_TIMEOUT_MS).toBeLessThan(29_000);
+  });
+});
+
+describe('consolidated privacy, tools and spending', () => {
+  it('reserves the exact scrubbed payload that reaches the model, once per call', async () => {
+    const { service, spending, createMessage, auditCreate } = setup([
+      final({ kind: 'ANSWER', summary: 'Contact a@b.co', options: ['Email a@b.co'] }),
+    ]);
+    const answer = await service.ask(hq, 'Email a@b.co', [{ role: 'user', text: 'password=fixture-secret' }], now);
+    const reserved = spending.reserve.mock.calls[0][1];
+    expect(createMessage.mock.calls[0][0]).toBe(reserved);
+    expect(JSON.stringify(reserved)).toContain('[REDACTED EMAIL]');
+    expect(JSON.stringify(reserved)).not.toContain('fixture-secret');
+    expect(JSON.stringify(reserved)).not.toContain('a@b.co');
+    expect(createMessage.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    expect(reserved).toMatchObject({ max_tokens: 2048, thinking: { type: 'disabled' } });
+    expect(spending.reserve).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(answer)).not.toContain('a@b.co');
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('Email a@b.co');
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('fixture-secret');
+  });
+
+  it.each(['limit', 'review'])('does not audit the prompt on a spending %s refusal', async (kind) => {
+    const { service, spending, auditCreate, createMessage } = setup([]);
+    spending.reserve.mockRejectedValue(kind === 'limit' ? new SpendingLimitReachedException(now) : new SpendingBlockedError('Approval expired'));
+    await expect(service.ask(hq, 'Fictional confidential question', [], now)).rejects.toThrow();
+    expect(createMessage).not.toHaveBeenCalled();
+    expect(JSON.stringify(auditCreate.mock.calls)).not.toContain('Fictional confidential question');
+    expect(auditCreate.mock.calls[0][0].data.detail).toContain(kind === 'limit' ? 'SPENDING_LIMIT' : 'SPENDING_REVIEW');
+  });
+
+  it('rejects an oversized scrubbed payload before reserving or calling the model', async () => {
+    const { service, spending, createMessage } = setup([]);
+    await expect(service.ask(hq, 'x'.repeat(66_000), [], now)).rejects.toThrow('paused');
+    expect(spending.reserve).not.toHaveBeenCalled();
+    expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps source evidence from multiple tools and the latest tool table', async () => {
+    const first = { content: '{}', answer: { details: { recordsUsed: ['Profile'], sources: [{ label: 'Profile', href: '/societies/00000000-0000-4000-8000-000000000001' }] } } };
+    const last = { content: '{}', answer: { table: { columns: ['Queue'], rows: [['Pending']], totalRows: 1 }, details: { recordsUsed: ['Queues'], sources: [{ label: 'Requests', href: '/requests' }] } } };
+    const { service, run } = setup([
+      toolUse('get_society_overview', { societyCode: 'TEST-A', financialYear: 2025 }),
+      toolUse('list_outstanding_work', { district: '' }),
+      final({ kind: 'ANSWER', summary: 'Recorded results.', options: [] }),
+    ]);
+    run.mockResolvedValueOnce(first).mockResolvedValueOnce(last);
+    const answer = await service.ask(hq, 'Fictional overview and work?', [], now);
+    expect(answer.table).toEqual(last.answer.table);
+    expect(answer.details.recordsUsed).toEqual(['Profile', 'Queues']);
+    expect(answer.details.sources).toEqual([...first.answer.details.sources, ...last.answer.details.sources]);
+  });
+
+  it('does not execute an unapproved tool or more than four tools per round', async () => {
+    for (const content of [
+      [{ type: 'tool_use', id: 'bad', name: 'arbitrary_sql', input: {} }],
+      Array.from({ length: 5 }, (_, i) => ({ type: 'tool_use', id: `call-${i}`, name: 'list_districts', input: {} })),
+    ]) {
+      const { service, run } = setup([message('tool_use', content)]);
+      await expect(service.ask(hq, 'Fictional question', [], now)).rejects.toThrow();
+      expect(run).not.toHaveBeenCalled();
+    }
+  });
+
+  it('does not call the provider after cancellation during reservation and keeps the attempt counted', async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    const { service, spending, createMessage, reservation } = setup([]);
+    spending.reserve.mockImplementation(async () => { controller.abort(); return reservation; });
+    try {
+      await expect(service.ask(hq, 'Fictional question', [], now)).rejects.toThrow();
+      expect(createMessage).not.toHaveBeenCalled();
+      expect(spending.failed).toHaveBeenCalledWith(reservation, expect.any(Error));
+    } finally { timeout.mockRestore(); }
+  });
+
+  it('forwards the cancellation signal to the SDK without changing the reserved request', async () => {
+    const model = new BedrockAssistantModel('global.anthropic.claude-haiku-5-5', 'ap-southeast-1');
+    const sent = vi.spyOn(model['client'].messages, 'create').mockResolvedValue(final({ kind: 'ANSWER' }) as never);
+    const signal = AbortSignal.timeout(22_000);
+    const payload = { max_tokens: 2048, thinking: { type: 'disabled' }, messages: [{ role: 'user', content: 'Fictional' }] } as Parameters<AssistantModel['createMessage']>[0];
+    await model.createMessage(payload, signal);
+    expect(sent).toHaveBeenCalledWith({ ...payload, model: model.modelId }, { signal });
+    expect(model['client'].logLevel).toBe('off');
+    sent.mockRestore();
   });
 });
 

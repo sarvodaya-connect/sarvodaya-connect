@@ -408,6 +408,33 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
     final error = turn.error;
     if (error != null) {
       if (error.status == 400) return _Box(child: Text(error.message));
+      // Issue #96: the API's own wording. Asking again cannot help, so no retry.
+      final paused = error.status == 503 && error.message.contains('paused');
+      if (error.status == 429 || paused) {
+        return _Box(
+          border: const Color(0xFFECD9A0),
+          colour: const Color(0xFFFFFAF0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                paused
+                    ? 'SarvoAI is paused'
+                    : 'SarvoAI has reached this month’s limit',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                error.message,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.inkBody,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
       return _Box(
         border: const Color(0xFFF0CFCB),
         child: Column(

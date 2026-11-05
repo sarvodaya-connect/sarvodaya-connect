@@ -11,3 +11,13 @@ export function scrubAssistantText(value: string): string {
     .replace(/\b(?:\d{9}[vVxX]|\d{12})\b/g, '[REDACTED IDENTIFIER]')
     .replace(/(?:\+\d[\d ()-]{7,}\d|\b0\d{9}\b)/g, '[REDACTED PHONE]');
 }
+
+/** Scrub every string in the exact model request before the spending ledger measures it. */
+export function scrubAssistantPayload(value: unknown): unknown {
+  if (typeof value === 'string') return scrubAssistantText(value);
+  if (Array.isArray(value)) return value.map(scrubAssistantPayload);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, scrubAssistantPayload(item)]));
+  }
+  return value;
+}

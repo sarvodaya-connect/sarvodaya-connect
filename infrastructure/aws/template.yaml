@@ -47,17 +47,21 @@ Parameters:
     Type: String
     AllowedValues: ['false', 'true']
     Default: 'false'
-  SarvoAiPriceReviewUntil:
-    Type: String
-    Default: ''
-    AllowedPattern: '^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-    Description: Expiry (UTC YYYY-MM-DD, at most 31 days ahead) of owner review confirming the documented standard-tier pricing envelope and fictional-data global routing
   SarvoAiModelId:
     Type: String
     Default: global.anthropic.claude-haiku-5-5
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
+  SarvoAiMonthlyLimitUsd:
+    Type: String
+    AllowedPattern: '^[0-9]{1,6}(\.[0-9]{1,6})?$'
+    Default: '20'
+    Description: Application spending limit for SarvoAI per UTC month. Not an AWS billing cap.
+  SarvoAiPricingApproval:
+    Type: String
+    Default: ''
+    Description: Reviewed Bedrock prices for this model and Region as one line of JSON (docs/sarvoai-aws-setup.md). Empty, invalid or expired refuses every model call.
 
 Rules:
   ExistingStageSecrets:
@@ -67,15 +71,15 @@ Rules:
         AssertDescription: Staging and production require the database secret ARN
       - Assert: !Not [!Equals [!Ref NicKeySecretArn, '']]
         AssertDescription: Staging and production require the NIC key secret ARN
-  TestAiPilot:
+  TestAiDisabled:
     RuleCondition: !Equals [!Ref Stage, test]
     Assertions:
-      - Assert: !Or [!Equals [!Ref SarvoAiEnabled, 'false'], !Not [!Equals [!Ref SarvoAiPriceReviewUntil, '']]]
-        AssertDescription: Test SarvoAI requires a current pricing and fictional-data global-routing review before enablement
-      - Assert: !Equals [!Ref SarvoAiModelId, global.anthropic.claude-haiku-5-5]
-        AssertDescription: The test spending envelope covers only the reviewed Haiku 5.5 global profile
-      - Assert: !Equals [!Ref SarvoAiRegion, ap-southeast-1]
-        AssertDescription: The test pilot must invoke from Singapore
+      - Assert: !Equals [!Ref SarvoAiEnabled, 'false']
+        AssertDescription: Keep test SarvoAI disabled until a reviewed application monthly spending cap is implemented
+  AiPricingApproved:
+    Assertions:
+      - Assert: !Or [!Equals [!Ref SarvoAiEnabled, 'false'], !Not [!Equals [!Ref SarvoAiPricingApproval, '']]]
+        AssertDescription: SarvoAI cannot be enabled without a reviewed pricing approval
 
 Conditions:
   IsTest: !Equals [!Ref Stage, test]
@@ -131,10 +135,11 @@ Resources:
           DOCUMENT_MAX_UPLOAD_BYTES: '10000000'
           DISTRICT_ACCESS_MAX_DAYS: '14'
           SARVOAI_ENABLED: !Ref SarvoAiEnabled
-          SARVOAI_PRICE_REVIEW_UNTIL: !Ref SarvoAiPriceReviewUntil
           SARVOAI_FICTIONAL_ONLY: !If [IsTest, 'true', 'false']
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
+          SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd
+          SARVOAI_PRICING_APPROVAL: !Ref SarvoAiPricingApproval
           LOG_FORMAT: json
       Policies:
         - !If
