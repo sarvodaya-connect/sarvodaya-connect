@@ -71,11 +71,8 @@ Rules:
         AssertDescription: Staging and production require the database secret ARN
       - Assert: !Not [!Equals [!Ref NicKeySecretArn, '']]
         AssertDescription: Staging and production require the NIC key secret ARN
-  TestAiDisabled:
-    RuleCondition: !Equals [!Ref Stage, test]
-    Assertions:
-      - Assert: !Equals [!Ref SarvoAiEnabled, 'false']
-        AssertDescription: Keep test SarvoAI disabled until a reviewed application monthly spending cap is implemented
+  # SarvoAI stays off unless a deployment sets SarvoAiEnabled=true, and then only
+  # with a reviewed pricing approval. TEST pilot checks: docs/sarvoai-aws-setup.md.
   AiPricingApproved:
     Assertions:
       - Assert: !Or [!Equals [!Ref SarvoAiEnabled, 'false'], !Not [!Equals [!Ref SarvoAiPricingApproval, '']]]

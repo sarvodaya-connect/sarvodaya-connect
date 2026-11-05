@@ -137,7 +137,16 @@ SELECT month, committed_micro_usd / 1000000.0 AS usd FROM assistant_monthly_spen
 
 SarvoAI has no default prices. `SARVOAI_PRICING_APPROVAL` holds the reviewed prices, and every model call is refused if it is missing, invalid or expired, or covers a different model, inference profile or Region.
 
-**No approval exists yet.** Bedrock prices for this model are unconfirmed: the AWS pricing page showed no figure for it when last checked on 5 November 2026. Anthropic publishes USD 0.10 input and USD 0.50 output per million tokens for Claude Haiku 5.5, and USD 0.50 and USD 2.50 for prompts over 100,000 tokens. Those are reference figures only, not Bedrock prices, and must not be copied into an approval without confirming them.
+**Verified Bedrock prices.** No approval is deployed yet. The prices below were confirmed on 5 November 2026 in the [AWS Price List for Amazon Bedrock foundation models](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/current/us-east-1/index.json) (publication `2026-10-12T08:40:08Z`). They are Claude Haiku 5.5's **Global, standard-tier** prices in US dollars per million tokens, and the ap-southeast-1 Price List shows the same figures:
+
+| Price | Standard | Prompts over 100,000 tokens |
+|---|---:|---:|
+| Input | 0.10 | 0.50 |
+| Output | 0.50 | 2.50 |
+| 5-minute cache write | 0.125 | 0.625 |
+| Cache read | 0.01 | 0.05 |
+
+The Price List does not state the 100,000-token threshold; it is Anthropic's published long-context rule for this model. The 1-hour cache and the non-global (in-Region) prices are different, and SarvoAI uses neither. Prices change: check them again on the day each approval is written. The [TEST pilot plan](sarvoai-test-pilot-plan.md) has a ready approval line with these prices.
 
 To review the prices:
 
@@ -224,7 +233,7 @@ SELECT detected_at, reasons, reserved_micro_usd, actual_micro_usd FROM assistant
 - Changing the limit takes effect on the next call. Lowering it below the amount already committed refuses further calls; it does not undo anything.
 - Calls made outside this API, such as in the Bedrock console, are not counted.
 
-SarvoAI stays off in the AWS TEST environment (`SarvoAiEnabled` is `false`) until this has been reviewed and validated. While it is off, no reservations are made, and the template refuses `SarvoAiEnabled=true` without an approval.
+SarvoAI is off in the AWS TEST environment (`SarvoAiEnabled` defaults to `false`). While it is off, no reservations are made. The template refuses `SarvoAiEnabled=true` without a pricing approval, and the application refuses every call if that approval is invalid or expired. A TEST pilot may be enabled only through the checks in [TEST pilot](#test-pilot) below.
 
 ## 5. Check it works
 
@@ -261,7 +270,38 @@ This branch does not deploy grants or replace that ledger with a second mechanis
 Direct table writes and API-clock month/expiry boundaries remain #97 limitations;
 review restricted SQL-function access and database clock handling separately.
 
-TEST remains disabled by the SAM `TestAiDisabled` rule, with fictional-only scope
-forced on. Enablement needs a separate reviewed change, owner approval of global
-processing and confirmed Bedrock pricing. Local fake-model and disposable-database
-checks do not establish live model access, answer quality or actual AWS billing.
+## TEST pilot
+
+The obsolete `TestAiDisabled` template rule is removed: the application spending
+limit it waited for now exists. SarvoAI in TEST is still off by default, and turning
+it on is a deliberate, reviewed deployment that follows the
+[TEST pilot plan](sarvoai-test-pilot-plan.md).
+
+**Pilot scope.** HQ users only, and only fictional societies whose S number starts
+`TEST-` in the district with code `TEST-ONLY` (`SARVOAI_FICTIONAL_ONLY=true`, which
+the template forces for `Stage=test`). The existing `99999TEST` society does not
+match that scope and SarvoAI cannot see it; create new `TEST-` societies in the
+`TEST-ONLY` district for the pilot rather than renaming it.
+[`sarvoai-pilot-district.sql`](../infrastructure/aws/test/sarvoai-pilot-district.sql)
+adds that district; HQ creates the societies through the normal Create society flow.
+
+**Checks required before deploying.** All of them, recorded, on the day:
+
+1. **Current pricing approval.** Prices re-checked against the AWS Price List; an
+   approval line whose `reviewedOn` is not in the future and whose `expiresOn` is
+   at most 31 days later and still ahead.
+2. **Runtime database privileges.** The runtime role has SELECT, INSERT and UPDATE
+   on all three tables above (and USAGE on the `assistant_spend_status` type), and
+   both ledger migrations are applied. The migrations being deployed does not prove
+   the grants: run
+   [`sarvoai-pilot-checks.sql`](../infrastructure/aws/test/sarvoai-pilot-checks.sql)
+   as the database owner. It is read-only.
+3. **Fictional-only scope.** The same script lists every society SarvoAI could see
+   in TEST; each must be fictional, and no real society may sit in `TEST-ONLY`.
+4. **Lambda throttling and capacity.** A question keeps one Lambda environment
+   busy for up to about 22 seconds, and TEST has very little reserved concurrency.
+   Review this with issue #104 (PR #105) and deploy from a `main` that contains
+   the agreed TEST capacity settings.
+
+Local fake-model and disposable-database checks do not establish live model access,
+answer quality or actual AWS billing.
