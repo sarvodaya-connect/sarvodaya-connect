@@ -114,7 +114,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
       if (_error != null) {
         return StateMessage(
           icon: Icons.cloud_off_outlined,
-          title: 'Your society could not be loaded',
+          title: 'Your Society Could Not Be Loaded',
           message: _error!.message,
           primaryLabel: 'Try again',
           onPrimary: _load,
@@ -158,19 +158,19 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
           const SizedBox(height: 18),
           const Padding(
             padding: EdgeInsets.only(left: 2, bottom: 8),
-            child: Text('UPDATE YOUR SOCIETY', style: _HomeStyle.section),
+            child: Text('Update Your Society', style: _HomeStyle.section),
           ),
           _TileGrid(
             tiles: [
               _UpdateTile(
                 icon: Icons.apartment_outlined,
-                title: 'Society information',
+                title: 'Society Information',
                 subtitle: 'Details, yearly profit and expenses',
                 onTap: () => store.selectTab(OfficerTabs.society),
               ),
               _UpdateTile(
                 icon: Icons.people_outline,
-                title: 'Exco members',
+                title: 'Exco Members',
                 subtitle: exco == _excoSeats
                     ? '$exco of $_excoSeats · complete'
                     : exco == 0
@@ -180,7 +180,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
               ),
               _UpdateTile(
                 icon: Icons.calendar_today_outlined,
-                title: 'Annual work plan',
+                title: 'Annual Work Plan',
                 subtitle: plan == null
                     ? 'Activities and allocations'
                     : '${plan.year} · ${plan.activities.length} '
@@ -189,7 +189,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
               ),
               _UpdateTile(
                 icon: Icons.history,
-                title: 'Change history',
+                title: 'Change History',
                 subtitle: record.lastChangeAt == null
                     ? 'No changes yet'
                     : 'Last change ${formatWhen(record.lastChangeAt!, DateTime.now())}',
@@ -199,7 +199,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
           ),
           const SizedBox(height: 10),
           _LinkCard(
-            title: '${summary.financialYear.label} summary and audit report',
+            title: '${summary.financialYear.label} Summary and Audit Report',
             subtitle: [
               summary.totalProfit != null && summary.totalExpenses != null
                   ? 'Yearly figures added'
@@ -437,7 +437,7 @@ class _SocietySummaryCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _Stat(
-                  label: plan == null ? 'Work plan' : '${plan!.year} plan',
+                  label: plan == null ? 'Work Plan' : '${plan!.year} Plan',
                   value: plan?.activities.length.toString() ?? '—',
                 ),
               ),

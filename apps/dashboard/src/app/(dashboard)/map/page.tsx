@@ -28,7 +28,7 @@ export default async function MapPage({ searchParams }: PageProps<"/map">) {
 
   return (
     <>
-      <Breadcrumb current="Map view" />
+      <Breadcrumb current="Map View" />
       <PageTitle
         actions={
           <form className="flex flex-wrap items-center gap-2" method="get">
@@ -45,7 +45,7 @@ export default async function MapPage({ searchParams }: PageProps<"/map">) {
           </form>
         }
         description="Every active society, coloured by class A, B or C · click a dot to see its summary"
-        title="Map view"
+        title="Map View"
       />
       <div className="mt-4">
         <SocietyMapView counts={map.counts} demo={isDemoMode()} points={map.points} />

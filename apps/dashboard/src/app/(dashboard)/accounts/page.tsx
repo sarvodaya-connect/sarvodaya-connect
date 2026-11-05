@@ -65,7 +65,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
         <CreateAccountDrawer options={options} />
       </div>
 
-      <nav aria-label="Account roles" className="flex flex-wrap gap-x-6 gap-y-2 border-b border-line">
+      <nav aria-label="Account Roles" className="flex flex-wrap gap-x-6 gap-y-2 border-b border-line">
         {ACCOUNT_TABS.map((tab) => (
           <Link
             aria-current={filters.tab === tab.key ? "page" : undefined}
@@ -195,13 +195,13 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
             action={<Link className={secondaryButtonClass} href="/accounts">Clear all filters</Link>}
             description="No account matches this name, role or district."
             icon="search"
-            title="No accounts match"
+            title="No Accounts Match"
           />
         ) : (
           <EmptyState
             description="Create the first account and give the username and password to the person yourself."
             icon="user"
-            title="No accounts yet"
+            title="No Accounts Yet"
           />
         )}
       </section>

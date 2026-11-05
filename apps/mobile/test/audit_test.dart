@@ -10,8 +10,8 @@ import 'test_helpers.dart';
 Future<void> _openAudit(WidgetTester tester) async {
   await signInWithDemoAccount(tester);
   await openScreen(tester, const AuditScreen());
-  // The checklist is folded under "Required steps", as in the catalogue.
-  await tapVisible(tester, find.text('Required steps'));
+  // The checklist is folded under "Required Steps", as in the catalogue.
+  await tapVisible(tester, find.text('Required Steps'));
 }
 
 /// The status chip shown on one checklist row.
@@ -72,7 +72,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(DropdownButtonFormField<DocumentType>),
-        matching: find.text('Audit report'),
+        matching: find.text('Audit Report'),
       ),
       findsOneWidget,
     );
@@ -83,9 +83,9 @@ void main() {
     expect(store.currentAudit.status, AuditStatus.underReview);
     expect(find.text('5 of 6 complete'), findsOneWidget);
     if (find.text('Audit report uploaded').evaluate().isEmpty) {
-      await tapVisible(tester, find.text('Required steps'));
+      await tapVisible(tester, find.text('Required Steps'));
     }
-    expect(find.text('Audit report received'), findsOneWidget);
+    expect(find.text('Audit Report Received'), findsOneWidget);
     expect(find.textContaining('days late'), findsNothing);
     expect(_rowStatus('Audit report uploaded', 'Complete'), findsOne);
     expect(
@@ -112,7 +112,7 @@ void main() {
     store.setDemoOptions(failLoads: true);
     await tester.pump();
     await tester.pumpAndSettle();
-    expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Something Went Wrong'), findsOneWidget);
 
     store.failLoads = false;
     await tester.tap(find.text('Try again'));
@@ -122,6 +122,6 @@ void main() {
     store.setDemoOptions(emptyRecords: true);
     await tester.pump();
     await tester.pumpAndSettle();
-    expect(find.text('No audits yet'), findsOneWidget);
+    expect(find.text('No Audits Yet'), findsOneWidget);
   });
 }

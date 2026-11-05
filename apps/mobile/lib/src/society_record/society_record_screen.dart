@@ -152,7 +152,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                       tabs: [
                         Tab(height: 38, text: 'Overview'),
                         Tab(height: 38, text: 'Exco'),
-                        Tab(height: 38, text: 'Work plan'),
+                        Tab(height: 38, text: 'Work Plan'),
                         Tab(height: 38, text: 'Documents'),
                         Tab(height: 38, text: 'History'),
                       ],
@@ -318,7 +318,7 @@ class _OverviewTab extends StatelessWidget {
         if (!viewOnly) ...[
           _gap,
           RecordCard(
-            title: 'Address and location',
+            title: 'Address and Location',
             children: [
               Text(
                 address.isEmpty ? 'Address not recorded' : address,
@@ -344,7 +344,7 @@ class _OverviewTab extends StatelessWidget {
         ],
         _gap,
         RecordCard(
-          title: 'Business run by the society',
+          title: 'Business Run by the Society',
           children: [
             Text(
               record.businessDescription ?? 'None recorded.',
@@ -364,7 +364,7 @@ class _OverviewTab extends StatelessWidget {
           _OfficeBearersCard(record: record),
           _gap,
           RecordCard(
-            title: 'Responsible staff',
+            title: 'Responsible Staff',
             trailing: const LockedNote('Assigned by HQ'),
             children: [
               KeyValueGrid([
@@ -559,7 +559,7 @@ class _OfficeBearersCard extends StatelessWidget {
     final status = record.excoStatus;
     final complete = status.complete;
     return RecordCard(
-      title: 'Exco · office bearers',
+      title: 'Exco · Office Bearers',
       trailing: record.exco.isEmpty
           ? null
           : InkWell(
@@ -568,7 +568,7 @@ class _OfficeBearersCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'All ${record.exco.length} members',
+                    'All ${record.exco.length} Members',
                     style: RecordStyle.link,
                   ),
                   const Icon(
@@ -669,7 +669,7 @@ class _AnnualSummaryCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Annual financial summary · ${summary.financialYear.label}',
+                'Annual Financial Summary · ${summary.financialYear.label}',
                 style: RecordStyle.cardTitle,
               ),
             ),
@@ -707,13 +707,13 @@ class _AnnualSummaryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               tile(
-                'Total profit for the year',
+                'Total Profit for the Year',
                 summary.totalProfit,
                 profit: true,
               ),
               const SizedBox(width: 8),
               tile(
-                'Total expenses for the year',
+                'Total Expenses for the Year',
                 summary.totalExpenses,
                 profit: false,
               ),
@@ -734,7 +734,7 @@ class _AnnualSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Audit report ${summary.financialYear.label}',
+                    'Audit Report ${summary.financialYear.label}',
                     style: RecordStyle.value,
                   ),
                   Text(
@@ -820,7 +820,7 @@ class _ExcoTabState extends State<_ExcoTab> {
     if (members.isEmpty && !canEdit) {
       return const StateMessage(
         icon: Icons.groups_outlined,
-        title: 'No Exco members yet',
+        title: 'No Exco Members Yet',
         message: 'The Society Officer enters the 25 Exco members. They will appear here as they are added.',
       );
     }
@@ -903,7 +903,7 @@ class _ExcoTabState extends State<_ExcoTab> {
       return [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('$office not chosen', style: RecordStyle.value),
+          title: Text('$office Not Chosen', style: RecordStyle.value),
           trailing: canEdit
               ? TextButton(
                   onPressed: () => widget.open(
@@ -943,7 +943,7 @@ class _ExcoTabState extends State<_ExcoTab> {
           const SizedBox(height: 8),
           RecordNote(
             icon: Icons.info_outline,
-            title: 'Exco incomplete',
+            title: 'Exco Incomplete',
             // What is missing, in the API's words (seats, groups, offices).
             message: [
               ...status.problems,
@@ -973,7 +973,7 @@ class _ExcoTabState extends State<_ExcoTab> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'OFFICE BEARERS · CHOSEN FROM THE 25',
+          'Office Bearers · Chosen From the 25',
           style: RecordStyle.sectionLabel,
         ),
         const SizedBox(height: 6),
@@ -982,7 +982,7 @@ class _ExcoTabState extends State<_ExcoTab> {
           children: [for (final office in officeBearers) ...officeRow(office)],
         ),
         const SizedBox(height: 12),
-        Text('MEMBERS · ${others.length}', style: RecordStyle.sectionLabel),
+        Text('Members · ${others.length}', style: RecordStyle.sectionLabel),
         const SizedBox(height: 6),
         RecordCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -1183,7 +1183,7 @@ class _DocumentsTab extends StatelessWidget {
               color: const Color(0xFFF3F8F3),
               children: [
                 Text(
-                  'Annual documents · ${registrar.yearLabel}',
+                  'Annual Documents · ${registrar.yearLabel}',
                   style: RecordStyle.cardTitle,
                 ),
                 Text(
@@ -1216,7 +1216,7 @@ class _DocumentsTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            const Text('ALL DOCUMENTS', style: RecordStyle.sectionLabel),
+            const Text('All Documents', style: RecordStyle.sectionLabel),
             const SizedBox(height: 6),
             if (others.isEmpty)
               const Text('No other documents yet.', style: RecordStyle.body)
@@ -1357,8 +1357,8 @@ const _historyFilters = [
   (null, 'All'),
   ('SOCIETY', 'Society'),
   ('EXCO', 'Exco'),
-  ('WORK_PLAN', 'Work plan'),
-  ('ANNUAL_SUMMARY', 'Annual summary'),
+  ('WORK_PLAN', 'Work Plan'),
+  ('ANNUAL_SUMMARY', 'Annual Summary'),
   ('GRADE', 'Grade'),
 ];
 

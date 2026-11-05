@@ -36,7 +36,7 @@ describe("ErrorState", () => {
     const onRetry = vi.fn();
     render(<ErrorState onRetry={onRetry} reference="digest-123" />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn’t load this page");
+    expect(screen.getByRole("alert")).toHaveTextContent("We Couldn’t Load This Page");
     expect(screen.getByText("digest-123")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
@@ -72,7 +72,7 @@ describe("NoResultsState", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "No societies match" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No Societies Match" })).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "Remove Status filter" }));
@@ -87,7 +87,7 @@ describe("NoAccessState", () => {
   it("uses the V5 wording and never needs the restricted record", () => {
     render(<NoAccessState />);
 
-    expect(screen.getByRole("heading", { name: "You don’t have access to this page" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You Don’t Have Access to This Page" })).toBeInTheDocument();
     expect(screen.getByText("Your role cannot open it. Ask HQ if you think you need it.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to overview" })).toHaveAttribute("href", "/dashboard");
   });
@@ -102,9 +102,9 @@ describe("NoAccessState", () => {
 
 describe("SuccessState", () => {
   it("announces the result with its follow-up action", () => {
-    render(<SuccessState action={<button type="button">Back to queue</button>} description="Everyone has been told." title="Grade decision saved" />);
+    render(<SuccessState action={<button type="button">Back to queue</button>} description="Everyone has been told." title="Grade Decision Saved" />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Grade decision saved");
+    expect(screen.getByRole("status")).toHaveTextContent("Grade Decision Saved");
     expect(screen.getByRole("button", { name: "Back to queue" })).toBeInTheDocument();
   });
 });

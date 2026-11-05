@@ -28,7 +28,7 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
         tabs={[
           { href: base, label: "Overview" },
           { count: record.committee.filter((member) => member.isActive).length, href: `${base}/exco`, label: "Exco" },
-          { count: plan?.activities.length, href: `${base}/work-plan`, label: `Work plan${plan ? ` ${plan.year}` : ""}` },
+          { count: plan?.activities.length, href: `${base}/work-plan`, label: `Work Plan${plan ? ` ${plan.year}` : ""}` },
           { count: documents?.total, href: `${base}/documents`, label: "Documents" },
           { count: requests?.length, href: `${base}/grade`, label: "Grade" },
           { href: `${base}/history`, label: "History" },

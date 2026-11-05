@@ -46,7 +46,7 @@ class TemporaryViewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
-    label: 'Temporary district-wide view',
+    label: 'Temporary District-Wide View',
     child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -62,7 +62,7 @@ class TemporaryViewCard extends StatelessWidget {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Temporary district-wide view',
+                  'Temporary District-Wide View',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -194,7 +194,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'Something went wrong',
+          title: 'Something Went Wrong',
           message: error is HomeException
               ? error.message
               : 'Could not load your overview.',
@@ -397,7 +397,7 @@ class _SocietyListState extends State<_SocietyList> {
           prefixIcon: const Icon(Icons.search),
           hintText: widget.searchHint,
           suffixIcon: IconButton(
-            tooltip: 'Filter societies',
+            tooltip: 'Filter Societies',
             onPressed: _filters,
             icon: const Icon(Icons.tune),
           ),
@@ -421,7 +421,7 @@ class _SocietyListState extends State<_SocietyList> {
                   const Icon(Icons.search, color: AppColors.forest),
                   const SizedBox(height: 8),
                   const Text(
-                    'No societies match',
+                    'No Societies Match',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   Text(
@@ -499,7 +499,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 const Expanded(
                   child: Text(
-                    'Filter societies',
+                    'Filter Societies',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -566,14 +566,14 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Not updated in 90 days'),
+              title: const Text('Not Updated in 90 Days'),
               value: _query.needsUpdate,
               onChanged: (value) =>
                   setState(() => _query = _query.copyWith(needsUpdate: value)),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Has a grade-change request'),
+              title: const Text('Has a Grade-Change Request'),
               value: _query.gradeRequest,
               onChanged: (value) =>
                   setState(() => _query = _query.copyWith(gradeRequest: value)),
@@ -669,7 +669,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           _Card(
-            title: 'District overview',
+            title: 'District Overview',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -680,7 +680,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                     home.members == null ? '—' : count(home.members!),
                   ),
                   _Tile(
-                    'Not updated 90d',
+                    'Not Updated 90d',
                     count(home.notUpdated),
                     colour: AppColors.danger,
                   ),
@@ -702,7 +702,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ),
           const SizedBox(height: 12),
           _Card(
-            title: 'Temporary access for your DDM',
+            title: 'Temporary Access for Your DDM',
             trailing: home.temporaryAccess.isEmpty
                 ? const _Pill(
                     'None active',
@@ -748,7 +748,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           if (home.needsAttention.isNotEmpty) ...[
             const SizedBox(height: 16),
             const Text(
-              'NEEDS ATTENTION',
+              'Needs Attention',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -813,7 +813,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             segments: [
               ButtonSegment(
                 value: false,
-                label: Text('My ${home.total} · edit'),
+                label: Text('My ${home.total} · Edit'),
               ),
               ButtonSegment(
                 value: true,
@@ -843,12 +843,12 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           _TileRow([
             _Tile('Assigned', count(home.total)),
             _Tile(
-              'Grade requests',
+              'Grade Requests',
               count(home.gradeRequests),
               colour: AppColors.warning,
             ),
             _Tile(
-              'Not updated 90d',
+              'Not Updated 90d',
               count(home.notUpdated),
               colour: AppColors.danger,
             ),
@@ -874,7 +874,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
               child: ListTile(
                 leading: const Icon(Icons.task_alt, color: AppColors.warning),
                 title: Text(
-                  '${home.activitiesWaiting} ${home.activitiesWaiting == 1 ? 'activity' : 'activities'} to approve',
+                  '${home.activitiesWaiting} ${home.activitiesWaiting == 1 ? 'Activity' : 'Activities'} to Approve',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 subtitle: const Text('Choose the UN SDGs and approve'),
@@ -888,7 +888,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             children: [
               const Expanded(
                 child: Text(
-                  'My societies',
+                  'My Societies',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),

@@ -44,7 +44,7 @@ export function ActivityForm({
   return (
     <form className="mt-4 space-y-4" onSubmit={submitWithoutReset(submit)}>
       <section className="rounded-card border border-line bg-surface p-4">
-        <h3 className="text-[14px] font-bold text-ink">1 · Details and sector</h3>
+        <h3 className="text-[14px] font-bold text-ink">1 · Details and Sector</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <label className={label}>
             Activity name {required}
@@ -94,7 +94,7 @@ export function ActivityForm({
       </section>
 
       <section className="rounded-card border border-line bg-surface p-4">
-        <h3 className="text-[14px] font-bold text-ink">2 · Participants and beneficiaries</h3>
+        <h3 className="text-[14px] font-bold text-ink">2 · Participants and Beneficiaries</h3>
         <p className="mt-1 text-[12px] text-ink-soft">Use your best count — it can change until the SPC approves.</p>
         <div className="mt-3 grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {PEOPLE.map(([name, title, note]) => (
@@ -108,7 +108,7 @@ export function ActivityForm({
       </section>
 
       <section className="rounded-card border border-line bg-surface p-4">
-        <h3 className="text-[14px] font-bold text-ink">3 · Resources and partners</h3>
+        <h3 className="text-[14px] font-bold text-ink">3 · Resources and Partners</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <label className={label}>
             Allocated cost (LKR) {required}

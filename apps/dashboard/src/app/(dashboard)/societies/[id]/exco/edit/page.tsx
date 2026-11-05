@@ -12,7 +12,7 @@ export default async function EditExcoPage({ params, searchParams }: PageProps<"
   const { id } = await params;
   if (!isSocietyRecordId(id)) notFound();
   const [record, { focus }] = await Promise.all([getSocietyRecord(id), searchParams]);
-  if (!record.permissions.canEdit) return <NoAccessState description="Your role can view this Exco but not change it." title="You can’t edit this Exco" />;
+  if (!record.permissions.canEdit) return <NoAccessState description="Your role can view this Exco but not change it." title="You Can’t Edit This Exco" />;
   return (
     <ExcoEditForm
       action={updateExco.bind(null, id)}

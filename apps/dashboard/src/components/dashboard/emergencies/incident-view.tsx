@@ -69,7 +69,7 @@ export function HelperBadge({ status }: { status: EmergencyHelperStatus }) {
 }
 
 const linkClass = "font-semibold text-brand-forest underline underline-offset-2";
-const eyebrowClass = "text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest";
+const eyebrowClass = "text-[10px] font-bold tracking-[0.08em] text-brand-forest";
 
 /** A V5 card with an eyebrow and title. Cards in a row stretch to the same height. */
 export function Card({ eyebrow, title, action, children, id }: { eyebrow: string; title: string; action?: ReactNode; children: ReactNode; id: string }) {
@@ -91,7 +91,7 @@ export function Card({ eyebrow, title, action, children, id }: { eyebrow: string
 export function Breadcrumb({ incident, page }: { incident?: EmergencyIncidentSummary; page?: string }) {
   return (
     <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-soft">
-      <Link className={linkClass} href="/emergencies">Disaster response</Link>
+      <Link className={linkClass} href="/emergencies">Disaster Response</Link>
       {incident && (
         <>
           <span aria-hidden="true">›</span>
@@ -142,11 +142,11 @@ export function IncidentTabs({ incidentId, current, counts }: { incidentId: stri
   const tabs: [IncidentTab, string, number | null][] = [
     ["overview", "Overview", null],
     ["assessments", "Assessments", counts.assessments],
-    ["actions", "Response actions", counts.actions],
+    ["actions", "Response Actions", counts.actions],
     ["reports", "Situation reports", counts.reports],
   ];
   return (
-    <nav aria-label="Incident sections" className="flex gap-6 overflow-x-auto border-b border-line">
+    <nav aria-label="Incident Sections" className="flex gap-6 overflow-x-auto border-b border-line">
       {tabs.map(([tab, label, count]) => (
         <Link
           aria-current={tab === current ? "page" : undefined}
@@ -177,11 +177,11 @@ function Tile({ label, value, detail, tone = "ink" }: { label: string; value: st
 export function IncidentTiles({ totals }: { totals: EmergencyTotals }) {
   return (
     <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <Tile detail={`${totals.critical} critical`} label="Societies affected" tone={totals.affected ? "red" : "ink"} value={number(totals.affected)} />
-      <Tile detail={`${number(totals.people)} people`} label="Families / people affected" value={number(totals.families)} />
-      <Tile detail="From received assessments" label="Houses fully / partly damaged" value={`${number(totals.housesFully)} / ${number(totals.housesPartly)}`} />
-      <Tile detail={`of ${number(totals.societiesInArea)} societies`} label="Not yet assessed" tone={totals.notAssessed ? "amber" : "ink"} value={number(totals.notAssessed)} />
-      <Tile detail={`${totals.actionsDelivered} delivered`} label="Response actions" value={number(totals.actions)} />
+      <Tile detail={`${totals.critical} critical`} label="Societies Affected" tone={totals.affected ? "red" : "ink"} value={number(totals.affected)} />
+      <Tile detail={`${number(totals.people)} people`} label="Families / People Affected" value={number(totals.families)} />
+      <Tile detail="From received assessments" label="Houses Fully / Partly Damaged" value={`${number(totals.housesFully)} / ${number(totals.housesPartly)}`} />
+      <Tile detail={`of ${number(totals.societiesInArea)} societies`} label="Not Yet Assessed" tone={totals.notAssessed ? "amber" : "ink"} value={number(totals.notAssessed)} />
+      <Tile detail={`${totals.actionsDelivered} delivered`} label="Response Actions" value={number(totals.actions)} />
     </div>
   );
 }
@@ -198,11 +198,11 @@ export function AssessmentsTable({ rows, wide, incidentId, emptyText }: { rows: 
           <tr>
             <th className={th} scope="col">Society</th>
             <th className={th} scope="col">Status</th>
-            <th className={th} scope="col">Families / people</th>
-            {wide && <th className={th} scope="col">Houses full / part</th>}
-            <th className={th} scope="col">Top needs</th>
+            <th className={th} scope="col">Families / People</th>
+            {wide && <th className={th} scope="col">Houses Full / Part</th>}
+            <th className={th} scope="col">Top Needs</th>
             {wide && <th className={th} scope="col">Road</th>}
-            <th className={th} scope="col">Last received</th>
+            <th className={th} scope="col">Last Received</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
@@ -246,9 +246,9 @@ export function ByDistrictTable({ totals }: { totals: EmergencyTotals }) {
         <thead className="bg-surface-muted">
           <tr>
             <th className={th} scope="col">District</th>
-            <th className={th} scope="col">In area</th>
+            <th className={th} scope="col">In Area</th>
             <th className={th} scope="col">Affected</th>
-            <th className={th} scope="col">Not assessed</th>
+            <th className={th} scope="col">Not Assessed</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
@@ -432,8 +432,8 @@ export function SituationReportDocument({ report }: { report: EmergencySituation
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt="Sarvodaya Connect" className="h-10 w-auto" src="/brand/sarvodaya-connect-wordmark.png" />
         <div>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-danger-text">
-            Situation report no. {report.number} · as of {asOf}
+          <p className="text-[10.5px] font-bold tracking-[0.08em] text-danger-text">
+            Situation Report No. {report.number} · As of {asOf}
           </p>
           <h2 className="text-[18px] font-bold text-ink">{incident.title} ({incident.reference})</h2>
           <p className="text-[12px] text-ink-soft">{areaLine(incident)}</p>
@@ -454,12 +454,12 @@ export function SituationReportDocument({ report }: { report: EmergencySituation
         ))}
       </div>
       {report.summary && <p className="whitespace-pre-wrap text-[12.5px] text-ink">{report.summary}</p>}
-      <h3 className="text-[13px] font-bold text-ink">2. Affected societies by district</h3>
+      <h3 className="text-[13px] font-bold text-ink">2. Affected Societies by District</h3>
       <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full border-collapse text-left">
           <thead className="bg-surface-muted">
             <tr>
-              {["District", "In area", "Affected", "Critical", "Families", "People", "Houses full / part", "Not assessed"].map((h) => (
+              {["District", "In Area", "Affected", "Critical", "Families", "People", "Houses Full / Part", "Not Assessed"].map((h) => (
                 <th className={th} key={h} scope="col">{h}</th>
               ))}
             </tr>
@@ -490,7 +490,7 @@ export function SituationReportDocument({ report }: { report: EmergencySituation
           </tbody>
         </table>
       </div>
-      <h3 className="text-[13px] font-bold text-ink">3. Response actions</h3>
+      <h3 className="text-[13px] font-bold text-ink">3. Response Actions</h3>
       {snapshot.items.length ? (
         <div className="overflow-x-auto rounded-lg border border-line">
           <table className="w-full border-collapse text-left">
@@ -516,7 +516,7 @@ export function SituationReportDocument({ report }: { report: EmergencySituation
       ) : (
         <p className="text-[12.5px] text-ink-soft">No response actions yet.</p>
       )}
-      <h3 className="text-[13px] font-bold text-ink">4. Gaps and next steps</h3>
+      <h3 className="text-[13px] font-bold text-ink">4. Gaps and Next Steps</h3>
       <p className="text-[12.5px] text-ink">
         {t.notAssessed
           ? `${number(t.notAssessed)} ${t.notAssessed === 1 ? "society has" : "societies have"} not sent an assessment.`

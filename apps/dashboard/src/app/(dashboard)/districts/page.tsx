@@ -30,7 +30,7 @@ export default async function DistrictsPage({ searchParams }: PageProps<"/distri
 
   return (
     <>
-      <Breadcrumb current="District view" />
+      <Breadcrumb current="District View" />
       <PageTitle
         actions={
           <form className="flex flex-wrap items-center gap-2" method="get" role="search">
@@ -47,7 +47,7 @@ export default async function DistrictsPage({ searchParams }: PageProps<"/distri
           </form>
         }
         description={`${summaries.data.length} districts · active societies by grade A, B and C · alphabetical, never ranked`}
-        title="District view"
+        title="District View"
       />
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <YearLinks current={financialYear.startYear} href={(value) => `/districts?year=${value}`} years={selectableStartYears()} />
@@ -76,7 +76,7 @@ export default async function DistrictsPage({ searchParams }: PageProps<"/distri
 
       {shown.length === 0 ? (
         <div className="mt-4">
-          <EmptyState description="No district matches. Clear the search or choose another province." icon="search" title="No districts match" />
+          <EmptyState description="No district matches. Clear the search or choose another province." icon="search" title="No Districts Match" />
         </div>
       ) : (
         <ul className="mt-4 grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -165,7 +165,7 @@ void main() {
           jsonEncode({
             'id': 'doc-1',
             'documentType': 'AUDIT_REPORT',
-            'title': 'Audit report FY 2025/26',
+            'title': 'Audit Report FY 2025/26',
             'fileName': 'audit.pdf',
             'sizeBytes': 3,
             'uploadedBy': 'N. Wijesinghe',

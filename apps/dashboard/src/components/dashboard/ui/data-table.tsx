@@ -22,7 +22,7 @@ export function Thead({ children }: { children: ReactNode }) {
 export function Th({ children, className = "", ...rest }: ThHTMLAttributes<HTMLTableCellElement> & { children: ReactNode }) {
   return (
     <th
-      className={`whitespace-nowrap border-b border-line-soft px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted ${className}`}
+      className={`whitespace-nowrap border-b border-line-soft px-4 py-3 text-[11px] font-semibold tracking-[0.08em] text-muted ${className}`}
       {...rest}
     >
       {children}

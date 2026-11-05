@@ -25,7 +25,7 @@ class MoreScreen extends StatelessWidget {
         actions: [
           if (store.isDemo)
             IconButton(
-              tooltip: 'Demo options',
+              tooltip: 'Demo Options',
               icon: const Icon(Icons.tune),
               onPressed: () => showDemoOptions(context),
             ),
@@ -143,7 +143,7 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.health_and_safety_outlined,
-                title: 'Disaster response',
+                title: 'Disaster Response',
                 chevron: true,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -153,12 +153,12 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.help_outline,
-                title: 'Help and HQ contact',
+                title: 'Help and HQ Contact',
                 chevron: true,
                 onTap: () => showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Need help?'),
+                    title: const Text('Need Help?'),
                     content: const Text(
                       'Contact your District Centre if your account, society assignment or submitted information is incorrect.',
                     ),
@@ -173,7 +173,7 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.logout,
-                title: 'Sign out',
+                title: 'Sign Out',
                 subtitle: 'Back to the sign-in screen',
                 danger: true,
                 last: true,
@@ -235,7 +235,7 @@ class MoreScreen extends StatelessWidget {
             children: [
               const ListTile(
                 title: Text(
-                  'Choose language',
+                  'Choose Language',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),

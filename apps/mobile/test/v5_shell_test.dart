@@ -34,7 +34,7 @@ void main() {
     var backs = 0;
     await tester.pumpWidget(_host(NoAccessView(onBack: () => backs++)));
 
-    expect(find.text("You don't have access to this"), findsOneWidget);
+    expect(find.text("You Don't Have Access to This"), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
     await tester.tap(find.text('Back to my societies'));
     expect(backs, 1);

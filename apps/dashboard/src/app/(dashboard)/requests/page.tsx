@@ -36,14 +36,14 @@ export default async function RequestsPage({ searchParams }: PageProps<"/request
       <p className="text-[12px] text-ink-soft">Ask districts and societies for documents or information, and see your own tasks</p>
       <div className="mt-4 grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section aria-labelledby="new-request" className="h-fit rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">New request</p>
-          <h2 className="mb-3 text-[15px] font-bold text-ink" id="new-request">Ask societies for documents or information</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">New Request</p>
+          <h2 className="mb-3 text-[15px] font-bold text-ink" id="new-request">Ask Societies for Documents or Information</h2>
           <RequestForm activeSocieties={summaries.totals.active} districts={districts} fyLabel={summaries.financialYear.label} minDate={today} />
         </section>
         <div className="flex flex-col gap-4">
           <section aria-labelledby="tracker" className="rounded-card border border-line bg-surface p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Request tracker</p>
-            <h2 className="text-[15px] font-bold text-ink" id="tracker">Requests you have sent</h2>
+            <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Request Tracker</p>
+            <h2 className="text-[15px] font-bold text-ink" id="tracker">Requests You Have Sent</h2>
             {requests.data.length === 0 ? (
               <p className="mt-3 rounded-lg bg-[#f4f5f1] px-3 py-6 text-center text-[12px] text-muted">No requests yet. Requests you send appear here with how many societies have responded.</p>
             ) : (
@@ -73,8 +73,8 @@ export default async function RequestsPage({ searchParams }: PageProps<"/request
           <section aria-labelledby="tasks" className="rounded-card border border-line bg-surface p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">My tasks</p>
-                <h2 className="text-[15px] font-bold text-ink" id="tasks">{tasks.data.length} open</h2>
+                <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">My Tasks</p>
+                <h2 className="text-[15px] font-bold text-ink" id="tasks">{tasks.data.length} Open</h2>
               </div>
               <Link className="text-[11px] font-semibold text-brand-forest underline" href="/reviews">Go to Review Queue</Link>
             </div>

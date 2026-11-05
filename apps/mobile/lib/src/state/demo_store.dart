@@ -776,11 +776,10 @@ class DemoStore extends ChangeNotifier {
   /// Calls made in the same session while one is in progress share it.
   Future<void> loadNotifications() {
     final session = _notificationSession;
-    return _notificationsLoading ??= _loadNotifications(session).whenComplete(
-      () {
-        if (session == _notificationSession) _notificationsLoading = null;
-      },
-    );
+    return _notificationsLoading ??= _loadNotifications(session)
+        .whenComplete(() {
+          if (session == _notificationSession) _notificationsLoading = null;
+        });
   }
 
   Future<void> _loadNotifications(int session) async {

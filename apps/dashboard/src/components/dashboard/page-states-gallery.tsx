@@ -17,7 +17,7 @@ import {
 function StateCard({ children, label }: { children: React.ReactNode; label: string }) {
   return (
     <section className="flex min-h-[230px] flex-col rounded-card border border-line bg-surface p-4">
-      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-muted">{label}</h3>
+      <h3 className="text-[10.5px] font-bold tracking-[0.08em] text-muted">{label}</h3>
       <div className="flex flex-1 flex-col justify-center [&>div]:!px-2 [&>div]:!py-3 [&_[role=status][aria-busy]]:border-0 [&_[role=status][aria-busy]]:p-0">
         {children}
       </div>
@@ -32,7 +32,7 @@ export function PageStatesGallery() {
   return (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-ink">Page states</h2>
+        <h2 className="text-xl font-bold text-ink">Page States</h2>
         <p className="mt-0.5 text-xs text-muted">How every page behaves when data is not normal</p>
       </div>
       {message && (
@@ -48,31 +48,31 @@ export function PageStatesGallery() {
           <EmptyState
             action={<Link className={secondaryButtonClass} href="/reviews">See decided requests</Link>}
             description="New requests from Society Officers, SPCs and DDMs will appear here."
-            title="No grade requests waiting"
+            title="No Grade Requests Waiting"
           />
         </StateCard>
-        <StateCard label="No results for these filters">
+        <StateCard label="No Results for These Filters">
           <NoResultsState
             filters={[
               { id: "grade", label: "Grade", value: "A" },
-              { id: "division", label: "DS division", value: "Wariyapola" },
+              { id: "division", label: "DS Division", value: "Wariyapola" },
             ]}
             itemLabel="societies"
             onClearAll={() => setMessage("All example filters have been cleared.")}
             onRemoveFilter={(id) => setMessage(`Removed the ${id} example filter.`)}
           />
         </StateCard>
-        <StateCard label="Error · retry">
+        <StateCard label="Error · Retry">
           <ErrorState onRetry={() => setMessage("Retry requested. This page shows examples only.")} />
         </StateCard>
         <StateCard label="Success">
           <SuccessState
             action={<Link className={primaryButtonClass} href="/reviews">Back to queue</Link>}
             description="The request has been decided and the people who asked have been told."
-            title="Grade decision saved"
+            title="Grade Decision Saved"
           />
         </StateCard>
-        <StateCard label="No access">
+        <StateCard label="No Access">
           <NoAccessState />
         </StateCard>
       </div>

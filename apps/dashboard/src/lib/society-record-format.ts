@@ -52,7 +52,7 @@ export function excoProgress(status: ExcoStatus | undefined, committee: SocietyR
 export const SOCIETY_GRADE_LABELS = {
   A: "Strong",
   B: "Developing",
-  C: "Needs strengthening",
+  C: "Needs Strengthening",
 } as const satisfies Record<SocietyGrade, string>;
 
 export const SOCIETY_HISTORY_CATEGORIES = [

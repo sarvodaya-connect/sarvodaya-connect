@@ -75,7 +75,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
 
       {report && (
         <section aria-labelledby="report-preview" className="mt-4 rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Preview</p>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Preview</p>
           <h2 className="text-[15px] font-bold text-ink" id="report-preview">{report.title} · {report.scope} · {report.financialYear.label}</h2>
           <div className="mt-3 overflow-x-auto rounded-lg border border-line-soft">
             <ReportTableView limit={PREVIEW_ROWS} report={report} />

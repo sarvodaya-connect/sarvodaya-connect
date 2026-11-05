@@ -106,7 +106,7 @@ const record: SocietyRecord = {
 describe("D05 annual financial summary", () => {
   it("leads with the two yearly totals and the audit report HQ can open or download", () => {
     render(<AnnualSummaryCards societyId={SOCIETY_ID} societyName={record.nameEn} staff={record.staff} summary={fullSummary} />);
-    expect(screen.getByRole("heading", { name: /Annual financial summary · FY 2025\/26/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Annual Financial Summary · FY 2025\/26/ })).toBeInTheDocument();
     expect(screen.getByText("LKR 412,500")).toBeInTheDocument();
     expect(screen.getByText("LKR 1,286,000")).toBeInTheDocument();
     expect(screen.getByText(/Was LKR 398,000 before 22 Oct 2026/)).toBeInTheDocument();
@@ -237,7 +237,7 @@ describe("Exco completion comes from the API (excoStatus)", () => {
         status={noTreasurer}
       />,
     );
-    expect(screen.getByText("25 of 25 Exco seats filled")).toBeInTheDocument();
+    expect(screen.getByText("25 of 25 Exco Seats Filled")).toBeInTheDocument();
     expect(screen.getByText("Incomplete")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("No Treasurer chosen yet.");
     expect(screen.queryByText("✓ Complete")).not.toBeInTheDocument();
@@ -273,7 +273,7 @@ describe("D05x Exco", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reveal = vi.fn().mockResolvedValue({ nic: "198400000012" });
     render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} status={record.excoStatus} />);
-    expect(screen.getByText("2 of 25 Exco seats filled")).toBeInTheDocument();
+    expect(screen.getByText("2 of 25 Exco Seats Filled")).toBeInTheDocument();
     expect(screen.getByText("Incomplete · 23 to fill")).toBeInTheDocument();
     expect(screen.getByText("•••• •••• 0047")).toBeInTheDocument();
 
@@ -315,8 +315,8 @@ describe("D05w work plan", () => {
     render(<WorkPlanOverview plan={plan} societyId={SOCIETY_ID} />);
     expect(screen.getByText("Approved")).toBeInTheDocument();
     expect(screen.getByText("Waiting for SPC")).toBeInTheDocument();
-    expect(screen.getByText("Clean water and sanitation")).toBeInTheDocument();
-    expect(screen.getByText("Life on land")).toBeInTheDocument();
+    expect(screen.getByText("Clean Water and Sanitation")).toBeInTheDocument();
+    expect(screen.getByText("Life on Land")).toBeInTheDocument();
     expect(screen.getByText(/1 approved by the SPC · 1 waiting/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "+ Add activity" })).toHaveAttribute(
       "href",
@@ -359,7 +359,7 @@ describe("society history", () => {
       />,
     );
     expect(screen.getByText("N. Wijesinghe (Society Officer) · 22 Oct 2026")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Annual summary" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Annual Summary" })).toHaveAttribute("aria-current", "page");
   });
 });
 

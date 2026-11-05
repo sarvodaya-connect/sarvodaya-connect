@@ -56,7 +56,7 @@ describe("V5 M13a document upload on the desktop", () => {
 
   it("leaves out the audit report for roles that cannot upload it", () => {
     render(<DocumentUpload allowAuditReport={false} complete={vi.fn()} financialYears={years} start={vi.fn()} />);
-    expect(screen.queryByRole("option", { name: "Audit report" })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "AGM minutes" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Audit Report" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "AGM Minutes" })).toBeInTheDocument();
   });
 });

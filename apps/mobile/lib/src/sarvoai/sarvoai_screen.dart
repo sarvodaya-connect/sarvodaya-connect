@@ -116,7 +116,7 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
           title: const _Title('SarvoAI', 'Opened from a shared link'),
         ),
         body: NoAccessView(
-          title: 'SarvoAI is for HQ only',
+          title: 'SarvoAI Is for HQ Only',
           message:
               'You are signed in as ${user?.displayName ?? 'another account'}${user == null ? '' : ' (${user.primaryRole.label})'}. Nothing from this link is shown.',
           backLabel: 'Go to my home',
@@ -214,7 +214,7 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
       ),
       const SizedBox(height: 16),
       const Text(
-        'TRY ASKING',
+        'Try Asking',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -420,7 +420,7 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
               Text(
                 paused
                     ? 'SarvoAI is paused'
-                    : 'SarvoAI has reached this month’s limit',
+                    : 'SarvoAI Has Reached This Month’s Limit',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
@@ -446,7 +446,7 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'SarvoAI isn’t available right now',
+                    'SarvoAI Isn’t Available Right Now',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -697,7 +697,7 @@ class _AnswerView extends StatelessWidget {
               Semantics(
                 header: true,
                 child: const Text(
-                  'How was this answered?',
+                  'How Was This Answered?',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -793,7 +793,7 @@ class _AnswerView extends StatelessWidget {
         final (icon, title, colour, border, label) = switch (answer.kind) {
           AnswerKind.noMatch => (
             Icons.search,
-            'No societies match',
+            'No Societies Match',
             AppColors.surface,
             AppColors.line,
             null,
@@ -807,7 +807,7 @@ class _AnswerView extends StatelessWidget {
           ),
           _ => (
             Icons.info_outline,
-            'SarvoAI can’t answer this',
+            'SarvoAI Can’t Answer This',
             AppColors.surface,
             AppColors.line,
             null,
@@ -880,7 +880,7 @@ class _AnswerView extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _Figure(
-                          'Not included',
+                          'Not Included',
                           '${count(scope.excluded ?? 0)} societies',
                           AppColors.warning,
                           AppColors.warningSoft,
@@ -893,7 +893,7 @@ class _AnswerView extends StatelessWidget {
               if (table != null && table.rows.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
-                  table.columns.last.toUpperCase(),
+                  table.columns.last,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

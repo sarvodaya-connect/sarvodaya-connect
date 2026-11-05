@@ -17,7 +17,7 @@ const _dense = InputDecoration(
 
 const _stepTitles = [
   'Details and sector',
-  'Participants and beneficiaries',
+  'Participants and Beneficiaries',
   'Resources and partners',
   'Check and send',
 ];
@@ -176,7 +176,7 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
     return Scaffold(
       appBar: recordFormAppBar(
         context,
-        title: _existing == null ? 'New activity' : 'Change activity',
+        title: _existing == null ? 'New Activity' : 'Change Activity',
         subtitle:
             '${widget.societyName} · Work plan ${_existing?.year ?? widget.year}',
         onClose: _saving ? () {} : null,
@@ -217,7 +217,7 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
             RecordNote(
               icon: Icons.error_outline,
               tone: NoteTone.error,
-              title: 'Not sent',
+              title: 'Not Sent',
               message: _error!,
             ),
           ],
@@ -457,7 +457,7 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
         ),
         KeyValue('Dimension', input.dimension.label),
       ]),
-      section('Participants and beneficiaries', 1, [
+      section('Participants and Beneficiaries', 1, [
         KeyValue('Female participants', '${input.femaleParticipants}'),
         KeyValue('Male participants', '${input.maleParticipants}'),
         KeyValue('Youth (15–25)', '${input.youthParticipants}'),
@@ -562,13 +562,13 @@ class _SentScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: recordFormAppBar(
       context,
-      title: 'New activity',
+      title: 'New Activity',
       subtitle: detail.societyName,
       onClose: () => Navigator.of(context).pop(true),
     ),
     body: StateMessage(
       icon: Icons.check_circle_outline,
-      title: 'Sent to your SPC',
+      title: 'Sent to Your SPC',
       message:
           '${detail.activity.name} is waiting for ${spcName == null ? 'your SPC' : '$spcName (SPC)'}. They will choose the UN SDGs and approve it. You get a notification when it is approved.',
       primaryLabel: 'Back to work plan',
@@ -704,7 +704,7 @@ class ActivityDetailsCards extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         RecordCard(
-          title: 'Participants and beneficiaries',
+          title: 'Participants and Beneficiaries',
           children: [
             KeyValueGrid([
               KeyValue(
@@ -761,7 +761,7 @@ class ActivityDetailScreen extends StatelessWidget {
                 icon: Icons.undo,
                 tone: NoteTone.warning,
                 title:
-                    'Sent back by ${activity.reviewedBy?.label ?? 'the SPC'}',
+                    'Sent Back by ${activity.reviewedBy?.label ?? 'the SPC'}',
                 message:
                     activity.reviewComment ??
                     'Change the activity and send it again.',
@@ -770,7 +770,7 @@ class ActivityDetailScreen extends StatelessWidget {
             ],
             if (activity.status == ActivityStatus.approved) ...[
               RecordCard(
-                title: 'UN SDGs chosen by the SPC',
+                title: 'UN SDGs Chosen by the SPC',
                 children: [
                   Wrap(
                     spacing: 6,
@@ -802,7 +802,7 @@ class ActivityDetailScreen extends StatelessWidget {
                 child: Text(
                   activity.status == ActivityStatus.sentBack
                       ? 'Change and send again'
-                      : 'Change activity',
+                      : 'Change Activity',
                 ),
               ),
             ],
@@ -866,7 +866,7 @@ class _ActivitiesToApproveScreenState extends State<ActivitiesToApproveScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Activities to approve', style: RecordStyle.screenTitle),
+            const Text('Activities to Approve', style: RecordStyle.screenTitle),
             if (queue != null)
               Text(
                 '${queue.waiting.length} waiting · your ${queue.societyCount} ${queue.societyCount == 1 ? 'society' : 'societies'}',
@@ -878,7 +878,7 @@ class _ActivitiesToApproveScreenState extends State<ActivitiesToApproveScreen> {
       body: error != null
           ? (error.status == 403
                 ? NoAccessView(
-                    title: 'Only SPCs approve activities',
+                    title: 'Only SPCs Approve Activities',
                     message: 'Activities are approved by the SPC assigned to each society.',
                     backLabel: 'Back',
                     onBack: () => Navigator.of(context).maybePop(),
@@ -907,7 +907,7 @@ class _ActivitiesToApproveScreenState extends State<ActivitiesToApproveScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'WAITING FOR YOU',
+                    'Waiting for You',
                     style: RecordStyle.sectionLabel,
                   ),
                   const SizedBox(height: 6),
@@ -972,7 +972,7 @@ class _ActivitiesToApproveScreenState extends State<ActivitiesToApproveScreen> {
                     ),
                   const SizedBox(height: 14),
                   const Text(
-                    'APPROVED RECENTLY',
+                    'Approved Recently',
                     style: RecordStyle.sectionLabel,
                   ),
                   const SizedBox(height: 6),
@@ -1125,7 +1125,7 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Review activity', style: RecordStyle.screenTitle),
+              const Text('Review Activity', style: RecordStyle.screenTitle),
               Text(detail.societyName, style: RecordStyle.screenSubtitle),
             ],
           ),
@@ -1240,7 +1240,7 @@ class _SendBackSheetState extends State<_SendBackSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Send back to ${widget.officer}?', style: RecordStyle.screenTitle),
+        Text('Send Back to ${widget.officer}?', style: RecordStyle.screenTitle),
         const SizedBox(height: 6),
         const Text(
           'The activity goes back to the Society Officer to change. It stays out of the dashboards until you approve it.',
@@ -1296,7 +1296,7 @@ class _ApprovedScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Review activity', style: RecordStyle.screenTitle),
+            const Text('Review Activity', style: RecordStyle.screenTitle),
             Text(detail.societyName, style: RecordStyle.screenSubtitle),
           ],
         ),

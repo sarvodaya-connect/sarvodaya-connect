@@ -157,7 +157,7 @@ class _DocumentsContentState extends State<_DocumentsContent> {
         if (widget.hasDraft) ...[
           NoticeBanner(
             icon: Icons.attach_file,
-            title: 'Supporting document for your Council update',
+            title: 'Supporting Document for Your Council Update',
             message: store.draftDocuments.isEmpty
                 ? 'Upload the AGM minutes that record the change. Files are attached as Draft until you submit.'
                 : '${store.draftDocuments.length} file attached as Draft to your pending update.',
@@ -173,7 +173,7 @@ class _DocumentsContentState extends State<_DocumentsContent> {
         ],
         if (failedUploads.isNotEmpty) ...[
           SectionCard(
-            title: 'Not uploaded',
+            title: 'Not Uploaded',
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             children: [
               for (final upload in failedUploads)
@@ -184,7 +184,7 @@ class _DocumentsContentState extends State<_DocumentsContent> {
         ],
         if (_filter == null) ...[
           SectionCard(
-            title: 'Registrar documents · FY 2025/26',
+            title: 'Registrar Documents · FY 2025/26',
             trailing: Text(
               '$approvedCount of 4\napproved',
               textAlign: TextAlign.end,
@@ -211,11 +211,10 @@ class _DocumentsContentState extends State<_DocumentsContent> {
           child: Semantics(
             header: true,
             label:
-                '${_filter == null ? 'All documents' : _filter!.label}, ${visible.length} ${visible.length == 1 ? 'document' : 'documents'}',
+                '${_filter == null ? 'All Documents' : _filter!.label}, ${visible.length} ${visible.length == 1 ? 'document' : 'documents'}',
             excludeSemantics: true,
             child: Text(
-              (_filter == null ? 'All documents' : _filter!.label)
-                  .toUpperCase(),
+              (_filter == null ? 'All Documents' : _filter!.label),
               style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 10.5,
@@ -686,7 +685,7 @@ class _UploadSheetState extends State<_UploadSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Upload supporting document',
+                'Upload Supporting Document',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 4),
@@ -712,7 +711,7 @@ class _UploadSheetState extends State<_UploadSheet> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Choose a file (demonstration files)',
+                'Choose a File (Demonstration Files)',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
@@ -758,7 +757,7 @@ class _UploadSheetState extends State<_UploadSheet> {
                 NoticeBanner(
                   icon: Icons.cloud_off_outlined,
                   tone: NoticeTone.error,
-                  title: 'Upload failed',
+                  title: 'Upload Failed',
                   message:
                       '$_uploadFailure ${_file!.name} was not saved. Your choices are kept, so you can retry now or later from Documents.',
                 ),

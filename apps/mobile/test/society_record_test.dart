@@ -73,18 +73,18 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.text('Annual financial summary · FY 2025/26'),
+          find.text('Annual Financial Summary · FY 2025/26'),
           findsOneWidget,
         );
         expect(find.text('LKR 412,500'), findsOneWidget);
         expect(find.text('LKR 1,286,000'), findsOneWidget);
-        expect(find.text('Audit report FY 2025/26'), findsOneWidget);
+        expect(find.text('Audit Report FY 2025/26'), findsOneWidget);
         expect(find.text('● Uploaded'), findsOneWidget);
         expect(find.text('Request: B → A · Waiting for HQ'), findsOneWidget);
         expect(find.widgetWithText(OutlinedButton, 'Edit'), findsOneWidget);
         // A request is already waiting, so a second one is not offered.
         expect(find.text('Request a grade change'), findsNothing);
-        expect(find.text('Business run by the society'), findsOneWidget);
+        expect(find.text('Business Run by the Society'), findsOneWidget);
         expect(find.text('A. Jayasekara'), findsOneWidget);
       },
     );
@@ -153,7 +153,7 @@ void main() {
           societyId: _wellawa,
         );
         await _tapText(tester, 'Add figures');
-        expect(find.text('Yearly summary'), findsOneWidget);
+        expect(find.text('Yearly Summary'), findsOneWidget);
         expect(
           find.text('FY 2025/26 · 1 Apr 2025 – 31 Mar 2026'),
           findsOneWidget,
@@ -180,7 +180,7 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Save'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Yearly summary'), findsNothing);
+        expect(find.text('Yearly Summary'), findsNothing);
         expect(find.text('LKR 412,500'), findsOneWidget);
         expect(find.text('LKR 1,286,000.5'), findsOneWidget);
 
@@ -209,7 +209,7 @@ void main() {
       await tester.tap(find.widgetWithText(OutlinedButton, 'Edit'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Edit society information'), findsOneWidget);
+      expect(find.text('Edit Society Information'), findsOneWidget);
       expect(find.text('S-104233'), findsOneWidget);
       expect(find.text('Read only'), findsNWidgets(2));
 
@@ -228,7 +228,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
-      expect(find.text('Leave without saving?'), findsOneWidget);
+      expect(find.text('Leave Without Saving?'), findsOneWidget);
       expect(
         find.textContaining('number of members and landline'),
         findsOneWidget,
@@ -241,7 +241,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Edit society information'), findsNothing);
+      expect(find.text('Edit Society Information'), findsNothing);
       expect(find.text('418'), findsOneWidget);
       expect(find.text('037 000 0123'), findsOneWidget);
     });
@@ -271,7 +271,7 @@ void main() {
           societyId: _wellawa,
         );
         await _tapText(tester, 'Request a grade change');
-        expect(find.text('C · Needs strengthening'), findsOneWidget);
+        expect(find.text('C · Needs Strengthening'), findsOneWidget);
         expect(find.text('Current'), findsOneWidget);
 
         await tester.tap(find.widgetWithText(FilledButton, 'Send to HQ'));
@@ -293,7 +293,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Request: C → B · Waiting for HQ'), findsOneWidget);
-        expect(find.text('Grade C · Needs strengthening'), findsOneWidget);
+        expect(find.text('Grade C · Needs Strengthening'), findsOneWidget);
       },
     );
 
@@ -304,7 +304,7 @@ void main() {
       expect(find.text('● Waiting for HQ'), findsOneWidget);
       expect(find.text('● Approved'), findsOneWidget);
       expect(find.text('● Rejected'), findsOneWidget);
-      expect(find.text('Waiting for an HQ decision'), findsOneWidget);
+      expect(find.text('Waiting for an HQ Decision'), findsOneWidget);
       expect(
         find.text('“Move one grade at a time. Please apply for B first.”'),
         findsOneWidget,
@@ -320,8 +320,8 @@ void main() {
       await _openRecord(tester, role: UserRole.districtManager);
       await _tapText(tester, 'Documents');
 
-      expect(find.text('Annual documents · FY 2025/26'), findsOneWidget);
-      expect(find.text('Audit report'), findsOneWidget);
+      expect(find.text('Annual Documents · FY 2025/26'), findsOneWidget);
+      expect(find.text('Audit Report'), findsOneWidget);
       expect(
         find.textContaining('Nimali Wijesinghe (Society Officer)'),
         findsWidgets,

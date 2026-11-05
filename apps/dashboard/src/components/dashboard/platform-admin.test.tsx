@@ -10,11 +10,11 @@ describe("platform administration", () => {
     render(<PlatformAdminScreen />);
 
     expect(screen.getByRole("heading", { name: "Administration" })).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "Demonstration platform users, roles and access scopes" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Demonstration Platform Users, Roles and Access Scopes" })).toBeInTheDocument();
     expect(screen.getByText("R. Fernando")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Roles & permissions" }));
-    expect(screen.getByRole("table", { name: "Demonstration role permissions and scopes" })).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "System audit log" }));
-    expect(screen.getByRole("table", { name: "Recent platform administration audit events" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Roles & Permissions" }));
+    expect(screen.getByRole("table", { name: "Demonstration Role Permissions and Scopes" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "System Audit Log" }));
+    expect(screen.getByRole("table", { name: "Recent Platform Administration Audit Events" })).toBeInTheDocument();
   });
 });

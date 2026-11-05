@@ -25,10 +25,10 @@ const options = {
 
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-    this.setAttribute("open", "");
+    this.setAttribute("Open", "");
   });
   HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-    this.removeAttribute("open");
+    this.removeAttribute("Open");
   });
   vi.clearAllMocks();
 });
@@ -38,7 +38,7 @@ describe("V5 D01 sign-in", () => {
     const user = userEvent.setup();
     render(<SignInForm />);
 
-    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign In" })).toBeInTheDocument();
     expect(screen.getByText("Society Officers use the Sarvodaya Connect phone app.")).toBeInTheDocument();
     expect(screen.getByText(/Forgot your password\? Ask HQ to set a new one\./)).toBeInTheDocument();
     const password = screen.getByLabelText(/^Password/);
@@ -109,7 +109,7 @@ describe("V5 D16t set a new password", () => {
     );
     await user.click(screen.getByRole("button", { name: "Set new password for M. Herath" }));
 
-    expect(screen.getByRole("heading", { name: "Set a new password for M. Herath" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Set a New Password for M. Herath" })).toBeInTheDocument();
     expect(screen.getByText(/The old password stops working straight away/)).toBeInTheDocument();
   });
 });

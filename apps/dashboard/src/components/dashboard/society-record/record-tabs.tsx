@@ -9,7 +9,7 @@ export type RecordTab = { count?: number; href: string; label: string };
 export function RecordTabs({ tabs }: { tabs: RecordTab[] }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Society record sections" className="flex overflow-x-auto border-b border-line">
+    <nav aria-label="Society Record Sections" className="flex overflow-x-auto border-b border-line">
       {tabs.map((tab, index) => {
         const active = index === 0 ? pathname === tab.href : pathname.startsWith(tab.href);
         return (

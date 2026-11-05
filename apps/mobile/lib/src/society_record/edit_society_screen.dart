@@ -200,7 +200,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Leave without saving?',
+                'Leave Without Saving?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
@@ -298,7 +298,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Edit society information',
+          title: 'Edit Society Information',
           actions: [if (dirty) const UnsavedChip()],
         ),
         body: Column(
@@ -449,7 +449,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                     NoticeBanner(
                       icon: Icons.error_outline,
                       tone: NoticeTone.error,
-                      title: 'Not saved',
+                      title: 'Not Saved',
                       message: _serverError,
                     ),
                   ],

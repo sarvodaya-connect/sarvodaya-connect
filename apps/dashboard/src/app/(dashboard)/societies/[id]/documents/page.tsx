@@ -25,7 +25,7 @@ export default async function SocietyDocumentsPage({ params, searchParams }: Pag
   const years = summary.financialYears.map(({ startYear, label }) => ({ startYear, label }));
   return (
     <div className="mt-4 space-y-4">
-      <nav aria-label="Financial year" className="flex flex-wrap gap-2">
+      <nav aria-label="Financial Year" className="flex flex-wrap gap-2">
         {years.map((option) => {
           const active = option.startYear === registrar.financialYear.startYear;
           return (
@@ -59,7 +59,7 @@ export default async function SocietyDocumentsPage({ params, searchParams }: Pag
         )}
       </div>
       <section aria-labelledby="all-documents-heading">
-        <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-soft" id="all-documents-heading">All documents</h2>
+        <h2 className="text-[10px] font-bold tracking-[0.12em] text-ink-soft" id="all-documents-heading">All Documents</h2>
         <DocumentsList documents={data} societyId={id} />
       </section>
     </div>

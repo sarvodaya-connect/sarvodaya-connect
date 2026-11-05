@@ -12,10 +12,10 @@ export const COMPLIANCE_DUE_DATE = "2026-09-30";
 export const COMPLIANCE_AS_OF = "2026-11-12";
 
 export const REGISTRAR_DOCUMENTS = [
-  { type: "AUDIT_REPORT", label: "Audit report", note: "Certified by a registered auditor" },
-  { type: "AGM_MINUTES", label: "AGM minutes", note: "Annual General Meeting record" },
-  { type: "OFFICE_BEARER_LIST", label: "Office-bearer list", note: "New board · names and addresses" },
-  { type: "MEMBERS_LIST", label: "Members list", note: "Signed file · District Manager and HQ only" },
+  { type: "AUDIT_REPORT", label: "Audit Report", note: "Certified by a registered auditor" },
+  { type: "AGM_MINUTES", label: "AGM Minutes", note: "Annual General Meeting record" },
+  { type: "OFFICE_BEARER_LIST", label: "Office-Bearer List", note: "New board · names and addresses" },
+  { type: "MEMBERS_LIST", label: "Members List", note: "Signed file · District Manager and HQ only" },
 ] as const;
 
 export type RegistrarDocumentType = (typeof REGISTRAR_DOCUMENTS)[number]["type"];

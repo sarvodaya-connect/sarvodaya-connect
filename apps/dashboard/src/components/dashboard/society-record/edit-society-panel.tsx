@@ -102,7 +102,7 @@ export function EditSocietyPanel({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[16px] font-bold text-ink" id="edit-society-heading">Edit society information</h2>
+            <h2 className="text-[16px] font-bold text-ink" id="edit-society-heading">Edit Society Information</h2>
             <p className="text-[11px] text-muted">{record.nameEn} · HQ can correct any field at any time</p>
           </div>
           {dirty && (
@@ -126,7 +126,7 @@ export function EditSocietyPanel({
           {field("businessDescription", "Business run by the society", { hint: "Information only — no sales, stock or accounts." })}
 
           <fieldset className="space-y-2">
-            <legend className="text-[11px] font-semibold text-ink-soft">Map location</legend>
+            <legend className="text-[11px] font-semibold text-ink-soft">Map Location</legend>
             {token && (
               <SocietyLocationMap
                 className="h-48"
@@ -194,7 +194,7 @@ export function EditSocietyPanel({
           )}
           {gradeChanged && (
             <div className="rounded-lg border border-line bg-[#f6f7f4] px-3 py-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted">Will be added to the grade history</p>
+              <p className="text-[9px] font-bold tracking-[0.14em] text-muted">Will Be Added to the Grade History</p>
               <p className="mt-1 text-[11px] font-semibold text-ink">
                 {before.grade || "Not set"} → {values.grade} changed directly by {hqName} (HQ)
               </p>

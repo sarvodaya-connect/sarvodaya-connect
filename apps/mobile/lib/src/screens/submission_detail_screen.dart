@@ -26,7 +26,7 @@ class SubmissionDetailScreen extends StatelessWidget {
         body: StateMessage(
           icon: Icons.search_off,
           tone: StateTone.error,
-          title: 'Submission not found',
+          title: 'Submission Not Found',
           message:
               'It may have been removed. Go back to the tracker and try again.',
           primaryLabel: 'Back',
@@ -78,7 +78,7 @@ class SubmissionDetailScreen extends StatelessWidget {
               const NoticeBanner(
                 icon: Icons.lock_outline,
                 tone: NoticeTone.warning,
-                title: 'Waiting for review',
+                title: 'Waiting for Review',
                 message: 'This submission is locked while the District Centre reviews it. You can view it but not edit it.',
               ),
             const SizedBox(height: 12),
@@ -87,7 +87,7 @@ class SubmissionDetailScreen extends StatelessWidget {
               submission.status != SubmissionStatus.approved) ...[
             const NoticeBanner(
               icon: Icons.info_outline,
-              title: 'Not counted yet',
+              title: 'Not Counted Yet',
               message: 'Activity reports are excluded from HQ reporting until they are approved.',
             ),
             const SizedBox(height: 12),
@@ -125,7 +125,7 @@ class SubmissionDetailScreen extends StatelessWidget {
           ],
           if (submission.activityReport case final report?) ...[
             SectionCard(
-              title: 'Activity report details',
+              title: 'Activity Report Details',
               children: [
                 InfoRow(label: 'Activity name', value: report.title),
                 InfoRow(label: 'Date', value: report.date),
@@ -191,7 +191,7 @@ class SubmissionDetailScreen extends StatelessWidget {
           ],
           if (submission.documents.isNotEmpty) ...[
             SectionCard(
-              title: 'Supporting documents',
+              title: 'Supporting Documents',
               children: [
                 for (final document in submission.documents)
                   InfoRow(
@@ -324,7 +324,7 @@ class _DemoReviewControls extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Demo: District Manager actions',
+            'Demo: District Manager Actions',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           const Text(

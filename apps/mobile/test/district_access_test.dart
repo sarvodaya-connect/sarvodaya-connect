@@ -139,8 +139,8 @@ void main() {
       await _tap(tester, cont);
 
       // M31
-      expect(find.text('Check and confirm'), findsOneWidget);
-      expect(find.text('P. DISSANAYAKE WILL BE ABLE TO'), findsOneWidget);
+      expect(find.text('Check and Confirm'), findsOneWidget);
+      expect(find.text('P. Dissanayake Will Be Able To'), findsOneWidget);
       expect(find.text('Give access to anyone else'), findsOneWidget);
       expect(find.text('4 days'), findsOneWidget);
       expect(find.text('Annual leave'), findsOneWidget);
@@ -155,7 +155,7 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsNothing);
 
       await _tap(tester, find.text('End access now'));
-      expect(find.text("End P. Dissanayake's access now?"), findsOneWidget);
+      expect(find.text("End P. Dissanayake's Access Now?"), findsOneWidget);
       await _tap(tester, find.widgetWithText(FilledButton, 'End access now'));
       expect(
         find.text('Access ended. The DDM no longer sees the district.'),
@@ -182,7 +182,7 @@ void main() {
       ),
       UserRole.deputyDistrictManager,
     );
-    expect(find.text('Temporary district-wide view'), findsOneWidget);
+    expect(find.text('Temporary District-Wide View'), findsOneWidget);
     expect(
       find.text(
         'All societies in your district · view only. Granted by R. Fernando (DM).',

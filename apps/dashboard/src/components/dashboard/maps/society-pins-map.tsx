@@ -22,8 +22,8 @@ const INDEX_LAYER = "societies-index";
 const LEGEND: { label: string; classes: MapSocietyClass[] }[] = [
   { label: "A · Strong", classes: ["A"] },
   { label: "B · Developing", classes: ["B"] },
-  { label: "C · Needs strengthening", classes: ["C"] },
-  { label: "No grade or not active", classes: ["UNGRADED", "NOT_ACTIVE"] },
+  { label: "C · Needs Strengthening", classes: ["C"] },
+  { label: "No Grade or Not Active", classes: ["UNGRADED", "NOT_ACTIVE"] },
 ];
 
 /** Societies recorded at exactly the same position share one marker, so a list can be offered. */
@@ -169,7 +169,7 @@ export function SocietyPinsMap({ token }: { token: string }) {
         <section aria-labelledby="map-chooser" className="mt-2 rounded-lg border border-line px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-[12px] font-bold text-ink" id="map-chooser" ref={chooserHeading} tabIndex={-1}>
-              {chooser.length} societies at this place
+              {chooser.length} Societies at This Place
             </h3>
             <button className="text-[11px] font-semibold text-brand-forest hover:underline" onClick={() => setChooser(null)} type="button">
               Close

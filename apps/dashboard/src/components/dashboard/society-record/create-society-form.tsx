@@ -106,7 +106,7 @@ export function CreateSocietyForm({
 
   const steps = (
     <p className="text-[12.5px] text-ink-soft">
-      <span className="font-bold text-ink">Step 1 · Society details</span>
+      <span className="font-bold text-ink">Step 1 · Society Details</span>
       {" → "}2 · Assign staff{" → "}3 · The Society Officer enters the Exco
     </p>
   );
@@ -127,11 +127,11 @@ export function CreateSocietyForm({
       <nav aria-label="Breadcrumb" className="flex gap-1.5 text-[11.5px] text-ink-soft">
         <Link className="font-medium text-brand-action underline underline-offset-2" href="/societies">Societies</Link>
         <span aria-hidden="true">›</span>
-        <span aria-current="page">Create a society record</span>
+        <span aria-current="page">Create a Society Record</span>
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[22px] font-bold text-ink">Create a society record</h2>
+          <h2 className="text-[22px] font-bold text-ink">Create a Society Record</h2>
           {steps}
         </div>
         <div className="flex gap-2.5">
@@ -154,7 +154,7 @@ export function CreateSocietyForm({
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-[16px] font-bold text-ink">Society details</h3>
+          <h3 className="text-[16px] font-bold text-ink">Society Details</h3>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {field("nameEn", "Society name (English)", { required: true })}
             {field("societyCode", "S number", { required: true })}
@@ -191,7 +191,7 @@ export function CreateSocietyForm({
           </div>
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-[16px] font-bold text-ink">Map location</h3>
+          <h3 className="text-[16px] font-bold text-ink">Map Location</h3>
           {token ? (
             <div className="mt-3">
               <SocietyLocationMap

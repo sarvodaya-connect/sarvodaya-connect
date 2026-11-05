@@ -39,7 +39,7 @@ type Copy = {
  */
 export const SIGN_IN_COPY: Record<SignInLanguage, Copy> = {
   en: {
-    title: "Sign in",
+    title: "Sign In",
     subtitle: "Use the username and password HQ created for you. You see the dashboard for your role.",
     username: "Username",
     password: "Password",

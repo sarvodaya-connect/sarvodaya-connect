@@ -17,7 +17,7 @@ function renderShell(viewer: DemoViewer, unread = 0) {
   );
 }
 
-const desktopNav = () => screen.getAllByRole("navigation", { name: "Main navigation" })[0]!;
+const desktopNav = () => screen.getAllByRole("navigation", { name: "Main Navigation" })[0]!;
 
 describe("V5 dashboard shell", () => {
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe("V5 dashboard shell", () => {
     renderShell(getViewer("hq-admin"));
 
     expect(within(desktopNav()).getByRole("link", { name: "Administration" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("heading", { level: 1, name: "Change & access log" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Change & Access Log" })).toBeInTheDocument();
   });
 
   it("gives coordinators a scoped search and no HQ pages", () => {
@@ -54,9 +54,9 @@ describe("V5 dashboard shell", () => {
 
     const nav = within(desktopNav());
     // V5 SP01 sidebar: Home, My societies, Activities to approve.
-    expect(nav.getByRole("link", { name: "Activities to approve" })).toHaveAttribute("aria-current", "page");
+    expect(nav.getByRole("link", { name: "Activities to Approve" })).toHaveAttribute("aria-current", "page");
     expect(nav.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/dashboard");
-    expect(nav.getByRole("link", { name: "My societies" })).toHaveAttribute("href", "/my-societies");
+    expect(nav.getByRole("link", { name: "My Societies" })).toHaveAttribute("href", "/my-societies");
     expect(nav.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
     expect(nav.getByText("SPC · 3 assigned societies")).toBeInTheDocument();
     // The header search looks only through the SPC's own societies.
@@ -68,7 +68,7 @@ describe("V5 dashboard shell", () => {
   it("tells District Managers their district is view only", () => {
     renderShell(getViewer("district-manager"));
 
-    expect(screen.getByRole("heading", { level: 1, name: "District overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "District Overview" })).toBeInTheDocument();
     expect(screen.getByText("Kurunegala District · view only")).toBeInTheDocument();
   });
 });

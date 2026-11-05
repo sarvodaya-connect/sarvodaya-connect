@@ -21,7 +21,7 @@ export default function SpcError({
         description="The activities could not be loaded. Nothing has been approved or changed. Please try again."
         onRetry={retry}
         reference={error.digest}
-        title="We couldn't load this page"
+        title="We Couldn't Load This Page"
       />
     </section>
   );

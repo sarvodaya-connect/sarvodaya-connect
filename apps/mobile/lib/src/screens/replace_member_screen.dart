@@ -131,7 +131,7 @@ class _ReplaceMemberScreenState extends State<ReplaceMemberScreen> {
         body: StateMessage(
           icon: Icons.person_off_outlined,
           tone: StateTone.error,
-          title: 'This seat could not be found',
+          title: 'This Seat Could Not Be Found',
           message:
               'The Council may have changed. Go back and open the seat again.',
           primaryLabel: 'Back to Council',
@@ -177,7 +177,7 @@ class _ReplaceMemberScreenState extends State<ReplaceMemberScreen> {
             ),
             const SizedBox(height: 12),
             SectionCard(
-              title: 'New member',
+              title: 'New Member',
               children: [
                 TextFormField(
                   controller: _name,

@@ -87,7 +87,7 @@ describe("DM04 temporary DDM access", () => {
       ],
     };
     render(<GrantDetail grant={detail} now={now} />);
-    const history = within(screen.getByRole("region", { name: "Access history" }));
+    const history = within(screen.getByRole("region", { name: "Access History" }));
     expect(history.getByText("Opened Thalawa SSS")).toBeInTheDocument();
     expect(history.getByText("P. Dissanayake · 27 Oct, 10:02 a.m.")).toBeInTheDocument();
     expect(history.getByText("Access given · view only")).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("DM05 give temporary access", () => {
     expect(screen.getByLabelText(/^Ends/)).toHaveValue("2026-10-31T09:00");
 
     await user.selectOptions(screen.getByLabelText(/^DDM/), "u1");
-    expect(screen.getByText("P. Dissanayake will be able to")).toBeInTheDocument();
+    expect(screen.getByText("P. Dissanayake Will Be Able To")).toBeInTheDocument();
     expect(screen.getByText("Give access to anyone else")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Give access" }));
     expect(action).toHaveBeenCalled();
@@ -177,7 +177,7 @@ const homeGrant = {
 describe("DD02 / DD07 DDM home", () => {
   it("DD02: shows the district-wide view with the time left and a way into it", () => {
     render(<RoleHome home={ddmHome({ temporaryAccess: [homeGrant], districtViewCount: 106 })} now={now} viewer={ddm} />);
-    const banner = screen.getAllByRole("note").find((note) => note.textContent?.includes("Temporary district-wide view"))!;
+    const banner = screen.getAllByRole("note").find((note) => note.textContent?.includes("Temporary District-Wide View"))!;
     expect(banner).toHaveTextContent("all 106 Kurunegala societies, view only. Given by R. Fernando (DM) on 26 Oct, 9:10 a.m.");
     expect(banner).toHaveTextContent("Ends Sat 31 Oct, 6:00 p.m. · 4 days left");
     expect(screen.getByRole("link", { name: "Browse district societies" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
@@ -240,14 +240,14 @@ describe("DD04 district societies, view only", () => {
   it("has both tabs, marks the DDM's own societies and keeps the rest view only", () => {
     render(<MySocieties filters={{ scope: "DISTRICT" }} list={list} now={now} role="DEPUTY_DISTRICT_MANAGER" />);
     expect(screen.getByText("All 106 Kurunegala societies · view only until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
-    const tabs = within(screen.getByRole("navigation", { name: "Which societies" }));
-    expect(tabs.getByRole("link", { name: /My societies · edit/ })).toHaveAttribute("href", "/my-societies");
+    const tabs = within(screen.getByRole("navigation", { name: "Which Societies" }));
+    expect(tabs.getByRole("link", { name: /My Societies · Edit/ })).toHaveAttribute("href", "/my-societies");
     expect(tabs.getByRole("link", { name: /Kurunegala district · view only/ })).toHaveAttribute("aria-current", "page");
     const rows = screen.getAllByRole("row").slice(1);
     expect(within(rows[0]!).getByText("View only")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("Editable")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("Yours")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Assigned to me" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Assigned to Me" })).toBeInTheDocument();
     expect(document.querySelector('input[name="scope"]')).toHaveValue("DISTRICT");
     expect(screen.getByText(/each one you open is recorded in the access history/)).toBeInTheDocument();
   });
@@ -268,7 +268,7 @@ describe("DD04 district societies, view only", () => {
       />,
     );
     expect(screen.getByText(/was ended early on Sat 31 Oct/)).toBeInTheDocument();
-    expect(within(screen.getByRole("navigation", { name: "Which societies" })).getAllByRole("link")).toHaveLength(1);
+    expect(within(screen.getByRole("navigation", { name: "Which Societies" })).getAllByRole("link")).toHaveLength(1);
   });
 });
 
@@ -287,14 +287,14 @@ describe("DD06, ST04 and pages for another role", () => {
         recentlyEnded={{ districtName: "Kurunegala", grantedByName: "R. Fernando", startsAt: "", expiresAt: "", endedAt: "2026-10-31T12:30:00Z", endedEarly: false }}
       />,
     );
-    expect(screen.getByRole("heading", { name: "You don't have access to this society" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You Don't Have Access to This Society" })).toBeInTheDocument();
     expect(screen.getByText(/not one of your 18 assigned societies, and your temporary district-wide view ended on Sat 31 Oct/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to my societies" })).toHaveAttribute("href", "/my-societies");
   });
 
   it("M69d: an HQ page tells the user who they are signed in as", () => {
     render(<RolePageNoAccess name="R. Fernando" roleLabel="District Manager" scope="Kurunegala" />);
-    expect(screen.getByRole("heading", { name: "This page is for HQ only" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "This Page Is for HQ Only" })).toBeInTheDocument();
     expect(screen.getByText(/signed in as R. Fernando \(District Manager, Kurunegala\)/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to my home" })).toHaveAttribute("href", "/dashboard");
   });

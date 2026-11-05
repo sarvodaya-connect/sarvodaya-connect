@@ -261,7 +261,7 @@ void main() {
       expect(find.text('● Incomplete'), findsOneWidget);
       expect(find.text('● Complete'), findsNothing);
       expect(find.textContaining('No Treasurer chosen yet.'), findsOneWidget);
-      expect(find.text('Treasurer not chosen'), findsOneWidget);
+      expect(find.text('Treasurer Not Chosen'), findsOneWidget);
     },
   );
 
@@ -276,7 +276,7 @@ void main() {
     )..switchDemoRole(UserRole.hqAdmin);
     await _pump(tester, store, const CreateSocietyScreen());
 
-    expect(find.text('The Exco is entered later'), findsOneWidget);
+    expect(find.text('The Exco Is Entered Later'), findsOneWidget);
     await tester.tap(find.text('Save and assign staff'));
     await tester.pumpAndSettle();
     expect(admin.created, isNull);
@@ -335,7 +335,7 @@ void main() {
     await tester.enterText(fields.at(6), '90');
     await tester.tap(find.text('Save and assign staff'));
     await tester.pumpAndSettle();
-    expect(find.text('The society was not created'), findsOneWidget);
+    expect(find.text('The Society Was Not Created'), findsOneWidget);
     expect(find.textContaining('Only HQ can do this'), findsOneWidget);
     expect(find.byType(AssignStaffScreen), findsNothing);
   });

@@ -79,9 +79,9 @@ void main() {
     expect(find.text('Show all 22 members'), findsOneWidget);
 
     await _tap(tester, find.text('N. Wijesinghe'));
-    expect(find.text('Exco member'), findsOneWidget);
-    expect(find.text('Exco member 2 of 25'), findsOneWidget);
-    expect(find.text('NIC number'), findsOneWidget);
+    expect(find.text('Exco Member'), findsOneWidget);
+    expect(find.text('Exco Member 2 of 25'), findsOneWidget);
+    expect(find.text('NIC Number'), findsOneWidget);
     expect(find.text('Replace this member'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
   });
@@ -133,7 +133,7 @@ void main() {
 
     // The new Treasurer's own page shows the office.
     await _tap(tester, find.text('Exco member 5'));
-    expect(find.text('Exco member 5 of 25'), findsOneWidget);
+    expect(find.text('Exco Member 5 of 25'), findsOneWidget);
     expect(find.textContaining('Treasurer'), findsOneWidget);
   });
 
@@ -143,7 +143,7 @@ void main() {
     await _openExco(tester, UserRole.districtManager);
     expect(find.text('Change'), findsNothing);
     await _tap(tester, find.text('N. Wijesinghe'));
-    expect(find.text('View only'), findsOneWidget);
+    expect(find.text('View Only'), findsOneWidget);
     expect(find.text('Replace this member'), findsNothing);
     expect(find.text('Edit'), findsNothing);
   });

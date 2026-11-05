@@ -53,7 +53,7 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-bold text-ink">Activities to approve</h1>
+          <h1 className="text-[22px] font-bold text-ink">Activities to Approve</h1>
           <p className="text-[12px] text-ink-soft">
             {queue.waiting.length} waiting from your {queue.societyCount} {queue.societyCount === 1 ? "society" : "societies"}
           </p>
@@ -67,14 +67,14 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
       </div>
 
       <section aria-labelledby="waiting-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">1 · Waiting for you</p>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">1 · Waiting for You</p>
         <h2 className="text-[15px] font-bold text-ink" id="waiting-heading">Waiting ({queue.waiting.length})</h2>
         {queue.waiting.length === 0 ? (
           <div className="mt-3">
             <EmptyState
               description="New activities from your societies appear here when their Society Officer sends them."
               icon="success"
-              title="Nothing is waiting for you"
+              title="Nothing Is Waiting for You"
             />
           </div>
         ) : (
@@ -118,8 +118,8 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
       </section>
 
       <section aria-labelledby="approved-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">2 · Approved</p>
-        <h2 className="text-[15px] font-bold text-ink" id="approved-heading">Approved recently</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">2 · Approved</p>
+        <h2 className="text-[15px] font-bold text-ink" id="approved-heading">Approved Recently</h2>
         {queue.approvedRecently.length === 0 ? (
           <p className="mt-3 rounded-lg bg-[#f4f5f1] px-4 py-6 text-center text-[12px] text-muted">
             No activities approved in the last 30 days.

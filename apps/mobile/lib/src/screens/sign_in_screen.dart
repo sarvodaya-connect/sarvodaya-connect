@@ -119,7 +119,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Sign in',
+                    'Sign In',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
@@ -195,7 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     const SizedBox(height: 24),
                     NoticeBanner(
                       icon: Icons.info_outline,
-                      title: 'Demonstration sign-in',
+                      title: 'Demonstration Sign-In',
                       message:
                           'This build uses a fictional account. Production authentication will '
                           'be connected securely through Amazon Cognito.',

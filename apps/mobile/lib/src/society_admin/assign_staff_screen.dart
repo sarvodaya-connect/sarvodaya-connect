@@ -129,7 +129,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: recordFormAppBar(
       context,
-      title: 'Assign responsible staff',
+      title: 'Assign Responsible Staff',
       subtitle: widget.justCreated
           ? 'Step 2 of 2 · ${widget.societyName}'
           : widget.societyName,
@@ -145,7 +145,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
           final error = snapshot.error;
           return StateMessage(
             icon: Icons.error_outline,
-            title: 'We couldn’t load the staff',
+            title: 'We Couldn’t Load the Staff',
             message: error is SocietyRecordException
                 ? error.message
                 : 'Check the connection and try again.',
@@ -164,7 +164,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
               NoticeBanner(
                 icon: Icons.check_circle_outline,
                 tone: NoticeTone.success,
-                title: '${widget.societyName} was created',
+                title: '${widget.societyName} Was Created',
                 message: 'Its Exco is not entered yet. Choose the Society Officer who will add the 25 members.',
               ),
               const SizedBox(height: 14),
@@ -239,7 +239,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
             ],
             const NoticeBanner(
               icon: Icons.history,
-              title: 'Recorded in the society history',
+              title: 'Recorded in the Society History',
               message: 'The change is saved with your name and the time. Anyone whose access changes is signed out.',
             ),
             if (_error != null) ...[
@@ -247,7 +247,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'Not saved',
+                title: 'Not Saved',
                 message: _error,
               ),
             ],

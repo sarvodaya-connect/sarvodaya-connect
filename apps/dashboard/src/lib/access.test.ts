@@ -81,10 +81,10 @@ describe("provisional role-based visibility", () => {
       "Settings",
     ]);
     // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8).
-    expect(labels(districtManager)).toEqual(["District overview", "Societies", "Temporary DDM access", "Disaster response"]);
-    expect(labels(coordinator)).toEqual(["Home", "My societies", "Activities to approve", "Disaster response"]);
-    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster response"]);
-    expect(labels(systemAdmin)).toEqual(["Platform access", "Notifications"]);
+    expect(labels(districtManager)).toEqual(["District Overview", "Societies", "Temporary DDM Access", "Disaster Response"]);
+    expect(labels(coordinator)).toEqual(["Home", "My Societies", "Activities to Approve", "Disaster Response"]);
+    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster Response"]);
+    expect(labels(systemAdmin)).toEqual(["Platform Access", "Notifications"]);
   });
 
   it("only gives HQ the administration pages", () => {

@@ -35,8 +35,8 @@ void main() {
 
     expect(find.byType(NotificationsScreen), findsOneWidget);
     expect(find.bySemanticsLabel('4 unread'), findsOneWidget);
-    expect(find.text('TODAY'), findsOneWidget);
-    expect(find.text('EARLIER'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Earlier'), findsOneWidget);
     expect(find.text('HQ asked for the 4 Registrar documents'), findsOneWidget);
 
     // Unread: dot, bold title and "Unread" for screen readers.
@@ -175,7 +175,7 @@ void main() {
 
     expect(_badge('4'), findsNothing);
     await _openNotifications(tester);
-    expect(find.text('No notifications'), findsOneWidget);
+    expect(find.text('No Notifications'), findsOneWidget);
     await tester.tap(find.text('Back to Home'));
     await tester.pumpAndSettle();
 
@@ -183,7 +183,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     await _openNotifications(tester);
-    expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Something Went Wrong'), findsOneWidget);
 
     store.failLoads = false;
     await tester.tap(find.text('Try again'));

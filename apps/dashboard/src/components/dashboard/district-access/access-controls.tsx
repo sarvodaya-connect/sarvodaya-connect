@@ -85,12 +85,12 @@ export function GiveAccessForm({
       </label>
 
       <div className="rounded-xl border border-line bg-surface-muted px-4 py-3 text-[12px]">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.06em] text-brand-forest">{deputy ? deputy.displayName : "The DDM"} will be able to</p>
+        <p className="text-[10.5px] font-bold tracking-[0.06em] text-brand-forest">{deputy ? deputy.displayName : "The DDM"} Will Be Able To</p>
         <p className="mt-1 flex items-center gap-1.5 text-ink">
           <Icon className="size-3.5 text-brand-leaf" name="check" strokeWidth={2.4} />
           View all {societyCount} societies in {districtName}
         </p>
-        <p className="mt-2 text-[10.5px] font-bold uppercase tracking-[0.06em] text-danger-text">They will not be able to</p>
+        <p className="mt-2 text-[10.5px] font-bold tracking-[0.06em] text-danger-text">They Will Not Be Able To</p>
         {["Edit societies outside their own", "Request grade changes for those societies", "Give access to anyone else"].map((text) => (
           <p className="mt-1 flex items-center gap-1.5 text-ink" key={text}>
             <Icon className="size-3.5 text-ink-soft" name="close" strokeWidth={2.4} />

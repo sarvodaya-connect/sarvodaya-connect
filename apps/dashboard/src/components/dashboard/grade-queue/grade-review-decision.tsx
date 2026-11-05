@@ -55,9 +55,9 @@ export function GradeReviewDecision({ decide, request }: { decide: DecideFromQue
 
   return (
     <section aria-labelledby="decision-heading" className="rounded-card border border-line bg-surface p-5">
-      <h2 className="text-[16px] font-bold text-ink" id="decision-heading">Your decision</h2>
+      <h2 className="text-[16px] font-bold text-ink" id="decision-heading">Your Decision</h2>
       <fieldset className="mt-3 space-y-3" disabled={pending}>
-        <legend className="sr-only">Approve or reject</legend>
+        <legend className="sr-only">Approve or Reject</legend>
         {option("APPROVE", `Approve · change grade to ${request.toGrade}`, "The grade changes straight away.")}
         {option("REJECT", `Reject · keep grade ${current}`, "A comment is required.")}
       </fieldset>

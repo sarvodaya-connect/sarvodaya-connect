@@ -92,10 +92,10 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
     final draft = store.draft;
     if (draft == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Check before sending')),
+        appBar: AppBar(title: const Text('Check Before Sending')),
         body: StateMessage(
           icon: Icons.inbox_outlined,
-          title: 'Nothing to send',
+          title: 'Nothing to Send',
           message: 'There is no draft change. Start from the Executive Council to replace a member.',
           primaryLabel: 'Back to Home',
           onPrimary: () => HomeShell.openTab(context, HomeShell.homeTab),
@@ -107,7 +107,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
     final documents = store.draftDocuments;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Check before sending')),
+      appBar: AppBar(title: const Text('Check Before Sending')),
       body: Column(
         children: [
           if (store.offline) const OfflineBanner(),
@@ -164,7 +164,7 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                   NoticeBanner(
                     icon: Icons.wifi_off,
                     tone: NoticeTone.error,
-                    title: 'Not sent',
+                    title: 'Not Sent',
                     message: _sendError,
                     action: Align(
                       alignment: Alignment.centerLeft,

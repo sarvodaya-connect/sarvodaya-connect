@@ -327,7 +327,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
             RecordNote(
               icon: Icons.error_outline,
               tone: NoteTone.error,
-              title: 'Not uploaded',
+              title: 'Not Uploaded',
               message: _uploadError!,
             ),
           ],

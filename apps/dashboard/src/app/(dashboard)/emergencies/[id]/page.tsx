@@ -52,7 +52,7 @@ function first(value: string | string[] | undefined) {
 
 const STATES = [
   ["ALL", "All"],
-  ["NOT_ASSESSED", "Not assessed"],
+  ["NOT_ASSESSED", "Not Assessed"],
   ["CRITICAL", "Critical"],
   ["AFFECTED", "Affected"],
   ["SAFE", "Safe"],
@@ -75,18 +75,18 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
   const panel = first(query.panel);
   const now = new Date();
   const back = <Link className={secondaryButtonClass} href="/emergencies">Back to disaster response</Link>;
-  if (!isUuid(id)) return <NoAccessState action={back} description="This incident could not be found, or it does not cover your societies." heading="h1" title="You don’t have access to this incident" />;
+  if (!isUuid(id)) return <NoAccessState action={back} description="This incident could not be found, or it does not cover your societies." heading="h1" title="You Don’t Have Access to This Incident" />;
 
   let detail: EmergencyIncidentDetail;
   try {
     detail = await getIncident(id);
   } catch (error) {
     if (isNotFound(error)) {
-      return <NoAccessState action={back} description="This incident could not be found, or it does not cover your societies." heading="h1" title="You don’t have access to this incident" />;
+      return <NoAccessState action={back} description="This incident could not be found, or it does not cover your societies." heading="h1" title="You Don’t Have Access to This Incident" />;
     }
     return (
       <section className="rounded-card border border-[#efc4bd] bg-surface p-6" role="alert">
-        <h1 className="text-[15px] font-bold text-ink">We couldn’t load this incident</h1>
+        <h1 className="text-[15px] font-bold text-ink">We Couldn’t Load This Incident</h1>
         <p className="mt-1 text-[12.5px] text-ink-soft">{failureMessage(error)}</p>
         <Link className="mt-3 inline-block text-[12.5px] font-semibold text-brand-forest underline underline-offset-2" href={`/emergencies/${id}`}>Try again</Link>
       </section>
@@ -131,7 +131,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
 
   return (
     <div className="flex flex-col gap-4">
-      <Breadcrumb incident={incident} page={tab === "actions" ? "Response actions" : tab === "reports" ? "Situation reports" : tab === "assessments" ? "Assessments" : undefined} />
+      <Breadcrumb incident={incident} page={tab === "actions" ? "Response Actions" : tab === "reports" ? "Situation reports" : tab === "assessments" ? "Assessments" : undefined} />
       <IncidentHeader actions={headerActions} incident={incident} now={now} />
       {!isHq && <RulesBanner />}
 
@@ -154,7 +154,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
               action={<Link className="text-[12px] font-semibold text-brand-forest underline underline-offset-2" href={`${base}?tab=assessments`}>All {totals.assessed}</Link>}
               eyebrow="Assessments"
               id="assessments-heading"
-              title="Rapid assessments received"
+              title="Rapid Assessments Received"
             >
               <AssessmentsTable
                 emptyText={isHq ? "No assessments received yet." : "No assessments received yet for your societies."}
@@ -166,13 +166,13 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             <div className="flex min-w-0 flex-col gap-4">
               {isHq ? (
                 <>
-                  <Card eyebrow="Area" id="district-heading" title="By district">
+                  <Card eyebrow="Area" id="district-heading" title="By District">
                     <ByDistrictTable totals={totals} />
                   </Card>
-                  <Card eyebrow="From assessments" id="needs-heading" title="Urgent needs">
+                  <Card eyebrow="From Assessments" id="needs-heading" title="Urgent Needs">
                     <UrgentNeeds totals={totals} />
                   </Card>
-                  <Card eyebrow="Coordination" id="helping-heading" title="Societies helping">
+                  <Card eyebrow="Coordination" id="helping-heading" title="Societies Helping">
                     <SocietiesHelping actions={detail.actions} incidentId={id} />
                   </Card>
                 </>
@@ -185,13 +185,13 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
                         HQ decides
                       </span>
                     }
-                    eyebrow="Response actions"
+                    eyebrow="Response Actions"
                     id="actions-heading"
                     title="Assigned by HQ"
                   >
                     <ActionsSummary actions={detail.actions} />
                   </Card>
-                  <Card eyebrow="History" id="history-heading" title="Incident history">
+                  <Card eyebrow="History" id="history-heading" title="Incident History">
                     <HistoryList history={detail.history} />
                   </Card>
                 </>
@@ -199,7 +199,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             </div>
           </div>
           {isHq && (
-            <Card eyebrow="History" id="history-heading" title="Incident history">
+            <Card eyebrow="History" id="history-heading" title="Incident History">
               <HistoryList history={detail.history} />
             </Card>
           )}
@@ -210,7 +210,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
         <section aria-labelledby="all-assessments" className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Assessments</p>
+              <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Assessments</p>
               <h2 className="text-[15px] font-bold text-ink" id="all-assessments">
                 {isHq ? `Societies in the area (${totals.societiesInArea})` : "Your societies in the area"}
               </h2>
@@ -226,7 +226,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
               </form>
             )}
           </div>
-          <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
+          <nav aria-label="Filter by Status" className="flex flex-wrap gap-2">
             {STATES.map(([value, label]) => (
               <Link
                 aria-current={value === state ? "page" : undefined}
@@ -316,7 +316,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             <Notice tone="error">This situation report could not be loaded. Refresh the page to try again.</Notice>
           ) : (
             <section className="rounded-card border border-line bg-surface p-8 text-center" role="status">
-              <h2 className="text-[15px] font-bold text-ink">No situation reports yet</h2>
+              <h2 className="text-[15px] font-bold text-ink">No Situation Reports Yet</h2>
               <p className="mt-1 text-[12.5px] text-ink-soft">
                 {permissions.canReport ? "Make the first report from the latest assessments and response actions." : "HQ makes situation reports from the latest assessments. They appear here."}
               </p>
@@ -326,7 +326,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
       )}
 
       {panel === "assess" && permissions.canAssess && (
-        <Drawer closeHref={tabHref} subtitle={`${incident.reference} · ${incident.title}`} title="Rapid assessment">
+        <Drawer closeHref={tabHref} subtitle={`${incident.reference} · ${incident.title}`} title="Rapid Assessment">
           <AssessmentWizard
             closeHref={tabHref}
             completeUpload={completeEvidenceUpload}
@@ -368,7 +368,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
         <Drawer
           closeHref={`${base}?tab=actions`}
           subtitle={need ? `Need: ${NEED_LABELS[need.need].toLowerCase()} · ${quantityLine(need.quantity, need.unit)} · for ${need.forSociety?.name ?? "a society"} (${need.forSociety?.districtName ?? ""})` : undefined}
-          title="Assign helping societies"
+          title="Assign Helping Societies"
         >
           {need && candidates ? (
             <AssignHelpersForm action={assignHelpers} candidates={candidates} incidentId={id} need={need} now={now} />
@@ -379,7 +379,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
       )}
 
       {panel === "need" && permissions.canAssign && (
-        <Drawer closeHref={`${base}?tab=actions`} subtitle={`${incident.reference} · ${incident.title}`} title="Add a need">
+        <Drawer closeHref={`${base}?tab=actions`} subtitle={`${incident.reference} · ${incident.title}`} title="Add a Need">
           <AddNeedForm action={addNeed} incidentId={id} societies={detail.assessableSocieties} />
         </Drawer>
       )}

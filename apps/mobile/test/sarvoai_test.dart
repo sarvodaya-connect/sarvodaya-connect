@@ -65,7 +65,7 @@ void main() {
   ) async {
     await _pump(tester, const SarvoAiScreen());
     expect(find.text('Collective Wisdom. Intelligent Impact.'), findsOneWidget);
-    expect(find.text('TRY ASKING'), findsOneWidget);
+    expect(find.text('Try Asking'), findsOneWidget);
     expect(
       find.textContaining('never share capital, savings, loans'),
       findsOneWidget,
@@ -100,7 +100,7 @@ void main() {
 
       await tester.tap(find.text('View details'));
       await tester.pumpAndSettle();
-      expect(find.text('How was this answered?'), findsOneWidget);
+      expect(find.text('How Was This Answered?'), findsOneWidget);
       expect(
         find.textContaining('Annual summary · total profit'),
         findsOneWidget,
@@ -149,10 +149,10 @@ void main() {
   });
 
   for (final (question, title) in [
-    ('Mannar above LKR 1,000,000?', 'No societies match'),
+    ('Mannar above LKR 1,000,000?', 'No Societies Match'),
     ('Average in Mullaitivu?', 'Only 6 of 17 societies have added figures'),
     ('Which are the best societies?', 'What do you mean by “best”?'),
-    ('Total share capital in Kurunegala?', 'SarvoAI can’t answer this'),
+    ('Total share capital in Kurunegala?', 'SarvoAI Can’t Answer This'),
   ]) {
     testWidgets('M87–M89 shows “$title”', (tester) async {
       await _pump(
@@ -181,7 +181,7 @@ void main() {
     });
     await _pump(tester, const SarvoAiScreen(), api: api);
     await _ask(tester, 'Who is the president of Pahala Kosgama SSS?');
-    expect(find.text('SarvoAI isn’t available right now'), findsOneWidget);
+    expect(find.text('SarvoAI Isn’t Available Right Now'), findsOneWidget);
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
     expect(find.textContaining('is A. Jayasekara'), findsOneWidget);
@@ -201,7 +201,7 @@ void main() {
       ),
     );
     await _ask(tester, 'Average profit in Kurunegala?');
-    expect(find.text('SarvoAI has reached this month’s limit'), findsOneWidget);
+    expect(find.text('SarvoAI Has Reached This Month’s Limit'), findsOneWidget);
     expect(find.text(message), findsOneWidget);
     expect(find.text('Try again'), findsNothing);
   });
@@ -252,7 +252,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester, const SarvoAiScreen(), role: role);
-      expect(find.text('SarvoAI is for HQ only'), findsOneWidget);
+      expect(find.text('SarvoAI Is for HQ Only'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
     });
 
@@ -278,11 +278,11 @@ void main() {
       const SarvoAiScreen(),
       api: _FakeApi(
         (_) async =>
-            throw const SarvoAiException('SarvoAI is for HQ only', status: 403),
+            throw const SarvoAiException('SarvoAI Is for HQ Only', status: 403),
       ),
     );
     await _ask(tester, 'Average profit?');
-    expect(find.text('SarvoAI is for HQ only'), findsOneWidget);
+    expect(find.text('SarvoAI Is for HQ Only'), findsOneWidget);
   });
 
   testWidgets('M17 offers Ask SarvoAI to HQ only', (tester) async {
@@ -290,13 +290,13 @@ void main() {
     expect(find.text('Ask SarvoAI'), findsOneWidget);
     await tester.tap(find.text('Ask SarvoAI'));
     await tester.pumpAndSettle();
-    expect(find.text('TRY ASKING'), findsOneWidget);
+    expect(find.text('Try Asking'), findsOneWidget);
   });
 
   testWidgets('M17 has no SarvoAI for a DM', (tester) async {
     await _pump(tester, const MoreScreen(), role: UserRole.districtManager);
     expect(find.text('Ask SarvoAI'), findsNothing);
-    expect(find.text('Help and HQ contact'), findsOneWidget);
+    expect(find.text('Help and HQ Contact'), findsOneWidget);
     expect(find.text('Back to the sign-in screen'), findsOneWidget);
   });
 

@@ -57,7 +57,7 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Grade-change requests', style: RecordStyle.screenTitle),
+            const Text('Grade-Change Requests', style: RecordStyle.screenTitle),
             Text(widget.record.nameEn, style: RecordStyle.screenSubtitle),
           ],
         ),
@@ -77,7 +77,7 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
           : requests.isEmpty
           ? const StateMessage(
               icon: Icons.workspace_premium_outlined,
-              title: 'No grade-change requests yet',
+              title: 'No Grade-Change Requests Yet',
               message: 'Requests sent to HQ for this society will appear here.',
             )
           : RefreshIndicator(
@@ -90,7 +90,7 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
                     const Padding(
                       padding: EdgeInsets.fromLTRB(2, 6, 2, 8),
                       child: Text(
-                        'EARLIER REQUESTS',
+                        'Earlier Requests',
                         style: RecordStyle.sectionLabel,
                       ),
                     ),
@@ -143,7 +143,7 @@ class _RequestCard extends StatelessWidget {
               ringColor: AppColors.danger,
             ),
             const RecordTimelineEntry(
-              title: 'Waiting for an HQ decision',
+              title: 'Waiting for an HQ Decision',
               detail: 'Usually within 5 working days',
               ringColor: AppColors.muted,
               last: true,

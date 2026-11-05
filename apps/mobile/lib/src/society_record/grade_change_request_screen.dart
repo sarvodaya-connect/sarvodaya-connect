@@ -85,7 +85,7 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
     final record = widget.record;
     final current = record.grade;
     return Scaffold(
-      appBar: recordFormAppBar(context, title: 'Request a grade change'),
+      appBar: recordFormAppBar(context, title: 'Request a Grade Change'),
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -185,7 +185,7 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
                 RecordNote(
                   icon: Icons.info_outline,
                   tone: NoteTone.warning,
-                  title: 'HQ approval needed',
+                  title: 'HQ Approval Needed',
                   message:
                       "The grade stays ${current ?? 'as it is'} until HQ approves. You will get a notification with HQ's decision.",
                 ),
@@ -194,7 +194,7 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
                   RecordNote(
                     icon: Icons.error_outline,
                     tone: NoteTone.error,
-                    title: 'Not sent',
+                    title: 'Not Sent',
                     message: _error!,
                   ),
                 ],

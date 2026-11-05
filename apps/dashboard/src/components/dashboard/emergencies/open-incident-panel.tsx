@@ -60,11 +60,11 @@ export async function OpenIncidentPanel({ viewer, closeHref, search }: { viewer:
     </>
   );
   return isHq ? (
-    <Drawer closeHref={closeHref} subtitle="Anyone signed in can open an incident for a society they look after. People covering the area are notified." title="Open an incident">
+    <Drawer closeHref={closeHref} subtitle="Anyone signed in can open an incident for a society they look after. People covering the area are notified." title="Open an Incident">
       {body}
     </Drawer>
   ) : (
-    <Modal closeHref={closeHref} subtitle="Opens a disaster incident" title="Report an incident">
+    <Modal closeHref={closeHref} subtitle="Opens a disaster incident" title="Report an Incident">
       {body}
     </Modal>
   );

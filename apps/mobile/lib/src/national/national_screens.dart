@@ -91,7 +91,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error is SocietyRecordException && error.status == 403) {
         final user = DemoScope.of(context).user;
         return NoAccessView(
-          title: 'This page is for HQ only',
+          title: 'This Page Is for HQ Only',
           message:
               'You are signed in as ${user?.displayName ?? 'another role'}. '
               'Your own societies and figures are on your home page.',
@@ -107,7 +107,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'We couldn’t load the national figures',
+          title: 'We Couldn’t Load the National Figures',
           message: error is SocietyRecordException
               ? error.message
               : 'Check the connection and try again.',
@@ -234,7 +234,7 @@ class _Eyebrow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
-          text.toUpperCase(),
+          text,
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -642,7 +642,7 @@ class _Overview extends StatelessWidget {
       ('Map', const SocietyMapScreen()),
       ('Membership', const NationalMembershipScreen()),
       ('Audit & AGM', const AuditAgmScreen()),
-      ('Profit & expenses', const ProfitExpensesScreen()),
+      ('Profit & Expenses', const ProfitExpensesScreen()),
       ('Activities', const NationalActivitiesScreen()),
     ];
     return ListView(
@@ -669,7 +669,7 @@ class _Overview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '1 · Societies status',
+                '1 · Societies Status',
                 link: 'Districts',
                 onLink: () =>
                     _push(context, const DistrictsScreen(standalone: true)),
@@ -723,7 +723,7 @@ class _Overview extends StatelessWidget {
             onTap: () => _push(context, const NationalMembershipScreen()),
           ),
           _Figure(
-            '3–4 · Audit reports',
+            '3–4 · Audit Reports',
             '${sharePercent(audit.submitted, overview.active)}%',
             '${count(audit.submitted)} of ${count(overview.active)} uploaded',
             colour: AppColors.leaf,
@@ -735,14 +735,14 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 8),
         _Pair(
           _Figure(
-            '5 · Profit for the year',
+            '5 · Profit for the Year',
             lkr(overview.totalProfit),
             '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
             colour: AppColors.leaf,
             onTap: () => _push(context, const ProfitExpensesScreen()),
           ),
           _Figure(
-            '5 · Expenses for the year',
+            '5 · Expenses for the Year',
             lkr(overview.totalExpenses),
             '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
             colour: const Color(0xFF9A4F12),
@@ -757,7 +757,7 @@ class _Overview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '6 · Activities completed',
+                '6 · Activities Completed',
                 link: 'Activities',
                 onLink: () => _push(context, const NationalActivitiesScreen()),
               ),
@@ -784,7 +784,7 @@ class _Overview extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Top UN SDGs by completed activities · ${overview.year.label}',
+                'Top UN SDGs by Completed Activities · ${overview.year.label}',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -921,7 +921,7 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
                 padding: EdgeInsets.only(top: 40),
                 child: StateMessage(
                   icon: Icons.search,
-                  title: 'No districts match',
+                  title: 'No Districts Match',
                   message: 'Try another name.',
                 ),
               ),
@@ -1059,7 +1059,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
           if (page.rows.isEmpty)
             StateMessage(
               icon: Icons.search,
-              title: 'No societies match',
+              title: 'No Societies Match',
               message: _query.filtered
                   ? 'Try fewer filters.'
                   : 'No society is in your view yet.',
@@ -1169,7 +1169,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                 child: Chip(label: Text('Class: ${_query.grade ?? 'All'}')),
               ),
               FilterChip(
-                label: const Text('90+ days'),
+                label: const Text('90+ Days'),
                 selected: _query.notUpdated,
                 onSelected: (value) => _set(_query.copyWith(notUpdated: value)),
               ),
@@ -1238,7 +1238,7 @@ class SocietySummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Page(
-    title: 'Society summary',
+    title: 'Society Summary',
     subtitle: 'Counts and yearly totals',
     body: _Loader<SocietyAtAGlance>(
       loadingLabel: 'Loading the society',
@@ -1290,7 +1290,7 @@ class SocietySummaryScreen extends StatelessWidget {
                     : '${society.membershipYear}',
               ),
               _Figure(
-                'Records complete',
+                'Records Complete',
                 '${society.recordsCompletePercent}%',
                 society.missingFields == 0
                     ? 'Every field entered'
@@ -1304,7 +1304,7 @@ class SocietySummaryScreen extends StatelessWidget {
             const SizedBox(height: 8),
             _Pair(
               _Figure(
-                'Profit for the year',
+                'Profit for the Year',
                 lkr(society.profit),
                 society.profit == null
                     ? 'Waiting for the society'
@@ -1312,7 +1312,7 @@ class SocietySummaryScreen extends StatelessWidget {
                 colour: AppColors.leaf,
               ),
               _Figure(
-                'Expenses for the year',
+                'Expenses for the Year',
                 lkr(society.expenses),
                 society.expenses == null
                     ? 'Waiting for the society'
@@ -1326,7 +1326,7 @@ class SocietySummaryScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _Eyebrow(
-                    'Registrar documents · $uploaded of ${registrarDocumentTypes.length}',
+                    'Registrar Documents · $uploaded of ${registrarDocumentTypes.length}',
                   ),
                   for (final type in registrarDocumentTypes)
                     Padding(
@@ -1362,7 +1362,7 @@ class SocietySummaryScreen extends StatelessWidget {
               const SizedBox(height: 8),
               NoticeBanner(
                 icon: Icons.warning_amber_outlined,
-                title: '${society.name} has no Society Officer',
+                title: '${society.name} Has No Society Officer',
                 message: society.spcName == null
                     ? 'Its SPC adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.'
                     : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.',
@@ -1673,12 +1673,12 @@ class NationalMembershipScreen extends StatelessWidget {
           ),
           _Pair(
             _Figure(
-              'Total members',
+              'Total Members',
               count(overview.members),
               '${count(overview.societiesReported)} societies reported',
             ),
             _Figure(
-              'Female · male',
+              'Female · Male',
               '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
               '${count(overview.female)} · ${count(overview.male)}',
               colour: _female,
@@ -1691,7 +1691,7 @@ class NationalMembershipScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _Eyebrow('By category · female / male'),
+                const _Eyebrow('By Category · Female / Male'),
                 for (final row in overview.categories)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1752,7 +1752,7 @@ class NationalMembershipScreen extends StatelessWidget {
           const SizedBox(height: 8),
           const NoticeBanner(
             icon: Icons.info_outline,
-            title: 'Counts only',
+            title: 'Counts Only',
             message: 'Members’ names are kept in the signed members list, which only DMs and HQ can open.',
           ),
         ],
@@ -1818,7 +1818,7 @@ class AuditAgmScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Eyebrow('4 Registrar documents · ${overview.year.label}'),
+                  _Eyebrow('4 Registrar Documents · ${overview.year.label}'),
                   for (final row in overview.documentCounts)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1860,7 +1860,7 @@ class ProfitExpensesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Page(
-    title: 'Profit & expenses',
+    title: 'Profit & Expenses',
     subtitle: 'The only two yearly figures societies enter',
     body: _Loader<(NationalOverview, FiguresNotAdded)>(
       load: (api) async =>
@@ -1872,7 +1872,7 @@ class ProfitExpensesScreen extends StatelessWidget {
           children: [
             SampleLabel(text: 'Demonstration data · ${overview.year.label}'),
             _Figure(
-              'Total profit for the year',
+              'Total Profit for the Year',
               lkr(overview.totalProfit),
               '${overview.year.label} · from ${count(overview.societiesWithBoth)} active societies',
               colour: AppColors.leaf,
@@ -1881,7 +1881,7 @@ class ProfitExpensesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _Figure(
-              'Total expenses for the year',
+              'Total Expenses for the Year',
               lkr(overview.totalExpenses),
               '${overview.year.label} · from ${count(overview.societiesWithBoth)} active societies',
               colour: const Color(0xFF9A4F12),
@@ -1898,12 +1898,12 @@ class ProfitExpensesScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const NoticeBanner(
               icon: Icons.info_outline,
-              title: 'Two yearly totals only',
+              title: 'Two Yearly Totals Only',
               message: 'Each society enters only its total profit and total expenses, with its audit report. No other financial details are kept.',
             ),
             const SizedBox(height: 12),
             Text(
-              'NOT ADDED YET · ${count(missing.total)}',
+              'Not Added Yet · ${count(missing.total)}',
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -2003,7 +2003,7 @@ class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
                   const SizedBox(height: 8),
                   SegmentedButton<bool>(
                     segments: const [
-                      ButtonSegment(value: true, label: Text('10 sectors')),
+                      ButtonSegment(value: true, label: Text('10 Sectors')),
                       ButtonSegment(value: false, label: Text('Dimensions')),
                     ],
                     selected: {_bySector},
@@ -2071,7 +2071,7 @@ class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Eyebrow('UN SDGs · ranked by completed activities'),
+                  const _Eyebrow('UN SDGs · Ranked by Completed Activities'),
                   Text(
                     '${programmes.year.label} · equal counts listed by SDG number',
                     style: const TextStyle(

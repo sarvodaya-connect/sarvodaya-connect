@@ -90,7 +90,7 @@ export function SignInForm() {
   return (
     <div className="w-full max-w-[400px]" lang={language}>
       <div className="mb-6 flex justify-end">
-        <div className="inline-flex rounded-[10px] border border-line bg-surface p-1" role="group" aria-label="Choose language">
+        <div className="inline-flex rounded-[10px] border border-line bg-surface p-1" role="group" aria-label="Choose Language">
           {([
             ["si", "සිංහල"],
             ["ta", "தமிழ்"],
@@ -253,7 +253,7 @@ function RoleScopeFields({
       )}
       {(role === "PROGRAMME_COORDINATOR" || role === "DEPUTY_DISTRICT_MANAGER") && (
         <fieldset className="sm:col-span-2">
-          <legend className={labelClass}>Assigned societies<Required /></legend>
+          <legend className={labelClass}>Assigned Societies<Required /></legend>
           {districtId ? (
             <div className="mt-1.5 grid max-h-44 gap-1 overflow-y-auto rounded-[10px] border border-line p-2 sm:grid-cols-2">
               {societies.length ? (
@@ -321,7 +321,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
         >
           <div className="flex items-start justify-between gap-4 sm:col-span-2">
             <div>
-              <h2 className="text-lg font-bold text-ink" id={titleId}>Create an account</h2>
+              <h2 className="text-lg font-bold text-ink" id={titleId}>Create an Account</h2>
               <p className="text-xs text-ink-soft">HQ enters the person, a role and its scope, a username and a password</p>
             </div>
             <button aria-label="Close" className="grid size-8 place-items-center rounded-lg text-ink hover:bg-brand-mint-soft" onClick={close} type="button">
@@ -452,7 +452,7 @@ export function SetPasswordDialog({
             <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-state-mint text-brand-forest">
               <Icon className="size-5" name="key" strokeWidth={2} />
             </span>
-            <h2 className="text-lg font-bold text-ink" id={titleId}>Set a new password for {account.displayName}</h2>
+            <h2 className="text-lg font-bold text-ink" id={titleId}>Set a New Password for {account.displayName}</h2>
             <p className="text-xs text-ink-soft">
               {account.scopeLabel} · username <strong className="text-ink">{account.username}</strong>
             </p>
@@ -540,7 +540,7 @@ export function ChangeRoleDialog({
           <input name="phone" type="hidden" value={account.phone} />
           <input name="email" type="hidden" value={account.email ?? ""} />
           <div className="sm:col-span-2">
-            <h2 className="text-lg font-bold text-ink" id={titleId}>Change role for {account.displayName}</h2>
+            <h2 className="text-lg font-bold text-ink" id={titleId}>Change Role for {account.displayName}</h2>
             <p className="text-xs text-ink-soft">
               Now: {account.scopeLabel} · username <strong className="text-ink">{account.username}</strong>
             </p>

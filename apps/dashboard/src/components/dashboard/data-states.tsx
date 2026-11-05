@@ -120,7 +120,7 @@ export function ErrorState({
   reference,
   retryLabel = "Try again",
   secondaryAction,
-  title = "We couldn’t load this page",
+  title = "We Couldn’t Load This Page",
 }: {
   description?: string;
   onRetry: () => void;
@@ -179,7 +179,7 @@ export function ConflictState({ onReload }: { onReload: () => void }) {
       actions={<button className={secondaryButtonClass} onClick={onReload} type="button">Reload record</button>}
       icon="conflict"
       role="alert"
-      title="This record was updated elsewhere"
+      title="This Record Was Updated Elsewhere"
       tone="grey"
     >
       <p>Your changes have not been saved. Reload the latest version before continuing.</p>
@@ -197,7 +197,7 @@ export function NoAccessState({
   action = <Link className={secondaryButtonClass} href="/dashboard">Back to overview</Link>,
   description = "Your role cannot open it. Ask HQ if you think you need it.",
   heading = "h2",
-  title = "You don’t have access to this page",
+  title = "You Don’t Have Access to This Page",
 }: {
   action?: ReactNode;
   description?: string;
@@ -233,11 +233,11 @@ export function NoResultsState({
     <StateLayout
       actions={<button className={primaryButtonClass} onClick={onClearAll} type="button">Clear all filters</button>}
       icon="search"
-      title={`No ${itemLabel} match`}
+      title={`No ${itemLabel.charAt(0).toUpperCase()}${itemLabel.slice(1)} Match`}
     >
       <p>Try a different search term, or remove one of the filters below.</p>
       {filters.length > 0 && (
-        <ul aria-label="Active filters" className="mt-3 flex flex-wrap justify-center gap-2">
+        <ul aria-label="Active Filters" className="mt-3 flex flex-wrap justify-center gap-2">
           {filters.map((filter) => (
             <li
               className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0d1] bg-brand-mint-soft py-1 pl-3 pr-1 text-xs text-[#2f4a39]"

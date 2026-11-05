@@ -109,7 +109,7 @@ class ConfigurationProblemScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'This app is not set up yet',
+                'This App Is Not Set Up Yet',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
@@ -219,8 +219,8 @@ class HomeShell extends StatelessWidget {
           const NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon: Icon(Icons.calendar_today),
-            label: 'Work plan',
-            tooltip: 'Work plan',
+            label: 'Work Plan',
+            tooltip: 'Work Plan',
           ),
           NavigationDestination(
             icon: const Icon(Icons.menu),

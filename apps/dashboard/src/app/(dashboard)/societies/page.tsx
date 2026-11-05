@@ -12,10 +12,10 @@ import { type DirectoryFilters, getDistrictOptions, getSocietyDirectory } from "
 import { isDemoMode, platformApi } from "@/lib/platform-api";
 
 const VIEWS: { key: DirectoryView; label: string }[] = [
-  { key: "all", label: "All societies" },
-  { key: "not-updated", label: "Not updated in 90+ days" },
-  { key: "figures-not-added", label: "Yearly figures not added" },
-  { key: "audit-past-due", label: "Audit report past due" },
+  { key: "all", label: "All Societies" },
+  { key: "not-updated", label: "Not Updated in 90+ Days" },
+  { key: "figures-not-added", label: "Yearly Figures Not Added" },
+  { key: "audit-past-due", label: "Audit Report Past Due" },
 ];
 
 const FILTER_KEYS = ["q", "districtId", "dsDivision", "grade", "spcId", "records", "gradeRequest"] as const;
@@ -23,11 +23,11 @@ const FILTER_KEYS = ["q", "districtId", "dsDivision", "grade", "spcId", "records
 const FILTER_LABELS: Record<(typeof FILTER_KEYS)[number], string> = {
   q: "Search",
   districtId: "District",
-  dsDivision: "DS division",
+  dsDivision: "DS Division",
   grade: "Grade",
   spcId: "SPC",
   records: "Records",
-  gradeRequest: "Grade request",
+  gradeRequest: "Grade Request",
 };
 
 const selectClass = "rounded-button border border-line bg-surface px-3 py-2 text-[12px]";
@@ -94,7 +94,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
         </div>
       </div>
 
-      <nav aria-label="Society lists" className="mt-4 flex flex-wrap gap-1 border-b border-line">
+      <nav aria-label="Society Lists" className="mt-4 flex flex-wrap gap-1 border-b border-line">
         {VIEWS.map((item) => (
           <Link
             aria-current={item.key === view ? "page" : undefined}
@@ -146,7 +146,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
         </select>
         <label className="sr-only" htmlFor="filter-request">Grade request</label>
         <select className={selectClass} defaultValue={filters.gradeRequest ?? ""} id="filter-request" name="gradeRequest">
-          <option value="">Grade request: Any</option>
+          <option value="">Grade Request: Any</option>
           <option value="waiting">Grade request: waiting</option>
           <option value="none">Grade request: none</option>
         </select>
@@ -162,10 +162,10 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
         {directory.data.length === 0 ? (
           <section className="rounded-card border border-line bg-surface px-6 py-10 text-center" role="status">
             <Icon className="mx-auto size-8 text-brand-forest" name="search" />
-            <h2 className="mt-2 text-[16px] font-bold text-ink">No societies match</h2>
+            <h2 className="mt-2 text-[16px] font-bold text-ink">No Societies Match</h2>
             <p className="mt-1 text-[12px] text-ink-soft">Try a different search, or remove one of the filters.</p>
             {active.length > 0 && (
-              <ul aria-label="Active filters" className="mt-3 flex flex-wrap justify-center gap-2">
+              <ul aria-label="Active Filters" className="mt-3 flex flex-wrap justify-center gap-2">
                 {active.map((key) => (
                   <li key={key}>
                     <Link aria-label={`Remove the ${FILTER_LABELS[key]} filter`} className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0d1] bg-brand-mint-soft px-3 py-1 text-[11px] text-[#2f4a39]" href={href({ [key]: undefined })}>
@@ -183,7 +183,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
             <caption className="sr-only">Societies</caption>
             <Thead>
               <tr>
-                {["S number", "Society", "District", "Grade", "Members", "SPC", "Society Officer · account", "Updated"].map((heading) => (
+                {["S Number", "Society", "District", "Grade", "Members", "SPC", "Society Officer · Account", "Updated"].map((heading) => (
                   <Th key={heading} scope="col">{heading}</Th>
                 ))}
               </tr>

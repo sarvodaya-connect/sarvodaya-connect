@@ -103,7 +103,7 @@ describe("V5 D02 society map (Mapbox)", () => {
 
     const legend = screen.getByRole("list", { name: "Grade" });
     expect(legend).toHaveTextContent("A · Strong1");
-    expect(legend).toHaveTextContent("No grade or not active2");
+    expect(legend).toHaveTextContent("No Grade or Not Active2");
   });
 
   it("opens the society record when a society is clicked", async () => {
@@ -137,7 +137,7 @@ describe("V5 D02 society map (Mapbox)", () => {
     loadNationalMapPins.mockResolvedValue({ counts: {}, points: shared, truncated: false });
     render(<SocietyPinsMap token={TOKEN} />);
     await user.click(await screen.findByRole("button", { name: "2 societies at the same place, choose one" }));
-    expect(screen.getByRole("heading", { name: "2 societies at this place" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "2 Societies at This Place" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Kosgama Women's SSS, grade A, open record" })).toHaveAttribute("href", "/societies/9");
   });
 
@@ -145,7 +145,7 @@ describe("V5 D02 society map (Mapbox)", () => {
     const user = userEvent.setup();
     loadNationalMapPins.mockResolvedValueOnce({ error: "Service unavailable" });
     render(<SocietyPinsMap token={TOKEN} />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("The map could not load");
+    expect(await screen.findByRole("alert")).toHaveTextContent("The Map Could Not Load");
 
     fakeMapbox.features = placeFeatures(pins.slice(0, 1));
     loadNationalMapPins.mockResolvedValueOnce({ counts: {}, points: pins.slice(0, 1), truncated: false });
@@ -158,7 +158,7 @@ describe("V5 D02 society map (Mapbox)", () => {
     fakeMapbox.failLoad = true;
     loadNationalMapPins.mockResolvedValue({ counts: {}, points: [], truncated: false });
     render(<SocietyPinsMap token={TOKEN} />);
-    expect(await screen.findByText("The map could not load")).toBeInTheDocument();
+    expect(await screen.findByText("The Map Could Not Load")).toBeInTheDocument();
     expect(loadNationalMapPins).not.toHaveBeenCalled();
   });
 });

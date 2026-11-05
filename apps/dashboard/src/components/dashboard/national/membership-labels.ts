@@ -1,10 +1,10 @@
 /** Membership categories as the API stores them (To Confirm against V5, see the PR). */
 export const MEMBERSHIP_LABELS: Record<string, string> = {
-  CHILDREN: "Child members",
-  YOUTH: "Youth members",
+  CHILDREN: "Child Members",
+  YOUTH: "Youth Members",
   MOTHERS: "Mothers",
-  ORDINARY: "Ordinary members",
-  ELDERS_COUNCIL: "Elders’ council",
+  ORDINARY: "Ordinary Members",
+  ELDERS_COUNCIL: "Elders’ Council",
 };
 
 /** "Counts only, no personal data · 1,018 of 1,076 societies reported for 2026". */

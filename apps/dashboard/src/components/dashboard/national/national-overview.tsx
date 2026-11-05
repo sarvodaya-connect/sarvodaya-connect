@@ -36,7 +36,7 @@ function SocietyStatus({ overview }: { overview: NationalOverview }) {
     { grade: "C" as const, note: "Need strengthening support" },
   ];
   return (
-    <Panel eyebrow="Latest Shramadana society status" link={{ href: "/districts", label: "District view" }} title="Active societies by grade · as of today">
+    <Panel eyebrow="Latest Shramadana Society Status" link={{ href: "/districts", label: "District View" }} title="Active Societies by Grade · As of Today">
       <div className="flex flex-wrap items-center gap-5">
         <GradePyramid />
         <div className="min-w-[220px] flex-1">
@@ -66,8 +66,8 @@ function SocietyStatus({ overview }: { overview: NationalOverview }) {
         <strong>{count(societies.registeredNotActive)}</strong> registered but not active
       </p>
       <ul className="mt-3 grid auto-rows-fr gap-2 sm:grid-cols-2">
-        <li><Stat label="Records not updated in 90+ days" tone="danger" value={count(societies.notUpdatedIn90Days)} /></li>
-        <li><Stat label="Active societies without a map position" value={count(societies.withoutLocation)} /></li>
+        <li><Stat label="Records Not Updated in 90+ Days" tone="danger" value={count(societies.notUpdatedIn90Days)} /></li>
+        <li><Stat label="Active Societies Without a Map Position" value={count(societies.withoutLocation)} /></li>
       </ul>
       <p className="mt-auto pt-3 text-[11px] text-muted">
         Grades change only with HQ approval ·{" "}
@@ -108,7 +108,7 @@ function DrawnDistrictMap({ overview }: { overview: NationalOverview }) {
 /** V5 D02 Society map: the Mapbox map of every society when a token is set, otherwise the drawn district map. */
 function SocietyMapCard({ mapboxToken, overview }: { mapboxToken: string | null; overview: NationalOverview }) {
   return (
-    <Panel eyebrow="Society map" link={{ href: "/map", label: "Map view" }} title={mapboxToken ? "Societies by grade" : "Active societies by district"}>
+    <Panel eyebrow="Society Map" link={{ href: "/map", label: "Map View" }} title={mapboxToken ? "Societies by grade" : "Active Societies by District"}>
       {mapboxToken ? <SocietyPinsMap token={mapboxToken} /> : <DrawnDistrictMap overview={overview} />}
       <Link className="mt-2 self-start text-[11px] font-semibold text-brand-forest underline-offset-2 hover:underline" href="/societies">
         List view ›
@@ -126,7 +126,7 @@ function SocietyMapCard({ mapboxToken, overview }: { mapboxToken: string | null;
 function Membership({ overview }: { overview: NationalOverview }) {
   const { membership } = overview;
   return (
-    <Panel eyebrow="Total membership" link={{ href: "/membership", label: "Membership" }} title="Female and male members">
+    <Panel eyebrow="Total Membership" link={{ href: "/membership", label: "Membership" }} title="Female and Male Members">
       <p>
         <strong className="text-[30px] font-bold text-ink">{count(membership.total)}</strong>
         <span className="ml-2 text-[11px] text-muted">members in {count(overview.societies.active)} active societies</span>
@@ -136,8 +136,8 @@ function Membership({ overview }: { overview: NationalOverview }) {
         <li><Stat label={<><strong>Male</strong> · {share(membership.male, membership.total)}% of members</>} tone="male" value={count(membership.male)} /></li>
       </ul>
       <table className="mt-4 w-full text-left text-[11px]">
-        <caption className="pb-1 text-left text-[12px] font-bold text-ink">Membership categories</caption>
-        <thead className="text-[10px] uppercase tracking-[0.06em] text-muted">
+        <caption className="pb-1 text-left text-[12px] font-bold text-ink">Membership Categories</caption>
+        <thead className="text-[10px] tracking-[0.06em] text-muted">
           <tr><th className="py-1 font-semibold" scope="col">Category</th><th className="py-1 text-right font-semibold" scope="col">Female</th><th className="py-1 text-right font-semibold" scope="col">Male</th><th className="py-1 text-right font-semibold" scope="col">Total</th></tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
@@ -149,7 +149,7 @@ function Membership({ overview }: { overview: NationalOverview }) {
               <td className="py-1.5 text-right font-semibold text-ink">{count(row.total)}</td>
             </tr>
           ))}
-          <tr className="font-bold"><th className="py-1.5 text-ink" scope="row">All members</th><td className="py-1.5 text-right text-[#7a3f96]">{count(membership.female)}</td><td className="py-1.5 text-right text-[#2f5590]">{count(membership.male)}</td><td className="py-1.5 text-right text-ink">{count(membership.total)}</td></tr>
+          <tr className="font-bold"><th className="py-1.5 text-ink" scope="row">All Members</th><td className="py-1.5 text-right text-[#7a3f96]">{count(membership.female)}</td><td className="py-1.5 text-right text-[#2f5590]">{count(membership.male)}</td><td className="py-1.5 text-right text-ink">{count(membership.total)}</td></tr>
         </tbody>
       </table>
       <p className="mt-auto pt-3 text-[11px] text-muted">{membershipNote(membership.year, membership.societiesReported, overview.societies.active)}</p>
@@ -160,7 +160,7 @@ function Membership({ overview }: { overview: NationalOverview }) {
 function Activities({ overview }: { overview: NationalOverview }) {
   const { activities, financialYear } = overview;
   return (
-    <Panel eyebrow="SDGs and dimensions" link={{ href: `/activities?year=${financialYear.startYear}`, label: "All 17 SDGs" }} title="Completed activities">
+    <Panel eyebrow="SDGs and Dimensions" link={{ href: `/activities?year=${financialYear.startYear}`, label: "All 17 SDGs" }} title="Completed Activities">
       <p><strong className="text-[30px] font-bold text-ink">{count(activities.completed)}</strong></p>
       <p className="text-[11px] text-muted">
         of {count(activities.planned)} planned activities completed — {share(activities.completed, activities.planned)}% · {financialYear.label}
@@ -192,14 +192,14 @@ function Activities({ overview }: { overview: NationalOverview }) {
 function Finance({ demo, overview }: { demo: boolean; overview: NationalOverview }) {
   const { finance, financialYear } = overview;
   return (
-    <Panel eyebrow="Profit and expenses" title="Totals for the year">
+    <Panel eyebrow="Profit and Expenses" title="Totals for the Year">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] text-muted">Totals of the two yearly figures societies entered · {financialYear.label}</p>
         <SampleBadge demo={demo} label="Sample figures" />
       </div>
       <ul className="mt-3 grid auto-rows-fr grid-cols-2 gap-2">
-        <li><Stat label={<>Total profit for the year<br />From {count(finance.societiesWithBoth)} active societies</>} tone="profit" value={lkrShort(finance.totalProfit)} /></li>
-        <li><Stat label={<>Total expenses for the year<br />From {count(finance.societiesWithBoth)} active societies</>} tone="expenses" value={lkrShort(finance.totalExpenses)} /></li>
+        <li><Stat label={<>Total Profit for the Year<br />From {count(finance.societiesWithBoth)} active societies</>} tone="profit" value={lkrShort(finance.totalProfit)} /></li>
+        <li><Stat label={<>Total Expenses for the Year<br />From {count(finance.societiesWithBoth)} active societies</>} tone="expenses" value={lkrShort(finance.totalExpenses)} /></li>
         <li><Stat label={`of ${count(finance.activeSocieties)} active societies submitted both figures — ${share(finance.societiesWithBoth, finance.activeSocieties)}%`} value={count(finance.societiesWithBoth)} /></li>
         <li>
           <Stat
@@ -232,7 +232,7 @@ function Documents({ overview }: { overview: NationalOverview }) {
         </p>
       </div>
       <table className="mt-3 w-full text-left text-[11px]">
-        <thead className="text-[10px] uppercase tracking-[0.06em] text-muted">
+        <thead className="text-[10px] tracking-[0.06em] text-muted">
           <tr><th className="py-1 font-semibold" scope="col">Document · {financialYear.label}</th><th className="py-1 text-right font-semibold" scope="col">Submitted</th><th className="py-1 text-right font-semibold" scope="col">Missing</th></tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
@@ -243,7 +243,7 @@ function Documents({ overview }: { overview: NationalOverview }) {
               <td className="py-1.5 text-right text-[#a8312a]">{count(row.missing)}</td>
             </tr>
           ))}
-          <tr className="font-bold"><th className="py-1.5 text-ink" scope="row">All four documents</th><td className="py-1.5 text-right text-brand-forest">{count(docs.allFour)}</td><td className="py-1.5 text-right text-[#a8312a]">{count(Math.max(0, docs.activeSocieties - docs.allFour))}</td></tr>
+          <tr className="font-bold"><th className="py-1.5 text-ink" scope="row">All Four Documents</th><td className="py-1.5 text-right text-brand-forest">{count(docs.allFour)}</td><td className="py-1.5 text-right text-[#a8312a]">{count(Math.max(0, docs.activeSocieties - docs.allFour))}</td></tr>
         </tbody>
       </table>
       <p className="mt-auto pt-3 text-[11px] text-muted">Out of {count(docs.activeSocieties)} active societies. Audits are certified by an auditor registered under the Companies Act.</p>
@@ -254,7 +254,7 @@ function Documents({ overview }: { overview: NationalOverview }) {
 function Incidents({ overview }: { overview: NationalOverview }) {
   const incidents = overview.incidents;
   return (
-    <Panel eyebrow="Disaster and emergency" link={{ href: "/emergencies", label: "Disaster response" }} title="Active incidents and their status">
+    <Panel eyebrow="Disaster & Emergency" link={{ href: "/emergencies", label: "Disaster Response" }} title="Active Incidents and Their Status">
       {incidents.length === 0 ? (
         <p className="rounded-lg bg-[#f4f5f1] px-3 py-6 text-center text-[12px] text-muted">No open incidents. Any role can open one from the phone app.</p>
       ) : (
@@ -263,7 +263,7 @@ function Incidents({ overview }: { overview: NationalOverview }) {
             <li className="rounded-lg border border-[#f0cfcb] bg-[#fdf3f2] p-3" key={incident.id}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="flex items-center gap-2 text-[13px] font-bold text-ink">
-                  {incident.status === "ACTIVE" && <span className="rounded bg-[#a8312a] px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Live</span>}
+                  {incident.status === "ACTIVE" && <span className="rounded bg-[#a8312a] px-1.5 py-0.5 text-[9px] font-bold text-white">Live</span>}
                   {incident.title}
                 </p>
                 <Pill tone={incident.status === "ACTIVE" ? "overdue" : "fast-target"}>{incident.status === "ACTIVE" ? "Responding" : "Contained"}</Pill>
@@ -272,11 +272,11 @@ function Incidents({ overview }: { overview: NationalOverview }) {
                 {incident.districtName} District · opened {new Date(incident.activatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" })} · {incident.severity.toLowerCase()} severity
               </p>
               <ul className="mt-2 grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                <li><Stat label="Societies in the area" value={count(incident.societiesInArea)} /></li>
+                <li><Stat label="Societies in the Area" value={count(incident.societiesInArea)} /></li>
                 <li><Stat label="Assessed" value={count(incident.assessed)} /></li>
-                <li><Stat label="Not yet assessed" tone="danger" value={count(Math.max(0, incident.societiesInArea - incident.assessed))} /></li>
-                <li><Stat label={`Families · ${count(incident.peopleAffected)} people`} value={count(incident.householdsAffected)} /></li>
-                <li><Stat label={`Response actions · ${count(incident.actionsCompleted)} delivered`} value={count(incident.actions)} /></li>
+                <li><Stat label="Not Yet Assessed" tone="danger" value={count(Math.max(0, incident.societiesInArea - incident.assessed))} /></li>
+                <li><Stat label={`Families · ${count(incident.peopleAffected)} People`} value={count(incident.householdsAffected)} /></li>
+                <li><Stat label={`Response Actions · ${count(incident.actionsCompleted)} Delivered`} value={count(incident.actions)} /></li>
               </ul>
               <Link className={`${secondaryButtonClass} mt-3`} href="/emergencies">Open incident</Link>
             </li>
@@ -314,7 +314,7 @@ export function NationalOverviewView({ demo, overview, years }: { demo: boolean;
         <button className="rounded-button bg-brand-forest px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#174f34]" type="submit">Ask</button>
       </form>
       <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3">
-        <span className="text-[12px] font-semibold text-ink">Reporting period</span>
+        <span className="text-[12px] font-semibold text-ink">Reporting Period</span>
         <YearLinks current={financialYear.startYear} href={(year) => `/dashboard?year=${year}`} years={years} />
         <span className="text-[11px] text-muted">Grades, active societies and incidents are as of today. Yearly figures, audits and activities are for {financialYear.label}.</span>
         <SampleBadge demo={demo} label="Demonstration data · sample figures, not real" />
@@ -323,17 +323,17 @@ export function NationalOverviewView({ demo, overview, years }: { demo: boolean;
         <SocietyStatus overview={overview} />
         <SocietyMapCard mapboxToken={mapboxToken()} overview={overview} />
       </div>
-      <h2 className="text-[16px] font-bold text-ink">Demographics <span className="text-[11px] font-normal text-muted">Members and activities</span></h2>
+      <h2 className="text-[16px] font-bold text-ink">Demographics <span className="text-[11px] font-normal text-muted">Members and Activities</span></h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Membership overview={overview} />
         <Activities overview={overview} />
       </div>
-      <h2 className="text-[16px] font-bold text-ink">Financial data <span className="text-[11px] font-normal text-muted">Yearly totals and audit documents</span></h2>
+      <h2 className="text-[16px] font-bold text-ink">Financial Data <span className="text-[11px] font-normal text-muted">Yearly Totals and Audit Documents</span></h2>
       <div className="grid gap-4 xl:grid-cols-2">
         <Finance demo={demo} overview={overview} />
         <Documents overview={overview} />
       </div>
-      <h2 className="text-[16px] font-bold text-ink">Disaster &amp; emergency</h2>
+      <h2 className="text-[16px] font-bold text-ink">Disaster &amp; Emergency</h2>
       <Incidents overview={overview} />
     </div>
   );

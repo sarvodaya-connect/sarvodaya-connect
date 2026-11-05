@@ -87,7 +87,7 @@ describe("V5 D02 National Dashboard", () => {
     vi.unstubAllEnvs();
     expect(screen.getByRole("img", { name: "Active societies in each district" })).toBeInTheDocument();
     expect(screen.getByText("The street map is not set up yet, so a drawn map is shown.")).toBeInTheDocument();
-    expect(screen.queryByText("The map could not load")).not.toBeInTheDocument();
+    expect(screen.queryByText("The Map Could Not Load")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "List view ›" })).toHaveAttribute("href", "/societies");
     expect(screen.getByRole("link", { name: /12 active societies have no map position yet/ })).toHaveAttribute("href", "/reports?type=data-quality");
   });
@@ -151,7 +151,7 @@ describe("V5 D03 Map view", () => {
   });
 
   it("says when the society cannot be opened", async () => {
-    loadSocietySummary.mockResolvedValue({ error: "Society not found" });
+    loadSocietySummary.mockResolvedValue({ error: "Society Not Found" });
     const user = userEvent.setup();
     render(
       <SocietyMapView
@@ -161,7 +161,7 @@ describe("V5 D03 Map view", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Example, S-1" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Society not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Society Not Found");
     expect(screen.getByText("Demonstration data")).toBeInTheDocument();
   });
 });
@@ -169,7 +169,7 @@ describe("V5 D03 Map view", () => {
 describe("V5 D15 Reports", () => {
   const report: ReportTable = {
     type: "society-status",
-    title: "Society status summary",
+    title: "Society Status Summary",
     scope: "National",
     financialYear: overview.financialYear,
     columns: [
@@ -183,7 +183,7 @@ describe("V5 D15 Reports", () => {
 
   it("previews the report as a table", () => {
     render(<ReportTableView report={report} />);
-    const table = screen.getByRole("table", { name: "Society status summary · National · FY 2025/26" });
+    const table = screen.getByRole("table", { name: "Society Status Summary · National · FY 2025/26" });
     expect(within(table).getByText("412,500")).toBeInTheDocument();
   });
 

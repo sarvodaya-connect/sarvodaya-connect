@@ -76,9 +76,9 @@ describe("SP01 SPC home", () => {
     expect(screen.getByText("A 2 · B 4 · C 6")).toBeInTheDocument();
     expect(screen.getByText("Pahala Kosgama SSS · 2 days")).toBeInTheDocument();
     expect(screen.getByText("Hettipola SSS, Wariyapola SSS")).toBeInTheDocument();
-    expect(screen.getByText("Societies with a 2027 plan")).toBeInTheDocument();
+    expect(screen.getByText("Societies With a 2027 Plan")).toBeInTheDocument();
 
-    const attention = within(screen.getByRole("region", { name: "Needs attention" }));
+    const attention = within(screen.getByRole("region", { name: "Needs Attention" }));
     expect(attention.getAllByRole("link", { name: "Pahala Kosgama SSS" })[0]).toHaveAttribute("href", "/societies/s1");
     expect(attention.getByText("Activity to approve: Youth leadership camp")).toBeInTheDocument();
     expect(attention.getAllByText("Editable")).toHaveLength(3);
@@ -145,7 +145,7 @@ describe("DD01 DDM home", () => {
     expect(screen.getByText("Deputy District Manager (DDM) · Kurunegala · Monday 26 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("Only with temporary access from your DM")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "District-wide view" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "District-Wide View" })).toBeInTheDocument();
     expect(screen.getByText(/None active\. When your DM is away/)).toBeInTheDocument();
 
     rerender(
@@ -186,7 +186,7 @@ describe("DM01 DM district overview", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 1, name: "District overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "District Overview" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Your access: all 106 Kurunegala societies · view only.");
     expect(screen.getByText("98 active · 8 not active")).toBeInTheDocument();
     expect(screen.getByText("9,412")).toBeInTheDocument();
@@ -199,7 +199,7 @@ describe("DM01 DM district overview", () => {
     expect(staff.getByText("P. Dissanayake (DDM)")).toBeInTheDocument();
     expect(staff.getByText("S. Karunaratne (SPC)")).toBeInTheDocument();
 
-    const attention = within(screen.getByRole("region", { name: "Societies to follow up with your staff" }));
+    const attention = within(screen.getByRole("region", { name: "Societies to Follow Up With Your Staff" }));
     expect(attention.getByText("M. Herath")).toBeInTheDocument();
     expect(attention.getByText("View only")).toBeInTheDocument();
     expect(attention.queryByText("Editable")).not.toBeInTheDocument();
@@ -267,7 +267,7 @@ function list(overrides: Partial<HomeSocietyList> = {}): HomeSocietyList {
 describe("SP02 / DM02 society lists", () => {
   it("SP02: the SPC sees officers, their access and stale dates", () => {
     render(<MySocieties filters={{}} list={list()} now={now} />);
-    expect(screen.getByRole("heading", { level: 1, name: "My societies" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "My Societies" })).toBeInTheDocument();
     expect(screen.getByText("12 societies assigned to you by HQ")).toBeInTheDocument();
     const table = within(screen.getByRole("table"));
     expect(table.getByRole("columnheader", { name: "Society Officer" })).toBeInTheDocument();
@@ -290,13 +290,13 @@ describe("SP02 / DM02 society lists", () => {
     expect(screen.getByRole("combobox", { name: "Grade" })).toHaveValue("B");
     const table = within(screen.getByRole("table"));
     expect(table.getByRole("columnheader", { name: "DDM" })).toBeInTheDocument();
-    expect(table.queryByRole("columnheader", { name: "Your access" })).not.toBeInTheDocument();
+    expect(table.queryByRole("columnheader", { name: "Your Access" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/my-societies");
   });
 
   it("says when filters match nothing, and pages through long lists", () => {
     const { rerender } = render(<MySocieties filters={{ q: "zzz" }} list={list({ data: [], meta: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } })} now={now} />);
-    expect(screen.getByText("No societies match these filters")).toBeInTheDocument();
+    expect(screen.getByText("No Societies Match These Filters")).toBeInTheDocument();
 
     rerender(<MySocieties filters={{ grade: "C", page: "2" }} list={list({ meta: { page: 2, pageSize: 20, totalItems: 45, totalPages: 3 } })} now={now} />);
     expect(screen.getByRole("link", { name: "‹ Previous" })).toHaveAttribute("href", "/my-societies?grade=C");

@@ -18,7 +18,7 @@ export function KpiTile({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2 rounded-tile border border-line bg-surface px-5 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+      <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">
         {label}
       </p>
       <div className="flex items-baseline justify-between gap-3">

@@ -67,7 +67,7 @@ class _ManualPinScreenState extends State<ManualPinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Place pin manually')),
+      appBar: AppBar(title: const Text('Place Pin Manually')),
       body: Form(
         key: _formKey,
         child: ListView(
