@@ -121,7 +121,7 @@ void main() {
         expect(find.text('STEP 4 OF 4'), findsOneWidget);
         expect(find.text('LKR 18,000 (planning)'), findsOneWidget);
         await _tap(tester, find.text('Send to SPC'));
-        expect(find.text('Sent to your SPC'), findsOneWidget);
+        expect(find.text('Sent to Your SPC'), findsOneWidget);
         await _tap(tester, find.text('Back to work plan'));
 
         expect(find.text('Coir rope training'), findsOneWidget);
@@ -143,13 +143,13 @@ void main() {
         role: UserRole.programmeCoordinator,
       );
       expect(find.text('Youth leadership camp'), findsOneWidget);
-      expect(find.text('APPROVED RECENTLY'), findsOneWidget);
-      expect(find.text('Clean water and sanitation'), findsWidgets);
+      expect(find.text('Approved Recently'), findsOneWidget);
+      expect(find.text('Clean Water and Sanitation'), findsWidgets);
     });
 
     testWidgets('other roles see that only SPCs approve', (tester) async {
       await _pump(tester, const ActivitiesToApproveScreen());
-      expect(find.text('Only SPCs approve activities'), findsOneWidget);
+      expect(find.text('Only SPCs Approve Activities'), findsOneWidget);
     });
 
     testWidgets(
@@ -161,12 +161,12 @@ void main() {
           role: UserRole.programmeCoordinator,
         );
         await _tap(tester, find.text('Youth leadership camp'));
-        expect(find.text('Review activity'), findsOneWidget);
+        expect(find.text('Review Activity'), findsOneWidget);
 
         // All 17 official goals, each named for screen readers.
-        expect(find.bySemanticsLabel('SDG 1: No poverty'), findsOneWidget);
+        expect(find.bySemanticsLabel('SDG 1: No Poverty'), findsOneWidget);
         expect(
-          find.bySemanticsLabel('SDG 17: Partnerships for the goals'),
+          find.bySemanticsLabel('SDG 17: Partnerships for the Goals'),
           findsOneWidget,
         );
 
@@ -176,15 +176,15 @@ void main() {
           findsOneWidget,
         );
 
-        await _tap(tester, find.bySemanticsLabel('SDG 4: Quality education'));
+        await _tap(tester, find.bySemanticsLabel('SDG 4: Quality Education'));
         expect(
-          find.bySemanticsLabel('SDG 4: Quality education, selected'),
+          find.bySemanticsLabel('SDG 4: Quality Education, selected'),
           findsOneWidget,
         );
         await _tap(
           tester,
           find.bySemanticsLabel(
-            'SDG 16: Peace, justice and strong institutions',
+            'SDG 16: Peace, Justice and Strong Institutions',
           ),
         );
         expect(
@@ -194,9 +194,9 @@ void main() {
 
         await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
         expect(find.text('Activity approved'), findsOneWidget);
-        expect(find.text('SDG 4 · Quality education'), findsOneWidget);
+        expect(find.text('SDG 4 · Quality Education'), findsOneWidget);
         expect(
-          find.text('SDG 16 · Peace, justice and strong institutions'),
+          find.text('SDG 16 · Peace, Justice and Strong Institutions'),
           findsOneWidget,
         );
 
@@ -223,7 +223,7 @@ void main() {
       );
       await _tap(tester, find.text('Youth leadership camp'));
       await _tap(tester, find.widgetWithText(OutlinedButton, 'Send back'));
-      expect(find.text('Send back to Nimali Wijesinghe?'), findsOneWidget);
+      expect(find.text('Send Back to Nimali Wijesinghe?'), findsOneWidget);
       await tester.enterText(
         find.byType(TextField).last,
         'Please split the participants by village ward.',
@@ -278,7 +278,7 @@ void main() {
         tester,
         const SocietyRecordScreen(societyId: _pahala, initialTab: 3),
       );
-      expect(find.text('Annual documents · FY 2025/26'), findsOneWidget);
+      expect(find.text('Annual Documents · FY 2025/26'), findsOneWidget);
       expect(find.text('3 of 4 uploaded'), findsOneWidget);
       expect(find.text('Not submitted'), findsWidgets);
     });

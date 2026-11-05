@@ -96,7 +96,7 @@ export function ActivityReview({
           role="dialog"
         >
           <div className="w-full max-w-md rounded-card bg-surface p-5 shadow-xl">
-            <h2 className="text-[16px] font-bold text-ink" id="send-back-title">Send back to {officerName}?</h2>
+            <h2 className="text-[16px] font-bold text-ink" id="send-back-title">Send Back to {officerName}?</h2>
             <p className="mt-1 text-[12px] text-ink-soft">
               The activity goes back to the Society Officer to change. It stays out of the dashboards until you approve it.
             </p>
@@ -138,7 +138,7 @@ export function ActivityReview({
       <section aria-labelledby="sdg-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">2 · You choose</p>
+            <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">2 · You Choose</p>
             <h2 className="text-[15px] font-bold text-ink" id="sdg-heading">UN SDGs</h2>
           </div>
           <span className="rounded-full bg-[#e8f2e6] px-2.5 py-0.5 text-[10px] font-semibold text-brand-forest">Editable</span>

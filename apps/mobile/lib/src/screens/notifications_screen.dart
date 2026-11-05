@@ -78,7 +78,7 @@ class _ApiNotificationsState extends State<_ApiNotifications> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'We couldn’t load your notifications',
+          title: 'We Couldn’t Load Your Notifications',
           message: error,
           tone: StateTone.error,
           isAlert: true,
@@ -103,7 +103,7 @@ class _NotificationsContent extends StatelessWidget {
     if (notifications.isEmpty) {
       return StateMessage(
         icon: Icons.notifications_none,
-        title: 'No notifications',
+        title: 'No Notifications',
         message: 'Approvals, returned updates, requests from your District Centre and reminders will appear here.',
         secondaryLabel: 'Back to Home',
         onSecondary: () => HomeShell.openTab(context, HomeShell.homeTab),
@@ -156,7 +156,7 @@ class _GroupHeader extends StatelessWidget {
       child: Semantics(
         header: true,
         child: Text(
-          label.toUpperCase(),
+          label,
           semanticsLabel: label,
           style: const TextStyle(
             color: AppColors.muted,

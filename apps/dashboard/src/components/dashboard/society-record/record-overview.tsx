@@ -25,7 +25,7 @@ const STAFF_ORDER = ["DISTRICT_MANAGER", "DEPUTY_DISTRICT_MANAGER", "PROGRAMME_C
 const OFFICES = ["President", "Secretary", "Treasurer"];
 
 function Eyebrow({ children }: { children: string }) {
-  return <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-brand-leaf">{children}</p>;
+  return <p className="text-[9px] font-bold tracking-[0.14em] text-brand-leaf">{children}</p>;
 }
 
 function Card({
@@ -122,7 +122,7 @@ export function RecordOverview({
               )
             }
             eyebrow="Record"
-            title="Society details"
+            title="Society Details"
           >
             <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
               <Field label="Society name" value={record.nameEn} />
@@ -161,7 +161,7 @@ export function RecordOverview({
               </Link>
             }
             eyebrow="Exco"
-            title={`Exco · ${exco.filled} of 25 seats filled`}
+            title={`Exco · ${exco.filled} of 25 Seats Filled`}
           >
             {!exco.complete && (
               <p className="mb-2 text-[11.5px] text-warn-text">
@@ -195,7 +195,7 @@ export function RecordOverview({
         </div>
 
         <div className="space-y-4">
-          <Card eyebrow="Assigned by HQ" title="Responsible staff">
+          <Card eyebrow="Assigned by HQ" title="Responsible Staff">
             {staff.length === 0 ? (
               <p className="text-[12px] text-muted">No staff are assigned to this society yet.</p>
             ) : (
@@ -239,7 +239,7 @@ export function RecordOverview({
                 Grade history
               </Link>
             }
-            eyebrow="HQ only"
+            eyebrow="HQ Only"
             title="Grade"
           >
             <div className="flex items-center gap-3">
@@ -276,7 +276,7 @@ export function RecordOverview({
               </Link>
             }
             eyebrow="Plan"
-            title={`Annual work plan ${workPlan?.year ?? ""}`.trim()}
+            title={`Annual Work Plan ${workPlan?.year ?? ""}`.trim()}
           >
             {workPlan && workPlan.activities.length > 0 ? (
               <p className="text-[12px] text-ink">

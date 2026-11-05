@@ -30,7 +30,7 @@ describe("Dashboard route states", () => {
 
     render(<DashboardError error={error} reset={reset} retry={retry} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't load this page");
+    expect(screen.getByRole("alert")).toHaveTextContent("We Couldn't Load This Page");
     expect(screen.queryByText(/db-internal-01/)).not.toBeInTheDocument();
     expect(screen.getByText("4021984")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to societies" })).toHaveAttribute("href", "/societies");

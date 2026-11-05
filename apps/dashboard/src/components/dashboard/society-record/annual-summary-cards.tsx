@@ -32,8 +32,8 @@ export function AnnualSummaryCards({
   return (
     <section aria-labelledby="annual-summary-heading" className="mt-5">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-soft" id="annual-summary-heading">
-          Annual financial summary · {financialYear.label} ({yearRange.toUpperCase()})
+        <h3 className="text-[10px] font-bold tracking-[0.12em] text-ink-soft" id="annual-summary-heading">
+          Annual Financial Summary · {financialYear.label} ({yearRange})
         </h3>
         {lastChange && (
           <p className="text-[10px] text-muted">
@@ -48,13 +48,13 @@ export function AnnualSummaryCards({
       <div className="grid gap-3 md:grid-cols-3">
         <AmountCard
           change={summary.profitChange}
-          label="Total profit for the year"
+          label="Total Profit for the Year"
           tone="profit"
           value={summary.totalProfit}
         />
         <AmountCard
           change={summary.expensesChange}
-          label="Total expenses for the year"
+          label="Total Expenses for the Year"
           tone="expenses"
           value={summary.totalExpenses}
         />

@@ -162,7 +162,7 @@ class ExcoMemberScreen extends StatelessWidget {
         record.permissions.viewOnlyReason == ViewOnlyReason.districtManager;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exco member'),
+        title: const Text('Exco Member'),
         actions: [
           if (canEdit)
             Padding(
@@ -181,7 +181,7 @@ class ExcoMemberScreen extends StatelessWidget {
           if (dm)
             RecordNote(
               icon: Icons.lock_outline,
-              title: 'View only',
+              title: 'View Only',
               message: 'District Manager · ${accessNote(record)}',
             )
           else
@@ -214,7 +214,7 @@ class ExcoMemberScreen extends StatelessWidget {
                       children: [
                         Text(member.fullName, style: RecordStyle.cardTitle),
                         Text(
-                          'Exco member ${member.seatNumber} of 25',
+                          'Exco Member ${member.seatNumber} of 25',
                           style: RecordStyle.caption,
                         ),
                       ],
@@ -228,7 +228,7 @@ class ExcoMemberScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           RecordCard(
-            title: 'NIC number',
+            title: 'NIC Number',
             children: [
               NicRevealButton(
                 societyId: record.id,

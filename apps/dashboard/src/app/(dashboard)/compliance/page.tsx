@@ -31,7 +31,7 @@ export default async function AuditsPage({ searchParams }: PageProps<"/complianc
   return (
     <>
       <nav aria-label="Breadcrumb" className="text-[11px] text-ink-soft">
-        <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">National overview</Link>
+        <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">National Overview</Link>
         <span aria-hidden> › </span>
         <span aria-current="page">Audits &amp; AGM</span>
       </nav>
@@ -41,7 +41,7 @@ export default async function AuditsPage({ searchParams }: PageProps<"/complianc
           <p className="text-[12px] text-ink-soft">{fy.label} · audit report and the other annual documents to the Registrar</p>
         </div>
         <div className="flex items-center gap-2">
-          <nav aria-label="Financial year" className="flex flex-wrap gap-1.5">
+          <nav aria-label="Financial Year" className="flex flex-wrap gap-1.5">
             {startYears.map((startYear) => (
               <Link
                 aria-current={startYear === fy.startYear ? "true" : undefined}
@@ -87,8 +87,8 @@ export default async function AuditsPage({ searchParams }: PageProps<"/complianc
       <section aria-labelledby="completion-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Audit &amp; AGM completion</p>
-            <h2 className="text-[15px] font-bold text-ink" id="completion-heading">All 4 Registrar documents</h2>
+            <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Audit &amp; AGM Completion</p>
+            <h2 className="text-[15px] font-bold text-ink" id="completion-heading">All 4 Registrar Documents</h2>
           </div>
           <p className="text-[12px] text-ink-soft">{allFourLabel(totals)}</p>
         </div>
@@ -98,20 +98,20 @@ export default async function AuditsPage({ searchParams }: PageProps<"/complianc
       </section>
 
       <section aria-labelledby="follow-up-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Needs follow-up</p>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Needs Follow-Up</p>
         <h2 className="text-[15px] font-bold text-ink" id="follow-up-heading">
           {missing.pastDue ? "Audit report past the due date" : "Audit report not uploaded yet"}
         </h2>
         {missing.data.length === 0 ? (
           <div className="mt-3">
-            <EmptyState description={`Every active society has uploaded its ${fy.label} audit report.`} icon="success" title="Nothing to follow up" />
+            <EmptyState description={`Every active society has uploaded its ${fy.label} audit report.`} icon="success" title="Nothing to Follow Up" />
           </div>
         ) : (
           <div className="mt-3 overflow-x-auto rounded-lg border border-line-soft">
             <table className="w-full min-w-[640px] text-left text-[12px]">
               <thead className="bg-[#f2f4f0] text-[11px] text-muted">
                 <tr>
-                  {["Society", "S number", "District", "Due", "Status"].map((heading) => (
+                  {["Society", "S Number", "District", "Due", "Status"].map((heading) => (
                     <th className="px-3 py-2.5 font-medium" key={heading} scope="col">{heading}</th>
                   ))}
                 </tr>

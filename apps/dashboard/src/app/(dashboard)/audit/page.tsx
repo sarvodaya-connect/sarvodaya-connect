@@ -43,7 +43,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
       <AdministrationTabs current="log" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Change &amp; access log</h2>
+          <h2 className="text-xl font-bold text-ink">Change &amp; Access Log</h2>
           <p className="mt-0.5 text-xs text-ink-soft">Who changed, approved or opened what, and when. NICs, passwords and credentials are never shown here.</p>
         </div>
         <a className={secondaryButtonClass} download href={`/audit/export?${query}`}>
@@ -109,7 +109,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         {data.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1080px] text-left text-[13px]">
-              <caption className="sr-only">Change and access log</caption>
+              <caption className="sr-only">Change and Access Log</caption>
               <thead className="bg-surface-muted text-[11.5px] text-ink-soft">
                 <tr>
                   {["When", "Who", "What", "Society or scope", "Details", "Approved by"].map((heading) => (
@@ -154,7 +154,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
             action={<Link className={secondaryButtonClass} href="/audit">Clear filters</Link>}
             description="Nothing matches these filters in this period."
             icon="search"
-            title="No log entries"
+            title="No Log Entries"
           />
         )}
       </section>

@@ -25,7 +25,7 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 901));
     await tester.pumpAndSettle();
-    expect(find.text('Choose your language'), findsOneWidget);
+    expect(find.text('Choose Your Language'), findsOneWidget);
 
     await tester.tap(find.text('English').first);
     await tester.pump();
@@ -43,7 +43,7 @@ void main() {
     await signInWithDemoAccount(tester);
     expect(find.text('Your account is ready'), findsNothing);
     expect(find.textContaining('Nimali'), findsOneWidget);
-    expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
+    expect(find.text('Update Your Society'), findsOneWidget);
   });
 
   testWidgets('the chosen language is saved on continue', (tester) async {

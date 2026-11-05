@@ -4,7 +4,7 @@ import Link from "next/link";
 export function AdministrationTabs({ current }: { current: "accounts" | "log" }) {
   const tabs = [
     { key: "accounts", href: "/accounts", label: "Accounts" },
-    { key: "log", href: "/audit", label: "Change & access log" },
+    { key: "log", href: "/audit", label: "Change & Access Log" },
   ] as const;
   return (
     <nav aria-label="Administration" className="flex gap-6 border-b border-line">

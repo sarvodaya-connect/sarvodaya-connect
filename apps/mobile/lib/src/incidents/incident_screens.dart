@@ -51,7 +51,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(2, 16, 2, 8),
     child: Text(
-      text.toUpperCase(),
+      text,
       style: const TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
@@ -137,7 +137,7 @@ class _IncidentStrip extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            '${incident.reference} · ${incident.title} · disaster record',
+            '${incident.reference} · ${incident.title} · Disaster Record',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 12,
@@ -243,7 +243,7 @@ class ActiveIncidentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ACTIVE INCIDENT · ${incident.reference}',
+                          'Active Incident · ${incident.reference}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10.5,
@@ -428,7 +428,7 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
               : null,
         ),
         if (mine.isNotEmpty) ...[
-          const _SectionLabel('Response actions for your society'),
+          const _SectionLabel('Response Actions for Your Society'),
           _Card(
             padding: 12,
             child: Column(
@@ -520,7 +520,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     final incidents = _incidents;
     return Scaffold(
       appBar: const _TitledBar(
-        title: 'Disaster response',
+        title: 'Disaster Response',
         subtitle: 'Live incidents for your societies',
       ),
       body: _error != null
@@ -571,7 +571,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                     label: const Text('Report an incident'),
                   ),
                   if (_alerts.isNotEmpty) ...[
-                    const _SectionLabel('Incident notifications'),
+                    const _SectionLabel('Incident Notifications'),
                     for (final alert in _alerts)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
@@ -590,7 +590,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                                   const SizedBox(width: 6),
                                   const Expanded(
                                     child: Text(
-                                      'SARVODAYA CONNECT',
+                                      'Sarvodaya Connect',
                                       style: TextStyle(
                                         fontSize: 10.5,
                                         color: AppColors.muted,
@@ -680,7 +680,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Close this incident?'),
+        title: const Text('Close This Incident?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -871,7 +871,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
                         ] else if (dueLine(detail.incident, store.now)
                             case final due?) ...[
                           const SizedBox(height: 10),
-                          _Fact(label: 'Assessments due', value: due),
+                          _Fact(label: 'Assessments Due', value: due),
                         ],
                       ],
                     ),
@@ -892,7 +892,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
                   for (final society in ownSocieties)
                     _LinkTile(
                       icon: Icons.inventory_2_outlined,
-                      title: 'Response actions',
+                      title: 'Response Actions',
                       subtitle: society.name,
                       onTap: () => Navigator.of(context).push<void>(
                         MaterialPageRoute(
@@ -906,7 +906,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
                   if (helping.isNotEmpty)
                     _LinkTile(
                       icon: Icons.volunteer_activism_outlined,
-                      title: 'Helping another society',
+                      title: 'Helping Another Society',
                       subtitle:
                           '${helping.length} ${helping.length == 1 ? 'request' : 'requests'} from HQ',
                       onTap: () async {
@@ -921,7 +921,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
                   if (detail.reports.isNotEmpty)
                     _LinkTile(
                       icon: Icons.description_outlined,
-                      title: 'Situation report',
+                      title: 'Situation Report',
                       subtitle:
                           'Report ${detail.reports.first.number} · ${accessDateTime(detail.reports.first.asOf)}',
                       onTap: () => Navigator.of(context).push<void>(
@@ -1355,32 +1355,32 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
   }
 
   static const _titles = [
-    ('Is the society affected?', "Choose how the society's village is now."),
+    ('Is the Society Affected?', "Choose how the society's village is now."),
     (
-      'How many families are affected?',
+      'How Many Families Are Affected?',
       "Count families in the society's village only. Give your best estimate.",
     ),
-    ('How many people are affected?', 'Everyone in the affected families.'),
-    ('How many people are injured?', 'Numbers only. Never names.'),
+    ('How Many People Are Affected?', 'Everyone in the affected families.'),
+    ('How Many People Are Injured?', 'Numbers only. Never names.'),
     (
-      'How many houses were damaged?',
+      'How Many Houses Were Damaged?',
       "Count houses in the society's village only. Give your best estimate.",
     ),
     (
-      'How many people are in safety centres?',
+      'How Many People Are in Safety Centres?',
       'People who had to leave their homes.',
     ),
-    ('Can vehicles reach the village?', 'Road access now.'),
+    ('Can Vehicles Reach the Village?', 'Road access now.'),
     (
-      'What is most urgently needed?',
+      'What Is Most Urgently Needed?',
       'Choose all that apply. Items, people or tasks only — no money.',
     ),
     (
-      'Add photos (optional)',
+      'Add Photos (Optional)',
       "PDF, JPG or PNG, up to 10 MB each. Don't photograph faces or documents.",
     ),
     (
-      'Anything else HQ should know?',
+      'Anything Else HQ Should Know?',
       'Optional. Do not include names or NIC numbers.',
     ),
   ];
@@ -1394,7 +1394,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
     final reviewing = _step == _questions;
     return Scaffold(
       appBar: _TitledBar(
-        title: reviewing ? 'Check before sending' : 'Rapid assessment',
+        title: reviewing ? 'Check Before Sending' : 'Rapid Assessment',
         subtitle: subtitle,
         close: !reviewing,
       ),
@@ -1576,7 +1576,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
     final latest = updates.isEmpty ? null : updates.first;
     return Scaffold(
       appBar: _TitledBar(
-        title: 'Rapid assessment',
+        title: 'Rapid Assessment',
         subtitle: subtitle,
         close: true,
       ),
@@ -1593,7 +1593,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Assessment sent',
+            'Assessment Sent',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
@@ -1672,7 +1672,7 @@ class SocietyActionsScreen extends StatelessWidget {
     };
     return Scaffold(
       appBar: _TitledBar(
-        title: 'Response actions',
+        title: 'Response Actions',
         subtitle: '${society.name} · ${detail.incident.reference}',
       ),
       body: ListView(
@@ -1719,7 +1719,7 @@ class SocietyActionsScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              'Societies helping you',
+                              'Societies Helping You',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -1790,7 +1790,7 @@ class _HelpingScreenState extends State<HelpingScreen> {
     final first = rows.firstOrNull;
     return Scaffold(
       appBar: _TitledBar(
-        title: 'Helping another society',
+        title: 'Helping Another Society',
         subtitle:
             '${first?.helper.society.name ?? ''} · ${_detail.incident.reference}',
       ),
@@ -1860,7 +1860,7 @@ class _HelpingScreenState extends State<HelpingScreen> {
                       ],
                     ),
                   ),
-                const _SectionLabel('What your society provides'),
+                const _SectionLabel('What Your Society Provides'),
                 _Card(
                   padding: 4,
                   child: Column(
@@ -1984,7 +1984,7 @@ class _DeliveryUpdateScreenState extends State<DeliveryUpdateScreen> {
     final local = _deliveredOn;
     return Scaffold(
       appBar: _TitledBar(
-        title: 'Update delivery',
+        title: 'Update Delivery',
         subtitle:
             '${widget.action.title} · ${widget.helper.society.name} → ${widget.action.forSociety?.name ?? ''}',
         close: true,
@@ -2174,7 +2174,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
         );
     return Scaffold(
       appBar: _TitledBar(
-        title: 'Situation report',
+        title: 'Situation Report',
         subtitle: report == null
             ? null
             : '${report.incident.reference} · report ${report.number} · ${accessDateTime(report.asOf)}',
@@ -2206,7 +2206,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             tile(
-                              'Societies affected',
+                              'Societies Affected',
                               grouped(report.totals.affected),
                               colour: AppColors.danger,
                             ),
@@ -2229,7 +2229,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
                             ),
                             const SizedBox(width: 10),
                             tile(
-                              'Not yet assessed',
+                              'Not Yet Assessed',
                               grouped(report.totals.notAssessed),
                               colour: AppColors.warning,
                             ),
@@ -2242,7 +2242,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'By district',
+                              'By District',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             for (final (index, d)
@@ -2279,7 +2279,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Urgent needs',
+                              'Urgent Needs',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 4),
@@ -2302,7 +2302,7 @@ class _SituationReportScreenState extends State<SituationReportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Societies helping',
+                              'Societies Helping',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 4),
@@ -2422,7 +2422,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     final options = _options;
     return Scaffold(
       appBar: const _TitledBar(
-        title: 'Report an incident',
+        title: 'Report an Incident',
         subtitle: 'Opens a disaster incident',
         close: true,
       ),
@@ -2482,7 +2482,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 const SizedBox(height: 14),
                 if (options != null) ...[
                   const Text(
-                    'Area affected *',
+                    'Area Affected *',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   const SizedBox(height: 6),

@@ -13,8 +13,8 @@ void main() {
       await pumpApp(tester, store: store);
 
       expect(find.textContaining('Good '), findsOneWidget);
-      expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
-      for (final tab in ['Home', 'Society', 'Exco', 'Work plan', 'More']) {
+      expect(find.text('Update Your Society'), findsOneWidget);
+      for (final tab in ['Home', 'Society', 'Exco', 'Work Plan', 'More']) {
         expect(navTab(tab), findsOneWidget);
       }
       expect(find.text('Incident'), findsOneWidget);
@@ -55,7 +55,7 @@ void main() {
       expect(navTab('Disasters'), findsNothing);
       expect(find.text('Submit'), findsNothing);
       if (role == UserRole.districtManager) {
-        expect(find.text('District overview'), findsOneWidget);
+        expect(find.text('District Overview'), findsOneWidget);
         await tester.tap(navTab('Societies'));
         await tester.pumpAndSettle();
         expect(find.text('Your district · view only'), findsOneWidget);
@@ -95,7 +95,7 @@ void main() {
     expect(find.text('Waiting to send (0)'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
 
-    await tester.tap(find.text('Sign out'));
+    await tester.tap(find.text('Sign Out'));
     await tester.pumpAndSettle();
     expect(
       find.text(
@@ -111,7 +111,7 @@ void main() {
     store.setDemoOptions(emptyRecords: true);
     await pumpApp(tester, store: store);
 
-    expect(find.text('No societies match'), findsOneWidget);
+    expect(find.text('No Societies Match'), findsOneWidget);
   });
 
   testWidgets('role home exposes the M26 error state', (tester) async {
@@ -120,7 +120,7 @@ void main() {
     store.setDemoOptions(failLoads: true);
     await pumpApp(tester, store: store);
 
-    expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Something Went Wrong'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
   });
 }

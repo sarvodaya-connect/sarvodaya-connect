@@ -27,7 +27,7 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
         action={<Link className="text-[12px] font-semibold text-brand-forest underline underline-offset-2" href="/dashboard">Go to my home</Link>}
         description="Only the District Manager gives temporary district access."
         heading="h1"
-        title="This page is for District Managers"
+        title="This Page Is for District Managers"
       />
     );
   }
@@ -50,7 +50,7 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-bold text-ink">Temporary DDM access</h1>
+          <h1 className="text-[22px] font-bold text-ink">Temporary DDM Access</h1>
           <p className="text-[12.5px] text-ink-soft">Let a DDM view all {districtName} societies while you are away</p>
         </div>
         <Link className="inline-flex h-[38px] items-center gap-1.5 rounded-button bg-brand-action px-4 text-[13px] font-semibold text-white hover:bg-brand-action-pressed" href="/district-access?panel=give">
@@ -79,8 +79,8 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
       <section aria-labelledby="current-heading" className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Active now</p>
-            <h2 className="text-[15px] font-bold text-ink" id="current-heading">{current.length > 1 ? "Current grants" : "Current grant"}</h2>
+            <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Active Now</p>
+            <h2 className="text-[15px] font-bold text-ink" id="current-heading">{current.length > 1 ? "Current Grants" : "Current Grant"}</h2>
           </div>
           {current[0] && <GrantStatus grant={current[0]} />}
         </div>
@@ -100,8 +100,8 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
 
       <section aria-labelledby="history-table-heading" className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">History</p>
-          <h2 className="text-[15px] font-bold text-ink" id="history-table-heading">Grants you have given</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">History</p>
+          <h2 className="text-[15px] font-bold text-ink" id="history-table-heading">Grants You Have Given</h2>
         </div>
         <GrantHistoryTable grants={list.data} />
       </section>
@@ -113,7 +113,7 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
       </p>
 
       {panel === "give" && (
-        <Drawer subtitle={`View only · all ${societyCount} ${districtName} societies`} title="Give temporary access">
+        <Drawer subtitle={`View only · all ${societyCount} ${districtName} societies`} title="Give Temporary Access">
           {deputies.length ? (
             <GiveAccessForm action={giveDistrictAccess} deputies={deputies} districtName={districtName} maxDays={list.maxDays} now={now} societyCount={societyCount} />
           ) : (
@@ -122,7 +122,7 @@ export default async function DistrictAccessPage({ searchParams }: PageProps<"/d
         </Drawer>
       )}
       {grantId && (
-        <Drawer subtitle={detail ? `${detail.district.name} District` : undefined} title="Temporary access">
+        <Drawer subtitle={detail ? `${detail.district.name} District` : undefined} title="Temporary Access">
           {detail ? (
             <GrantDetail
               endButton={

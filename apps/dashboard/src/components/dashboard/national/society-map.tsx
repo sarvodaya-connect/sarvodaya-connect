@@ -22,9 +22,9 @@ const CLASS_COLOURS: Record<SocietyMap["points"][number]["class"], string> = {
 const LEGEND = [
   { key: "A", label: "A · Strong" },
   { key: "B", label: "B · Developing" },
-  { key: "C", label: "C · Needs strengthening" },
-  { key: "UNGRADED", label: "Active, not graded" },
-  { key: "NOT_ACTIVE", label: "Not active" },
+  { key: "C", label: "C · Needs Strengthening" },
+  { key: "UNGRADED", label: "Active, Not Graded" },
+  { key: "NOT_ACTIVE", label: "Not Active" },
 ] as const;
 
 function Selected({ summary }: { summary: SocietyAtAGlance }) {
@@ -79,14 +79,14 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
   const totals = [
     { key: "A", label: "A · Strong", value: counts.A },
     { key: "B", label: "B · Developing", value: counts.B },
-    { key: "C", label: "C · Needs strengthening", value: counts.C },
-    { key: "UNGRADED", label: "Active, not graded", value: counts.ungraded },
-    { key: "NOT_ACTIVE", label: "Registered, not active", value: counts.notActive },
+    { key: "C", label: "C · Needs Strengthening", value: counts.C },
+    { key: "UNGRADED", label: "Active, Not Graded", value: counts.ungraded },
+    { key: "NOT_ACTIVE", label: "Registered, Not Active", value: counts.notActive },
   ] as const;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section aria-label="Map of societies" className="rounded-card border border-line bg-surface p-4">
+      <section aria-label="Map of Societies" className="rounded-card border border-line bg-surface p-4">
         <div className="relative">
           <svg aria-labelledby="society-map-title" className="mx-auto h-auto max-h-[640px] w-full" role="img" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
             <title id="society-map-title">{`${points.length.toLocaleString("en-GB")} societies with a recorded position`}</title>
@@ -118,7 +118,7 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
               );
             })}
           </svg>
-          <ul aria-label="Society class" className="absolute right-0 top-0 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[11px]">
+          <ul aria-label="Society Class" className="absolute right-0 top-0 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[11px]">
             {LEGEND.map((item) => (
               <li className="flex items-center gap-2" key={item.key}>
                 <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: CLASS_COLOURS[item.key] }} />
@@ -136,7 +136,7 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
       </section>
       <div className="flex flex-col gap-4">
         <section aria-labelledby="selected-society" aria-live="polite" className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Selected society</p>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Selected Society</p>
           {pending ? (
             <p className="mt-3 text-[12px] text-muted" role="status">Loading the society…</p>
           ) : error ? (
@@ -153,8 +153,8 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
           )}
         </section>
         <section aria-labelledby="on-the-map" className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">On the map</p>
-          <h2 className="text-[15px] font-bold text-ink" id="on-the-map">{(counts.A + counts.B + counts.C + counts.ungraded).toLocaleString("en-GB")} active societies</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">On the Map</p>
+          <h2 className="text-[15px] font-bold text-ink" id="on-the-map">{(counts.A + counts.B + counts.C + counts.ungraded).toLocaleString("en-GB")} Active Societies</h2>
           <ul className="mt-2 divide-y divide-line-soft text-[12px]">
             {totals.map((row) => (
               <li className="flex items-center justify-between py-2" key={row.key}>

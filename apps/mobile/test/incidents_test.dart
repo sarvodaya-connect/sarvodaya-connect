@@ -102,11 +102,11 @@ void main() {
       tester,
       const Scaffold(body: IncidentHomeSection(societyId: 'society-demo')),
     );
-    expect(find.text('ACTIVE INCIDENT · INC-2026-09'), findsOneWidget);
+    expect(find.text('Active Incident · INC-2026-09'), findsOneWidget);
     expect(find.text('Floods — Sample District'), findsOneWidget);
     expect(find.textContaining('1 day 9 hours left'), findsOneWidget);
     expect(find.text('Start rapid assessment'), findsOneWidget);
-    expect(find.text('RESPONSE ACTIONS FOR YOUR SOCIETY'), findsOneWidget);
+    expect(find.text('Response Actions for Your Society'), findsOneWidget);
     expect(find.text('Drinking water · 200 L'), findsOneWidget);
     expect(find.text('● Assigned'), findsOneWidget);
     expect(find.text('● In progress'), findsOneWidget);
@@ -132,7 +132,7 @@ void main() {
       await _tap(tester, find.text('Next'));
     }
     expect(find.text('QUESTION 5 OF 10'), findsOneWidget);
-    expect(find.text('How many houses were damaged?'), findsOneWidget);
+    expect(find.text('How Many Houses Were Damaged?'), findsOneWidget);
     await _tap(tester, find.byTooltip('More: Fully damaged'));
     await _tap(tester, find.byTooltip('More: Fully damaged'));
     await _tap(tester, find.byTooltip('More: Partly damaged'));
@@ -140,7 +140,7 @@ void main() {
       await _tap(tester, find.text('Next'));
     }
     await _tap(tester, find.text('Check answers'));
-    expect(find.text('Check before sending'), findsOneWidget);
+    expect(find.text('Check Before Sending'), findsOneWidget);
     expect(find.text('2 / 1'), findsOneWidget);
     expect(find.text('Critical'), findsOneWidget);
     expect(
@@ -150,7 +150,7 @@ void main() {
       findsOneWidget,
     );
     await _tap(tester, find.text('Send assessment'));
-    expect(find.text('Assessment sent'), findsOneWidget);
+    expect(find.text('Assessment Sent'), findsOneWidget);
     expect(find.text('Update 1 · Flood'), findsOneWidget);
     expect(find.text('● Received'), findsOneWidget);
     _expectNoBars();
@@ -177,7 +177,7 @@ void main() {
       await _tap(tester, find.text('Send assessment'));
       expect(api.attempts, 1);
       expect(find.textContaining("You're offline"), findsOneWidget);
-      expect(find.text('Check before sending'), findsOneWidget);
+      expect(find.text('Check Before Sending'), findsOneWidget);
       expect(find.text('Critical'), findsOneWidget);
       // Sending again is a person's choice, with the same answers.
       await _tap(tester, find.text('Send assessment'));
@@ -190,7 +190,7 @@ void main() {
     expect(find.text('● Active'), findsOneWidget);
     expect(find.text('96 of 151'), findsOneWidget);
     await _tap(tester, find.text('Close incident'));
-    expect(find.text('Close this incident?'), findsOneWidget);
+    expect(find.text('Close This Incident?'), findsOneWidget);
     await _tap(tester, find.text('Keep open'));
     expect(find.text('● Active'), findsOneWidget);
     await _tap(tester, find.text('Close incident'));
@@ -204,11 +204,11 @@ void main() {
     tester,
   ) async {
     await _pump(tester, const IncidentScreen(incidentId: 'incident-demo'));
-    await _tap(tester, find.text('Helping another society'));
+    await _tap(tester, find.text('Helping Another Society'));
     expect(find.text('HQ asked your society to help'), findsOneWidget);
     expect(find.text('Sample Lake Society'), findsOneWidget);
     await _tap(tester, find.text('Drinking water · 300 L'));
-    expect(find.text('Update delivery'), findsOneWidget);
+    expect(find.text('Update Delivery'), findsOneWidget);
     await tester.enterText(
       find.widgetWithText(TextField, 'Delivered so far *'),
       '301',
@@ -229,15 +229,15 @@ void main() {
     tester,
   ) async {
     await _pump(tester, const IncidentScreen(incidentId: 'incident-demo'));
-    await _tap(tester, find.text('Response actions'));
+    await _tap(tester, find.text('Response Actions'));
     expect(
-      find.text('INC-2026-09 · Floods — Sample District · disaster record'),
+      find.text('INC-2026-09 · Floods — Sample District · Disaster Record'),
       findsOneWidget,
     );
-    expect(find.text('Societies helping you'), findsOneWidget);
+    expect(find.text('Societies Helping You'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await _tap(tester, find.text('Situation report'));
+    await _tap(tester, find.text('Situation Report'));
     expect(find.text('4,610'), findsOneWidget);
     expect(find.text('36 / 412'), findsOneWidget);
     expect(
@@ -279,7 +279,7 @@ void main() {
       find.text('Sample data · fictional incident for demonstration'),
       findsOneWidget,
     );
-    expect(find.text('INCIDENT NOTIFICATIONS'), findsOneWidget);
+    expect(find.text('Incident Notifications'), findsOneWidget);
     expect(find.text('New incident: Floods — Sample District'), findsOneWidget);
     expect(find.text('Report an incident'), findsOneWidget);
   });

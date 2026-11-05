@@ -73,7 +73,7 @@ class _WorkPlanViewState extends State<WorkPlanView> {
           children: [
             Expanded(
               child: Text(
-                'Annual work plan · ${plan.year}',
+                'Annual Work Plan · ${plan.year}',
                 style: RecordStyle.cardTitle,
               ),
             ),
@@ -90,7 +90,7 @@ class _WorkPlanViewState extends State<WorkPlanView> {
         if (plan.activities.isEmpty)
           StateMessage(
             icon: Icons.event_note_outlined,
-            title: 'No activities planned for ${plan.year} yet',
+            title: 'No Activities Planned for ${plan.year} Yet',
             message: 'Add the activities the society plans for the year, with a short description and the cost allocated to each.',
             primaryLabel: plan.canAddActivities ? 'Add first activity' : null,
             onPrimary: plan.canAddActivities ? _add : null,
@@ -114,7 +114,7 @@ class _WorkPlanViewState extends State<WorkPlanView> {
                 children: [
                   Expanded(
                     child: _Figure(
-                      label: 'Activities planned',
+                      label: 'Activities Planned',
                       value: '${plan.activities.length}',
                       note: [
                         '$approved approved',
@@ -126,7 +126,7 @@ class _WorkPlanViewState extends State<WorkPlanView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _Figure(
-                      label: 'Allocated (planning)',
+                      label: 'Allocated (Planning)',
                       value: formatLkr(plan.totalAllocated),
                       note: 'Not payments',
                     ),
@@ -138,7 +138,7 @@ class _WorkPlanViewState extends State<WorkPlanView> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(2, 14, 2, 6),
                 child: Text(
-                  monthNames[month - 1].toUpperCase(),
+                  monthNames[month - 1],
                   style: RecordStyle.sectionLabel.copyWith(
                     color: AppColors.pine,
                   ),

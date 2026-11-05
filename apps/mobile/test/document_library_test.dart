@@ -31,7 +31,7 @@ void main() {
       await pumpApp(tester);
       await _openDocuments(tester);
 
-      expect(find.text('Registrar documents · FY 2025/26'), findsOneWidget);
+      expect(find.text('Registrar Documents · FY 2025/26'), findsOneWidget);
       final officeBearers = _row('Office-bearer list 2026.pdf');
       expect(
         find.descendant(
@@ -58,10 +58,10 @@ void main() {
       );
 
       // Filter by type.
-      await tapVisible(tester, find.widgetWithText(ChoiceChip, 'Audit report'));
+      await tapVisible(tester, find.widgetWithText(ChoiceChip, 'Audit Report'));
       expect(find.text('Audit report FY 2024-25.pdf'), findsOneWidget);
       expect(find.text('Office-bearer list 2026.pdf'), findsNothing);
-      expect(find.text('Registrar documents · FY 2025/26'), findsNothing);
+      expect(find.text('Registrar Documents · FY 2025/26'), findsNothing);
 
       await tapVisible(tester, find.widgetWithText(ChoiceChip, 'Other'));
       expect(find.text('No other supporting document yet'), findsOneWidget);
@@ -124,7 +124,7 @@ void main() {
 
     await _chooseAndUpload(tester);
 
-    expect(find.text('Upload failed'), findsOneWidget);
+    expect(find.text('Upload Failed'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(BottomSheet),
@@ -143,7 +143,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Retry upload'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Upload failed'), findsNothing);
+    expect(find.text('Upload Failed'), findsNothing);
     expect(store.failedUploads, isEmpty);
     expect(store.libraryDocuments.first.fileName, _agmFile);
   });
@@ -163,14 +163,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Not uploaded'),
+      find.text('Not Uploaded'),
       -300,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       find.descendant(
         of: _row(_agmFile),
-        matching: find.textContaining('Upload failed · AGM minutes'),
+        matching: find.textContaining('Upload failed · AGM Minutes'),
       ),
       findsOneWidget,
     );
@@ -180,7 +180,7 @@ void main() {
       find.bySemanticsLabel('Retry upload of $_agmFile'),
     );
     expect(find.text('$_agmFile uploaded.'), findsOneWidget);
-    expect(find.text('Not uploaded'), findsNothing);
+    expect(find.text('Not Uploaded'), findsNothing);
     expect(store.failedUploads, isEmpty);
     expect(store.libraryDocuments.first.fileName, _agmFile);
   });
@@ -198,13 +198,13 @@ void main() {
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Not uploaded'),
+      find.text('Not Uploaded'),
       -300,
       scrollable: find.byType(Scrollable).first,
     );
     await tapVisible(tester, find.byTooltip('Remove $_agmFile'));
 
-    expect(find.text('Not uploaded'), findsNothing);
+    expect(find.text('Not Uploaded'), findsNothing);
     expect(store.failedUploads, isEmpty);
   });
 
@@ -216,10 +216,10 @@ void main() {
     expect(find.text('No documents yet'), findsOneWidget);
     expect(find.text('0 of 4\napproved'), findsOneWidget);
     for (final type in [
-      'Audit report',
-      'AGM minutes',
-      'Office-bearer list',
-      'Members list',
+      'Audit Report',
+      'AGM Minutes',
+      'Office-Bearer List',
+      'Members List',
     ]) {
       expect(find.bySemanticsLabel('Upload $type'), findsOneWidget);
     }

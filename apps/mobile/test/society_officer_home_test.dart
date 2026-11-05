@@ -67,7 +67,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('All changes synced · today'), findsOneWidget);
-      expect(find.text('UPDATE YOUR SOCIETY'), findsOneWidget);
+      expect(find.text('Update Your Society'), findsOneWidget);
       expect(find.text('25 of 25 · complete'), findsOneWidget);
       expect(find.text('Details, yearly profit and expenses'), findsOneWidget);
     });
@@ -78,9 +78,9 @@ void main() {
       final store = await _openHome(tester);
 
       for (final (tile, tab) in [
-        ('Exco members', OfficerTabs.exco),
-        ('Annual work plan', OfficerTabs.workPlan),
-        ('Society information', OfficerTabs.society),
+        ('Exco Members', OfficerTabs.exco),
+        ('Annual Work Plan', OfficerTabs.workPlan),
+        ('Society Information', OfficerTabs.society),
       ]) {
         await tester.ensureVisible(find.text(tile));
         await tester.pumpAndSettle();
@@ -88,8 +88,8 @@ void main() {
         expect(store.selectedTab, tab);
       }
 
-      await tester.ensureVisible(find.text('Change history'));
-      await tester.tap(find.text('Change history'));
+      await tester.ensureVisible(find.text('Change History'));
+      await tester.tap(find.text('Change History'));
       await tester.pumpAndSettle();
       final record = tester.widget<SocietyRecordScreen>(
         find.byType(SocietyRecordScreen),
@@ -106,11 +106,11 @@ void main() {
         await _openHome(tester, size: size, textScale: scale);
         expect(tester.takeException(), isNull);
         // V5 M40: the live incident comes first while one is open.
-        expect(find.textContaining('ACTIVE INCIDENT'), findsOneWidget);
+        expect(find.textContaining('Active Incident'), findsOneWidget);
         await tester.drag(find.byType(ListView), const Offset(0, -1600));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.textContaining('summary and audit report'), findsOneWidget);
+        expect(find.textContaining('Summary and Audit Report'), findsOneWidget);
       });
     }
   });

@@ -43,7 +43,7 @@ export default function DashboardError({
             Back to societies
           </Link>
         }
-        title="We couldn't load this page"
+        title="We Couldn't Load This Page"
       />
     </section>
   );

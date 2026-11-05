@@ -19,21 +19,21 @@ describe("V5 SP07 / M51 UN SDG selector", () => {
     render(<Selector />);
     const tiles = within(screen.getByRole("list", { name: "UN SDGs" })).getAllByRole("button");
     expect(tiles).toHaveLength(17);
-    expect(tiles[0]).toHaveAccessibleName("SDG 1: No poverty");
-    expect(tiles[16]).toHaveAccessibleName("SDG 17: Partnerships for the goals");
-    expect(screen.getByText("12 · Responsible consumption and production")).toBeInTheDocument();
+    expect(tiles[0]).toHaveAccessibleName("SDG 1: No Poverty");
+    expect(tiles[16]).toHaveAccessibleName("SDG 17: Partnerships for the Goals");
+    expect(screen.getByText("12 · Responsible Consumption and Production")).toBeInTheDocument();
     const icon = tiles[3]!.querySelector("img");
     expect(icon).toHaveAttribute("src", "/sdg/sdg-04.jpg");
   });
 
   it("marks a chosen goal as pressed and says it is selected", async () => {
     render(<Selector initial={[16]} />);
-    const education = screen.getByRole("button", { name: "SDG 4: Quality education" });
+    const education = screen.getByRole("button", { name: "SDG 4: Quality Education" });
     expect(education).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(education);
-    expect(screen.getByRole("button", { name: "SDG 4: Quality education, selected" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "SDG 4: Quality Education, selected" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Chosen (2)")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, justice and strong institutions, selected" }));
+    await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, Justice and Strong Institutions, selected" }));
     expect(screen.getByText("Chosen (1)")).toBeInTheDocument();
   });
 });
@@ -60,8 +60,8 @@ describe("V5 SP07 activity review", () => {
 
   it("approves with the chosen goals and names how many", async () => {
     const { approve } = renderReview();
-    await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, justice and strong institutions" }));
-    await userEvent.click(screen.getByRole("button", { name: "SDG 4: Quality education" }));
+    await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, Justice and Strong Institutions" }));
+    await userEvent.click(screen.getByRole("button", { name: "SDG 4: Quality Education" }));
     await userEvent.click(screen.getByRole("button", { name: /Approve with 2 SDGs/ }));
     expect(approve).toHaveBeenCalledWith([4, 16]);
   });
@@ -70,7 +70,7 @@ describe("V5 SP07 activity review", () => {
     let finish: (value: { error?: string }) => void = () => undefined;
     const approve = vi.fn(() => new Promise<{ error?: string }>((resolve) => (finish = resolve)));
     renderReview(approve);
-    await userEvent.click(screen.getByRole("button", { name: "SDG 6: Clean water and sanitation" }));
+    await userEvent.click(screen.getByRole("button", { name: "SDG 6: Clean Water and Sanitation" }));
     await userEvent.click(screen.getByRole("button", { name: /Approve with 1 SDG/ }));
     expect(screen.getByRole("button", { name: /Approving…/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
@@ -81,7 +81,7 @@ describe("V5 SP07 activity review", () => {
   it("sends back with an optional note to the Society Officer", async () => {
     const { sendBack } = renderReview();
     await userEvent.click(screen.getByRole("button", { name: "Send back" }));
-    const dialog = screen.getByRole("dialog", { name: "Send back to N. Wijesinghe?" });
+    const dialog = screen.getByRole("dialog", { name: "Send Back to N. Wijesinghe?" });
     await userEvent.type(within(dialog).getByLabelText("What should change? (optional)"), "Split by ward");
     await userEvent.click(within(dialog).getByRole("button", { name: "Send back" }));
     expect(sendBack).toHaveBeenCalledWith("Split by ward");

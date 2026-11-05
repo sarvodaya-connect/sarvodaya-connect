@@ -231,7 +231,7 @@ export function ExcoEditor({
       <input name={name} type="hidden" value={payload} />
       <section className="overflow-hidden rounded-card border border-line bg-surface">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-[15px] font-bold text-ink">Exco · 25 members</h3>
+          <h3 className="text-[15px] font-bold text-ink">Exco · 25 Members</h3>
           <button className="text-[12px] text-ink-soft underline underline-offset-2" onClick={() => setShowAll((all) => !all)} type="button">
             {showAll ? "Show only office bearers and seats still to complete" : "Show all 25"}
           </button>
@@ -340,7 +340,7 @@ export function ExcoEditor({
           )}
         </section>
         <section className="rounded-card border border-line bg-surface p-4">
-          <h3 className="text-[15px] font-bold text-ink">Office bearers</h3>
+          <h3 className="text-[15px] font-bold text-ink">Office Bearers</h3>
           <ul className="mt-2 space-y-1 text-[12.5px]">
             {OFFICE_BEARERS.map((office) => {
               const holder = rows.find((row) => row.position === office);

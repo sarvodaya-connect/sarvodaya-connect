@@ -46,7 +46,7 @@ function Card({ n, eyebrow, title, action, children, id }: { n: number; eyebrow:
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">
             {n} · {eyebrow}
           </p>
           <h2 className="text-[15px] font-bold text-ink" id={id}>
@@ -108,9 +108,9 @@ function AttentionTable({ items, showSpc }: { items: HomeAttentionItem[]; showSp
           <tr>
             <th className={th} scope="col">Society</th>
             <th className={th} scope="col">Grade</th>
-            <th className={th} scope="col">Needs attention</th>
+            <th className={th} scope="col">Needs Attention</th>
             {showSpc && <th className={th} scope="col">SPC</th>}
-            <th className={th} scope="col"><span className="sr-only">Your access</span></th>
+            <th className={th} scope="col"><span className="sr-only">Your Access</span></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
@@ -168,7 +168,7 @@ function IncidentsCard({ home, n }: { home: HomeSummary; n: number }) {
   const button =
     "inline-flex h-9 items-center gap-1.5 rounded-button border px-3.5 text-[12.5px] font-semibold";
   return (
-    <Card eyebrow="Disaster response" id="incidents-heading" n={n} title="Incidents">
+    <Card eyebrow="Disaster Response" id="incidents-heading" n={n} title="Incidents">
       <p className="text-[12.5px] text-ink-soft">
         You can open or close an incident, send rapid assessments and see live incidents. Response actions are assigned by HQ.
       </p>
@@ -195,7 +195,7 @@ function TemporaryAccessCard({ home, n, now }: { home: HomeSummary; n: number; n
   );
   if (isDm) {
     return (
-      <Card action={status} eyebrow="Temporary access" id="temporary-access-heading" n={n} title={grant ? "Active grant" : "No active grant"}>
+      <Card action={status} eyebrow="Temporary Access" id="temporary-access-heading" n={n} title={grant ? "Active grant" : "No Active Grant"}>
         {grant ? (
           <div className="flex flex-1 flex-col justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -229,7 +229,7 @@ function TemporaryAccessCard({ home, n, now }: { home: HomeSummary; n: number; n
     );
   }
   return (
-    <Card action={status} eyebrow="Temporary access" id="temporary-access-heading" n={n} title="District-wide view">
+    <Card action={status} eyebrow="Temporary Access" id="temporary-access-heading" n={n} title="District-Wide View">
       {grant ? (
         <div className="flex flex-1 flex-col justify-between gap-3">
           <p className="text-[12.5px] text-ink-soft">
@@ -257,7 +257,7 @@ function TemporaryAccessCard({ home, n, now }: { home: HomeSummary; n: number; n
 export function TemporaryViewBanner({ grant, now }: { grant: HomeSummary["temporaryAccess"][number]; now: Date }) {
   return (
     <AccessBanner action={`Ends ${endsLabel(grant.expiresAt)} · ${timeLeft(grant.expiresAt, now)}`} tone="temporary">
-      <strong>Temporary district-wide view</strong> · all {grant.districtSocietyCount} {grant.districtName} societies, <strong>view only</strong>. Given by{" "}
+      <strong>Temporary District-Wide View</strong> · all {grant.districtSocietyCount} {grant.districtName} societies, <strong>view only</strong>. Given by{" "}
       {grant.grantedByName ?? "your DM"} (DM) on {shortDateTime(grant.grantedAt)}.
     </AccessBanner>
   );
@@ -285,10 +285,10 @@ function AttentionCard({ home, n }: { home: HomeSummary; n: number }) {
           All {total} {total === 1 ? "society" : "societies"}
         </Link>
       }
-      eyebrow={isDm ? "Needs attention" : "My societies"}
+      eyebrow={isDm ? "Needs Attention" : "My Societies"}
       id="attention-heading"
       n={n}
-      title={isDm ? "Societies to follow up with your staff" : "Needs attention"}
+      title={isDm ? "Societies to Follow Up With Your Staff" : "Needs Attention"}
     >
       <AttentionTable items={home.needsAttention} showSpc={isDm} />
     </Card>
@@ -297,7 +297,7 @@ function AttentionCard({ home, n }: { home: HomeSummary; n: number }) {
 
 function SpcRecentCard({ home, now }: { home: HomeSummary; now: Date }) {
   return (
-    <Card eyebrow="Activity" id="recent-heading" n={2} title="Latest in my societies">
+    <Card eyebrow="Activity" id="recent-heading" n={2} title="Latest in My Societies">
       {home.recent.length ? (
         <ul className="flex flex-col gap-3">
           {home.recent.map((change, index) => (
@@ -349,7 +349,7 @@ function StaffCard({ home }: { home: HomeSummary }) {
               <tr>
                 <th className={th} scope="col">Staff</th>
                 <th className={th} scope="col">Societies</th>
-                <th className={th} scope="col">Not updated {home.notUpdated.days}d</th>
+                <th className={th} scope="col">Not Updated {home.notUpdated.days}d</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
@@ -389,38 +389,38 @@ export function RoleHome({ home, viewer, now = new Date() }: { home: HomeSummary
     <>
       <Tile detail={`${home.societies.active} active · ${home.societies.notActive} not active`} label="Societies" value={String(total)} />
       <Tile detail="From the latest membership counts" label="Members" value={(home.societies.members ?? 0).toLocaleString("en-GB")} />
-      <Tile detail="View only" label="Grade requests with HQ" tone={home.gradeRequests.pending ? "amber" : "ink"} value={String(home.gradeRequests.pending)} />
-      <Tile detail={stale.societyNames.join(", ") || "None"} label={`Not updated ${stale.days}+ days`} tone={stale.count ? "red" : "ink"} value={String(stale.count)} />
+      <Tile detail="View only" label="Grade Requests With HQ" tone={home.gradeRequests.pending ? "amber" : "ink"} value={String(home.gradeRequests.pending)} />
+      <Tile detail={stale.societyNames.join(", ") || "None"} label={`Not Updated ${stale.days}+ Days`} tone={stale.count ? "red" : "ink"} value={String(stale.count)} />
       <Tile
         detail={home.temporaryAccess.length ? `Active · ${home.temporaryAccess.map((g) => g.deputyName).join(", ")}` : "None active"}
-        label="Temporary DDM access"
+        label="Temporary DDM Access"
         value={String(home.temporaryAccess.length)}
       />
     </>
   ) : (
     <>
-      <Tile detail={isSpc ? gradeLine(home.societies.grades) : "view and edit"} label="Assigned societies" value={String(total)} />
+      <Tile detail={isSpc ? gradeLine(home.societies.grades) : "view and edit"} label="Assigned Societies" value={String(total)} />
       <Tile
         detail={latest ? (isSpc ? `${latest.societyName} · ${waitedLabel(latest.requestedAt, now)}` : "from your societies") : "None waiting"}
-        label="Grade requests with HQ"
+        label="Grade Requests With HQ"
         tone={home.gradeRequests.pending ? "amber" : "ink"}
         value={String(home.gradeRequests.pending)}
       />
       <Tile
         detail={isSpc ? stale.societyNames.join(", ") || "None" : `of your ${total}`}
-        label={`Not updated ${stale.days}+ days`}
+        label={`Not Updated ${stale.days}+ Days`}
         tone={stale.count ? "red" : "ink"}
         value={String(stale.count)}
       />
       {isSpc ? (
         <>
-          <Tile detail={home.financialYear.label} label="Yearly summary missing" tone={home.yearlySummaryMissing ? "amber" : "ink"} value={String(home.yearlySummaryMissing)} />
-          <Tile detail={`of ${total} assigned`} label={`Societies with a ${home.planYear} plan`} value={String(home.societiesWithPlan)} />
+          <Tile detail={home.financialYear.label} label="Yearly Summary Missing" tone={home.yearlySummaryMissing ? "amber" : "ink"} value={String(home.yearlySummaryMissing)} />
+          <Tile detail={`of ${total} assigned`} label={`Societies With a ${home.planYear} Plan`} value={String(home.societiesWithPlan)} />
         </>
       ) : (
         <Tile
           detail={home.districtViewCount === null ? "Only with temporary access from your DM" : `View only · until ${endsLabel(home.temporaryAccess[0]!.expiresAt)}`}
-          label="District societies"
+          label="District Societies"
           value={home.districtViewCount === null ? "—" : String(home.districtViewCount)}
         />
       )}
@@ -430,7 +430,7 @@ export function RoleHome({ home, viewer, now = new Date() }: { home: HomeSummary
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[22px] font-bold text-ink">{isDm ? "District overview" : `${greeting(now)}, ${viewer.displayName}`}</h1>
+        <h1 className="text-[22px] font-bold text-ink">{isDm ? "District Overview" : `${greeting(now)}, ${viewer.displayName}`}</h1>
         <p className="text-[12.5px] text-ink-soft">
           {isDm ? home.district?.name : ROLE_TITLE[home.role]}
           {home.role === "DEPUTY_DISTRICT_MANAGER" && home.district ? ` · ${home.district.name}` : ""} · {longDate(now)}

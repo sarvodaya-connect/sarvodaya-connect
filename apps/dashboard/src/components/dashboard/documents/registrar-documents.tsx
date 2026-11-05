@@ -11,7 +11,7 @@ export function RegistrarDocumentsList({ registrar, societyId }: { registrar: So
     <section aria-labelledby="registrar-heading" className="rounded-card border border-line bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-bold text-ink" id="registrar-heading">
-          Annual documents to the Registrar · {registrar.financialYear.label}
+          Annual Documents to the Registrar · {registrar.financialYear.label}
         </h2>
         <p className="text-[12px] text-ink-soft">
           <strong className="text-ink">{registrar.submitted} of 4</strong> uploaded

@@ -13,7 +13,7 @@ import 'society_admin_api.dart';
 const _gradeLabels = {
   'A': 'A · Strong',
   'B': 'B · Developing',
-  'C': 'C · Needs strengthening',
+  'C': 'C · Needs Strengthening',
 };
 
 final _codePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9-]{2,19}$');
@@ -173,7 +173,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Leave without saving?'),
+        title: const Text('Leave Without Saving?'),
         content: const Text(
           'The society has not been created. What you typed will be lost.',
         ),
@@ -237,7 +237,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Create a society record',
+          title: 'Create a Society Record',
           subtitle: 'Step 1 of 2 · Society details',
         ),
         body: ListView(
@@ -245,7 +245,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
           children: [
             const NoticeBanner(
               icon: Icons.groups_outlined,
-              title: 'The Exco is entered later',
+              title: 'The Exco Is Entered Later',
               message: 'Next, assign a Society Officer. They add the 25 Exco members and can save as they go. The record shows the Exco as incomplete until all 25 seats are filled.',
             ),
             const SizedBox(height: 14),
@@ -401,7 +401,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'The society was not created',
+                title: 'The Society Was Not Created',
                 message: '$_serverError What you typed is still here.',
               ),
             ],
@@ -410,7 +410,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'Check the highlighted fields',
+                title: 'Check the Highlighted Fields',
                 message: errors.values.first,
               ),
             ],

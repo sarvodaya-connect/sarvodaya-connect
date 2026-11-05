@@ -19,7 +19,7 @@ export default async function NewActivityPage({ params }: PageProps<"/societies/
         <NoAccessState
           action={<Link className={secondaryButtonClass} href={`/societies/${id}/work-plan`}>Back to the work plan</Link>}
           description="You can view this work plan but cannot add activities to it."
-          title="You can’t add activities here"
+          title="You Can’t Add Activities Here"
         />
       </section>
     );
@@ -29,7 +29,7 @@ export default async function NewActivityPage({ params }: PageProps<"/societies/
   const spc = record.staff.find((member) => member.role === "PROGRAMME_COORDINATOR");
   return (
     <>
-      <h2 className="mt-4 text-[17px] font-bold text-ink">New activity</h2>
+      <h2 className="mt-4 text-[17px] font-bold text-ink">New Activity</h2>
       <p className="text-[12px] text-ink-soft">{record.nameEn} · work plan</p>
       <ActivityForm action={createActivity.bind(null, id)} societyId={id} spcName={spc?.displayName} years={years} />
     </>

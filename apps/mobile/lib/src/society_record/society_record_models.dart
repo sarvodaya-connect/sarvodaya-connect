@@ -48,7 +48,7 @@ class ActorRef {
 const gradeLabels = {
   'A': 'Strong',
   'B': 'Developing',
-  'C': 'Needs strengthening',
+  'C': 'Needs Strengthening',
 };
 
 class FinancialYear {
@@ -790,23 +790,23 @@ class RecordDocument {
 /// The 17 UN Sustainable Development Goals in official order (V5 M51). The
 /// SPC chooses them when approving an activity; the number is what is saved.
 const sdgTitles = [
-  'No poverty',
-  'Zero hunger',
-  'Good health and well-being',
-  'Quality education',
-  'Gender equality',
-  'Clean water and sanitation',
-  'Affordable and clean energy',
-  'Decent work and economic growth',
-  'Industry, innovation and infrastructure',
-  'Reduced inequalities',
-  'Sustainable cities and communities',
-  'Responsible consumption and production',
-  'Climate action',
-  'Life below water',
-  'Life on land',
-  'Peace, justice and strong institutions',
-  'Partnerships for the goals',
+  'No Poverty',
+  'Zero Hunger',
+  'Good Health and Well-Being',
+  'Quality Education',
+  'Gender Equality',
+  'Clean Water and Sanitation',
+  'Affordable and Clean Energy',
+  'Decent Work and Economic Growth',
+  'Industry, Innovation and Infrastructure',
+  'Reduced Inequalities',
+  'Sustainable Cities and Communities',
+  'Responsible Consumption and Production',
+  'Climate Action',
+  'Life Below Water',
+  'Life on Land',
+  'Peace, Justice and Strong Institutions',
+  'Partnerships for the Goals',
 ];
 
 String sdgTitle(int sdg) =>
@@ -1202,12 +1202,12 @@ const registrarDocumentTypes = [
 ];
 
 const documentTypeLabels = {
-  'AUDIT_REPORT': 'Audit report',
-  'AGM_MINUTES': 'AGM minutes',
-  'OFFICE_BEARER_LIST': 'Office-bearer list',
+  'AUDIT_REPORT': 'Audit Report',
+  'AGM_MINUTES': 'AGM Minutes',
+  'OFFICE_BEARER_LIST': 'Office-Bearer List',
   'MEMBERS_LIST': 'Signed members list',
   'REGISTRATION': 'Registration',
-  'ACTIVITY_EVIDENCE': 'Activity evidence',
+  'ACTIVITY_EVIDENCE': 'Activity Evidence',
   'FINANCE': 'Finance document',
   'OTHER': 'Other document',
 };

@@ -38,10 +38,10 @@ export function AssignStaffUnavailable({ record }: { record: SocietyRecord }) {
         className="relative h-full w-full max-w-[560px] overflow-y-auto bg-surface px-6 py-5 shadow-2xl"
         role="dialog"
       >
-        <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign responsible staff</h2>
+        <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign Responsible Staff</h2>
         <p className="text-[12px] text-ink-soft">{record.nameEn} · {record.societyCode}</p>
         <div className="mt-5 rounded-card border border-[#ead9a7] bg-warn-bg px-4 py-3" role="alert">
-          <p className="text-[13px] font-semibold text-warn-text">We couldn’t load the staff choices</p>
+          <p className="text-[13px] font-semibold text-warn-text">We Couldn’t Load the Staff Choices</p>
           <p className="mt-1 text-[12px] text-warn-text">
             The service is busy. Nothing has been changed, and the current assignments are as they were. Try again in a moment.
           </p>
@@ -105,7 +105,7 @@ export function AssignStaffPanel({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign responsible staff</h2>
+            <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign Responsible Staff</h2>
             <p className="text-[12px] text-ink-soft">
               {record.nameEn} · {record.societyCode} · {district}
             </p>

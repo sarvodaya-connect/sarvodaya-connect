@@ -55,7 +55,7 @@ function ScopeChips({ answer }: { answer: AssistantAnswer }) {
   if (!scope) return null;
   const chip = "rounded-full px-2.5 py-0.5 text-[11px] font-semibold";
   return (
-    <ul aria-label="What this answer covers" className="mt-2 flex flex-wrap gap-1.5">
+    <ul aria-label="What This Answer Covers" className="mt-2 flex flex-wrap gap-1.5">
       {scope.financialYears.length > 0 && (
         <li className={`${chip} bg-[#e5eef8] text-[#315d88]`}>
           {scope.financialYears.length > 2 ? `${scope.financialYears[0]} – ${scope.financialYears.at(-1)}` : scope.financialYears.join(", ")}
@@ -107,7 +107,7 @@ function HowAnswered({ answer, onClose, question, sample }: { answer: AssistantA
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[17px] font-bold text-ink" id="how-answered-title">How was this answered?</h2>
+            <h2 className="text-[17px] font-bold text-ink" id="how-answered-title">How Was This Answered?</h2>
             <p className="mt-0.5 text-[12px] text-muted">{question}</p>
             <p className="mt-2 flex gap-1.5">
               {sample && <Pill tone="preview">Sample data</Pill>}
@@ -128,7 +128,7 @@ function HowAnswered({ answer, onClose, question, sample }: { answer: AssistantA
         </dl>
         {Boolean(answer.details.sources?.length) && (
           <div className="mt-4 text-[12px]">
-            <h3 className="font-bold text-ink">Source records</h3>
+            <h3 className="font-bold text-ink">Source Records</h3>
             <ul className="mt-2 space-y-2">
               {answer.details.sources?.filter((source) => /^\/(?:societies\/[0-9a-f-]{36}(?:\/(?:documents|exco|work-plan|grade))?|requests|reviews)$/i.test(source.href)).map((source) => (
                 <li key={source.href}>
@@ -195,7 +195,7 @@ function AnswerCard({
         {isChoice ? (
           <>
             <fieldset className="mt-3 space-y-2">
-              <legend className="sr-only">Which do you mean?</legend>
+              <legend className="sr-only">Which Do You Mean?</legend>
               {answer.options.map((option, index) => (
                 <label
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-[12px] font-semibold text-ink ${index === choice ? "border-brand-forest bg-[#eef6ef]" : "border-line"}`}
@@ -225,9 +225,9 @@ function AnswerCard({
     answer.kind === "INCOMPLETE"
       ? { box: "border-[#ecd9a0] bg-[#fffaf0]", icon: "alert" as const, iconTone: "text-[#8a6100]", title: undefined }
       : answer.kind === "NO_MATCH"
-        ? { box: "border-line bg-surface", icon: "search" as const, iconTone: "text-brand-forest", title: "No societies match" }
+        ? { box: "border-line bg-surface", icon: "search" as const, iconTone: "text-brand-forest", title: "No Societies Match" }
         : answer.kind === "UNSUPPORTED"
-          ? { box: "border-line bg-surface", icon: "help" as const, iconTone: "text-ink-soft", title: "SarvoAI can’t answer this" }
+          ? { box: "border-line bg-surface", icon: "help" as const, iconTone: "text-ink-soft", title: "SarvoAI Can’t Answer This" }
           : null;
 
   if (tone) {
@@ -277,7 +277,7 @@ function AnswerCard({
       {table && table.rows.length > 0 && (
         <div className="mt-3 overflow-x-auto rounded-lg border border-line-soft">
           <table className="w-full text-left text-[12px]">
-            <caption className="sr-only">Records behind this answer</caption>
+            <caption className="sr-only">Records Behind This Answer</caption>
             <thead className="bg-[#f2f4f0] text-[11px] text-muted">
               <tr>{table.columns.map((column) => <th className="px-3 py-2 font-medium" key={column} scope="col">{column}</th>)}</tr>
             </thead>
@@ -323,7 +323,7 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
   if (result.status === 403) {
     return (
       <div className="rounded-card border border-line bg-surface p-4" role="alert">
-        <p className="text-[14px] font-bold text-ink">SarvoAI is for HQ only</p>
+        <p className="text-[14px] font-bold text-ink">SarvoAI Is for HQ Only</p>
         <p className="text-[12px] text-ink-soft">Your account cannot use SarvoAI, so nothing was looked up.</p>
       </div>
     );
@@ -332,7 +332,7 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
     // The API's own wording, with the date SarvoAI is available again (issue #96).
     return (
       <div className="rounded-card border border-[#ecd9a0] bg-[#fffaf0] p-4" role="alert">
-        <p className="text-[14px] font-bold text-ink">SarvoAI has reached this month’s limit</p>
+        <p className="text-[14px] font-bold text-ink">SarvoAI Has Reached This Month’s Limit</p>
         <p className="text-[12px] text-ink-soft">{result.message}</p>
         <div className="mt-3">
           <Link className={secondaryButtonClass} href="/reports">Open Reports</Link>
@@ -344,7 +344,7 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
     // Asking again cannot help until the spending settings are reviewed (issue #96).
     return (
       <div className="rounded-card border border-[#ecd9a0] bg-[#fffaf0] p-4" role="alert">
-        <p className="text-[14px] font-bold text-ink">SarvoAI is paused</p>
+        <p className="text-[14px] font-bold text-ink">SarvoAI Is Paused</p>
         <p className="text-[12px] text-ink-soft">{result.message}</p>
         <div className="mt-3">
           <Link className={secondaryButtonClass} href="/reports">Open Reports</Link>
@@ -366,7 +366,7 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
           <Icon className="size-4" name="error" />
         </span>
         <div>
-          <p className="text-[14px] font-bold text-ink">SarvoAI isn’t available right now</p>
+          <p className="text-[14px] font-bold text-ink">SarvoAI Isn’t Available Right Now</p>
           <p className="text-[12px] text-ink-soft">
             {result.status === 503 && /switched on/i.test(result.message)
               ? "SarvoAI is not switched on for this environment. Society records are not affected, and you can still find the figures in Reports."
@@ -483,7 +483,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
   const side = (
     <aside className="flex flex-col gap-4">
       <section aria-labelledby="try-asking" className="rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest" id="try-asking">Try asking</p>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest" id="try-asking">Try Asking</p>
         <ul className="mt-2 divide-y divide-line-soft">
           {SARVOAI_EXAMPLES.map((example) => (
             <li key={example.question}>
@@ -496,7 +496,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
         </ul>
       </section>
       <section aria-labelledby="sarvoai-uses" className="rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest" id="sarvoai-uses">What SarvoAI uses</p>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest" id="sarvoai-uses">What SarvoAI Uses</p>
         <ul className="mt-2 space-y-1.5 text-[12px] text-ink">
           {SARVOAI_USES.map((item) => (
             <li className="flex items-center gap-2" key={item}><Icon className="size-3.5 text-brand-forest" name="success" />{item}</li>
@@ -505,7 +505,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
         <p className="mt-3 rounded-lg bg-[#f2f4f0] p-2.5 text-[11px] text-ink-soft"><strong className="block text-ink">Never used or shown</strong>{SARVOAI_NEVER}</p>
       </section>
       <section aria-labelledby="recent-questions" className="rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest" id="recent-questions">Your recent questions</p>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest" id="recent-questions">Your Recent Questions</p>
         {recent.length === 0 ? (
           <p className="mt-2 text-[12px] text-muted">Questions you ask on this computer appear here.</p>
         ) : (
@@ -544,7 +544,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
             <p className="mt-2 text-[11px] text-white/80">SarvoAI answers only from Sarvodaya Connect records your HQ account can open. If a record is missing it says so — it does not guess.</p>
           </section>
           <div className="flex items-baseline justify-between">
-            <h2 className="text-[14px] font-bold text-ink">Example questions</h2>
+            <h2 className="text-[14px] font-bold text-ink">Example Questions</h2>
             {demo && <span className="text-[11px] text-muted">Answers in demonstration mode use sample data</span>}
           </div>
           <ul className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -567,7 +567,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
           </p>
         </div>
       ) : (
-        <section aria-label="SarvoAI conversation" className="flex min-h-[560px] flex-col rounded-card border border-line bg-surface">
+        <section aria-label="SarvoAI Conversation" className="flex min-h-[560px] flex-col rounded-card border border-line bg-surface">
           <header className="flex items-center justify-between border-b border-line-soft px-4 py-3">
             <p className="flex items-center gap-2 text-[14px] font-bold text-ink">
               <Mark />

@@ -65,7 +65,7 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send the correction?'),
+        title: const Text('Send the Correction?'),
         content: const Text(
           'The District Manager will check the corrected field. The original value stays in the history.',
         ),
@@ -127,10 +127,10 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
     if (submission == null ||
         submission.status != SubmissionStatus.changesRequested) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Council update')),
+        appBar: AppBar(title: const Text('Council Update')),
         body: StateMessage(
           icon: Icons.check_circle_outline,
-          title: 'Nothing to correct',
+          title: 'Nothing to Correct',
           message: 'This submission is not waiting for a correction.',
           primaryLabel: 'Back',
           onPrimary: () => Navigator.of(context).pop(),
@@ -145,7 +145,7 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
         .length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Council update')),
+      appBar: AppBar(title: const Text('Council Update')),
       body: Column(
         children: [
           if (store.offline) const OfflineBanner(),
@@ -195,7 +195,7 @@ class _ChangesRequestedScreenState extends State<ChangesRequestedScreen> {
                         : NoticeBanner(
                             icon: Icons.wifi_off,
                             tone: NoticeTone.error,
-                            title: 'Not sent',
+                            title: 'Not Sent',
                             message: _sendError,
                           ),
                   ),

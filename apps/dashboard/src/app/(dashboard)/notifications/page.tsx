@@ -10,7 +10,7 @@ import { markAllAlertsRead, openAlert } from "./actions";
 
 const FILTERS = [
   { key: "", label: "All" },
-  { key: "grades", label: "Grade requests" },
+  { key: "grades", label: "Grade Requests" },
   { key: "incidents", label: "Incidents" },
   { key: "access", label: "Access" },
   { key: "records", label: "Records" },
@@ -85,7 +85,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/notificat
           </form>
         )}
       </div>
-      <nav aria-label="Alert types" className="mt-4 flex flex-wrap gap-2">
+      <nav aria-label="Alert Types" className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((item) => (
           <Link
             aria-current={item.key === filter ? "page" : undefined}
@@ -99,7 +99,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/notificat
       </nav>
       <div className="mt-3">
         {alerts.data.length === 0 ? (
-          <EmptyState description={filter ? "No alerts of this type. Choose All to see everything." : "Requests, incidents, access changes and record reminders appear here."} icon="success" title="No alerts" />
+          <EmptyState description={filter ? "No alerts of this type. Choose All to see everything." : "Requests, incidents, access changes and record reminders appear here."} icon="success" title="No Alerts" />
         ) : (
           <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
             {alerts.data.map((alert) => <AlertRow alert={alert} key={alert.id} />)}

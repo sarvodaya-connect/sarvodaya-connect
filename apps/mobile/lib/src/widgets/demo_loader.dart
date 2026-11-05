@@ -58,7 +58,7 @@ class _DemoLoaderState extends State<DemoLoader> {
           return StateMessage(
             icon: Icons.wifi_off,
             tone: StateTone.offline,
-            title: 'You are offline',
+            title: 'You Are Offline',
             message: 'We could not reach Sarvodaya Connect. Anything you have entered is saved on this phone.',
             primaryLabel: 'Try again',
             onPrimary: _retry,
@@ -69,7 +69,7 @@ class _DemoLoaderState extends State<DemoLoader> {
           return StateMessage(
             icon: Icons.error_outline,
             tone: StateTone.error,
-            title: 'Something went wrong',
+            title: 'Something Went Wrong',
             message: 'This information could not be loaded. Your saved work has not been changed.',
             primaryLabel: 'Try again',
             onPrimary: _retry,

@@ -144,7 +144,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave without saving?'),
+        title: const Text('Leave Without Saving?'),
         content: const Text(
           'You changed the yearly figures. If you leave now, these changes are lost.',
         ),
@@ -218,7 +218,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Yearly summary',
+          title: 'Yearly Summary',
           subtitle: '${record.nameEn} · ${record.societyCode}',
           actions: [if (_dirty) const UnsavedChip()],
         ),
@@ -376,7 +376,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                           NoticeBanner(
                             icon: Icons.error_outline,
                             tone: NoticeTone.error,
-                            title: 'Not saved',
+                            title: 'Not Saved',
                             message: _saveError,
                           ),
                         ],

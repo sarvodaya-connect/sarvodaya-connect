@@ -129,7 +129,7 @@ void main() {
   });
 
   testWidgets(
-    'without a token, only "Place pin manually" picks on the drawn map',
+    'without a token, only "Place Pin Manually" picks on the drawn map',
     (tester) async {
       GeoLocation? picked;
       await _pump(

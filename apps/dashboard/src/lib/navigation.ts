@@ -49,9 +49,9 @@ export function navigationFor(viewer: DemoViewer): Navigation {
       return {
         main: [
           { href: "/dashboard", icon: "home", label: "Home" },
-          { href: "/my-societies", icon: "list", label: "My societies", alsoActiveOn: ["/societies"] },
-          { href: "/activities-to-approve", icon: "check", label: "Activities to approve" },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
+          { href: "/my-societies", icon: "list", label: "My Societies", alsoActiveOn: ["/societies"] },
+          { href: "/activities-to-approve", icon: "check", label: "Activities to Approve" },
+          { href: "/emergencies", icon: "alert", label: "Disaster Response" },
         ],
         secondary: [],
       };
@@ -60,17 +60,17 @@ export function navigationFor(viewer: DemoViewer): Navigation {
         main: [
           { href: "/dashboard", icon: "home", label: "Home" },
           { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
+          { href: "/emergencies", icon: "alert", label: "Disaster Response" },
         ],
         secondary: [],
       };
     case "DISTRICT_MANAGER":
       return {
         main: [
-          { href: "/dashboard", icon: "home", label: "District overview" },
+          { href: "/dashboard", icon: "home", label: "District Overview" },
           { href: "/my-societies", icon: "list", label: "Societies", alsoActiveOn: ["/societies"] },
-          { href: "/district-access", icon: "key", label: "Temporary DDM access" },
-          { href: "/emergencies", icon: "alert", label: "Disaster response" },
+          { href: "/district-access", icon: "key", label: "Temporary DDM Access" },
+          { href: "/emergencies", icon: "alert", label: "Disaster Response" },
         ],
         secondary: [],
       };
@@ -78,7 +78,7 @@ export function navigationFor(viewer: DemoViewer): Navigation {
       // Technical settings only: no society registry, district or review pages.
       return {
         main: [
-          { href: "/admin", icon: "building", label: "Platform access" },
+          { href: "/admin", icon: "building", label: "Platform Access" },
           { href: "/notifications", icon: "bell", label: "Notifications" },
         ],
         secondary: [],
@@ -96,25 +96,25 @@ export function isActiveItem(item: NavigationItem, pathname: string): boolean {
 const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
   ["/admin", "Administration"],
   ["/accounts", "Accounts", "Users, roles, scopes and passwords"],
-  ["/audit", "Change & access log", "Audit history"],
-  ["/states", "Page states"],
-  ["/societies/new", "Societies", "Create a society record"],
-  ["/societies/", "Society record"],
+  ["/audit", "Change & Access Log", "Audit history"],
+  ["/states", "Page States"],
+  ["/societies/new", "Societies", "Create a Society Record"],
+  ["/societies/", "Society Record"],
   ["/societies", "Societies", "Search and filter every society"],
   ["/membership", "Membership", "Aggregated counts — no personal data"],
-  ["/activities-to-approve", "Activities to approve", "Your assigned societies"],
-  ["/activities", "Programmes & Activities", "Sarvodaya 10-sector approach"],
-  ["/emergencies/", "Disaster response", "Live incident"],
-  ["/emergencies", "Disaster response", "Open and follow incidents"],
+  ["/activities-to-approve", "Activities to Approve", "Your assigned societies"],
+  ["/activities", "Programmes & Activities", "Sarvodaya 10-Sector Approach"],
+  ["/emergencies/", "Disaster Response", "Live incident"],
+  ["/emergencies", "Disaster Response", "Open and follow incidents"],
   ["/districts", "District View", "Districts · active societies by A/B/C class"],
   ["/map", "Map View", "Every society, by A/B/C class and status"],
   ["/requests", "Requests & Tasks", "Ask districts and societies for documents or information"],
   ["/reports", "Reports", "Standard reports, ready to print or share"],
-  ["/reviews", "Grade requests", "HQ approval queue"],
+  ["/reviews", "Grade Requests", "HQ approval queue"],
   ["/compliance", "Audits & AGM", "Audit report and the other annual Registrar documents"],
-  ["/my-societies", "My societies"],
-  ["/district-access", "Temporary DDM access"],
-  ["/no-access", "No access"],
+  ["/my-societies", "My Societies"],
+  ["/district-access", "Temporary DDM Access"],
+  ["/no-access", "No Access"],
   ["/documents", "Documents", "Every certificate, minute and report in one place"],
   ["/settings", "Settings", "Your profile and preferences"],
   ["/sarvoai", "SarvoAI", "Ask questions about society records · HQ only"],
@@ -126,7 +126,7 @@ const PAGE_TITLES: [prefix: string, title: string, subtitle?: string][] = [
 export function headingFor(pathname: string, viewer: DemoViewer): { title: string; subtitle: string } {
   const [, page, pageSubtitle] = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix)) ?? [];
   // V5 IR01: every role acts on incidents in its own scope, so no "view only" here.
-  if (page === "Disaster response" && pageSubtitle) return { title: page, subtitle: pageSubtitle };
+  if (page === "Disaster Response" && pageSubtitle) return { title: page, subtitle: pageSubtitle };
   switch (viewer.role) {
     case "HQ_ADMIN":
       return {
@@ -136,16 +136,16 @@ export function headingFor(pathname: string, viewer: DemoViewer): { title: strin
     case "DISTRICT_MANAGER":
       // V5 DM02 calls the list "Societies": the DM sees the whole district.
       return {
-        title: page === "My societies" ? "Societies" : (page ?? "District overview"),
+        title: page === "My Societies" ? "Societies" : (page ?? "District Overview"),
         subtitle: `${viewer.scopeLabel.endsWith("District") ? viewer.scopeLabel : `${viewer.scopeLabel} District`} · view only`,
       };
     case "DEPUTY_DISTRICT_MANAGER":
       // V5 DD03 / DD04: "Societies", with their own and (with temporary access) the district.
-      return { title: page === "My societies" ? "Societies" : (page ?? "Home"), subtitle: "Your assigned societies" };
+      return { title: page === "My Societies" ? "Societies" : (page ?? "Home"), subtitle: "Your assigned societies" };
     case "PROGRAMME_COORDINATOR":
       return {
         title: page ?? "Home",
-        subtitle: page === "My societies" ? "Assigned societies · view and edit" : "Your assigned societies",
+        subtitle: page === "My Societies" ? "Assigned societies · view and edit" : "Your assigned societies",
       };
     case "SYSTEM_ADMIN":
       return { title: page ?? "Administration", subtitle: "Technical settings only" };

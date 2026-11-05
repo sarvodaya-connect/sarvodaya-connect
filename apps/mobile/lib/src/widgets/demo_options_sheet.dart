@@ -25,7 +25,7 @@ Future<void> showDemoOptions(BuildContext context) {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
                 child: Text(
-                  'Demo options',
+                  'Demo Options',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -41,7 +41,7 @@ Future<void> showDemoOptions(BuildContext context) {
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: Text(
-                    'Preview role home',
+                    'Preview Role Home',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -75,19 +75,19 @@ Future<void> showDemoOptions(BuildContext context) {
                 onChanged: (value) => store.setDemoOptions(offline: value),
               ),
               SwitchListTile(
-                title: const Text('Loading error'),
+                title: const Text('Loading Error'),
                 subtitle: const Text('Screens show the general error state'),
                 value: store.failLoads,
                 onChanged: (value) => store.setDemoOptions(failLoads: value),
               ),
               SwitchListTile(
-                title: const Text('No submissions yet'),
+                title: const Text('No Submissions Yet'),
                 subtitle: const Text('The tracker shows its empty state'),
                 value: store.emptyTracker,
                 onChanged: (value) => store.setDemoOptions(emptyTracker: value),
               ),
               SwitchListTile(
-                title: const Text('New society with no records'),
+                title: const Text('New Society With No Records'),
                 subtitle: const Text(
                   'Documents, Audit and Notifications show their empty states',
                 ),
@@ -95,7 +95,7 @@ Future<void> showDemoOptions(BuildContext context) {
                 onChanged: (value) => store.setDemoOptions(emptyRecords: value),
               ),
               SwitchListTile(
-                title: const Text('Next upload fails'),
+                title: const Text('Next Upload Fails'),
                 subtitle: const Text(
                   'The next document upload stops part-way so Retry can be shown',
                 ),
@@ -104,7 +104,7 @@ Future<void> showDemoOptions(BuildContext context) {
                     store.setDemoOptions(failNextUpload: value),
               ),
               SwitchListTile(
-                title: const Text('Location permission denied'),
+                title: const Text('Location Permission Denied'),
                 subtitle: const Text(
                   '"Use my location" shows Open Settings and Place Pin Manually',
                 ),
@@ -114,7 +114,7 @@ Future<void> showDemoOptions(BuildContext context) {
               ),
               ListTile(
                 leading: const Icon(Icons.sync_problem),
-                title: const Text('Simulate a newer society record'),
+                title: const Text('Simulate a Newer Society Record'),
                 subtitle: Text(
                   store.recordVersion == 1
                       ? 'The District Centre saves a newer version; open profile drafts must be reloaded'

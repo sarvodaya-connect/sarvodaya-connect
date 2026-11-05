@@ -113,7 +113,7 @@ export function ExcoTable({
         </span>
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <h3 className="text-[15px] font-bold text-ink">{exco.filled} of 25 Exco seats filled</h3>
+        <h3 className="text-[15px] font-bold text-ink">{exco.filled} of 25 Exco Seats Filled</h3>
         <span
           className={`rounded-pill px-2 py-0.5 text-[10px] font-semibold ${
             exco.complete ? "bg-success-bg text-success-text" : "bg-warn-bg text-warn-text"

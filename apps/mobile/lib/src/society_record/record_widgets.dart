@@ -449,7 +449,7 @@ class ScopeBanner extends StatelessWidget {
     if (permissions.viewOnlyReason == ViewOnlyReason.temporaryDistrictAccess) {
       return _strip(
         icon: Icons.schedule,
-        bold: 'Temporary district-wide view',
+        bold: 'Temporary District-Wide View',
         text: permissions.viewOnlyUntil == null
             ? ''
             : ' · ends ${formatEnds(permissions.viewOnlyUntil!)}',

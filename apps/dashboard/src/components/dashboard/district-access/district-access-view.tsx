@@ -32,7 +32,7 @@ const initials = (name: string) =>
     .slice(0, 2)
     .join("");
 
-/** One active (or starting) grant, as on DM04 "Current grant" and DM01. */
+/** One active (or starting) grant, as on DM04 "Current Grant" and DM01. */
 export function CurrentGrant({ grant, now, endButton }: { grant: DistrictAccessGrantView; now: Date; endButton?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -93,7 +93,7 @@ export function GrantDetail({ grant, now, endButton }: { grant: DistrictAccessGr
       <section aria-labelledby="history-heading">
         <div className="flex items-center justify-between">
           <h3 className="text-[13px] font-bold text-ink" id="history-heading">
-            Access history
+            Access History
           </h3>
           <span className="text-[11px] text-ink-soft">Recorded</span>
         </div>

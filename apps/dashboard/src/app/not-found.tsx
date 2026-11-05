@@ -16,7 +16,7 @@ export default function NotFound() {
           }
           description="The page you requested does not exist or may have moved."
           icon="search"
-          title="Page not found"
+          title="Page Not Found"
         />
       </section>
     </main>

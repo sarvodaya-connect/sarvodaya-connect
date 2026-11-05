@@ -49,7 +49,7 @@ function DistrictPicker({ districts, selected, onChange }: { districts: { id: st
         <Icon className="size-4 text-ink-soft" name="chevron" strokeWidth={2} />
       </summary>
       <fieldset className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-input border border-line bg-surface p-2 shadow-lg">
-        <legend className="sr-only">Districts affected</legend>
+        <legend className="sr-only">Districts Affected</legend>
         {districts.map((district) => (
           <label className="flex items-center gap-2 rounded px-2 py-1.5 text-[12.5px] text-ink hover:bg-brand-mint-soft" key={district.id}>
             <input
@@ -126,7 +126,7 @@ export function OpenIncidentForm({
   );
   const areaField = (
     <div className={labelClass}>
-      {variant === "hq" ? "Districts affected" : "Area affected"} <Required />
+      {variant === "hq" ? "Districts Affected" : "Area affected"} <Required />
       <DistrictPicker districts={districts} onChange={setAreaIds} selected={areaIds} />
       {variant === "role" && <span className={hint}>Choose all districts you know are affected.</span>}
     </div>
@@ -313,7 +313,7 @@ export function AssessmentWizard({
   const questions = useMemo(
     () => [
       {
-        title: "Is the society affected?",
+        title: "Is the Society Affected?",
         help: "Choose how the society's village is now.",
         body: (
           <div className="grid gap-2 sm:grid-cols-3">
@@ -326,11 +326,11 @@ export function AssessmentWizard({
           </div>
         ),
       },
-      { title: "How many families are affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families affected" onChange={(v) => set("families", v)} value={answers.families} /> },
-      { title: "How many people are affected?", help: "Everyone in the affected families.", body: <Stepper label="People affected" onChange={(v) => set("people", v)} value={answers.people} /> },
-      { title: "How many people are injured?", help: "Numbers only. Never names.", body: <Stepper label="Injured" onChange={(v) => set("injured", v)} value={answers.injured} /> },
+      { title: "How Many Families Are Affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families affected" onChange={(v) => set("families", v)} value={answers.families} /> },
+      { title: "How Many People Are Affected?", help: "Everyone in the affected families.", body: <Stepper label="People affected" onChange={(v) => set("people", v)} value={answers.people} /> },
+      { title: "How Many People Are Injured?", help: "Numbers only. Never names.", body: <Stepper label="Injured" onChange={(v) => set("injured", v)} value={answers.injured} /> },
       {
-        title: "How many houses were damaged?",
+        title: "How Many Houses Were Damaged?",
         help: "Count houses in the society's village only. Give your best estimate.",
         body: (
           <div className="grid gap-2">
@@ -339,9 +339,9 @@ export function AssessmentWizard({
           </div>
         ),
       },
-      { title: "How many people are in safety centres?", help: "People who had to leave their homes.", body: <Stepper label="In safety centres" onChange={(v) => set("displaced", v)} value={answers.displaced} /> },
+      { title: "How Many People Are in Safety Centres?", help: "People who had to leave their homes.", body: <Stepper label="In safety centres" onChange={(v) => set("displaced", v)} value={answers.displaced} /> },
       {
-        title: "Can vehicles reach the village?",
+        title: "Can Vehicles Reach the Village?",
         help: "Road access now.",
         body: (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -355,7 +355,7 @@ export function AssessmentWizard({
         ),
       },
       {
-        title: "What is most urgently needed?",
+        title: "What Is Most Urgently Needed?",
         help: "Choose all that apply. Items, people or tasks only — no money.",
         body: (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -373,7 +373,7 @@ export function AssessmentWizard({
         ),
       },
       {
-        title: "Add photos (optional)",
+        title: "Add Photos (Optional)",
         help: "PDF, JPG or PNG, up to 10 MB each. Do not photograph people's faces or documents.",
         body: (
           <div className="flex flex-col gap-2">
@@ -399,7 +399,7 @@ export function AssessmentWizard({
           </div>
         ),
       },
-      { title: "Anything else HQ should know?", help: "Optional. Do not include names or NIC numbers.", body: null },
+      { title: "Anything Else HQ Should Know?", help: "Optional. Do not include names or NIC numbers.", body: null },
     ],
     [answers, photos.length],
   );
@@ -410,7 +410,7 @@ export function AssessmentWizard({
         <span className="grid size-12 place-items-center rounded-full bg-success-bg text-success-text">
           <Icon className="size-6" name="success" strokeWidth={2} />
         </span>
-        <h3 className="text-[16px] font-bold text-ink">Assessment sent</h3>
+        <h3 className="text-[16px] font-bold text-ink">Assessment Sent</h3>
         <p className="text-[12.5px] text-ink-soft">
           Received for {society?.name}. HQ and everyone following {incident.reference} can see it in the live incident.
           {sent.photos ? ` ${sent.photos} ${sent.photos === 1 ? "photo" : "photos"} added.` : ""}
@@ -467,7 +467,7 @@ export function AssessmentWizard({
 
       {reviewing ? (
         <>
-          <h3 className="text-[15px] font-bold text-ink">Check before sending</h3>
+          <h3 className="text-[15px] font-bold text-ink">Check Before Sending</h3>
           <dl className="divide-y divide-line-soft rounded-lg border border-line text-[12.5px]">
             {[
               ["What happened", INCIDENT_TYPE_LABELS[incident.type]],
@@ -498,7 +498,7 @@ export function AssessmentWizard({
         </>
       ) : (
         <>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-brand-forest">Question {step + 1} of {questions.length}</p>
+          <p className="text-[10.5px] font-bold tracking-[0.08em] text-brand-forest">Question {step + 1} of {questions.length}</p>
           <h3 className="text-[16px] font-bold text-ink">{question!.title}</h3>
           <p className="-mt-2 text-[12px] text-ink-soft">{question!.help}</p>
           {question!.body}
@@ -557,7 +557,7 @@ export function AssignHelpersForm({
       <input name="incidentId" type="hidden" value={incidentId} />
       <input name="actionId" type="hidden" value={need.id} />
       <fieldset className="flex flex-col gap-1">
-        <legend className={labelClass}>Societies that will help <Required /></legend>
+        <legend className={labelClass}>Societies That Will Help <Required /></legend>
         {options.length ? (
           <ul className="mt-1 divide-y divide-line-soft rounded-lg border border-line">
             {options.map((candidate) => {

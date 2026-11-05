@@ -82,10 +82,10 @@ export function SocietyProfileTabs({
         <div className="mt-4 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi label="Members" note={<>415 of 680 village families · <strong className="text-brand-leaf">61%</strong></>} value={members.toLocaleString("en-GB")} />
-            <Kpi label="Society wealth" note="Savings, loans, assets & shares" value="LKR 2.94M" />
-            <Kpi label="SDF shares" note="320 shares" value="LKR 640,000" />
+            <Kpi label="Society Wealth" note="Savings, loans, assets & shares" value="LKR 2.94M" />
+            <Kpi label="SDF Shares" note="320 shares" value="LKR 640,000" />
             <Kpi
-              label="Data complete"
+              label="Data Complete"
               note={missingCount === 0 ? "Registry ready" : `${missingCount} field${missingCount === 1 ? "" : "s"} missing`}
               value={`${society.profileCompleteness}%`}
             />
@@ -94,7 +94,7 @@ export function SocietyProfileTabs({
           <div className="grid gap-4 xl:grid-cols-2">
             <Card
               action={<SmallButton onClick={() => setActiveTab("Village profile")}>Village profile</SmallButton>}
-              title="Village at a glance"
+              title="Village at a Glance"
             >
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {villageFigures.map((item) => (
@@ -111,13 +111,13 @@ export function SocietyProfileTabs({
             </Card>
             <Card
               action={<SmallButton onClick={() => setActiveTab("Activities")}>All activities</SmallButton>}
-              title="Activity status · FY 2025/26"
+              title="Activity Status · FY 2025/26"
             >
               <ActivityStatus />
             </Card>
           </div>
 
-          <Card title="Basic information">
+          <Card title="Basic Information">
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-3 xl:grid-cols-5">
               <Info label="Founded" value={society.establishedOn?.slice(0, 4)} />
               <Info label="Registration no." value={society.societyCode} />
@@ -135,7 +135,7 @@ export function SocietyProfileTabs({
                   {primaryContact.fullName?.split(" ").map((part) => part[0]).join("").slice(0, 2)}
                 </span>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">Current authorised contact</p>
+                  <p className="text-[10px] font-semibold tracking-[0.1em] text-muted">Current Authorised Contact</p>
                   <p className="text-[13px] font-bold text-ink">
                     {primaryContact.fullName}
                     {primaryContact.position && ` · ${primaryContact.position}`}
@@ -155,7 +155,7 @@ export function SocietyProfileTabs({
 
       {activeTab === "Village profile" && (
         <div className="mt-4">
-          <Card title="Village profile 2026 · Approved">
+          <Card title="Village Profile 2026 · Approved">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {villageFigures.map((item) => (
                 <div className="rounded-lg border border-line px-3 py-2" key={item.label}>
@@ -172,7 +172,7 @@ export function SocietyProfileTabs({
 
       {activeTab === "Activities" && (
         <div className="mt-4">
-          <Card title="Activity status · FY 2025/26">
+          <Card title="Activity Status · FY 2025/26">
             <ActivityStatus />
           </Card>
         </div>
@@ -191,24 +191,24 @@ export function SocietyProfileTabs({
 
       {activeTab === "SDF Shares" && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Kpi label="SDF shares" note="320 shares · value at 30 Sep 2026" value="LKR 640,000" />
-          <Kpi label="Latest purchase" note="+20 shares · 02 Jul 2026" value="LKR 40,000" />
+          <Kpi label="SDF Shares" note="320 shares · value at 30 Sep 2026" value="LKR 640,000" />
+          <Kpi label="Latest Purchase" note="+20 shares · 02 Jul 2026" value="LKR 40,000" />
         </div>
       )}
 
       {activeTab === "Membership" && (
         <div className="mt-4 grid gap-6 rounded-card border border-line bg-surface p-6 lg:grid-cols-[1.2fr_1fr]">
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Total membership</h3>
+            <h3 className="text-[11px] font-semibold tracking-[0.14em] text-muted">Total Membership</h3>
             <p className="mt-2 text-[32px] font-bold text-ink">{members.toLocaleString("en-GB")}</p>
             <p className="mt-1 text-[12px] text-muted">Members across all categories · demonstration figures</p>
             <div className="mt-6 space-y-3">
               {[
-                { label: "Child members (7–14)", pct: 20, value: Math.round(members * 0.2) },
-                { label: "Youth members (15–25)", pct: 24, value: Math.round(members * 0.24) },
-                { label: "Ordinary members (over 25)", pct: 46, value: Math.round(members * 0.46) },
-                { label: "Life members", pct: 8, value: Math.round(members * 0.08) },
-                { label: "Invited members", pct: 2, value: Math.round(members * 0.02) },
+                { label: "Child Members (7–14)", pct: 20, value: Math.round(members * 0.2) },
+                { label: "Youth Members (15–25)", pct: 24, value: Math.round(members * 0.24) },
+                { label: "Ordinary Members (Over 25)", pct: 46, value: Math.round(members * 0.46) },
+                { label: "Life Members", pct: 8, value: Math.round(members * 0.08) },
+                { label: "Invited Members", pct: 2, value: Math.round(members * 0.02) },
               ].map((row) => (
                 <div className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-3 text-[12px]" key={row.label}>
                   <span className="text-ink-soft">{row.label}</span>
@@ -219,7 +219,7 @@ export function SocietyProfileTabs({
             </div>
           </div>
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Gender distribution</h3>
+            <h3 className="text-[11px] font-semibold tracking-[0.14em] text-muted">Gender Distribution</h3>
             <div className="mt-3 flex h-3 overflow-hidden rounded-full">
               <span className="w-[57%] bg-[#93458f]" />
               <span className="w-[43%] bg-[#28669a]" />
@@ -236,12 +236,12 @@ export function SocietyProfileTabs({
       {activeTab === "Executive Council" && (
         <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface p-6">
           <table className="w-full min-w-[680px] text-left">
-            <thead className="text-[11px] uppercase tracking-[0.08em] text-muted">
+            <thead className="text-[11px] tracking-[0.08em] text-muted">
               <tr>
                 <th className="pb-3">Position</th>
                 <th className="pb-3">Name</th>
                 <th className="pb-3">Phone</th>
-                <th className="pb-3">Start date</th>
+                <th className="pb-3">Start Date</th>
                 <th className="pb-3">Contact</th>
               </tr>
             </thead>
@@ -269,11 +269,11 @@ export function SocietyProfileTabs({
       {activeTab === "Documents" && (
         <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface p-6">
           <table className="w-full min-w-[680px] text-left">
-            <thead className="text-[11px] uppercase tracking-[0.08em] text-muted">
+            <thead className="text-[11px] tracking-[0.08em] text-muted">
               <tr>
                 <th className="pb-3">Document</th>
                 <th className="pb-3">Type</th>
-                <th className="pb-3">Uploaded by</th>
+                <th className="pb-3">Uploaded By</th>
                 <th className="pb-3">Uploaded</th>
                 <th className="pb-3">Status</th>
               </tr>
@@ -296,17 +296,17 @@ export function SocietyProfileTabs({
       {activeTab === "Finance" && (
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <article className="rounded-tile border border-line bg-surface px-5 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Society wealth</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">Society Wealth</p>
             <strong className="mt-2 block text-[26px] font-bold text-ink">LKR 2.5M</strong>
             <p className="mt-1 text-[11px] text-muted">31 Mar 2026 · from society finance tab</p>
           </article>
           <article className="rounded-tile border border-line bg-surface px-5 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Outstanding payments</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">Outstanding Payments</p>
             <strong className="mt-2 block text-[26px] font-bold text-ink">LKR 0</strong>
             <p className="mt-1 text-[11px] text-muted">Up to date</p>
           </article>
           <article className="rounded-tile border border-line bg-surface px-5 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">SDF shareholding</p>
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">SDF Shareholding</p>
             <strong className="mt-2 block text-[26px] font-bold text-ink">LKR 640,000</strong>
             <p className="mt-1 text-[11px] text-muted">320 shares</p>
           </article>

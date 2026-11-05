@@ -24,7 +24,7 @@ export function WaveHeader({ align = "left", children, eyebrow, subtitle, title 
       >
         <div className={align === "center" ? "max-w-xl" : "min-w-0"}>
           {eyebrow && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-ring">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-ring">
               {eyebrow}
             </p>
           )}

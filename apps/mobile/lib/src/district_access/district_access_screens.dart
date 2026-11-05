@@ -51,7 +51,7 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('End ${grant.deputyName}\'s access now?'),
+        title: Text('End ${grant.deputyName}\'s Access Now?'),
         content: const Text(
           'They lose the district-wide view straight away. Their own assigned societies are not affected.',
         ),
@@ -120,7 +120,7 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Temporary access'),
+            const Text('Temporary Access'),
             if (shown != null)
               Text(
                 '${shown.districtName} District',
@@ -297,7 +297,7 @@ class _HistoryCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Access history',
+                'Access History',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -368,7 +368,7 @@ class _EarlierGrants extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Text(
-        'Earlier grants',
+        'Earlier Grants',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       for (final grant in grants)
@@ -545,7 +545,7 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: const Text('Give temporary access'),
+        title: const Text('Give Temporary Access'),
       ),
       body: deputies == null && _error == null
           ? const LoadingSkeleton(label: 'Loading DDMs')
@@ -749,7 +749,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Check and confirm')),
+      appBar: AppBar(title: const Text('Check and Confirm')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -820,7 +820,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${name.toUpperCase()} WILL BE ABLE TO',
+                    '$name Will Be Able To',
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
@@ -834,7 +834,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'THEY WILL NOT BE ABLE TO',
+                    'They Will Not Be Able To',
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,

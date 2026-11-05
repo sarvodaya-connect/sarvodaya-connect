@@ -95,7 +95,7 @@ export function DocumentUpload({
   const uploading = state === "uploading";
   return (
     <form className="rounded-card border border-line bg-surface p-4" onSubmit={upload}>
-      <h3 className="text-[14px] font-bold text-ink">Upload a document</h3>
+      <h3 className="text-[14px] font-bold text-ink">Upload a Document</h3>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-[12px] font-semibold text-ink">
           Document type <span className="text-danger-text">*</span>

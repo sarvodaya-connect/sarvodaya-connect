@@ -22,7 +22,7 @@ export default async function PrintReportPage({ params, searchParams }: PageProp
     <main className="mx-auto w-full max-w-4xl bg-white px-8 py-8 text-ink">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-brand-forest">Sarvodaya Connect · report</p>
+          <p className="text-[11px] font-bold tracking-[0.08em] text-brand-forest">Sarvodaya Connect · Report</p>
           <h1 className="text-[22px] font-bold">{report.title}</h1>
           <p className="text-[12px] text-ink-soft">
             {report.scope} · {report.financialYear.label} · figures from approved records · generated{" "}

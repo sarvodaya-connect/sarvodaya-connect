@@ -67,8 +67,8 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
 
       <section aria-labelledby="registrar-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-soft" id="registrar-heading">
-            Annual documents to the Registrar · {totals.financialYear.label}
+          <h2 className="text-[10px] font-bold tracking-[0.12em] text-ink-soft" id="registrar-heading">
+            Annual Documents to the Registrar · {totals.financialYear.label}
           </h2>
           <p className="text-[12px] text-ink-soft">{allFourLabel(totals)}</p>
         </div>
@@ -76,14 +76,14 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <nav aria-label="Document types" className="h-fit rounded-card border border-line bg-surface p-2">
+        <nav aria-label="Document Types" className="h-fit rounded-card border border-line bg-surface p-2">
           <ul className="space-y-0.5 text-[12px]">
             {[undefined, ...ALL_TYPES].map((value, index) => {
               const active = value === type;
               const count = value ? (counts.get(value as never) ?? 0) : allCount;
               const label = value
                 ? `${index <= REGISTRAR_DOCUMENT_TYPES.length ? `${index} · ` : ""}${documentTypeLabel(value)}`
-                : "All documents";
+                : "All Documents";
               return (
                 <li key={value ?? "all"}>
                   <Link
@@ -100,12 +100,12 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
           </ul>
         </nav>
 
-        <section aria-label="Documents list" className="rounded-card border border-line bg-surface">
+        <section aria-label="Documents List" className="rounded-card border border-line bg-surface">
           {list.data.length === 0 ? (
             <EmptyState
               description={type ? `No ${documentTypeLabel(type).toLowerCase()} files have been uploaded yet.` : "No documents have been uploaded yet."}
               icon="document"
-              title="No documents"
+              title="No Documents"
             />
           ) : (
             <>

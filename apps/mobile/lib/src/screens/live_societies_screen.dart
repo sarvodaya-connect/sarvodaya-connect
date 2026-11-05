@@ -136,11 +136,11 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
                 segments: [
                   ButtonSegment(
                     value: false,
-                    label: Text('My ${user.societyIds.length} · edit'),
+                    label: Text('My ${user.societyIds.length} · Edit'),
                   ),
                   const ButtonSegment(
                     value: true,
-                    label: Text('District · view only'),
+                    label: Text('District · View Only'),
                   ),
                 ],
                 selected: {_district},
@@ -251,7 +251,7 @@ class _DistrictList extends StatelessWidget {
     if (rows.isEmpty) {
       return const StateMessage(
         icon: Icons.holiday_village_outlined,
-        title: 'No societies match',
+        title: 'No Societies Match',
         message: 'Try another name or S number.',
       );
     }

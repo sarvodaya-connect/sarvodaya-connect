@@ -43,7 +43,7 @@ describe("the Assign Responsible Staff panel", () => {
   it("shows the form once the options load", async () => {
     getStaffOptions.mockResolvedValue(options);
     await open();
-    expect(screen.getByRole("dialog", { name: "Assign responsible staff" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Assign Responsible Staff" })).toBeInTheDocument();
     expect(screen.getByText("Fictional DDM")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe("the Assign Responsible Staff panel", () => {
 
     it("explains the problem and offers a retry", async () => {
       await open();
-      expect(screen.getByRole("alert")).toHaveTextContent("We couldn’t load the staff choices");
+      expect(screen.getByRole("alert")).toHaveTextContent("We Couldn’t Load the Staff Choices");
       await userEvent.click(screen.getByRole("button", { name: "Try again" }));
       expect(refresh).toHaveBeenCalledTimes(1);
     });

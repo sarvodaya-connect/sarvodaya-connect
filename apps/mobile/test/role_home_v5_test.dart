@@ -61,8 +61,8 @@ void main() {
       find.text('Your access: 12 assigned societies · view and edit'),
       findsOneWidget,
     );
-    expect(find.text('2 activities to approve'), findsOneWidget);
-    expect(find.text('My societies'), findsOneWidget);
+    expect(find.text('2 Activities to Approve'), findsOneWidget);
+    expect(find.text('My Societies'), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     expect(find.text('Grade request'), findsOneWidget);
     expect(find.text('90+ days'), findsOneWidget);
@@ -80,13 +80,13 @@ void main() {
       role: UserRole.deputyDistrictManager,
     );
     expect(find.text('Assigned'), findsOneWidget);
-    expect(find.text('Grade requests'), findsOneWidget);
-    expect(find.text('Not updated 90d'), findsOneWidget);
+    expect(find.text('Grade Requests'), findsOneWidget);
+    expect(find.text('Not Updated 90d'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Filter societies'));
+    await tester.tap(find.byTooltip('Filter Societies'));
     await tester.pumpAndSettle();
-    expect(find.text('Filter societies'), findsOneWidget);
-    await tester.tap(find.text('Not updated in 90 days'));
+    expect(find.text('Filter Societies'), findsOneWidget);
+    await tester.tap(find.text('Not Updated in 90 Days'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Show societies'));
     await tester.pumpAndSettle();
@@ -96,7 +96,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'nothing like this');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
-    expect(find.text('No societies match'), findsOneWidget);
+    expect(find.text('No Societies Match'), findsOneWidget);
     await tester.tap(find.text('Clear all filters'));
     await tester.pumpAndSettle();
     expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
@@ -114,12 +114,12 @@ void main() {
         find.text('Your access: all 106 Kurunegala societies · view only'),
         findsOneWidget,
       );
-      expect(find.text('District overview'), findsOneWidget);
+      expect(find.text('District Overview'), findsOneWidget);
       expect(find.text('9,412'), findsOneWidget);
-      expect(find.text('Temporary access for your DDM'), findsOneWidget);
+      expect(find.text('Temporary Access for Your DDM'), findsOneWidget);
       expect(find.text('None active'), findsOneWidget);
       expect(find.text('Give temporary access'), findsOneWidget);
-      expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+      expect(find.text('Needs Attention'), findsOneWidget);
       expect(find.text('Not updated for 234 days'), findsOneWidget);
     },
   );
@@ -144,7 +144,7 @@ void main() {
       role: UserRole.programmeCoordinator,
       api: _Refusing(),
     );
-    expect(find.text("You don't have access to this"), findsOneWidget);
+    expect(find.text("You Don't Have Access to This"), findsOneWidget);
     expect(find.text('Pahala Kosgama SSS'), findsNothing);
   });
 

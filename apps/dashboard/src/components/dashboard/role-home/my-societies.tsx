@@ -84,7 +84,7 @@ export function MySocieties({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[22px] font-bold text-ink">{isDm || isDdm ? "Societies" : "My societies"}</h1>
+        <h1 className="text-[22px] font-bold text-ink">{isDm || isDdm ? "Societies" : "My Societies"}</h1>
         <p className="text-[12.5px] text-ink-soft">
           {isDm
             ? `All ${list.scopeTotal} societies in ${district}`
@@ -114,9 +114,9 @@ export function MySocieties({
       )}
 
       {isDdm && (
-        <nav aria-label="Which societies" className="flex gap-1 border-b border-line">
+        <nav aria-label="Which Societies" className="flex gap-1 border-b border-line">
           {[
-            { href: "/my-societies", label: "My societies · edit", count: list.tabs.mine, active: !districtScope },
+            { href: "/my-societies", label: "My Societies · Edit", count: list.tabs.mine, active: !districtScope },
             ...(list.tabs.district !== null
               ? [{ href: "/my-societies?scope=DISTRICT", label: `${district} district · view only`, count: list.tabs.district, active: districtScope }]
               : []),
@@ -143,9 +143,9 @@ export function MySocieties({
         </label>
         {isDm && (
           <Select
-            label="DS division"
+            label="DS Division"
             name="dsDivision"
-            options={[{ value: "", label: "DS division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
+            options={[{ value: "", label: "DS Division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
             value={filters.dsDivision}
           />
         )}
@@ -157,9 +157,9 @@ export function MySocieties({
         />
         {!isDm && (
           <Select
-            label="DS division"
+            label="DS Division"
             name="dsDivision"
-            options={[{ value: "", label: "DS division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
+            options={[{ value: "", label: "DS Division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
             value={filters.dsDivision}
           />
         )}
@@ -174,30 +174,30 @@ export function MySocieties({
           name="needsUpdate"
           options={[
             { value: "", label: isDm ? "Records: Any" : "Needs update: Any" },
-            { value: "true", label: "Not updated 90+ days" },
-            { value: "false", label: "Updated in 90 days" },
+            { value: "true", label: "Not Updated 90+ Days" },
+            { value: "false", label: "Updated in 90 Days" },
           ]}
           value={filters.needsUpdate}
         />
         {districtScope && (
           <Select
-            label="Assigned to me"
+            label="Assigned to Me"
             name="assignedToMe"
             options={[
-              { value: "", label: "Assigned to me: Any" },
+              { value: "", label: "Assigned to Me: Any" },
               { value: "true", label: "Mine" },
-              { value: "false", label: "Not mine" },
+              { value: "false", label: "Not Mine" },
             ]}
             value={filters.assignedToMe}
           />
         )}
         <Select
-          label="Grade request"
+          label="Grade Request"
           name="gradeRequest"
           options={[
-            { value: "", label: "Grade request: Any" },
+            { value: "", label: "Grade Request: Any" },
             { value: "PENDING", label: "Waiting for HQ" },
-            { value: "NONE", label: "No request" },
+            { value: "NONE", label: "No Request" },
           ]}
           value={filters.gradeRequest}
         />
@@ -221,7 +221,7 @@ export function MySocieties({
             }
             description="Change or clear the filters to see more societies."
             icon="search"
-            title="No societies match these filters"
+            title="No Societies Match These Filters"
           />
         ) : (
           <EmptyState
@@ -236,7 +236,7 @@ export function MySocieties({
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-muted">
                 <tr>
-                  <th className={th} scope="col">S number</th>
+                  <th className={th} scope="col">S Number</th>
                   <th className={th} scope="col">Society</th>
                   <th className={th} scope="col">Grade</th>
                   <th className={th} scope="col">Members</th>
@@ -251,7 +251,7 @@ export function MySocieties({
                     <th className={th} scope="col">Society Officer</th>
                   )}
                   <th className={th} scope="col">Updated</th>
-                  {!isDm && <th className={th} scope="col">Your access</th>}
+                  {!isDm && <th className={th} scope="col">Your Access</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">

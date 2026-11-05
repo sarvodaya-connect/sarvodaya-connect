@@ -29,7 +29,7 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
 
   return (
     <>
-      <Breadcrumb current="Programmes & activities" />
+      <Breadcrumb current="Programmes & Activities" />
       <PageTitle
         actions={
           <>
@@ -38,10 +38,10 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
           </>
         }
         description={`${count(programmes.completed)} of ${count(programmes.planned)} planned activities done in ${financialYear.label} · only SPC-approved activities are counted`}
-        title="Programmes & activities"
+        title="Programmes & Activities"
       />
 
-      <ul aria-label="Sarvodaya 10-sector approach" className="mt-4 grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <ul aria-label="Sarvodaya 10-Sector Approach" className="mt-4 grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {sectors.map((row) => (
           <li className="flex h-full flex-col rounded-card border border-line bg-surface p-3" key={row.sector}>
             <span className="flex items-start gap-2 text-[12px] font-bold text-ink">
@@ -57,8 +57,8 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
       </ul>
 
       <section aria-labelledby="sdg-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">UN Sustainable Development Goals</p>
-        <h2 className="text-[15px] font-bold text-ink" id="sdg-heading">SDGs ranked by completed activities</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">UN Sustainable Development Goals</p>
+        <h2 className="text-[15px] font-bold text-ink" id="sdg-heading">SDGs Ranked by Completed Activities</h2>
         <p className="text-[11px] text-muted">
           {financialYear.label} · ranked by completed, SPC-approved activities linked to each SDG. Equal counts are listed by SDG number. An activity can have several SDGs.
         </p>
@@ -81,8 +81,8 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section aria-labelledby="recent-heading" className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Approved by SPCs</p>
-          <h2 className="text-[15px] font-bold text-ink" id="recent-heading">Recent activities · all sectors</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Approved by SPCs</p>
+          <h2 className="text-[15px] font-bold text-ink" id="recent-heading">Recent Activities · All Sectors</h2>
           {programmes.recent.length === 0 ? (
             <p className="mt-3 rounded-lg bg-[#f4f5f1] px-3 py-6 text-center text-[12px] text-muted">No activity has been approved yet.</p>
           ) : (
@@ -112,7 +112,7 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
         </section>
         <div className="flex flex-col gap-4">
           <section aria-labelledby="dimension-heading" className="rounded-card border border-line bg-surface p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">By dimension</p>
+            <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">By Dimension</p>
             <h2 className="text-[15px] font-bold text-ink" id="dimension-heading">Social · Economic · Governance</h2>
             <ul className="mt-2 divide-y divide-line-soft text-[12px]">
               {programmes.byDimension.map((row) => (
@@ -129,7 +129,7 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
           </section>
           {selected && (
             <section aria-labelledby="activity-detail" className="rounded-card border border-line bg-surface p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Activity detail</p>
+              <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Activity Detail</p>
               <h2 className="text-[15px] font-bold text-ink" id="activity-detail">{selected.name}</h2>
               <p className="text-[11px] text-muted">{selected.society.name}{selected.datesLabel ? ` · ${selected.datesLabel} ${selected.year}` : ` · ${selected.year}`}</p>
               <ul className="mt-3 grid auto-rows-fr grid-cols-2 gap-2">

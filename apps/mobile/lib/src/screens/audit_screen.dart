@@ -46,7 +46,7 @@ class _AuditContent extends StatelessWidget {
     if (audits.isEmpty) {
       return StateMessage(
         icon: Icons.fact_check_outlined,
-        title: 'No audits yet',
+        title: 'No Audits Yet',
         message: 'When your society’s first annual audit is due, its checklist will appear here.',
         secondaryLabel: 'Back',
         onSecondary: () => Navigator.of(context).maybePop(),
@@ -119,7 +119,7 @@ class _CurrentAuditCard extends StatelessWidget {
           const NoticeBanner(
             icon: Icons.hourglass_top,
             tone: NoticeTone.success,
-            title: 'Audit report received',
+            title: 'Audit Report Received',
             message: 'The District Centre will check it and tell you when it is approved.',
           ),
         ],
@@ -142,7 +142,7 @@ class _CurrentAuditCard extends StatelessWidget {
             tilePadding: EdgeInsets.zero,
             childrenPadding: EdgeInsets.zero,
             title: const Text(
-              'Required steps',
+              'Required Steps',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
             // Numbers, not a bar (V5).

@@ -12,10 +12,10 @@ enum DocumentType {
 
 extension DocumentTypeInfo on DocumentType {
   String get label => switch (this) {
-    DocumentType.auditReport => 'Audit report',
-    DocumentType.agmMinutes => 'AGM minutes',
-    DocumentType.officeBearerList => 'Office-bearer list',
-    DocumentType.membersList => 'Members list',
+    DocumentType.auditReport => 'Audit Report',
+    DocumentType.agmMinutes => 'AGM Minutes',
+    DocumentType.officeBearerList => 'Office-Bearer List',
+    DocumentType.membersList => 'Members List',
     DocumentType.other => 'Other supporting document',
   };
 

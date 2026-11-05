@@ -46,8 +46,8 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
     <section aria-labelledby="details-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">1 · From the Society Officer</p>
-          <h2 className="text-[15px] font-bold text-ink" id="details-heading">Activity details</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">1 · From the Society Officer</p>
+          <h2 className="text-[15px] font-bold text-ink" id="details-heading">Activity Details</h2>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-[#eef1ec] px-2.5 py-0.5 text-[10px] font-semibold text-ink-soft">
           <Icon className="size-3" name="lock" /> View only
@@ -67,7 +67,7 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
           <Field label="Resources needed" value={activity.resourcesNeeded} />
         </dl>
       )}
-      <h3 className="mt-5 border-t border-line-soft pt-4 text-[13px] font-bold text-ink">Participants and beneficiaries</h3>
+      <h3 className="mt-5 border-t border-line-soft pt-4 text-[13px] font-bold text-ink">Participants and Beneficiaries</h3>
       <ul className="mt-3 grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {PEOPLE.map(({ key, label, note }) => (
           <li className="flex h-full flex-col rounded-lg border border-line px-3 py-2.5" key={key}>
@@ -132,7 +132,7 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
             <NoAccessState
               action={<Link className={secondaryButtonClass} href="/activities-to-approve">Back to activities</Link>}
               description="Only the society’s SPC approves its activities."
-              title="You can’t approve this activity"
+              title="You Can’t Approve This Activity"
             />
           </section>
         )}

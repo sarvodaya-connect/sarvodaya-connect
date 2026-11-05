@@ -40,8 +40,8 @@ export default async function MembershipPage() {
       </ul>
 
       <section aria-labelledby="category-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">Breakdown</p>
-        <h2 className="text-[15px] font-bold text-ink" id="category-heading">Membership by category</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Breakdown</p>
+        <h2 className="text-[15px] font-bold text-ink" id="category-heading">Membership by Category</h2>
         <div className="mt-3">
           <DataTable>
             <Thead>
@@ -63,8 +63,8 @@ export default async function MembershipPage() {
       </section>
 
       <section aria-labelledby="district-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">By district</p>
-        <h2 className="text-[15px] font-bold text-ink" id="district-heading">Members in each district</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">By District</p>
+        <h2 className="text-[15px] font-bold text-ink" id="district-heading">Members in Each District</h2>
         <div className="mt-3">
           <DataTable>
             <Thead>

@@ -50,7 +50,7 @@ export default async function GradeQueuePage({ searchParams }: PageProps<"/revie
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-bold text-ink">Grade-change requests</h2>
+        <h2 className="text-xl font-bold text-ink">Grade-Change Requests</h2>
         <p className="mt-0.5 text-xs text-ink-soft">Only HQ can change a society&apos;s grade. Requests come from Society Officers, SPCs and DDMs.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -60,16 +60,16 @@ export default async function GradeQueuePage({ searchParams }: PageProps<"/revie
           tone={summary.waiting ? "warn" : undefined}
           value={String(summary.waiting)}
         />
-        <Tile label="Approved this month" value={String(summary.approvedThisMonth)} />
-        <Tile label="Rejected this month" value={String(summary.rejectedThisMonth)} />
+        <Tile label="Approved This Month" value={String(summary.approvedThisMonth)} />
+        <Tile label="Rejected This Month" value={String(summary.rejectedThisMonth)} />
         <Tile
-          label="Average decision time"
+          label="Average Decision Time"
           note="Decisions in the last 90 days"
           value={summary.averageDecisionDays === null ? "—" : `${summary.averageDecisionDays} days`}
         />
       </div>
 
-      <nav aria-label="Request status" className="flex flex-wrap gap-x-6 border-b border-line">
+      <nav aria-label="Request Status" className="flex flex-wrap gap-x-6 border-b border-line">
         {TABS.map((tab) => (
           <Link
             aria-current={filter === tab.key ? "page" : undefined}
@@ -89,7 +89,7 @@ export default async function GradeQueuePage({ searchParams }: PageProps<"/revie
         {queue.data.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[960px] text-left text-[13px]">
-              <caption className="sr-only">Grade-change requests</caption>
+              <caption className="sr-only">Grade-Change Requests</caption>
               <thead className="bg-surface-muted text-[11.5px] text-ink-soft">
                 <tr>
                   {["Society", "District", "Change", "Requested by", "Sent", "Waiting", "Status"].map((heading) => (
@@ -138,7 +138,7 @@ export default async function GradeQueuePage({ searchParams }: PageProps<"/revie
                 ? "New requests from Society Officers, SPCs and DDMs will appear here."
                 : `No ${filter === "ALL" ? "" : `${filter.toLowerCase()} `}requests yet.`
             }
-            title={filter === "WAITING" ? "No grade requests waiting" : "Nothing here yet"}
+            title={filter === "WAITING" ? "No Grade Requests Waiting" : "Nothing here yet"}
           />
         )}
       </section>

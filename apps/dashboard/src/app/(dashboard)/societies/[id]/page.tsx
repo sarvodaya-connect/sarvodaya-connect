@@ -106,8 +106,8 @@ export default async function SocietyPage({ params, searchParams }: PageProps<"/
       </section>
 
       {missingInformation.length > 0 && (
-        <section aria-label="Missing profile information" className="mb-5 rounded-card border border-[#ead9a7] bg-warn-bg px-5 py-4">
-          <h2 className="text-sm font-semibold text-warn-text">Important information missing</h2>
+        <section aria-label="Missing Profile Information" className="mb-5 rounded-card border border-[#ead9a7] bg-warn-bg px-5 py-4">
+          <h2 className="text-sm font-semibold text-warn-text">Important Information Missing</h2>
           <p className="mt-1 text-xs text-warn-text">Complete these profile fields to improve the registry record.</p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {missingInformation.map((item) => (

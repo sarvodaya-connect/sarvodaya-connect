@@ -27,7 +27,7 @@ export const DOCUMENT_TYPES: { value: LibraryDocumentType; label: string }[] = [
   })),
   { value: "REGISTRATION", label: "Registration" },
   { value: "FINANCE", label: "Finance" },
-  { value: "ACTIVITY_EVIDENCE", label: "Activity evidence" },
+  { value: "ACTIVITY_EVIDENCE", label: "Activity Evidence" },
 ];
 
 /** Labels for document statuses. REJECTED means returned to the society for a corrected file. */

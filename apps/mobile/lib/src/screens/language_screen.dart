@@ -23,7 +23,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
           children: [
             Text(
-              'Choose your language',
+              'Choose Your Language',
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontSize: 22),
             ),

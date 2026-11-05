@@ -86,7 +86,7 @@ void main() {
   group('with demo mode off', () {
     testWidgets('More has no way into the demo controls', (tester) async {
       await _pumpMore(tester, (await tester.runAsync(_signedIn))!);
-      expect(find.byTooltip('Demo options'), findsNothing);
+      expect(find.byTooltip('Demo Options'), findsNothing);
       expect(find.byIcon(Icons.tune), findsNothing);
       expect(find.text('Fictional Admin'), findsOneWidget);
     });
@@ -95,8 +95,8 @@ void main() {
       await _pumpMore(tester, (await tester.runAsync(_signedIn))!);
       await showDemoOptions(tester.element(find.byType(MoreScreen)));
       await tester.pumpAndSettle();
-      expect(find.text('Demo options'), findsNothing);
-      expect(find.text('Preview role home'), findsNothing);
+      expect(find.text('Demo Options'), findsNothing);
+      expect(find.text('Preview Role Home'), findsNothing);
       expect(find.byType(BottomSheet), findsNothing);
     });
 
@@ -166,11 +166,11 @@ void main() {
     testWidgets('the demo controls are still there', (tester) async {
       final store = (await tester.runAsync(() => _signedIn(demo: true)))!;
       await _pumpMore(tester, store);
-      await tester.tap(find.byTooltip('Demo options'));
+      await tester.tap(find.byTooltip('Demo Options'));
       await tester.pumpAndSettle();
-      expect(find.text('Demo options'), findsOneWidget);
-      expect(find.text('Preview role home'), findsOneWidget);
-      expect(find.text('Next upload fails'), findsOneWidget);
+      expect(find.text('Demo Options'), findsOneWidget);
+      expect(find.text('Preview Role Home'), findsOneWidget);
+      expect(find.text('Next Upload Fails'), findsOneWidget);
     });
 
     test('the role switch and simulated states still work', () async {

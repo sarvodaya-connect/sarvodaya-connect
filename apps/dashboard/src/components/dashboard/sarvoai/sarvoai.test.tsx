@@ -60,18 +60,18 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(await screen.findByText(/LKR 298,400 per society/)).toBeInTheDocument();
     expect(screen.getByText("88 societies included")).toBeInTheDocument();
     expect(screen.getByText("10 excluded · figures not added")).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "Records behind this answer" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Records Behind This Answer" })).toBeInTheDocument();
     expect(screen.getByText("-38,600")).toBeInTheDocument();
     expect(screen.queryByText("Sample data")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "How was this answered?" }));
-    const dialog = screen.getByRole("dialog", { name: "How was this answered?" });
+    const dialog = screen.getByRole("dialog", { name: "How Was This Answered?" });
     expect(within(dialog).getByText(/Annual summary · total profit for the year/)).toBeInTheDocument();
     expect(within(dialog).getByText(/LKR 26,259,200 combined profit/)).toBeInTheDocument();
     expect(within(dialog).getByText(/left out, not counted as zero/)).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    const recent = screen.getByText("Your recent questions").closest("section")!;
+    const recent = screen.getByText("Your Recent Questions").closest("section")!;
     expect(within(recent).getByRole("button", { name: /What was the average profit/ })).toBeInTheDocument();
   });
 
@@ -89,7 +89,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     renderChat();
     await ask(user, "Fictional overview?");
     await user.click(await screen.findByRole("button", { name: "How was this answered?" }));
-    const dialog = within(screen.getByRole("dialog", { name: "How was this answered?" }));
+    const dialog = within(screen.getByRole("dialog", { name: "How Was This Answered?" }));
     expect(dialog.getByRole("link", { name: "Fictional profile" })).toHaveAttribute("href", "/societies/00000000-0000-4000-8000-000000000001");
     expect(dialog.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
     expect(dialog.getByText(/Record updated:/)).toBeInTheDocument();
@@ -124,10 +124,10 @@ describe("V5 D40–D49f SarvoAI", () => {
   });
 
   it.each([
-    ["Mannar", "No societies match", "Try instead"],
+    ["Mannar", "No Societies Match", "Try instead"],
     ["Mullaitivu average", "Only 6 of 17 societies have added their figures", "See the 11 not added"],
     ["Which are the best societies?", "What do you mean by “best”?", "Class A societies"],
-    ["What is the total share capital?", "SarvoAI can’t answer this", "You could ask"],
+    ["What is the total share capital?", "SarvoAI Can’t Answer This", "You could ask"],
   ])("shows the %s state", async (question, title, extra) => {
     askSarvoAi.mockResolvedValue({ ok: true, sample: true, answer: demoAnswer(question) });
     renderChat(question);
@@ -146,7 +146,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     askSarvoAi.mockResolvedValueOnce({ ok: true, sample: false, answer: answer({ summary: "Back again." }) });
     const user = userEvent.setup();
     renderChat("Average profit in Kurunegala?");
-    expect(await screen.findByText("SarvoAI isn’t available right now")).toBeInTheDocument();
+    expect(await screen.findByText("SarvoAI Isn’t Available Right Now")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Reports" })).toHaveAttribute("href", "/reports");
     await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Back again.")).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     const message = "SarvoAI is paused until its spending settings have been reviewed. Society records are not affected, and you can still find the figures in Reports.";
     askSarvoAi.mockResolvedValue({ ok: false, status: 503, message });
     renderChat("Average profit?");
-    expect(await screen.findByText("SarvoAI is paused")).toBeInTheDocument();
+    expect(await screen.findByText("SarvoAI Is Paused")).toBeInTheDocument();
     expect(screen.getByText(message)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
   });
@@ -172,17 +172,17 @@ describe("V5 D40–D49f SarvoAI", () => {
     const message = "SarvoAI has reached its spending limit for this month. It will be available again on 1 December 2026 (5:30 a.m. Sri Lanka time).";
     askSarvoAi.mockResolvedValue({ ok: false, status: 429, message });
     renderChat("Average profit?");
-    expect(await screen.findByText("SarvoAI has reached this month’s limit")).toBeInTheDocument();
+    expect(await screen.findByText("SarvoAI Has Reached This Month’s Limit")).toBeInTheDocument();
     expect(screen.getByText(message)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Reports" })).toHaveAttribute("href", "/reports");
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
-    expect(screen.queryByText("SarvoAI isn’t available right now")).not.toBeInTheDocument();
+    expect(screen.queryByText("SarvoAI Isn’t Available Right Now")).not.toBeInTheDocument();
   });
 
   it("shows nothing when the API refuses the account", async () => {
-    askSarvoAi.mockResolvedValue({ ok: false, status: 403, message: "SarvoAI is for HQ only" });
+    askSarvoAi.mockResolvedValue({ ok: false, status: 403, message: "SarvoAI Is for HQ Only" });
     renderChat("Average profit?");
-    expect(await screen.findByText("SarvoAI is for HQ only")).toBeInTheDocument();
+    expect(await screen.findByText("SarvoAI Is for HQ Only")).toBeInTheDocument();
   });
 
   it("stops waiting and lets the user ask again", async () => {
@@ -207,7 +207,7 @@ describe("V5 D40–D49f SarvoAI", () => {
 describe("V5 D49f SarvoAI no access", () => {
   it("names nothing from the HQ tool", () => {
     render(<RolePageNoAccess name="K. Perera" page="sarvoai" roleLabel="DDM" scope="Kurunegala" />);
-    expect(screen.getByRole("heading", { name: "SarvoAI is for HQ only" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "SarvoAI Is for HQ Only" })).toBeInTheDocument();
     expect(screen.getByText(/This link opens an HQ tool, so nothing from it is shown here/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to my home" })).toHaveAttribute("href", "/dashboard");
   });

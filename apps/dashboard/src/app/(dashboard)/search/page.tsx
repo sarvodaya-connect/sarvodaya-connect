@@ -48,11 +48,11 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
       {!results ? (
         <div className="mt-4">
-          <EmptyState description="Type at least two letters: a society name, S number, district or person." icon="search" title="Search the records you can open" />
+          <EmptyState description="Type at least two letters: a society name, S number, district or person." icon="search" title="Search the Records You Can Open" />
         </div>
       ) : (
         <>
-          <nav aria-label="Result types" className="mt-4 flex flex-wrap gap-2">
+          <nav aria-label="Result Types" className="mt-4 flex flex-wrap gap-2">
             <Link aria-current={!type ? "page" : undefined} className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold ${!type ? "border-brand-forest bg-brand-forest text-white" : "border-line bg-surface text-ink"}`} href={href()}>
               All ({total})
             </Link>
@@ -67,7 +67,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           </p>
           {results.data.length === 0 ? (
             <div className="mt-3">
-              <EmptyState description="Try a name, S number, district or person. Only records you can open are searched." icon="search" title="No results" />
+              <EmptyState description="Try a name, S number, district or person. Only records you can open are searched." icon="search" title="No Results" />
             </div>
           ) : (
             <ul className="mt-2 divide-y divide-line-soft rounded-card border border-line bg-surface">

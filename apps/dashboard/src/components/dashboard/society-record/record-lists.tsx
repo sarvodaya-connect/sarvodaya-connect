@@ -8,13 +8,13 @@ import type { RecordDocument } from "@/lib/society-record-api";
 import { actorLabel, formatDate, ROLE_LABELS } from "@/lib/society-record-format";
 
 const DOCUMENT_LABELS: Record<string, string> = {
-  AUDIT_REPORT: "Audit report",
-  AGM_MINUTES: "AGM minutes",
-  OFFICE_BEARER_LIST: "Office-bearer list",
+  AUDIT_REPORT: "Audit Report",
+  AGM_MINUTES: "AGM Minutes",
+  OFFICE_BEARER_LIST: "Office-Bearer List",
   MEMBERS_LIST: "Signed members list",
   REGISTRATION: "Registration",
   FINANCE: "Finance document",
-  ACTIVITY_EVIDENCE: "Activity evidence",
+  ACTIVITY_EVIDENCE: "Activity Evidence",
   OTHER: "Document",
 };
 
@@ -127,8 +127,8 @@ const CATEGORIES: { label: string; value?: SocietyHistoryCategory }[] = [
   { label: "All" },
   { label: "Society", value: "SOCIETY" },
   { label: "Exco", value: "EXCO" },
-  { label: "Work plan", value: "WORK_PLAN" },
-  { label: "Annual summary", value: "ANNUAL_SUMMARY" },
+  { label: "Work Plan", value: "WORK_PLAN" },
+  { label: "Annual Summary", value: "ANNUAL_SUMMARY" },
   { label: "Grade", value: "GRADE" },
   { label: "Documents", value: "DOCUMENTS" },
 ];
@@ -145,7 +145,7 @@ export function HistoryList({
 }) {
   return (
     <>
-      <nav aria-label="Filter history" className="mt-4 flex flex-wrap gap-2">
+      <nav aria-label="Filter History" className="mt-4 flex flex-wrap gap-2">
         {CATEGORIES.map((item) => {
           const active = item.value === category;
           return (

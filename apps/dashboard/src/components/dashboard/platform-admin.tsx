@@ -28,12 +28,12 @@ type AdminTab = "users" | "roles" | "master-data" | "workflow" | "data-import" |
 
 const tabs: { id: AdminTab; label: string }[] = [
   { id: "users", label: "Users (4)" },
-  { id: "roles", label: "Roles & permissions" },
-  { id: "master-data", label: "Master data" },
+  { id: "roles", label: "Roles & Permissions" },
+  { id: "master-data", label: "Master Data" },
   { id: "workflow", label: "Workflow" },
-  { id: "data-import", label: "Data import" },
-  { id: "security", label: "Security & privacy" },
-  { id: "audit", label: "System audit log" },
+  { id: "data-import", label: "Data Import" },
+  { id: "security", label: "Security & Privacy" },
+  { id: "audit", label: "System Audit Log" },
 ];
 
 export function PlatformAdminScreen() {
@@ -60,8 +60,8 @@ export function PlatformAdminScreen() {
           {notice}
         </p>
       )}
-      <section aria-label="Administration records" className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
-        <div aria-label="Administration sections" className="flex overflow-x-auto border-b border-line-soft px-3" role="tablist">
+      <section aria-label="Administration Records" className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
+        <div aria-label="Administration Sections" className="flex overflow-x-auto border-b border-line-soft px-3" role="tablist">
           {tabs.map((item) => (
             <button
               aria-controls={`admin-panel-${item.id}`}
@@ -87,13 +87,13 @@ export function PlatformAdminScreen() {
         <div aria-labelledby={`admin-tab-${tab}`} className="overflow-x-auto" id={`admin-panel-${tab}`} role="tabpanel" tabIndex={0}>
           {tab === "users" && (
             <table className="w-full min-w-[740px] text-left">
-              <caption className="sr-only">Demonstration platform users, roles and access scopes</caption>
+              <caption className="sr-only">Demonstration Platform Users, Roles and Access Scopes</caption>
               <thead className="bg-surface-muted">
-                <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <tr className="text-[11px] font-semibold tracking-[0.08em] text-muted">
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Scope</th>
-                  <th className="px-4 py-3">Last active</th>
+                  <th className="px-4 py-3">Last Active</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
@@ -112,12 +112,12 @@ export function PlatformAdminScreen() {
           )}
           {tab === "roles" && (
             <table className="w-full min-w-[620px] text-left">
-              <caption className="sr-only">Demonstration role permissions and scopes</caption>
+              <caption className="sr-only">Demonstration Role Permissions and Scopes</caption>
               <thead className="bg-surface-muted">
-                <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <tr className="text-[11px] font-semibold tracking-[0.08em] text-muted">
                   <th className="px-4 py-3">Role</th>
-                  <th className="px-4 py-3">Access scope</th>
-                  <th className="px-4 py-3">Assigned users</th>
+                  <th className="px-4 py-3">Access Scope</th>
+                  <th className="px-4 py-3">Assigned Users</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -136,13 +136,13 @@ export function PlatformAdminScreen() {
           )}
           {tab === "audit" && (
             <table className="w-full min-w-[620px] text-left">
-              <caption className="sr-only">Recent platform administration audit events</caption>
+              <caption className="sr-only">Recent Platform Administration Audit Events</caption>
               <thead className="bg-surface-muted">
-                <tr className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <tr className="text-[11px] font-semibold tracking-[0.08em] text-muted">
                   <th className="px-4 py-3">User</th>
                   <th className="px-4 py-3">Action</th>
                   <th className="px-4 py-3">Record</th>
-                  <th className="px-4 py-3">Date & time</th>
+                  <th className="px-4 py-3">Date & Time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -169,7 +169,7 @@ export function PlatformAdminScreen() {
 function TabPlaceholder({ tab }: { tab: AdminTab }) {
   const copy: Record<string, { title: string; description: string }> = {
     "master-data": {
-      title: "Master data",
+      title: "Master Data",
       description: "Districts, DS/GN divisions, sector catalogue and other reference lists maintained by HQ.",
     },
     workflow: {
@@ -177,11 +177,11 @@ function TabPlaceholder({ tab }: { tab: AdminTab }) {
       description: "Approval chains, review targets, and reminder cadences used across the registry.",
     },
     "data-import": {
-      title: "Data import",
+      title: "Data Import",
       description: "Bulk uploads for societies, members and historical records. Connected after the identity service is live.",
     },
     security: {
-      title: "Security & privacy",
+      title: "Security & Privacy",
       description: "Two-step verification policy, session timeouts, data retention and personal-data placeholders.",
     },
   };

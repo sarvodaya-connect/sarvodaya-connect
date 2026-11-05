@@ -21,7 +21,7 @@ export function share(part: number, whole: number) {
 export function Breadcrumb({ current }: { current: string }) {
   return (
     <nav aria-label="Breadcrumb" className="text-[11px] text-ink-soft">
-      <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">National overview</Link>
+      <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">National Overview</Link>
       <span aria-hidden> › </span>
       <span aria-current="page">{current}</span>
     </nav>
@@ -46,7 +46,7 @@ export function SampleBadge({ demo, label = "Demonstration data" }: { demo: bool
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-forest">{children}</p>;
+  return <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{children}</p>;
 }
 
 /** A card with the V5 eyebrow, title and an optional link at the top right. */
@@ -91,7 +91,7 @@ export function Stat({ label, tone = "plain", value }: { label: ReactNode; tone?
 export const GRADE_STYLE = {
   A: { label: "A · Strong", colour: "#3f7d4f", text: "text-[#2f6b3e]" },
   B: { label: "B · Developing", colour: "#e1b84a", text: "text-[#8a6100]" },
-  C: { label: "C · Needs strengthening", colour: "#de7c3a", text: "text-[#a2470f]" },
+  C: { label: "C · Needs Strengthening", colour: "#de7c3a", text: "text-[#a2470f]" },
 } as const;
 
 export function GradeBadge({ grade }: { grade: "A" | "B" | "C" | null }) {
@@ -143,7 +143,7 @@ export function SdgTile({ completed, rank, sdg }: { completed: number; rank: num
 /** Financial-year links (FY 2025/26 …) that keep the other parameters. */
 export function YearLinks({ current, href, years }: { current: number; href: (year: number) => string; years: number[] }) {
   return (
-    <nav aria-label="Financial year" className="flex flex-wrap gap-1.5">
+    <nav aria-label="Financial Year" className="flex flex-wrap gap-1.5">
       {years.map((year) => (
         <Link
           aria-current={year === current ? "true" : undefined}

@@ -62,7 +62,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('This app is not set up yet'), findsOneWidget);
+    expect(find.text('This App Is Not Set Up Yet'), findsOneWidget);
     expect(
       find.textContaining('--dart-define=API_BASE_URL=https://'),
       findsOneWidget,

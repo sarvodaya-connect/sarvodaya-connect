@@ -66,7 +66,7 @@ void main() {
       expect(find.text('Demonstration data · FY 2025/26'), findsOneWidget);
       expect(
         find.bySemanticsLabel(
-          'Number 1, SDG 4: Quality education, 980 completed',
+          'Number 1, SDG 4: Quality Education, 980 completed',
         ),
         findsOneWidget,
       );
@@ -84,7 +84,7 @@ void main() {
         tester,
       ) async {
         await _pump(tester, const NationalDashboardScreen(), role: role);
-        expect(find.text('This page is for HQ only'), findsOneWidget);
+        expect(find.text('This Page Is for HQ Only'), findsOneWidget);
         expect(find.text('5,340'), findsNothing);
       });
     }
@@ -94,7 +94,7 @@ void main() {
     ) async {
       await _pump(tester, const NationalDashboardScreen(), api: _FailingApi());
       expect(
-        find.text('We couldn’t load the national figures'),
+        find.text('We Couldn’t Load the National Figures'),
         findsOneWidget,
       );
       expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
@@ -117,7 +117,7 @@ void main() {
       expect(find.text('B → A'), findsOneWidget);
       await _tap(tester, find.text('Pahala Kosgama SSS'));
 
-      expect(find.text('Society summary'), findsOneWidget);
+      expect(find.text('Society Summary'), findsOneWidget);
       expect(find.text('96%'), findsOneWidget);
       expect(find.text('LKR 412,500'), findsOneWidget);
       expect(find.text('Grade change B → A'), findsOneWidget);
@@ -141,12 +141,12 @@ void main() {
     testWidgets('filters to nothing and clears the filters', (tester) async {
       await _pump(tester, const NationalSocietiesScreen(asTab: true));
       expect(find.text('Thalawa SSS'), findsOneWidget);
-      await _tap(tester, find.widgetWithText(FilterChip, '90+ days'));
+      await _tap(tester, find.widgetWithText(FilterChip, '90+ Days'));
       expect(find.text('Thalawa SSS'), findsOneWidget);
       expect(find.text('Pahala Kosgama SSS'), findsNothing);
       await _tap(tester, find.text('Class: All'));
       await _tap(tester, find.text('Class A').last);
-      expect(find.text('No societies match'), findsOneWidget);
+      expect(find.text('No Societies Match'), findsOneWidget);
       await _tap(tester, find.text('Clear all filters'));
       expect(find.text('Pahala Kosgama SSS'), findsOneWidget);
     });
@@ -157,7 +157,7 @@ void main() {
       await _pump(tester, const NationalMembershipScreen());
       expect(find.text('Youth members'), findsOneWidget);
       expect(find.text('18,350'), findsOneWidget);
-      expect(find.text('Counts only'), findsOneWidget);
+      expect(find.text('Counts Only'), findsOneWidget);
     });
 
     testWidgets('audit and Registrar documents', (tester) async {
@@ -172,7 +172,7 @@ void main() {
       await _pump(tester, const ProfitExpensesScreen());
       expect(find.text('LKR 312.4 m'), findsOneWidget);
       expect(find.text('Kobeigane SSS'), findsOneWidget);
-      expect(find.text('NOT ADDED YET · 108'), findsOneWidget);
+      expect(find.text('Not Added Yet · 108'), findsOneWidget);
     });
 
     testWidgets('activities by sector, dimension and UN SDG', (tester) async {
@@ -182,7 +182,7 @@ void main() {
       expect(find.text('Social'), findsOneWidget);
       expect(
         find.bySemanticsLabel(
-          'Number 6, SDG 8: Decent work and economic growth, 380 completed',
+          'Number 6, SDG 8: Decent Work and Economic Growth, 380 completed',
         ),
         findsOneWidget,
       );

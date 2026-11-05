@@ -85,7 +85,7 @@ export default async function GradeRequestPage({ params, searchParams }: PagePro
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-[22px] font-bold text-ink">
-            Grade change {request.fromGrade ?? "–"} → {request.toGrade} · {society.name}
+            Grade Change {request.fromGrade ?? "–"} → {request.toGrade} · {society.name}
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-soft">
             {society.societyCode} · {society.district} · sent by {actorLabel(request.requestedBy)} on{" "}
@@ -120,7 +120,7 @@ export default async function GradeRequestPage({ params, searchParams }: PagePro
             <blockquote className="mt-1 rounded-lg bg-surface-muted px-3.5 py-3 text-[13px] text-ink">“{request.reason}”</blockquote>
           </Card>
 
-          <Card title="Society at a glance">
+          <Card title="Society at a Glance">
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
                 ["Members", society.memberCount === null ? "—" : society.memberCount.toLocaleString("en-GB")],
@@ -138,7 +138,7 @@ export default async function GradeRequestPage({ params, searchParams }: PagePro
               {[
                 ["Open society record", base],
                 ["Exco", `${base}/exco`],
-                ["Work plan", `${base}/work-plan`],
+                ["Work Plan", `${base}/work-plan`],
                 ["Documents", `${base}/documents`],
               ].map(([label, href], index) => (
                 <span key={href}>
@@ -149,7 +149,7 @@ export default async function GradeRequestPage({ params, searchParams }: PagePro
             </p>
           </Card>
 
-          <Card title="Grade history">
+          <Card title="Grade History">
             {request.history.length ? (
               <ol className="space-y-3">
                 {request.history.map((event) => (

@@ -190,7 +190,7 @@ enum StateTone { neutral, error, offline, success, noAccess }
 class NoAccessView extends StatelessWidget {
   const NoAccessView({
     super.key,
-    this.title = "You don't have access to this",
+    this.title = "You Don't Have Access to This",
     this.message =
         'It is outside your assigned access, so it cannot be opened. '
         'Ask your DM or HQ if you need it.',
@@ -333,7 +333,7 @@ class NoticeBanner extends StatelessWidget {
   }) : this(
          key: key,
          icon: Icons.lock_outline,
-         title: 'Locked during review',
+         title: 'Locked During Review',
          message:
              '$reviewer started reviewing on ${formatDateTime(since)}. You can view it but not edit it.',
          tone: NoticeTone.warning,
