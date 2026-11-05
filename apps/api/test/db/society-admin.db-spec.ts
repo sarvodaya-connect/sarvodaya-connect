@@ -1,7 +1,8 @@
 /**
  * V5 PR 3 database tests: the national grade queue (D22/D22r), responsible
- * staff and assignments (D05/D05a), creating a society with its 25 Exco
- * members (D05n/D05c) and Exco dates of birth. Every record is fictional and
+ * staff and assignments (D05/D05a), creating a society without its Exco
+ * (D05n), the assigned Society Officer entering the Exco a few seats at a
+ * time, and Exco dates of birth. Every record is fictional and
  * removed afterwards.
  */
 import { INestApplication, ValidationPipe } from '@nestjs/common';
@@ -66,6 +67,7 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
     spc2: randomUUID(),
     so: randomUUID(),
     so2: randomUUID(),
+    so3: randomUUID(),
     farSpc: randomUUID(),
   };
   const tokens: Record<keyof typeof ids, string> = {} as never;
@@ -159,6 +161,8 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
           districtId,
           societyIds: [outsideId],
         }),
+        // Not assigned yet: HQ assigns them to the new society below.
+        account(ids.so3, 'SOCIETY_OFFICER', { districtId }),
         account(ids.farSpc, 'PROGRAMME_COORDINATOR', {
           districtId: otherDistrictId,
           societyIds: [outsideId],
@@ -334,7 +338,7 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
     await call('get', '/identity/me', tokens.ddm).expect(200);
   });
 
-  it('D05n/D05c: HQ creates a society with 25 Exco members and office bearers', async () => {
+  it('D05n: HQ creates a society without its Exco; the assigned officer enters it', async () => {
     const base = {
       societyCode: `SN-${suffix}`,
       nameEn: 'Fictional New Society',
@@ -343,34 +347,9 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       addressLine: 'Fictional Road',
       memberCount: 164,
       grade: 'C',
-      council: council(),
     };
     // The DM still has a session; the SPC was signed out by the assignment test.
     await call('post', '/societies', tokens.dm, base).expect(403);
-    const short = await call('post', '/societies', tokens.hq, {
-      ...base,
-      council: council().slice(0, 24),
-    }).expect(400);
-    expect(JSON.stringify(short.body)).toContain('exactly 25 Exco members');
-    const noPhone = council().map((member, index) =>
-      index === 6 ? { ...member, phone: undefined } : member,
-    );
-    const incomplete = await call('post', '/societies', tokens.hq, {
-      ...base,
-      council: noPhone,
-    }).expect(400);
-    expect(incomplete.body.error.message).toBe(
-      'Exco member 7: enter the phone number',
-    );
-    const noPresident = council().map((member) =>
-      member.position === 'President'
-        ? { ...member, position: 'Member' }
-        : member,
-    );
-    await call('post', '/societies', tokens.hq, {
-      ...base,
-      council: noPresident,
-    }).expect(400);
     const duplicate = await call('post', '/societies', tokens.hq, {
       ...base,
       societyCode: `SA-${suffix}`,
@@ -378,6 +357,216 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
     expect(duplicate.body.error.message).toContain(
       'is already used by Fictional Admin Society',
     );
+
+    // No Exco members are needed, and none are invented.
+    const created = await call('post', '/societies', tokens.hq, base).expect(
+      201,
+    );
+    createdSocieties.push(created.body.id);
+    const newId = created.body.id as string;
+    const society = await db.society.findUniqueOrThrow({
+      where: { id: newId },
+      include: { councilMembers: true },
+    });
+    expect(society).toMatchObject({
+      grade: 'C',
+      status: 'ACTIVE',
+      memberCount: 164,
+    });
+    expect(society.councilMembers).toHaveLength(0);
+    const empty = await call('get', `/societies/${newId}`, tokens.hq).expect(
+      200,
+    );
+    expect(empty.body.committee).toEqual([]);
+    expect(empty.body.excoStatus).toEqual({
+      filledSeats: 0,
+      totalSeats: 25,
+      complete: false,
+      missingOffices: ['President', 'Secretary', 'Treasurer'],
+      problems: ['No Exco members have been entered yet.'],
+    });
+    const directory = await call(
+      'get',
+      `/society-directory?q=SN-${suffix}`,
+      tokens.hq,
+    ).expect(200);
+    expect(directory.body.data[0]).toMatchObject({
+      id: newId,
+      excoSeatsFilled: 0,
+      excoComplete: false,
+    });
+
+    // Before HQ assigns them, the officer cannot touch the Exco.
+    const seats = council().map(({ nic: _nic, ...member }) => member);
+    await call('put', `/societies/${newId}/council`, tokens.so3, {
+      members: seats.slice(0, 3),
+    }).expect(403);
+
+    // D05a: HQ assigns staff; the officer's next session has the society.
+    await call('put', `/societies/${newId}/assignments`, tokens.hq, {
+      deputyId: ids.ddm,
+      coordinatorId: ids.spc2,
+      officerId: ids.so3,
+    }).expect(200);
+    const username = (
+      await db.platformAccount.findUniqueOrThrow({ where: { id: ids.so3 } })
+    ).username;
+    const login = await request(app.getHttpServer())
+      .post('/api/v1/identity/login')
+      .send({ username, password: 'test-password-123' })
+      .expect(201);
+    const officer = login.body.token as string;
+
+    // A partly entered Exco saves, and the record says how far it is.
+    const partial = await call('put', `/societies/${newId}/council`, officer, {
+      members: seats.slice(0, 3),
+    }).expect(200);
+    expect(partial.body.committee).toHaveLength(3);
+    expect(partial.body.excoStatus).toEqual({
+      filledSeats: 3,
+      totalSeats: 25,
+      complete: false,
+      missingOffices: [],
+      problems: ['22 of 25 seats are still to fill.'],
+    });
+
+    // The seat rules still hold while it is incomplete.
+    const fourChildren = [
+      ...seats.slice(0, 3),
+      {
+        ...seats[20]!,
+        seatNumber: 4,
+        seatType: 'CHILDREN',
+        dateOfBirth: '2016-05-01',
+      },
+    ];
+    const over = await call('put', `/societies/${newId}/council`, officer, {
+      members: fourChildren,
+    }).expect(400);
+    expect(over.body.error.message).toContain('only 3 children seats');
+    const twoPresidents = seats
+      .slice(0, 3)
+      .map((member, index) =>
+        index === 1 ? { ...member, position: 'President' } : member,
+      );
+    const twoHolders = await call(
+      'put',
+      `/societies/${newId}/council`,
+      officer,
+      {
+        members: twoPresidents,
+      },
+    ).expect(400);
+    expect(twoHolders.body.error.message).toBe('Choose only one President');
+    // The same on a full Exco: a second Treasurer is refused.
+    const twoTreasurers = seats.map((member) =>
+      member.seatNumber === 10 ? { ...member, position: 'Treasurer' } : member,
+    );
+    await call('put', `/societies/${newId}/council`, officer, {
+      members: twoTreasurers,
+    }).expect(400);
+    await call('put', `/societies/${newId}/council`, officer, {
+      members: [...seats, { ...seats[0]!, seatNumber: 26 }],
+    }).expect(400);
+
+    // Someone not assigned to it still cannot edit it.
+    await call('put', `/societies/${newId}/council`, tokens.farSpc, {
+      members: seats,
+    }).expect(403);
+
+    // The officer cannot assign staff: that stays with HQ.
+    await call('put', `/societies/${newId}/assignments`, officer, {
+      deputyId: ids.ddm,
+      coordinatorId: ids.spc2,
+      officerId: ids.so3,
+    }).expect(403);
+
+    // All 25 seats but no Treasurer: saved, and still incomplete.
+    const noTreasurer = seats.map((member) =>
+      member.position === 'Treasurer'
+        ? { ...member, position: 'Member' }
+        : member,
+    );
+    const almost = await call('put', `/societies/${newId}/council`, officer, {
+      members: noTreasurer,
+    }).expect(200);
+    expect(almost.body.committee).toHaveLength(25);
+    expect(almost.body.excoStatus).toEqual({
+      filledSeats: 25,
+      totalSeats: 25,
+      complete: false,
+      missingOffices: ['Treasurer'],
+      problems: ['No Treasurer chosen yet.'],
+    });
+    const listed = async () =>
+      (
+        await call(
+          'get',
+          `/society-directory?q=SN-${suffix}`,
+          tokens.hq,
+        ).expect(200)
+      ).body.data[0];
+    expect(await listed()).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: false,
+      excoMissingOffices: ['Treasurer'],
+    });
+    const summary = await call(
+      'get',
+      `/societies/${newId}/summary`,
+      tokens.hq,
+    ).expect(200);
+    expect(summary.body).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: false,
+      excoMissingOffices: ['Treasurer'],
+    });
+
+    // Later, the officer chooses the Treasurer: now it is complete.
+    const full = await call('put', `/societies/${newId}/council`, officer, {
+      members: seats,
+    }).expect(200);
+    expect(full.body.committee).toHaveLength(25);
+    expect(full.body.excoStatus).toEqual({
+      filledSeats: 25,
+      totalSeats: 25,
+      complete: true,
+      missingOffices: [],
+      problems: [],
+    });
+    expect(await listed()).toMatchObject({
+      excoSeatsFilled: 25,
+      excoComplete: true,
+      excoMissingOffices: [],
+    });
+    const seat = full.body.committee.find(
+      (member: { seatNumber: number }) => member.seatNumber === 4,
+    );
+    expect(seat).toMatchObject({
+      dateOfBirth: '2006-05-01',
+      profession: 'Farmer',
+      addressLine: 'Fictional Lane',
+    });
+    expect(seat.age).toBeGreaterThanOrEqual(19);
+  });
+
+  it('D05n: an older client may still send Exco seats, checked by the same rules', async () => {
+    const base = {
+      societyCode: `SO-${suffix}`,
+      nameEn: 'Fictional Older Client Society',
+      districtId,
+      dsDivision: 'Fictional DS',
+      addressLine: 'Fictional Road',
+      memberCount: 90,
+      grade: 'B',
+    };
+    const fourChildren = council()
+      .slice(0, 4)
+      .map((member) => ({ ...member, seatType: 'CHILDREN' }));
+    await call('post', '/societies', tokens.hq, {
+      ...base,
+      council: fourChildren,
+    }).expect(400);
 
     const withNic = council().map((member, index) =>
       index === 0 ? { ...member, nic: '199012345678' } : member,
@@ -391,11 +580,6 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       where: { id: created.body.id },
       include: { councilMembers: true },
     });
-    expect(society).toMatchObject({
-      grade: 'C',
-      status: 'ACTIVE',
-      memberCount: 164,
-    });
     expect(society.councilMembers).toHaveLength(25);
     const president = society.councilMembers.find(
       (member) => member.seatNumber === 1,
@@ -406,21 +590,6 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
       where: { societyId: created.body.id },
     });
     expect(JSON.stringify(audit)).not.toContain('199012345678');
-
-    const record = await call(
-      'get',
-      `/societies/${created.body.id}`,
-      tokens.hq,
-    ).expect(200);
-    const seat = record.body.committee.find(
-      (member: { seatNumber: number }) => member.seatNumber === 4,
-    );
-    expect(seat).toMatchObject({
-      dateOfBirth: '2006-05-01',
-      profession: 'Farmer',
-      addressLine: 'Fictional Lane',
-    });
-    expect(seat.age).toBeGreaterThanOrEqual(19);
   });
 
   it('Exco dates of birth must not be in the future', async () => {

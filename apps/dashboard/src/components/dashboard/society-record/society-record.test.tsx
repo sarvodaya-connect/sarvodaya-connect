@@ -4,7 +4,7 @@ import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import type { AnnualFinancialSummary, SocietyRecord, WorkPlanOverview as WorkPlan } from "@sarvodaya-connect/api-contracts";
 
-import { formatLkr, isSocietyRecordId, waitingLabel } from "@/lib/society-record-format";
+import { excoProgress, formatLkr, isSocietyRecordId, waitingLabel } from "@/lib/society-record-format";
 
 import { fakeMapbox } from "../maps/fake-mapbox.test-helper";
 
@@ -63,6 +63,13 @@ const record: SocietyRecord = {
   documents: [],
   history: [],
   createdAt: "2021-02-02T00:00:00.000Z",
+  excoStatus: {
+    filledSeats: 2,
+    totalSeats: 25,
+    complete: false,
+    missingOffices: ["Treasurer"],
+    problems: ["23 of 25 seats are still to fill.", "No Treasurer chosen yet."],
+  },
   memberCount: 418,
   landline: "037 000 0123",
   businessDescription: "A small rice mill for members' paddy.",
@@ -200,14 +207,74 @@ describe("D05e HQ edit society information", () => {
   });
 });
 
+/** 25 fictional members; seats 1–3 are the President, Secretary and Treasurer unless [offices] says otherwise. */
+function fullCommittee(offices: string[] = ["President", "Secretary", "Treasurer"]) {
+  return Array.from({ length: 25 }, (_, index) => ({
+    id: `full-${index + 1}`,
+    seatNumber: index + 1,
+    fullName: `Fictional Member ${index + 1}`,
+    position: offices[index] ?? "Member",
+    isActive: true,
+  }));
+}
+
+describe("Exco completion comes from the API (excoStatus)", () => {
+  const noTreasurer = {
+    filledSeats: 25,
+    totalSeats: 25 as const,
+    complete: false,
+    missingOffices: ["Treasurer" as const],
+    problems: ["No Treasurer chosen yet."],
+  };
+
+  it("shows 25 seats without a Treasurer as incomplete, and says what is missing", () => {
+    render(
+      <ExcoTable
+        accessNote="HQ has national access"
+        editHref="/societies/x/exco/edit"
+        members={fullCommittee(["President", "Secretary"])}
+        revealNic={vi.fn()}
+        status={noTreasurer}
+      />,
+    );
+    expect(screen.getByText("25 of 25 Exco seats filled")).toBeInTheDocument();
+    expect(screen.getByText("Incomplete")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("No Treasurer chosen yet.");
+    expect(screen.queryByText("✓ Complete")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Continue the Exco/ })).toBeInTheDocument();
+  });
+
+  it("shows a full Exco with all three office bearers as complete", () => {
+    render(
+      <ExcoTable
+        accessNote="HQ has national access"
+        members={fullCommittee()}
+        revealNic={vi.fn()}
+        status={{ filledSeats: 25, totalSeats: 25, complete: true, missingOffices: [], problems: [] }}
+      />,
+    );
+    expect(screen.getByText("✓ Complete")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("labels the record from the API's status, never from the seat count", () => {
+    expect(excoProgress(noTreasurer).label).toBe("Exco incomplete · no Treasurer");
+    expect(excoProgress(record.excoStatus).label).toBe("Exco incomplete · 2 of 25");
+    expect(excoProgress({ ...noTreasurer, filledSeats: 0, problems: [] }).label).toBe("Exco not entered yet");
+    // Without a status from the API, 25 members are still not called complete.
+    expect(excoProgress(undefined, fullCommittee()).complete).toBe(false);
+    expect(excoProgress({ ...noTreasurer, complete: true, missingOffices: [], problems: [] }).label).toBe("Exco complete");
+  });
+});
+
 describe("D05x Exco", () => {
   it("masks NICs and shows one for 30 seconds after Show", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reveal = vi.fn().mockResolvedValue({ nic: "198400000012" });
-    render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} />);
-    expect(screen.getByText("2 of 25 Exco members")).toBeInTheDocument();
-    expect(screen.getByText("23 missing")).toBeInTheDocument();
+    render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} status={record.excoStatus} />);
+    expect(screen.getByText("2 of 25 Exco seats filled")).toBeInTheDocument();
+    expect(screen.getByText("Incomplete · 23 to fill")).toBeInTheDocument();
     expect(screen.getByText("•••• •••• 0047")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Show" })[0]!);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 
 import type { CreateSocietyResult } from "@/app/(dashboard)/societies/[id]/record-actions";
 import { mapboxToken, typedPosition } from "@/lib/mapbox";
@@ -11,7 +11,6 @@ import { submitWithoutReset } from "@/lib/use-form-submit";
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { SocietyLocationMap } from "../maps/society-location-map";
-import { ExcoEditor, emptyExco, excoProblems } from "./exco-editor";
 
 const inputClass =
   "mt-1.5 h-10 w-full rounded-input border border-line bg-surface px-3 text-[13px] font-normal text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring aria-[invalid=true]:border-danger-dot";
@@ -64,8 +63,10 @@ function detailProblems(details: Details) {
 }
 
 /**
- * V5 D05n → D05c → D05a: HQ enters the society, then all 25 Exco members,
- * then assigns staff on the new record. The API checks every rule again.
+ * V5 D05n → D05a: HQ enters the society's basic details, then assigns staff
+ * on the new record. The Society Officer HQ assigns enters the 25 Exco
+ * members afterwards; until then the record shows the Exco as incomplete.
+ * The API checks every rule again.
  */
 export function CreateSocietyForm({
   action,
@@ -74,22 +75,18 @@ export function CreateSocietyForm({
   action: (previous: CreateSocietyResult, form: FormData) => Promise<CreateSocietyResult>;
   districts: { id: string; nameEn: string }[];
 }) {
-  const [step, setStep] = useState<1 | 2>(1);
   const [details, setDetails] = useState<Details>(EMPTY);
   const [touched, setTouched] = useState(false);
-  const [rows, setRows] = useState(emptyExco);
   const [state, submit, pending] = useActionState(action, {});
   const token = mapboxToken();
   const problems = detailProblems(details);
-  const excoIssues = excoProblems(rows, "create");
   const codeError =
     state.field === "societyCode" && details.societyCode.trim() && state.error?.includes(details.societyCode.trim().toUpperCase())
       ? state.error
       : undefined;
-  // A duplicate S number found by the API sends HQ back to step 1 to fix it.
-  useEffect(() => {
-    if (state.field === "societyCode") setStep(1);
-  }, [state]);
+  // Any other problem from the API (a duplicate S number shows on its field).
+  const saveError = state.error && state.field !== "societyCode" ? state.error : undefined;
+  const send = submitWithoutReset(submit);
   const set = (key: keyof Details) => (event: { target: { value: string } }) => setDetails((all) => ({ ...all, [key]: event.target.value }));
 
   const field = (key: keyof Details, label: string, options: { required?: boolean; hint?: string; inputMode?: "numeric" | "decimal" | "tel" } = {}) => {
@@ -109,18 +106,24 @@ export function CreateSocietyForm({
 
   const steps = (
     <p className="text-[12.5px] text-ink-soft">
-      <span className={step === 1 ? "font-bold text-ink" : ""}>Step 1 · Society details{step === 2 ? " ✓" : ""}</span>
-      {" → "}
-      <span className={step === 2 ? "font-bold text-ink" : ""}>2 · Exco (25 members)</span>
-      {" → "}3 · Assign staff
+      <span className="font-bold text-ink">Step 1 · Society details</span>
+      {" → "}2 · Assign staff{" → "}3 · The Society Officer enters the Exco
     </p>
   );
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={submitWithoutReset(submit)}>
-      {/* Step 1 values travel with the final save. */}
-      {step === 2 &&
-        (Object.keys(details) as (keyof Details)[]).map((key) => <input key={key} name={key} type="hidden" value={details[key]} />)}
+    <form
+      className="flex flex-col gap-4"
+      noValidate
+      onSubmit={(event) => {
+        setTouched(true);
+        if (Object.keys(problems).length > 0) {
+          event.preventDefault();
+          return;
+        }
+        send(event);
+      }}
+    >
       <nav aria-label="Breadcrumb" className="flex gap-1.5 text-[11.5px] text-ink-soft">
         <Link className="font-medium text-brand-action underline underline-offset-2" href="/societies">Societies</Link>
         <span aria-hidden="true">›</span>
@@ -132,114 +135,94 @@ export function CreateSocietyForm({
           {steps}
         </div>
         <div className="flex gap-2.5">
-          {step === 1 ? (
-            <>
-              <Link className={secondaryButtonClass} href="/societies">Cancel</Link>
-              <button
-                className={primaryButtonClass}
-                onClick={() => {
-                  setTouched(true);
-                  if (Object.keys(problems).length === 0) setStep(2);
-                }}
-                type="button"
-              >
-                Next: Exco members
-              </button>
-            </>
-          ) : (
-            <>
-              <button className={secondaryButtonClass} onClick={() => setStep(1)} type="button">Back</button>
-              <button className={primaryButtonClass} disabled={pending || excoIssues.length > 0} type="submit">
-                {pending ? "Saving…" : "Save and assign staff"}
-              </button>
-            </>
-          )}
+          <Link className={secondaryButtonClass} href="/societies">Cancel</Link>
+          <button className={primaryButtonClass} disabled={pending} type="submit">
+            {pending ? "Saving…" : "Save and assign staff"}
+          </button>
         </div>
       </div>
 
-      {step === 1 ? (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <section className="rounded-card border border-line bg-surface p-5">
-            <h3 className="text-[16px] font-bold text-ink">Society details</h3>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {field("nameEn", "Society name (English)", { required: true })}
-              {field("societyCode", "S number", { required: true })}
-              {field("nameLocal", "Name in Sinhala or Tamil")}
-              <label className="block text-[12.5px] font-semibold text-ink">
-                District <span className="text-danger-text">*</span>
-                <select aria-invalid={touched && problems.districtId ? true : undefined} className={inputClass} name="districtId" onChange={set("districtId")} value={details.districtId}>
-                  <option value="">Choose a district</option>
-                  {districts.map((district) => (
-                    <option key={district.id} value={district.id}>{district.nameEn}</option>
-                  ))}
-                </select>
-                {touched && problems.districtId && <span className="mt-1 block text-[11.5px] text-danger-text" role="alert">{problems.districtId}</span>}
-              </label>
-              {field("dsDivision", "DS division", { required: true })}
-              {field("gnDivision", "GN division")}
-            </div>
-            <div className="mt-4">{field("addressLine", "Address", { required: true })}</div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              {field("memberCount", "Number of members", { required: true, inputMode: "numeric" })}
-              {field("landline", "Landline (if any)", { hint: "Leave empty if the society has no landline.", inputMode: "tel" })}
-              <label className="block text-[12.5px] font-semibold text-ink">
-                Starting grade <span className="text-danger-text">*</span>
-                <select className={inputClass} name="grade" onChange={set("grade")} value={details.grade}>
-                  {(["A", "B", "C"] as const).map((grade) => (
-                    <option key={grade} value={grade}>{grade} · {SOCIETY_GRADE_LABELS[grade]}</option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-[11px] font-normal text-ink-soft">Only HQ sets or changes the grade.</span>
-              </label>
-            </div>
-            <div className="mt-4">
-              {field("businessDescription", "Business run by the society (optional)", { hint: "Information only — no sales, stock or accounts." })}
-            </div>
-          </section>
-          <section className="rounded-card border border-line bg-surface p-5">
-            <h3 className="text-[16px] font-bold text-ink">Map location</h3>
-            {token ? (
-              <div className="mt-3">
-                <SocietyLocationMap
-                  className="h-56"
-                  name={details.nameEn.trim()}
-                  onPick={(latitude, longitude) => setDetails((all) => ({ ...all, latitude: String(latitude), longitude: String(longitude) }))}
-                  position={typedPosition(details.latitude, details.longitude)}
-                  token={token}
-                />
-              </div>
-            ) : (
-              <div aria-hidden="true" className="mt-3 grid h-40 place-items-center rounded-lg bg-[#dce8d6] text-brand-forest">
-                <Icon className="size-8" name="map" strokeWidth={2} />
-              </div>
-            )}
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {field("latitude", "Latitude", { inputMode: "decimal" })}
-              {field("longitude", "Longitude", { inputMode: "decimal" })}
-            </div>
-            <p className="mt-2 text-[11.5px] text-ink-soft">
-              {token ? "Click the map or drag the pin, or type the coordinates." : "Type the coordinates."} They can be corrected later by HQ or the society&apos;s staff.
-            </p>
-          </section>
+      {saveError && (
+        <div className="flex gap-2.5 rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-4 py-3 text-[12.5px] text-[var(--banner-incident-text)]" role="alert">
+          <Icon className="mt-0.5 size-4 shrink-0" name="error" strokeWidth={2} />
+          <div>
+            <strong className="block">The society record can&apos;t be saved yet</strong>
+            {saveError}
+          </div>
         </div>
-      ) : (
-        <>
-          {(excoIssues.length > 0 || state.error) && (
-            <div className="flex gap-2.5 rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-4 py-3 text-[12.5px] text-[var(--banner-incident-text)]" role="alert">
-              <Icon className="mt-0.5 size-4 shrink-0" name="error" strokeWidth={2} />
-              <div>
-                <strong className="block">The society record can&apos;t be saved yet</strong>
-                <ul className="mt-0.5">
-                  {(state.error ? [state.error] : excoIssues.slice(0, 4)).map((problem) => (
-                    <li key={problem}>{problem}</li>
-                  ))}
-                </ul>
-              </div>
+      )}
+
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h3 className="text-[16px] font-bold text-ink">Society details</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {field("nameEn", "Society name (English)", { required: true })}
+            {field("societyCode", "S number", { required: true })}
+            {field("nameLocal", "Name in Sinhala or Tamil")}
+            <label className="block text-[12.5px] font-semibold text-ink">
+              District <span className="text-danger-text">*</span>
+              <select aria-invalid={touched && problems.districtId ? true : undefined} className={inputClass} name="districtId" onChange={set("districtId")} value={details.districtId}>
+                <option value="">Choose a district</option>
+                {districts.map((district) => (
+                  <option key={district.id} value={district.id}>{district.nameEn}</option>
+                ))}
+              </select>
+              {touched && problems.districtId && <span className="mt-1 block text-[11.5px] text-danger-text" role="alert">{problems.districtId}</span>}
+            </label>
+            {field("dsDivision", "DS division", { required: true })}
+            {field("gnDivision", "GN division")}
+          </div>
+          <div className="mt-4">{field("addressLine", "Address", { required: true })}</div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {field("memberCount", "Number of members", { required: true, inputMode: "numeric" })}
+            {field("landline", "Landline (if any)", { hint: "Leave empty if the society has no landline.", inputMode: "tel" })}
+            <label className="block text-[12.5px] font-semibold text-ink">
+              Starting grade <span className="text-danger-text">*</span>
+              <select className={inputClass} name="grade" onChange={set("grade")} value={details.grade}>
+                {(["A", "B", "C"] as const).map((grade) => (
+                  <option key={grade} value={grade}>{grade} · {SOCIETY_GRADE_LABELS[grade]}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] font-normal text-ink-soft">Only HQ sets or changes the grade.</span>
+            </label>
+          </div>
+          <div className="mt-4">
+            {field("businessDescription", "Business run by the society (optional)", { hint: "Information only — no sales, stock or accounts." })}
+          </div>
+        </section>
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h3 className="text-[16px] font-bold text-ink">Map location</h3>
+          {token ? (
+            <div className="mt-3">
+              <SocietyLocationMap
+                className="h-56"
+                name={details.nameEn.trim()}
+                onPick={(latitude, longitude) => setDetails((all) => ({ ...all, latitude: String(latitude), longitude: String(longitude) }))}
+                position={typedPosition(details.latitude, details.longitude)}
+                token={token}
+              />
+            </div>
+          ) : (
+            <div aria-hidden="true" className="mt-3 grid h-40 place-items-center rounded-lg bg-[#dce8d6] text-brand-forest">
+              <Icon className="size-8" name="map" strokeWidth={2} />
             </div>
           )}
-          <ExcoEditor mode="create" rows={rows} setRows={setRows} />
-        </>
-      )}
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {field("latitude", "Latitude", { inputMode: "decimal" })}
+            {field("longitude", "Longitude", { inputMode: "decimal" })}
+          </div>
+          <p className="mt-2 text-[11.5px] text-ink-soft">
+            {token ? "Click the map or drag the pin, or type the coordinates." : "Type the coordinates."} They can be corrected later by HQ or the society&apos;s staff.
+          </p>
+        </section>
+      </div>
+      <p className="flex items-start gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink-soft">
+        <Icon className="mt-0.5 size-4 shrink-0 text-brand-leaf" name="user" strokeWidth={2} />
+        <span>
+          <strong className="text-ink">The Exco is entered later.</strong> After saving, assign a Society Officer. They add the 25 Exco
+          members on the record and can save as they go; the record shows the Exco as incomplete until all 25 seats are filled.
+        </span>
+      </p>
     </form>
   );
 }

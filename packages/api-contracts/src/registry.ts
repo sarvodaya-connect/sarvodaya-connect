@@ -123,6 +123,14 @@ export interface SocietyProfileUpdate {
   };
 }
 
+/**
+ * PUT /societies/:id/council: the seats entered so far (0–25). Saving replaces
+ * the seats; a seat left out is empty. Each category stays within its number
+ * of seats (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders' council) and
+ * each office has at most one holder. With all 25 seats, every category is
+ * full. Office bearers are not needed to save; without exactly one President,
+ * Secretary and Treasurer the record's `excoStatus.complete` stays false.
+ */
 export interface SocietyCouncilUpdate {
   members: Array<{
     seatNumber: number;
