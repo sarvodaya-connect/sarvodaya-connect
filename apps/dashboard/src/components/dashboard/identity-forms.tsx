@@ -10,7 +10,9 @@ import {
   type FormResult,
 } from "@/app/identity-actions";
 import { ROLE_LABELS } from "@/lib/accounts";
-import { SIGN_IN_COPY, suggestUsername, type SignInLanguage } from "@/lib/sign-in-messages";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useI18n } from "@/i18n/provider";
+import { SIGN_IN_ERROR_KEYS, suggestUsername } from "@/lib/sign-in-messages";
 
 import { primaryButtonClass, secondaryButtonClass } from "./data-states";
 import { Icon } from "./icon";
@@ -84,38 +86,22 @@ function Message({ result }: { result: FormResult }) {
 /** V5 D01 / D01e: dashboard sign-in. */
 export function SignInForm() {
   const [state, action, pending] = useActionState(login, {});
-  const [language, setLanguage] = useState<SignInLanguage>("en");
-  const copy = SIGN_IN_COPY[language];
-  const error = state.error ? (copy.errors[state.error] ?? state.error) : undefined;
+  const { t } = useI18n();
+  const errorKey = state.error ? SIGN_IN_ERROR_KEYS[state.error] : undefined;
+  const error = errorKey ? t(errorKey) : state.error;
   return (
-    <div className="w-full max-w-[400px]" lang={language}>
-      <div className="mb-6 flex justify-end">
-        <div className="inline-flex rounded-[10px] border border-line bg-surface p-1" role="group" aria-label="Choose Language">
-          {([
-            ["si", "සිංහල"],
-            ["ta", "தமிழ்"],
-            ["en", "English"],
-          ] as const).map(([code, label]) => (
-            <button
-              aria-pressed={language === code}
-              className={`rounded-lg px-2.5 py-1 text-xs ${language === code ? "bg-brand-mint font-semibold text-brand-forest" : "text-ink-soft hover:bg-brand-mint-soft"}`}
-              key={code}
-              onClick={() => setLanguage(code)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+    <div className="w-full max-w-[400px]">
+      <div className="mb-6 flex min-h-[34px] justify-end">
+        <LanguageSwitcher />
       </div>
       <form action={action} className="space-y-4">
         <div>
-          <h1 className="text-[26px] font-bold text-ink">{copy.title}</h1>
-          <p className="mt-1 text-[13px] leading-5 text-ink-soft">{copy.subtitle}</p>
+          <h1 className="text-[26px] font-bold text-ink">{t("signIn.title")}</h1>
+          <p className="mt-1 text-[13px] leading-5 text-ink-soft">{t("signIn.subtitle")}</p>
         </div>
         {error && <Message result={{ error }} />}
         <label className={labelClass}>
-          {copy.username}
+          {t("signIn.username")}
           <Required />
           <span className="relative mt-1.5 block">
             <input
@@ -132,33 +118,33 @@ export function SignInForm() {
           </span>
         </label>
         <label className={labelClass}>
-          {copy.password}
+          {t("signIn.password")}
           <Required />
           <span className="mt-1.5 block">
             <PasswordInput
               autoComplete="current-password"
-              hideLabel={copy.hidePassword}
+              hideLabel={t("signIn.hidePassword")}
               invalid={Boolean(error)}
               name="password"
-              showLabel={copy.showPassword}
+              showLabel={t("signIn.showPassword")}
             />
           </span>
         </label>
         <button className={`${primaryButtonClass} h-11 w-full`} disabled={pending} type="submit">
-          {pending ? copy.waiting : copy.button}
+          {pending ? t("signIn.waiting") : t("signIn.button")}
         </button>
         <div className="flex gap-2.5 rounded-xl border border-[#c3d5ea] bg-[#e6eef8] px-3.5 py-2.5 text-xs text-[#24476b]">
           <Icon className="mt-0.5 size-4 shrink-0" name="phone" strokeWidth={2} />
           <p>
-            <strong className="block">{copy.officerTitle}</strong>
-            {copy.officerBody}
+            <strong className="block">{t("signIn.officerTitle")}</strong>
+            {t("signIn.officerBody")}
           </p>
         </div>
         <div className="text-xs text-ink-soft">
-          {copy.forgot} ·{" "}
+          {t("signIn.forgot")} ·{" "}
           <details className="inline">
-            <summary className="inline cursor-pointer list-none text-brand-action underline underline-offset-2">{copy.privacy}</summary>
-            <p className="mt-2 leading-5 text-ink-body">{copy.privacyBody}</p>
+            <summary className="inline cursor-pointer list-none text-brand-action underline underline-offset-2">{t("signIn.privacy")}</summary>
+            <p className="mt-2 leading-5 text-ink-body">{t("signIn.privacyBody")}</p>
           </details>
         </div>
       </form>

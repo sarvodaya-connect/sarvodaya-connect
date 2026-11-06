@@ -1,9 +1,11 @@
 import Image from "next/image";
 
 import { SignInForm } from "@/components/dashboard/identity-forms";
+import { getT } from "@/i18n/server";
 
 /** V5 D01 / D01e: dashboard sign-in. */
-export default function Home() {
+export default async function Home() {
+  const t = await getT();
   return (
     <main className="grid min-h-screen grid-cols-1 bg-surface md:grid-cols-[42%_58%]">
       <aside className="flex min-h-[240px] flex-col justify-between bg-brand-forest p-7 text-white md:min-h-0 md:p-9">
@@ -18,10 +20,10 @@ export default function Home() {
           />
         </span>
         <div className="max-w-[460px] py-8 md:py-0">
-          <p className="text-[28px] font-bold leading-tight md:text-[32px]">One trusted record for every village society.</p>
-          <p className="mt-3 text-sm text-[#d6e2d9]">Desktop dashboard for HQ, District Managers, DDMs and SPCs.</p>
+          <p className="text-[28px] font-bold leading-tight md:text-[32px]">{t("signIn.heroTitle")}</p>
+          <p className="mt-3 text-sm text-[#d6e2d9]">{t("signIn.heroBody")}</p>
         </div>
-        <p className="text-[11px] text-[#bdcec2]">Sarvodaya Shramadana Movement · Moratuwa, Sri Lanka</p>
+        <p className="text-[11px] text-[#bdcec2]">{t("signIn.heroFooter")}</p>
       </aside>
       <div className="flex items-center justify-center px-6 py-10 sm:px-10">
         <SignInForm />

@@ -93,7 +93,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans);
+  --font-sans: var(--font-noto-sans), var(--font-noto-sinhala), var(--font-noto-tamil);
   --font-mono: var(--font-geist-mono);
 
   --color-brand-forest: var(--brand-forest);
@@ -158,7 +158,7 @@
 body {
   background: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-noto-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-noto-sans), var(--font-noto-sinhala), var(--font-noto-tamil), Arial, Helvetica, sans-serif;
   margin: 0;
 }
 
