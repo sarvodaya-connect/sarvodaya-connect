@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { GradeRequestList } from "@/components/dashboard/society-record/record-lists";
+import { getT } from "@/i18n/server";
 import { getGradeRequests, getSocietyRecord } from "@/lib/society-record-api";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
@@ -10,12 +11,13 @@ import { decideGradeRequest } from "../record-actions";
 export default async function SocietyGradePage({ params, searchParams }: PageProps<"/societies/[id]/grade">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) notFound();
-  const [record, requests, { decided }] = await Promise.all([getSocietyRecord(id), getGradeRequests(id), searchParams]);
+  const [record, requests, { decided }, t] = await Promise.all([getSocietyRecord(id), getGradeRequests(id), searchParams, getT()]);
   return (
     <GradeRequestList
       decide={record.permissions.canChangeGrade ? decideGradeRequest.bind(null, id) : undefined}
       decided={typeof decided === "string" ? decided : undefined}
       requests={requests}
+      t={t}
     />
   );
 }

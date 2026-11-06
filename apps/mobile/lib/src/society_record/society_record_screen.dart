@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../models/society.dart';
 import '../models/user.dart';
 import '../state/demo_store.dart';
@@ -76,6 +79,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final record = _record;
     final user = DemoScope.of(context).user!;
     return DefaultTabController(
@@ -90,7 +94,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                record?.nameEn ?? 'Society record',
+                record?.nameEn ?? l.recTitle,
                 style: RecordStyle.screenTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -112,21 +116,21 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                   style: compactOutlinedStyle,
                   onPressed: () => _open(EditSocietyScreen(record: record)),
                   icon: const Icon(Icons.edit_outlined, size: 14),
-                  label: const Text('Edit'),
+                  label: Text(l.recEdit),
                 ),
               )
             else if (record != null)
-              const Padding(
-                padding: EdgeInsets.only(right: 12),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
                 child: Center(
-                  child: RecordChip('View only', icon: Icons.lock_outline),
+                  child: RecordChip(l.recViewOnly, icon: Icons.lock_outline),
                 ),
               ),
           ],
           bottom: record == null
               ? null
-              : const PreferredSize(
-                  preferredSize: Size.fromHeight(40),
+              : PreferredSize(
+                  preferredSize: const Size.fromHeight(40),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border(bottom: BorderSide(color: AppColors.line)),
@@ -150,34 +154,33 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                       indicatorWeight: 2.5,
                       dividerHeight: 0,
                       tabs: [
-                        Tab(height: 38, text: 'Overview'),
-                        Tab(height: 38, text: 'Exco'),
-                        Tab(height: 38, text: 'Work Plan'),
-                        Tab(height: 38, text: 'Documents'),
-                        Tab(height: 38, text: 'History'),
+                        Tab(height: 38, text: l.recTabOverview),
+                        Tab(height: 38, text: l.navExco),
+                        Tab(height: 38, text: l.recTabWorkPlan),
+                        Tab(height: 38, text: l.recTabDocuments),
+                        Tab(height: 38, text: l.recTabHistory),
                       ],
                     ),
                   ),
                 ),
         ),
         body: _loading && record == null
-            ? const LoadingSkeleton(label: 'Loading the society record')
+            ? LoadingSkeleton(label: l.recLoading)
             : _error != null && record == null
             // The API answers 403 or 404 for a society outside the user's
             // scope; neither is shown as an error, and nothing is named.
             ? (_error!.status == 403 || _error!.status == 404)
                   ? NoAccessView(
-                      title: "You don't have access to this society",
+                      title: l.recNoAccessSociety,
                       onBack: () => Navigator.maybePop(context),
                     )
                   : StateMessage(
                       icon: Icons.error_outline,
                       tone: StateTone.error,
                       isAlert: true,
-                      title: "Couldn't load the society record",
-                      message:
-                          '${_error!.message} Nothing you entered has been lost.',
-                      primaryLabel: 'Try again',
+                      title: l.recLoadError,
+                      message: l.recNothingLost(l.recordError(_error!)),
+                      primaryLabel: l.commonTryAgain,
                       onPrimary: _load,
                     )
             : Column(
@@ -214,10 +217,14 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final permissions = record.permissions;
     final viewOnly = !permissions.canEdit;
     final summary = record.annualSummary;
     final now = DemoScope.of(context).now;
+    final members = record.memberCount == null
+        ? l.recNotRecorded
+        : l.number(record.memberCount!);
     final spc = record.staffWithRole(UserRole.programmeCoordinator);
     final officer = record.staffWithRole(UserRole.societyOfficer);
     final address = [
@@ -239,37 +246,32 @@ class _OverviewTab extends StatelessWidget {
             children: [
               KeyValueGrid([
                 KeyValue(
-                  'Members',
-                  record.memberCount == null
-                      ? 'Not recorded'
-                      : formatAmount(record.memberCount!.toDouble()),
+                  l.recMembers,
+                  members,
                   missing: record.memberCount == null,
                 ),
-                KeyValue('Grade', record.grade ?? 'Not set'),
-                const KeyValue(
-                  'Society Officer',
-                  'Not assigned',
+                KeyValue(l.recGrade, record.grade ?? l.recNotSet),
+                KeyValue(
+                  l.recRoleSocietyOfficer,
+                  l.recNotAssigned,
                   missing: true,
                 ),
                 KeyValue(
-                  'Last update',
+                  l.recLastUpdate,
                   record.lastChangeAt == null
-                      ? 'No changes yet'
-                      : formatWhen(record.lastChangeAt!, now),
+                      ? l.recNoChanges
+                      : l.recordWhen(record.lastChangeAt!, now),
                 ),
               ]),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'The SPC can add the figures while this society has no Society Officer.',
-            style: RecordStyle.caption,
-          ),
+          Text(l.recSpcAddsFigures, style: RecordStyle.caption),
           _gap,
         ],
         RecordCard(
           children: [
-            const Text('Society name', style: RecordStyle.label),
+            Text(l.recSocietyName, style: RecordStyle.label),
             const SizedBox(height: 2),
             Text(record.nameEn, style: RecordStyle.value),
             if (record.nameLocal != null)
@@ -277,7 +279,7 @@ class _OverviewTab extends StatelessWidget {
             const SizedBox(height: 12),
             KeyValueGrid([
               KeyValue(
-                'S number',
+                l.recSNumber,
                 record.societyCode,
                 trailing: const Icon(
                   Icons.lock_outline,
@@ -286,28 +288,26 @@ class _OverviewTab extends StatelessWidget {
                 ),
               ),
               KeyValue(
-                'Members',
-                record.memberCount == null
-                    ? 'Not recorded'
-                    : formatAmount(record.memberCount!.toDouble()),
+                l.recMembers,
+                members,
                 missing: record.memberCount == null,
               ),
               KeyValue(
-                'Assigned SPC',
-                spc?.displayName ?? 'Not assigned',
+                l.recAssignedSpc,
+                spc?.displayName ?? l.recNotAssigned,
                 missing: spc == null,
               ),
               KeyValue(
-                'Landline',
-                record.landline ?? 'No landline',
+                l.recLandline,
+                record.landline ?? l.recNoLandline,
                 missing: record.landline == null,
               ),
             ]),
             if (viewOnly) ...[
               const SizedBox(height: 12),
               KeyValue(
-                'Address',
-                address.isEmpty ? 'Not recorded' : address,
+                l.recAddress,
+                address.isEmpty ? l.recNotRecorded : address,
                 missing: address.isEmpty,
               ),
             ],
@@ -318,10 +318,10 @@ class _OverviewTab extends StatelessWidget {
         if (!viewOnly) ...[
           _gap,
           RecordCard(
-            title: 'Address and Location',
+            title: l.recAddressLocation,
             children: [
               Text(
-                address.isEmpty ? 'Address not recorded' : address,
+                address.isEmpty ? l.recAddressNotRecorded : address,
                 style: RecordStyle.body,
               ),
               if (record.latitude != null && record.longitude != null) ...[
@@ -335,7 +335,10 @@ class _OverviewTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${record.latitude!.toStringAsFixed(4)}° N, ${record.longitude!.toStringAsFixed(4)}° E',
+                  l.editCoordinates(
+                    record.latitude!.toStringAsFixed(4),
+                    record.longitude!.toStringAsFixed(4),
+                  ),
                   style: RecordStyle.caption,
                 ),
               ],
@@ -344,18 +347,15 @@ class _OverviewTab extends StatelessWidget {
         ],
         _gap,
         RecordCard(
-          title: 'Business Run by the Society',
+          title: l.recBusiness,
           children: [
             Text(
-              record.businessDescription ?? 'None recorded.',
+              record.businessDescription ?? l.recNoneRecorded,
               style: RecordStyle.body,
             ),
             if (record.businessDescription != null) ...[
               const SizedBox(height: 6),
-              const Text(
-                'Information only — the app keeps no sales, stock or business accounts.',
-                style: RecordStyle.caption,
-              ),
+              Text(l.recBusinessNote, style: RecordStyle.caption),
             ],
           ],
         ),
@@ -364,8 +364,8 @@ class _OverviewTab extends StatelessWidget {
           _OfficeBearersCard(record: record),
           _gap,
           RecordCard(
-            title: 'Responsible Staff',
-            trailing: const LockedNote('Assigned by HQ'),
+            title: l.recStaffTitle,
+            trailing: LockedNote(l.recAssignedByHq),
             children: [
               KeyValueGrid([
                 for (final role in const [
@@ -376,9 +376,9 @@ class _OverviewTab extends StatelessWidget {
                 ])
                   KeyValue(
                     role == UserRole.districtManager
-                        ? 'District Manager'
-                        : role.recordLabel,
-                    record.staffWithRole(role)?.displayName ?? 'Not assigned',
+                        ? l.recRoleDistrictManager
+                        : l.recordRole(role),
+                    record.staffWithRole(role)?.displayName ?? l.recNotAssigned,
                     missing: record.staffWithRole(role) == null,
                   ),
               ]),
@@ -392,14 +392,17 @@ class _OverviewTab extends StatelessWidget {
             message:
                 permissions.viewOnlyReason ==
                     ViewOnlyReason.temporaryDistrictAccess
-                ? 'You can look at this society while your temporary access lasts. You cannot edit it or request a grade change.'
-                : 'District Managers view district societies. You cannot edit this society or request a grade change.',
+                ? l.recViewOnlyTemporary
+                : l.recViewOnlyDm,
           ),
         ],
         if (record.lastChangeAt != null && record.lastChangeBy != null) ...[
           const SizedBox(height: 12),
           Text(
-            'Last changed by ${record.lastChangeBy!.label} · ${formatWhen(record.lastChangeAt!, now)}',
+            l.recLastChangedBy(
+              l.actor(record.lastChangeBy!),
+              l.recordWhen(record.lastChangeAt!, now),
+            ),
             style: RecordStyle.caption,
             textAlign: TextAlign.center,
           ),
@@ -418,11 +421,12 @@ class _GradeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final permissions = record.permissions;
+    final l = context.l10n;
     final request = record.openGradeRequest;
     final now = DemoScope.of(context).now;
     return RecordCard(
-      title: 'Grade',
-      trailing: const LockedNote('Set by HQ'),
+      title: l.recGrade,
+      trailing: LockedNote(l.recSetByHq),
       children: [
         Row(
           children: [
@@ -432,22 +436,14 @@ class _GradeCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    record.grade == null
-                        ? 'Grade not set'
-                        : 'Grade ${record.grade} · ${gradeLabels[record.grade]}',
-                    style: RecordStyle.value,
-                  ),
+                  Text(l.gradeFull(record.grade), style: RecordStyle.value),
                   if (record.gradeChangedAt != null)
                     Text(
-                      'Approved by HQ · ${formatDate(record.gradeChangedAt!)}',
+                      l.recApprovedByHq(l.date(record.gradeChangedAt!)),
                       style: RecordStyle.caption,
                     )
                   else if (request == null)
-                    const Text(
-                      'No open grade-change request',
-                      style: RecordStyle.caption,
-                    ),
+                    Text(l.recNoOpenRequest, style: RecordStyle.caption),
                 ],
               ),
             ),
@@ -485,7 +481,7 @@ class _GradeCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Request: ${request.change} · Waiting for HQ',
+                            l.recRequestWaiting(request.change),
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
@@ -493,7 +489,10 @@ class _GradeCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Sent by ${request.requestedBy.label} · ${formatWhen(request.requestedAt, now)}',
+                            l.recSentBy(
+                              l.actor(request.requestedBy),
+                              l.recordWhen(request.requestedAt, now),
+                            ),
                             style: const TextStyle(
                               fontSize: 10.5,
                               color: AppColors.warning,
@@ -509,10 +508,7 @@ class _GradeCard extends StatelessWidget {
           ),
         ] else if (record.gradeChangedAt != null) ...[
           const SizedBox(height: 4),
-          const Text(
-            'No open grade-change request',
-            style: RecordStyle.caption,
-          ),
+          Text(l.recNoOpenRequest, style: RecordStyle.caption),
         ],
         // M06q opens from the request box while one is waiting.
         if (request == null) ...[
@@ -527,12 +523,12 @@ class _GradeCard extends StatelessWidget {
                   style: compactOutlinedStyle,
                   onPressed: () =>
                       open(GradeChangeRequestScreen(record: record)),
-                  child: const Text('Request a grade change'),
+                  child: Text(l.recRequestChange),
                 ),
               TextButton(
                 style: compactTextStyle,
                 onPressed: () => open(GradeRequestsScreen(record: record)),
-                child: const Text('Earlier requests'),
+                child: Text(l.recEarlierRequests),
               ),
             ],
           ),
@@ -550,16 +546,17 @@ class _OfficeBearersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     String bearer(String office) =>
         record.exco
             .where((member) => member.position == office)
             .firstOrNull
             ?.fullName ??
-        'Not chosen';
+        l.recNotChosen;
     final status = record.excoStatus;
     final complete = status.complete;
     return RecordCard(
-      title: 'Exco · Office Bearers',
+      title: l.recOfficeBearers,
       trailing: record.exco.isEmpty
           ? null
           : InkWell(
@@ -568,7 +565,7 @@ class _OfficeBearersCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'All ${record.exco.length} Members',
+                    l.recAllMembers(record.exco.length),
                     style: RecordStyle.link,
                   ),
                   const Icon(
@@ -581,12 +578,12 @@ class _OfficeBearersCard extends StatelessWidget {
             ),
       children: [
         KeyValueGrid([
-          KeyValue('President', bearer('President')),
-          KeyValue('Secretary', bearer('Secretary')),
-          KeyValue('Treasurer', bearer('Treasurer')),
+          KeyValue(l.recOfficePresident, bearer('President')),
+          KeyValue(l.recOfficeSecretary, bearer('Secretary')),
+          KeyValue(l.recOfficeTreasurer, bearer('Treasurer')),
           KeyValue(
             'Exco',
-            complete ? '25 of 25 · complete' : status.shortLabel,
+            complete ? l.recExcoComplete : l.excoShort(status),
             missing: !complete,
             trailing: complete
                 ? const Icon(Icons.check, size: 13, color: AppColors.leaf)
@@ -813,15 +810,16 @@ class _ExcoTabState extends State<_ExcoTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final record = widget.record;
     final members = [...record.exco]
       ..sort((a, b) => a.seatNumber.compareTo(b.seatNumber));
     final canEdit = record.permissions.canEdit;
     if (members.isEmpty && !canEdit) {
-      return const StateMessage(
+      return StateMessage(
         icon: Icons.groups_outlined,
-        title: 'No Exco Members Yet',
-        message: 'The Society Officer enters the 25 Exco members. They will appear here as they are added.',
+        title: l.excoNoneTitle,
+        message: l.excoNoneBody,
       );
     }
     final emptySeats = emptyExcoSeats(members);
@@ -862,6 +860,7 @@ class _ExcoTabState extends State<_ExcoTab> {
             ),
             const SizedBox(width: 10),
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -869,9 +868,11 @@ class _ExcoTabState extends State<_ExcoTab> {
                   Text(
                     [
                       if (member.dateOfBirth != null)
-                        '${ageFrom(member.dateOfBirth!, DateTime.now())} yrs'
+                        l.excoYears(
+                          ageFrom(member.dateOfBirth!, DateTime.now()),
+                        )
                       else if (member.age != null)
-                        '${member.age} yrs',
+                        l.excoYears(member.age!),
                       if (member.profession != null) member.profession!,
                     ].join(' · '),
                     style: RecordStyle.caption,
@@ -879,16 +880,32 @@ class _ExcoTabState extends State<_ExcoTab> {
                 ],
               ),
             ),
-            if (office != null) ...[
-              RecordChip(office, tone: ChipTone.info),
-              if (canEdit)
-                TextButton(
-                  onPressed: () => widget.open(
-                    ChooseOfficeBearerScreen(record: record, office: office),
+            if (office != null)
+              // Longer Sinhala and Tamil labels scale down rather than overflow.
+              Flexible(
+                flex: 2,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      RecordChip(l.office(office), tone: ChipTone.info),
+                      if (canEdit)
+                        TextButton(
+                          onPressed: () => widget.open(
+                            ChooseOfficeBearerScreen(
+                              record: record,
+                              office: office,
+                            ),
+                          ),
+                          child: Text(l.excoChange),
+                        ),
+                    ],
                   ),
-                  child: const Text('Change'),
                 ),
-            ] else
+              )
+            else
               const Icon(Icons.chevron_right, color: AppColors.muted),
           ],
         ),
@@ -903,13 +920,16 @@ class _ExcoTabState extends State<_ExcoTab> {
       return [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('$office Not Chosen', style: RecordStyle.value),
+          title: Text(
+            l.excoOfficeNotChosen(l.office(office)),
+            style: RecordStyle.value,
+          ),
           trailing: canEdit
               ? TextButton(
                   onPressed: () => widget.open(
                     ChooseOfficeBearerScreen(record: record, office: office),
                   ),
-                  child: const Text('Choose'),
+                  child: Text(l.excoChoose),
                 )
               : null,
         ),
@@ -923,18 +943,16 @@ class _ExcoTabState extends State<_ExcoTab> {
           children: [
             Expanded(
               child: Text(
-                complete
-                    ? 'All 25 positions filled'
-                    : '${members.length} of 25 members entered',
+                complete ? l.excoAllFilled : l.excoEntered(members.length),
                 style: RecordStyle.cardTitle,
               ),
             ),
             RecordChip(
               complete
-                  ? 'Complete'
+                  ? l.recExcoShortComplete
                   : toFill > 0
-                  ? 'Incomplete · $toFill to fill'
-                  : 'Incomplete',
+                  ? l.excoIncompleteToFill(toFill)
+                  : l.excoIncomplete,
               tone: complete ? ChipTone.success : ChipTone.warning,
             ),
           ],
@@ -943,16 +961,17 @@ class _ExcoTabState extends State<_ExcoTab> {
           const SizedBox(height: 8),
           RecordNote(
             icon: Icons.info_outline,
-            title: 'Exco Incomplete',
+            title: l.excoIncompleteTitle,
             // What is missing, in the API's words (seats, groups, offices).
+            // Those sentences stay as the API sends them until phase 9.
             message: [
               ...status.problems,
               if (canEdit && toFill > 0)
-                'Add members under "Empty seats". Each one is saved as you go, so you can finish later.'
+                l.excoAddUnderEmpty
               else if (canEdit && status.missingOffices.isNotEmpty)
-                'Choose them under "Office bearers".'
+                l.excoChooseUnderOffices
               else if (!canEdit)
-                'The Society Officer completes the Exco.',
+                l.excoOfficerCompletes,
             ].join(' '),
           ),
         ],
@@ -960,37 +979,36 @@ class _ExcoTabState extends State<_ExcoTab> {
         RecordNote(
           icon: Icons.shield_outlined,
           tone: NoteTone.success,
-          message:
-              'Personal details · ${record.nameEn} · ${accessNote(record)}',
+          message: l.excoPersonal(record.nameEn, l.excoAccessNote(record)),
         ),
         const SizedBox(height: 10),
         TextField(
-          decoration: const InputDecoration(
-            hintText: 'Search name or profession',
-            prefixIcon: Icon(Icons.search),
+          decoration: InputDecoration(
+            hintText: l.excoSearch,
+            prefixIcon: const Icon(Icons.search),
           ),
           onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Office Bearers · Chosen From the 25',
-          style: RecordStyle.sectionLabel,
-        ),
+        Text(l.excoOfficeBearersSection, style: RecordStyle.sectionLabel),
         const SizedBox(height: 6),
         RecordCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           children: [for (final office in officeBearers) ...officeRow(office)],
         ),
         const SizedBox(height: 12),
-        Text('Members · ${others.length}', style: RecordStyle.sectionLabel),
+        Text(
+          l.excoMembersSection(others.length),
+          style: RecordStyle.sectionLabel,
+        ),
         const SizedBox(height: 6),
         RecordCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           children: [
             if (others.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Text('No members match.', style: RecordStyle.caption),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(l.excoNoMatch, style: RecordStyle.caption),
               ),
             for (final member in shownOthers) row(member),
           ],
@@ -998,12 +1016,12 @@ class _ExcoTabState extends State<_ExcoTab> {
         if (shownOthers.length < others.length)
           TextButton(
             onPressed: () => setState(() => _showAll = true),
-            child: Text('Show all ${others.length} members'),
+            child: Text(l.excoShowAll(others.length)),
           ),
         if (canEdit && emptySeats.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text(
-            'EMPTY SEATS · ${emptySeats.length}',
+            l.excoEmptySeats(emptySeats.length),
             style: RecordStyle.sectionLabel,
           ),
           const SizedBox(height: 6),
@@ -1015,11 +1033,11 @@ class _ExcoTabState extends State<_ExcoTab> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   title: Text(
-                    'Seat ${seat.seatNumber}',
+                    l.excoSeat(seat.seatNumber),
                     style: RecordStyle.value,
                   ),
                   subtitle: Text(
-                    seatGroupLabels[seat.seatType] ?? seat.seatType,
+                    l.seatGroup(seat.seatType),
                     style: RecordStyle.caption,
                   ),
                   trailing: TextButton(
@@ -1031,8 +1049,8 @@ class _ExcoTabState extends State<_ExcoTab> {
                       ),
                     ),
                     child: Text(
-                      'Add',
-                      semanticsLabel: 'Add a member to seat ${seat.seatNumber}',
+                      l.excoAdd,
+                      semanticsLabel: l.excoAddToSeat(seat.seatNumber),
                     ),
                   ),
                 ),
@@ -1091,14 +1109,15 @@ class _AsyncTabState<T> extends State<_AsyncTab<T>>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final l = context.l10n;
     if (_error != null) {
       return StateMessage(
         icon: Icons.error_outline,
         tone: StateTone.error,
         isAlert: true,
         title: widget.errorTitle,
-        message: '${_error!.message} Nothing you entered has been lost.',
-        primaryLabel: 'Try again',
+        message: l.recNothingLost(l.recordError(_error!)),
+        primaryLabel: l.commonTryAgain,
         onPrimary: _load,
       );
     }
@@ -1353,13 +1372,14 @@ class _RegistrarRow extends StatelessWidget {
   }
 }
 
-const _historyFilters = [
-  (null, 'All'),
-  ('SOCIETY', 'Society'),
-  ('EXCO', 'Exco'),
-  ('WORK_PLAN', 'Work Plan'),
-  ('ANNUAL_SUMMARY', 'Annual Summary'),
-  ('GRADE', 'Grade'),
+/// The history filters: the API's category, and its label in the language.
+List<(String?, String)> _historyFilters(AppLocalizations l) => [
+  (null, l.recHistoryAll),
+  ('SOCIETY', l.recHistorySociety),
+  ('EXCO', l.navExco),
+  ('WORK_PLAN', l.recTabWorkPlan),
+  ('ANNUAL_SUMMARY', l.recHistoryAnnual),
+  ('GRADE', l.recGrade),
 ];
 
 /// M06h change history: every change with who made it and when.
@@ -1377,6 +1397,7 @@ class _HistoryTabState extends State<_HistoryTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final now = DemoScope.of(context).now;
     return Column(
       children: [
@@ -1386,7 +1407,7 @@ class _HistoryTabState extends State<_HistoryTab> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
             children: [
-              for (final (value, label) in _historyFilters)
+              for (final (value, label) in _historyFilters(l))
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
@@ -1420,16 +1441,16 @@ class _HistoryTabState extends State<_HistoryTab> {
             key: ValueKey(_category),
             load: (api) =>
                 api.fetchHistory(widget.societyId, category: _category),
-            loadingLabel: 'Loading the change history',
-            errorTitle: "Couldn't load the change history",
+            loadingLabel: l.recHistoryLoading,
+            errorTitle: l.recHistoryError,
             builder: (context, events, _) => ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
               children: [
                 if (events.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24),
                     child: Text(
-                      'No changes recorded here yet.',
+                      l.recHistoryNone,
                       textAlign: TextAlign.center,
                       style: RecordStyle.body,
                     ),
@@ -1440,9 +1461,10 @@ class _HistoryTabState extends State<_HistoryTab> {
                     children: [
                       for (final (index, event) in events.indexed)
                         RecordTimelineEntry(
+                          // The API writes the summary, so it stays as sent.
                           title: event.summary,
                           detail:
-                              '${event.actor.label} · ${formatWhen(event.occurredAt, now)}',
+                              '${l.actor(event.actor)} · ${l.recordWhen(event.occurredAt, now)}',
                           ringColor: event.category == 'GRADE'
                               ? AppColors.orangeChanged
                               : AppColors.forest,
@@ -1451,8 +1473,8 @@ class _HistoryTabState extends State<_HistoryTab> {
                     ],
                   ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Every change shows who made it and when.',
+                Text(
+                  l.recHistoryFooter,
                   style: RecordStyle.caption,
                   textAlign: TextAlign.center,
                 ),

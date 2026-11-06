@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/user.dart';
 import '../society_record/society_record_api.dart';
 import '../society_record/society_record_models.dart';
@@ -84,7 +85,7 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
       if (mounted) {
         setState(() {
           _district = false;
-          _districtError = 'Your temporary district-wide view has ended. You are back to your own societies.';
+          _districtError = context.l10n.listTempEnded;
         });
       }
     }
@@ -112,6 +113,7 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final user = DemoScope.of(context).user!;
     if (user.primaryRole == UserRole.societyOfficer &&
         user.societyIds.length == 1) {
@@ -126,7 +128,7 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
         user.roles.contains(UserRole.deputyDistrictManager) &&
         user.delegatedDistrictAccess.any((g) => g.activeAt(store.now));
     return Scaffold(
-      appBar: AppBar(title: const Text('Societies')),
+      appBar: AppBar(title: Text(l.listTitle)),
       body: Column(
         children: [
           if (hasDistrictView)
@@ -136,12 +138,9 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
                 segments: [
                   ButtonSegment(
                     value: false,
-                    label: Text('My ${user.societyIds.length} · Edit'),
+                    label: Text(l.listMine(user.societyIds.length)),
                   ),
-                  const ButtonSegment(
-                    value: true,
-                    label: Text('District · View Only'),
-                  ),
+                  ButtonSegment(value: true, label: Text(l.listDistrict)),
                 ],
                 selected: {_district},
                 showSelectedIcon: false,
@@ -165,10 +164,10 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
               controller: _query,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search name or S number',
+                hintText: l.homeSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                  tooltip: 'Search',
+                  tooltip: l.listSearch,
                   icon: const Icon(Icons.arrow_forward),
                   onPressed: () => _searchFor(_query.text),
                 ),
@@ -184,20 +183,20 @@ class _LiveSocietiesState extends State<LiveSocietiesScreen> {
                     icon: Icons.error_outline,
                     tone: StateTone.error,
                     isAlert: true,
-                    title: "Couldn't load your societies",
+                    title: l.listLoadError,
                     message: _error!.message,
-                    primaryLabel: 'Try again',
+                    primaryLabel: l.commonTryAgain,
                     onPrimary: _load,
                   )
                 : _rows == null
-                ? const LoadingSkeleton(label: 'Loading your societies')
+                ? LoadingSkeleton(label: l.listLoading)
                 : _rows!.isEmpty
                 ? StateMessage(
                     icon: Icons.holiday_village_outlined,
                     title: _search.isEmpty
-                        ? 'No societies assigned yet'
-                        : 'No societies match “$_search”',
-                    message: 'HQ manages the societies assigned to you.',
+                        ? l.listNoneAssigned
+                        : l.listNoMatchSearch(_search),
+                    message: l.listHqManages,
                   )
                 : RefreshIndicator(
                     onRefresh: _load,
@@ -246,13 +245,13 @@ class _DistrictList extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = this.rows;
     if (rows == null) {
-      return const LoadingSkeleton(label: 'Loading district societies');
+      return LoadingSkeleton(label: context.l10n.listLoadingDistrict);
     }
     if (rows.isEmpty) {
-      return const StateMessage(
+      return StateMessage(
         icon: Icons.holiday_village_outlined,
-        title: 'No Societies Match',
-        message: 'Try another name or S number.',
+        title: context.l10n.homeNoMatchTitle,
+        message: context.l10n.listTryAnother,
       );
     }
     return RefreshIndicator(
@@ -271,7 +270,9 @@ class _DistrictList extends StatelessWidget {
               ),
               subtitle: Text(row.societyCode),
               trailing: Text(
-                row.yours ? 'Yours · edit' : 'View only',
+                row.yours
+                    ? context.l10n.homeYoursEdit
+                    : context.l10n.homeViewOnly,
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,

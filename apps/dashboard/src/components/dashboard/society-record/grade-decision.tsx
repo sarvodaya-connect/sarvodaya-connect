@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import type { GradeChangeRequest, GradeDecision } from "@sarvodaya-connect/api-contracts";
 
+import { useI18n } from "@/i18n/provider";
+
 export type DecideGradeRequest = (
   requestId: string,
   decision: GradeDecision,
@@ -18,6 +20,7 @@ const buttonClass =
  * needed to reject; approving changes the society's grade to the requested one.
  */
 export function GradeDecisionActions({ decide, request }: { decide: DecideGradeRequest; request: GradeChangeRequest }) {
+  const { t } = useI18n();
   const [comment, setComment] = useState("");
   const [pending, setPending] = useState<GradeDecision>();
   const [error, setError] = useState<string>();
@@ -40,7 +43,7 @@ export function GradeDecisionActions({ decide, request }: { decide: DecideGradeR
   return (
     <div className="mt-3 border-t border-line-soft pt-3">
       <label className="block text-[11px] font-semibold text-ink-soft">
-        HQ comment {rejecting && <span className="text-danger-text">*</span>}
+        {t("sr.gr.hqComment")} {rejecting && <span className="text-danger-text">*</span>}
         <textarea
           aria-invalid={reasonMissing || undefined}
           className={`mt-1 w-full rounded-input border bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring ${
@@ -49,14 +52,14 @@ export function GradeDecisionActions({ decide, request }: { decide: DecideGradeR
           disabled={pending !== undefined}
           maxLength={500}
           onChange={(event) => setComment(event.target.value)}
-          placeholder="Optional when approving. Required when rejecting."
+          placeholder={t("sr.gr.commentHint")}
           rows={2}
           value={comment}
         />
         <span className={`mt-1 block text-[10px] ${reasonMissing ? "font-semibold text-danger-text" : "font-normal text-muted"}`}>
           {reasonMissing
-            ? "Enter a reason for rejecting. The requester will see it."
-            : `Approving changes the grade to ${request.toGrade}. Rejecting keeps it at ${request.fromGrade ?? "not set"}.`}
+            ? t("sr.gr.reasonRequired")
+            : t("sr.gr.effect", { to: request.toGrade, from: request.fromGrade ?? t("sr.notSet") })}
         </span>
       </label>
       {error && (
@@ -71,7 +74,7 @@ export function GradeDecisionActions({ decide, request }: { decide: DecideGradeR
           onClick={() => submit("REJECT")}
           type="button"
         >
-          {pending === "REJECT" ? "Rejecting…" : "Reject"}
+          {pending === "REJECT" ? t("sr.gr.rejecting") : t("sr.gr.reject")}
         </button>
         <button
           className={`${buttonClass} bg-brand-action text-white hover:bg-brand-action-pressed`}
@@ -79,7 +82,7 @@ export function GradeDecisionActions({ decide, request }: { decide: DecideGradeR
           onClick={() => submit("APPROVE")}
           type="button"
         >
-          {pending === "APPROVE" ? "Approving…" : `Approve ${request.fromGrade ?? "–"} → ${request.toGrade}`}
+          {pending === "APPROVE" ? t("sr.gr.approving") : t("sr.gr.approve", { from: request.fromGrade ?? "–", to: request.toGrade })}
         </button>
       </div>
     </div>

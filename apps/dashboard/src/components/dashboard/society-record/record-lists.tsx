@@ -4,8 +4,12 @@ import type { GradeChangeRequest, SocietyHistoryCategory, SocietyHistoryEvent } 
 
 import { Pill } from "../ui/pill";
 import { type DecideGradeRequest, GradeDecisionActions } from "./grade-decision";
+import { ENGLISH } from "@/i18n/english";
+import type { MessageKey } from "@/i18n/messages/en";
+import { actorName, recordDate } from "@/i18n/society-record";
+import type { Translator } from "@/i18n/translate";
 import type { RecordDocument } from "@/lib/society-record-api";
-import { actorLabel, formatDate, ROLE_LABELS } from "@/lib/society-record-format";
+import { formatDate, ROLE_LABELS } from "@/lib/society-record-format";
 
 const DOCUMENT_LABELS: Record<string, string> = {
   AUDIT_REPORT: "Audit Report",
@@ -63,15 +67,15 @@ export function DocumentsList({ documents, societyId }: { documents: RecordDocum
   );
 }
 
-const STATUS: Record<GradeChangeRequest["status"], { label: string; tone: "fast-target" | "on-time" | "overdue" }> = {
-  PENDING: { label: "Waiting for HQ", tone: "fast-target" },
-  APPROVED: { label: "Approved", tone: "on-time" },
-  REJECTED: { label: "Rejected", tone: "overdue" },
+const STATUS: Record<GradeChangeRequest["status"], { label: MessageKey; tone: "fast-target" | "on-time" | "overdue" }> = {
+  PENDING: { label: "sr.gr.waitingHq", tone: "fast-target" },
+  APPROVED: { label: "sr.gr.approved", tone: "on-time" },
+  REJECTED: { label: "sr.gr.rejected", tone: "overdue" },
 };
 
-const DECIDED: Record<string, string> = {
-  approved: "Request approved. The society's grade has been changed.",
-  rejected: "Request rejected. The grade is unchanged and the requester has been told why.",
+const DECIDED: Record<string, MessageKey> = {
+  approved: "sr.gr.decidedApproved",
+  rejected: "sr.gr.decidedRejected",
 };
 
 /**
@@ -82,17 +86,19 @@ export function GradeRequestList({
   decide,
   decided,
   requests,
+  t = ENGLISH,
 }: {
   decide?: DecideGradeRequest;
   decided?: string;
   requests: GradeChangeRequest[];
+  t?: Translator;
 }) {
-  if (requests.length === 0) return <Empty>No grade-change requests have been sent for this society.</Empty>;
+  if (requests.length === 0) return <Empty>{t("sr.gr.noneSent")}</Empty>;
   return (
     <>
     {decided && DECIDED[decided] && (
       <p className="mt-4 rounded-lg border border-[var(--success-ring)] bg-success-bg px-3 py-2 text-[11px] font-semibold text-success-text" role="status">
-        {DECIDED[decided]}
+        {t(DECIDED[decided])}
       </p>
     )}
     <ul className="mt-4 space-y-3">
@@ -102,16 +108,18 @@ export function GradeRequestList({
             <p className="text-[13px] font-bold text-ink">
               {request.fromGrade ?? "–"} → {request.toGrade}
             </p>
-            <Pill tone={STATUS[request.status].tone}>{STATUS[request.status].label}</Pill>
+            <Pill tone={STATUS[request.status].tone}>{t(STATUS[request.status].label)}</Pill>
           </div>
           <p className="mt-1 text-[11px] text-ink-soft">
-            Sent by {actorLabel(request.requestedBy)} · {formatDate(request.requestedAt)}
+            {t("sr.ov.sentBy", { actor: actorName(t, request.requestedBy), date: recordDate(t, request.requestedAt) })}
           </p>
           <p className="mt-1 rounded bg-[#f4f5f2] px-2 py-1 text-[11px] text-ink-soft">“{request.reason}”</p>
           {request.decidedAt && request.decidedBy && (
             <p className="mt-1.5 text-[11px] text-ink-soft">
-              {request.status === "APPROVED" ? "Approved" : "Rejected"} by {request.decidedBy.displayName} (HQ) ·{" "}
-              {formatDate(request.decidedAt)}
+              {t(request.status === "APPROVED" ? "sr.gr.approvedBy" : "sr.gr.rejectedBy", {
+                name: request.decidedBy.displayName,
+                date: recordDate(t, request.decidedAt),
+              })}
               {request.decisionComment && ` · “${request.decisionComment}”`}
             </p>
           )}
@@ -123,14 +131,14 @@ export function GradeRequestList({
   );
 }
 
-const CATEGORIES: { label: string; value?: SocietyHistoryCategory }[] = [
-  { label: "All" },
-  { label: "Society", value: "SOCIETY" },
+const CATEGORIES: { label: MessageKey | "Exco"; value?: SocietyHistoryCategory }[] = [
+  { label: "sr.hi.all" },
+  { label: "sr.hi.society", value: "SOCIETY" },
   { label: "Exco", value: "EXCO" },
-  { label: "Work Plan", value: "WORK_PLAN" },
-  { label: "Annual Summary", value: "ANNUAL_SUMMARY" },
-  { label: "Grade", value: "GRADE" },
-  { label: "Documents", value: "DOCUMENTS" },
+  { label: "sr.tab.workPlan", value: "WORK_PLAN" },
+  { label: "sr.hi.annualSummary", value: "ANNUAL_SUMMARY" },
+  { label: "sr.tab.grade", value: "GRADE" },
+  { label: "nav.documents", value: "DOCUMENTS" },
 ];
 
 /** History tab: every change with who made it and when (HQ's view of M06h). */
@@ -138,14 +146,16 @@ export function HistoryList({
   category,
   events,
   societyId,
+  t = ENGLISH,
 }: {
   category?: SocietyHistoryCategory;
   events: SocietyHistoryEvent[];
   societyId: string;
+  t?: Translator;
 }) {
   return (
     <>
-      <nav aria-label="Filter History" className="mt-4 flex flex-wrap gap-2">
+      <nav aria-label={t("sr.hi.filter")} className="mt-4 flex flex-wrap gap-2">
         {CATEGORIES.map((item) => {
           const active = item.value === category;
           return (
@@ -157,13 +167,13 @@ export function HistoryList({
               href={`/societies/${societyId}/history${item.value ? `?category=${item.value}` : ""}`}
               key={item.label}
             >
-              {item.label}
+              {item.label === "Exco" ? "Exco" : t(item.label)}
             </Link>
           );
         })}
       </nav>
       {events.length === 0 ? (
-        <Empty>No changes recorded here yet.</Empty>
+        <Empty>{t("sr.hi.none")}</Empty>
       ) : (
         <ol className="mt-4 rounded-card border border-line bg-surface px-5 py-3">
           {events.map((event) => (
@@ -171,13 +181,13 @@ export function HistoryList({
               <span aria-hidden="true" className={`absolute -left-[5px] top-3 size-2.5 rounded-full border-2 bg-surface ${event.category === "GRADE" ? "border-orange-changed" : "border-brand-forest"}`} />
               <p className="text-[12px] font-bold text-ink">{event.summary}</p>
               <p className="text-[10px] text-muted">
-                {actorLabel(event.actor)} · {formatDate(event.occurredAt)}
+                {actorName(t, event.actor)} · {recordDate(t, event.occurredAt)}
               </p>
             </li>
           ))}
         </ol>
       )}
-      <p className="mt-2 text-center text-[10px] text-muted">Every change shows who made it and when.</p>
+      <p className="mt-2 text-center text-[10px] text-muted">{t("sr.hi.footer")}</p>
     </>
   );
 }

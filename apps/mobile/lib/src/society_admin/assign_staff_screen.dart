@@ -5,6 +5,8 @@ import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../widgets/state_views.dart';
 import 'society_admin_api.dart';
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 
 /// HQ on the phone: choose who looks after a society (V5 D05a, as on the
 /// dashboard): one DDM, one SPC and one Society Officer from its district.
@@ -36,21 +38,15 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
   bool _saving = false;
   String? _error;
 
-  static const _roles = [
-    (
-      key: 'deputyId',
-      label: 'Deputy District Manager (DDM)',
-      hint: 'Can view and edit this society.',
-    ),
-    (
-      key: 'coordinatorId',
-      label: 'Society Program Coordinator (SPC)',
-      hint: 'Can view and edit this society.',
-    ),
+  AppLocalizations get _l => context.l10n;
+
+  List<({String key, String label, String hint})> get _roles => [
+    (key: 'deputyId', label: _l.adminDeputy, hint: _l.adminViewEdit),
+    (key: 'coordinatorId', label: _l.adminCoordinator, hint: _l.adminViewEdit),
     (
       key: 'officerId',
-      label: 'Society Officer',
-      hint: 'One officer per society. Can view and edit only this society, and enters its Exco.',
+      label: _l.recRoleSocietyOfficer,
+      hint: _l.adminOfficerHint,
     ),
   ];
 
@@ -103,13 +99,8 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
         officerId: _chosen['officerId']!,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Staff assigned. The change is in the society history.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_l.adminStaffAssigned)));
       if (widget.justCreated) {
         _openRecord();
       } else {
@@ -119,7 +110,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = error.message;
+          _error = _l.recordError(error);
         });
       }
     }
@@ -129,9 +120,9 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: recordFormAppBar(
       context,
-      title: 'Assign Responsible Staff',
+      title: _l.adminAssignTitle,
       subtitle: widget.justCreated
-          ? 'Step 2 of 2 · ${widget.societyName}'
+          ? _l.adminStep2(widget.societyName)
           : widget.societyName,
       onClose: widget.justCreated ? _openRecord : null,
     ),
@@ -139,19 +130,19 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
       future: _choices,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const LoadingSkeleton(label: 'Loading staff');
+          return LoadingSkeleton(label: _l.adminLoadingStaff);
         }
         if (snapshot.hasError) {
           final error = snapshot.error;
           return StateMessage(
             icon: Icons.error_outline,
-            title: 'We Couldn’t Load the Staff',
+            title: _l.adminStaffError,
             message: error is SocietyRecordException
-                ? error.message
-                : 'Check the connection and try again.',
+                ? _l.recordError(error)
+                : _l.adminCheckConnection,
             tone: StateTone.error,
             isAlert: true,
-            primaryLabel: 'Try again',
+            primaryLabel: _l.commonTryAgain,
             onPrimary: () => setState(() => _choices = _load()),
           );
         }
@@ -164,23 +155,20 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
               NoticeBanner(
                 icon: Icons.check_circle_outline,
                 tone: NoticeTone.success,
-                title: '${widget.societyName} Was Created',
-                message: 'Its Exco is not entered yet. Choose the Society Officer who will add the 25 members.',
+                title: _l.adminCreated(widget.societyName),
+                message: _l.adminExcoNotEntered,
               ),
               const SizedBox(height: 14),
             ],
-            const FieldLabel('District Manager (DM)'),
+            FieldLabel(_l.adminDm),
             ReadOnlyField(
               dms.isEmpty
-                  ? 'No DM has this district yet'
+                  ? _l.adminNoDm
                   : dms.map((dm) => dm.displayName).join(', '),
             ),
-            const Padding(
-              padding: EdgeInsets.only(top: 4, bottom: 14),
-              child: Text(
-                'Views all societies in the district. View only.',
-                style: RecordStyle.caption,
-              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 14),
+              child: Text(_l.adminDmViews, style: RecordStyle.caption),
             ),
             for (final role in _roles) ...[
               FieldLabel(role.label, required: true),
@@ -195,12 +183,9 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
                           ?.displayName
                     : null;
                 if (options.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 14),
-                    child: Text(
-                      'Nobody with this role works in the district yet. Create the account on the dashboard first.',
-                      style: RecordStyle.caption,
-                    ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(_l.adminNobody, style: RecordStyle.caption),
                   );
                 }
                 return Padding(
@@ -208,11 +193,12 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
                   child: DropdownButtonFormField<String>(
                     initialValue: chosen,
                     isExpanded: true,
-                    hint: const Text('Choose a person'),
+                    hint: Text(_l.adminChoosePerson),
                     decoration: changedDecoration(
                       changed: chosen != before,
                       helper: [
-                        if (changedFrom != null) 'Changing from $changedFrom.',
+                        if (changedFrom != null)
+                          _l.adminChangingFrom(changedFrom),
                         role.hint,
                       ].join(' '),
                     ),
@@ -224,7 +210,7 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
                             role.key == 'officerId' &&
                                     !option.assignedHere &&
                                     option.otherSocieties > 0
-                                ? '${option.displayName} (moves from another society)'
+                                ? _l.adminMoves(option.displayName)
                                 : option.displayName,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -237,17 +223,17 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
                 );
               }(),
             ],
-            const NoticeBanner(
+            NoticeBanner(
               icon: Icons.history,
-              title: 'Recorded in the Society History',
-              message: 'The change is saved with your name and the time. Anyone whose access changes is signed out.',
+              title: _l.adminRecordedTitle,
+              message: _l.adminRecordedBody,
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'Not Saved',
+                title: _l.editNotSaved,
                 message: _error,
               ),
             ],
@@ -262,11 +248,11 @@ class _AssignStaffScreenState extends State<AssignStaffScreen> {
             : widget.justCreated
             ? _openRecord
             : () => Navigator.of(context).maybePop(),
-        child: Text(widget.justCreated ? 'Later' : 'Cancel'),
+        child: Text(widget.justCreated ? _l.adminLater : _l.editCancel),
       ),
       primary: FilledButton(
         onPressed: _saving || !_complete ? null : _save,
-        child: Text(_saving ? 'Saving…' : 'Save assignments'),
+        child: Text(_saving ? _l.recSaving : _l.adminSaveAssignments),
       ),
     ),
   );

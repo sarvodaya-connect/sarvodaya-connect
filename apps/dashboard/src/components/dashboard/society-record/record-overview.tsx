@@ -2,22 +2,16 @@ import Link from "next/link";
 
 import type { SocietyRecord, WorkPlanOverview } from "@sarvodaya-connect/api-contracts";
 
+import { ENGLISH } from "@/i18n/english";
+import { actorName, excoMissing, gradeFull, officeName, recordDate, roleName, waiting } from "@/i18n/society-record";
+import { formatNumber, localeTag, type Translator } from "@/i18n/translate";
 import { mapboxToken } from "@/lib/mapbox";
 
 import { secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { SocietyLocationMap } from "../maps/society-location-map";
 import { Pill } from "../ui/pill";
-import {
-  actorLabel,
-  excoProgress,
-  formatDate,
-  formatLkr,
-  gradeBadgeClass,
-  gradeLabel,
-  ROLE_LABELS,
-  waitingLabel,
-} from "@/lib/society-record-format";
+import { excoProgress, formatLkr, gradeBadgeClass } from "@/lib/society-record-format";
 
 import { AnnualSummaryCards } from "./annual-summary-cards";
 
@@ -53,12 +47,12 @@ function Card({
   );
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function Field({ label, t, value }: { label: string; t: Translator; value?: string | null }) {
   return (
     <div>
       <dt className="text-[10px] text-muted">{label}</dt>
       <dd className={`text-[12px] font-semibold ${value ? "text-ink" : "font-normal text-muted"}`}>
-        {value || "Not recorded"}
+        {value || t("sr.ov.notRecorded")}
       </dd>
     </div>
   );
@@ -85,11 +79,13 @@ function MapPreview({ hasLocation }: { hasLocation: boolean }) {
 export function RecordOverview({
   canAssign = false,
   record,
+  t = ENGLISH,
   workPlan,
 }: {
   /** HQ only (D05a). The API refuses everyone else as well. */
   canAssign?: boolean;
   record: SocietyRecord;
+  t?: Translator;
   workPlan: WorkPlanOverview | null;
 }) {
   const base = `/societies/${record.id}`;
@@ -117,20 +113,24 @@ export function RecordOverview({
             action={
               record.permissions.canEdit && (
                 <Link className="rounded-md border border-line px-2.5 py-1 text-[11px] font-semibold text-ink-soft hover:bg-brand-mint-soft" href={`${base}?panel=edit`}>
-                  Edit
+                  {t("sr.ov.edit")}
                 </Link>
               )
             }
-            eyebrow="Record"
-            title="Society Details"
+            eyebrow={t("sr.ov.recordEyebrow")}
+            title={t("sr.ov.details")}
           >
             <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
-              <Field label="Society name" value={record.nameEn} />
-              <Field label="S number" value={record.societyCode} />
-              <Field label="Number of members" value={record.memberCount?.toLocaleString("en-GB")} />
-              <Field label="Landline" value={record.landline ?? "No landline"} />
+              <Field label={t("sr.ov.name")} t={t} value={record.nameEn} />
+              <Field label={t("sr.ov.sNumber")} t={t} value={record.societyCode} />
+              <Field
+                label={t("sr.ov.members")}
+                t={t}
+                value={record.memberCount === null || record.memberCount === undefined ? undefined : formatNumber(t.locale, record.memberCount)}
+              />
+              <Field label={t("sr.ov.landline")} t={t} value={record.landline ?? t("sr.ov.noLandline")} />
               <div className="sm:col-span-2">
-                <Field label="Address" value={address} />
+                <Field label={t("sr.ov.address")} t={t} value={address} />
               </div>
             </dl>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -140,49 +140,50 @@ export function RecordOverview({
                 <MapPreview hasLocation={Boolean(record.location)} />
               )}
               <div>
-                <p className="text-[10px] text-muted">Business run by the society</p>
-                <p className="mt-0.5 text-[12px] text-ink">{record.businessDescription || "None recorded."}</p>
-                <p className="mt-1.5 text-[10px] text-muted">Information only — no sales, stock or accounts are kept.</p>
+                <p className="text-[10px] text-muted">{t("sr.ov.business")}</p>
+                <p className="mt-0.5 text-[12px] text-ink">{record.businessDescription || t("sr.ov.noneRecorded")}</p>
+                <p className="mt-1.5 text-[10px] text-muted">{t("sr.ov.businessNote")}</p>
               </div>
             </div>
             <p className="mt-3 text-[10px] text-muted">
-              Map location{" "}
               {record.location
-                ? `${record.location.latitude.toFixed(4)}° N, ${record.location.longitude.toFixed(4)}° E`
-                : "not set"}{" "}
-              · details can be edited by the Society Officer, SPC, DDM and HQ.
+                ? t("sr.ov.mapSet", { lat: record.location.latitude.toFixed(4), lng: record.location.longitude.toFixed(4) })
+                : t("sr.ov.mapNotSet")}
             </p>
           </Card>
 
           <Card
             action={
               <Link className="text-[11px] font-semibold text-brand-leaf underline underline-offset-2" href={`${base}/exco`}>
-                {committee.length === 0 ? (record.permissions.canEdit ? "Add Exco members" : "Open Exco") : `All ${committee.length} members`}
+                {committee.length === 0
+                  ? record.permissions.canEdit
+                    ? t("sr.ov.addExco")
+                    : t("sr.ov.openExco")
+                  : t("sr.ov.allMembers", { count: committee.length })}
               </Link>
             }
             eyebrow="Exco"
-            title={`Exco · ${exco.filled} of 25 Seats Filled`}
+            title={t("sr.ov.excoTitle", { filled: exco.filled })}
           >
             {!exco.complete && (
               <p className="mb-2 text-[11.5px] text-warn-text">
-                {exco.problems.join(" ")}{" "}
-                The Society Officer enters the Exco and can save it as they go.
+                {excoMissing(t, record.excoStatus, exco.toFill).join(" ")} {t("sr.ov.officerEnters")}
               </p>
             )}
             {committee.length === 0 ? null : (
               <table className="w-full text-left text-[11px]">
                 <thead className="bg-[#f6f7f4] text-[10px] text-muted">
                   <tr>
-                    <th className="px-2 py-1.5 font-medium">Office</th>
-                    <th className="px-2 py-1.5 font-medium">Name</th>
-                    <th className="px-2 py-1.5 font-medium">Age</th>
-                    <th className="px-2 py-1.5 font-medium">Profession</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colOffice")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colName")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colAge")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colProfession")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line-soft">
                   {committee.slice(0, 5).map((member) => (
                     <tr key={member.id}>
-                      <td className="px-2 py-2 text-ink-soft">{OFFICES.includes(member.position) ? member.position : "Member"}</td>
+                      <td className="px-2 py-2 text-ink-soft">{officeName(t, member.position)}</td>
                       <td className="px-2 py-2 font-semibold text-ink">{member.fullName}</td>
                       <td className="px-2 py-2 text-ink-soft">{member.age ?? "—"}</td>
                       <td className="px-2 py-2 text-ink-soft">{member.profession ?? "—"}</td>
@@ -195,26 +196,30 @@ export function RecordOverview({
         </div>
 
         <div className="space-y-4">
-          <Card eyebrow="Assigned by HQ" title="Responsible Staff">
+          <Card eyebrow={t("sr.ov.staffEyebrow")} title={t("sr.ov.staffTitle")}>
             {staff.length === 0 ? (
-              <p className="text-[12px] text-muted">No staff are assigned to this society yet.</p>
+              <p className="text-[12px] text-muted">{t("sr.ov.noStaff")}</p>
             ) : (
               <table className="w-full text-left text-[11px]">
                 <thead className="bg-[#f6f7f4] text-[10px] text-muted">
                   <tr>
-                    <th className="px-2 py-1.5 font-medium">Role</th>
-                    <th className="px-2 py-1.5 font-medium">Name</th>
-                    <th className="px-2 py-1.5 font-medium">Account</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colRole")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colName")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("sr.ov.colAccount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line-soft">
                   {staff.map((member) => (
                     <tr key={`${member.role}-${member.displayName}`}>
-                      <td className="px-2 py-2 text-ink-soft">{ROLE_LABELS[member.role]}</td>
+                      <td className="px-2 py-2 text-ink-soft">{roleName(t, member.role)}</td>
                       <td className="px-2 py-2 text-ink">{member.displayName}</td>
                       <td className="px-2 py-2">
                         <Pill tone={member.accountStatus === "ACTIVE" ? "on-time" : member.accountStatus === "PENDING" ? "fast-target" : "overdue"}>
-                          {member.accountStatus === "ACTIVE" ? "Active" : member.accountStatus === "PENDING" ? "Waiting" : "Disabled"}
+                          {member.accountStatus === "ACTIVE"
+                            ? t("sr.ov.accountActive")
+                            : member.accountStatus === "PENDING"
+                              ? t("sr.ov.accountWaiting")
+                              : t("sr.ov.accountDisabled")}
                         </Pill>
                       </td>
                     </tr>
@@ -223,12 +228,12 @@ export function RecordOverview({
               </table>
             )}
             {!staff.some((member) => member.role === "SOCIETY_OFFICER") && (
-              <p className="mt-2 text-[10px] text-muted">No Society Officer is assigned.</p>
+              <p className="mt-2 text-[10px] text-muted">{t("sr.ov.noOfficer")}</p>
             )}
             {canAssign && (
               <Link className={`${secondaryButtonClass} mt-3`} href={`${base}?panel=assign`}>
                 <Icon className="size-4" name="user" strokeWidth={2} />
-                Change assignments
+                {t("sr.header.assign")}
               </Link>
             )}
           </Card>
@@ -236,21 +241,21 @@ export function RecordOverview({
           <Card
             action={
               <Link className="text-[11px] font-semibold text-brand-leaf underline underline-offset-2" href={`${base}/grade`}>
-                Grade history
+                {t("sr.ov.gradeHistory")}
               </Link>
             }
-            eyebrow="HQ Only"
-            title="Grade"
+            eyebrow={t("sr.ov.hqOnly")}
+            title={t("sr.tab.grade")}
           >
             <div className="flex items-center gap-3">
               <span className={`grid size-8 place-items-center rounded-md text-sm font-bold ${record.grade ? gradeBadgeClass[record.grade] : "bg-[#eef1ec] text-muted"}`}>
                 {record.grade ?? "–"}
               </span>
               <div>
-                <p className="text-[12px] font-bold text-ink">{record.grade ? gradeLabel(record.grade) : "Grade not set"}</p>
+                <p className="text-[12px] font-bold text-ink">{record.grade ? gradeFull(t, record.grade) : t("n.gradeNotSet")}</p>
                 {record.gradeChangedAt && record.gradeChangedBy && (
                   <p className="text-[10px] text-muted">
-                    Set by {actorLabel(record.gradeChangedBy)} · {formatDate(record.gradeChangedAt)}
+                    {t("sr.ov.setBy", { actor: actorName(t, record.gradeChangedBy), date: recordDate(t, record.gradeChangedAt) })}
                   </p>
                 )}
               </div>
@@ -259,32 +264,32 @@ export function RecordOverview({
               <div className="mt-3 rounded-lg border border-[#ecd89c] bg-warn-bg px-3 py-2 text-[11px] text-warn-text">
                 <p className="flex items-center gap-1.5 font-bold">
                   <Icon className="size-3.5" name="clock" />
-                  Request {request.fromGrade ?? "–"} → {request.toGrade} · waiting {waitingLabel(request.requestedAt)}
+                  {t("sr.ov.request", { from: request.fromGrade ?? "–", to: request.toGrade, waiting: waiting(t, request.requestedAt) })}
                 </p>
-                <p>
-                  Sent by {actorLabel(request.requestedBy)} · {formatDate(request.requestedAt)}
-                </p>
+                <p>{t("sr.ov.sentBy", { actor: actorName(t, request.requestedBy), date: recordDate(t, request.requestedAt) })}</p>
               </div>
             )}
-            <p className="mt-3 text-[10px] text-muted">Only HQ changes grades — by approving a request or editing the grade directly.</p>
+            <p className="mt-3 text-[10px] text-muted">{t("sr.ov.onlyHq")}</p>
           </Card>
 
           <Card
             action={
               <Link className="text-[11px] font-semibold text-brand-leaf underline underline-offset-2" href={`${base}/work-plan`}>
-                Open plan
+                {t("sr.ov.openPlan")}
               </Link>
             }
-            eyebrow="Plan"
-            title={`Annual Work Plan ${workPlan?.year ?? ""}`.trim()}
+            eyebrow={t("sr.ov.planEyebrow")}
+            title={workPlan?.year ? t("sr.ov.planTitleYear", { year: workPlan.year }) : t("sr.ov.planTitle")}
           >
             {workPlan && workPlan.activities.length > 0 ? (
               <p className="text-[12px] text-ink">
-                {workPlan.activities.length} {workPlan.activities.length === 1 ? "activity" : "activities"} ·{" "}
-                <span className="font-semibold">{formatLkr(workPlan.totalAllocated)}</span> allocated for planning
+                {t.rich(new Intl.PluralRules(localeTag(t.locale)).select(workPlan.activities.length) === "one" ? "sr.ov.planLine.one" : "sr.ov.planLine.other", {
+                  count: formatNumber(t.locale, workPlan.activities.length),
+                  amount: <span className="font-semibold">{formatLkr(workPlan.totalAllocated)}</span>,
+                })}
               </p>
             ) : (
-              <p className="text-[12px] text-muted">No activities planned yet.</p>
+              <p className="text-[12px] text-muted">{t("sr.ov.noActivities")}</p>
             )}
           </Card>
         </div>

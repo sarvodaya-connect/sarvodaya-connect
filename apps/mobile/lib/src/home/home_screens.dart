@@ -1015,27 +1015,25 @@ class DistrictSocietiesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final user = DemoScope.of(context).user!;
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            const Text(
-              'Societies',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            Text(
+              l.listTitle,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             Text(
               user.primaryRole == UserRole.districtManager
-                  ? 'Your district · view only'
-                  : 'Your societies',
+                  ? l.listDistrictViewOnly
+                  : l.listYours,
               style: const TextStyle(fontSize: 12, color: AppColors.muted),
             ),
             const SizedBox(height: 10),
-            _SocietyList(
-              showScope: false,
-              searchHint: 'Search name or S number',
-            ),
+            const _SocietyList(showScope: false),
           ],
         ),
       ),
