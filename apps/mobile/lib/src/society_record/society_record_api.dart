@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../auth/api_auth_service.dart';
 import '../auth/auth_service.dart';
+import '../l10n/l10n_format.dart' show ClientFailure;
 import 'society_record_models.dart';
 
 /// A failed society-record request. [message] is safe to show; nothing the
@@ -15,11 +16,16 @@ class SocietyRecordException implements Exception {
     this.message, {
     this.status,
     this.offline = false,
+    this.failure,
   });
 
   final String message;
   final int? status;
   final bool offline;
+
+  /// Set when the app, not the server, wrote [message], so a screen can show
+  /// it in the chosen language instead.
+  final ClientFailure? failure;
 
   @override
   String toString() => message;

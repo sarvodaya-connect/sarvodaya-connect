@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
-import 'access_format.dart';
 import 'district_access_api.dart';
+
+/// The app's own wording in the chosen language, or what the server said
+/// (still English until the API messages phase).
+String _message(AppLocalizations l, DistrictAccessException error) =>
+    error.failure == null ? error.message : l.failure(error.failure!);
 
 /// V5 M32: the DM's temporary DDM access. Shows the current grant with the
 /// time left as words, "End access now", and everything recorded against it.
@@ -43,30 +49,31 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
         });
       }
     } on DistrictAccessException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = _message(context.l10n, error));
     }
   }
 
   Future<void> _end(AccessGrant grant) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('End ${grant.deputyName}\'s Access Now?'),
-        content: const Text(
-          'They lose the district-wide view straight away. Their own assigned societies are not affected.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep access'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('End access now'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l = context.l10n;
+        return AlertDialog(
+          title: Text(l.accessEndConfirmTitle(grant.deputyName)),
+          content: Text(l.accessEndConfirmBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l.accessKeep),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.accessEndNow),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true || !mounted) return;
     setState(() => _ending = true);
@@ -75,16 +82,13 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Access ended. The DDM no longer sees the district.'),
-          ),
-        );
+        ..showSnackBar(SnackBar(content: Text(context.l10n.accessEndedSnack)));
       await _load();
     } on DistrictAccessException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_message(context.l10n, error))));
       }
     } finally {
       if (mounted) setState(() => _ending = false);
@@ -100,15 +104,14 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
     if (given == true && mounted) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Temporary view-only access given.')),
-        );
+        ..showSnackBar(SnackBar(content: Text(context.l10n.accessGivenSnack)));
       await _load();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final list = _list;
     final current = list?.grants.where((g) => g.isCurrent).toList() ?? const [];
@@ -120,10 +123,10 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Temporary Access'),
+            Text(l.accessTitle),
             if (shown != null)
               Text(
-                '${shown.districtName} District',
+                l.accessDistrict(shown.districtName),
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w400,
@@ -137,13 +140,13 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
               icon: Icons.error_outline,
               tone: StateTone.error,
               isAlert: true,
-              title: "Couldn't load temporary access",
+              title: l.accessLoadError,
               message: _error!,
-              primaryLabel: 'Try again',
+              primaryLabel: l.commonTryAgain,
               onPrimary: _load,
             )
           : list == null
-          ? const LoadingSkeleton(label: 'Loading temporary access')
+          ? LoadingSkeleton(label: l.accessLoading)
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
@@ -159,17 +162,15 @@ class _DistrictAccessScreenState extends State<DistrictAccessScreen> {
                     const SizedBox(height: 12),
                   ],
                   if (current.isEmpty) ...[
-                    const AccessBanner(
+                    AccessBanner(
                       tone: AccessBannerTone.viewOnly,
-                      child: Text(
-                        'No DDM has temporary access now. Give it when you are going to be away.',
-                      ),
+                      child: Text(l.accessNoneNow),
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       onPressed: _give,
                       icon: const Icon(Icons.key_outlined),
-                      label: const Text('Give temporary access'),
+                      label: Text(l.accessGive),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -200,6 +201,7 @@ class _CurrentGrantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final scheduled = grant.status == AccessStatus.scheduled;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -222,7 +224,7 @@ class _CurrentGrantCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _Chip(label: scheduled ? 'Starts later' : 'Active'),
+              _Chip(label: scheduled ? l.accessStartsLater : l.accessActive),
             ],
           ),
           const SizedBox(height: 8),
@@ -230,14 +232,14 @@ class _CurrentGrantCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _Fact(
-                  label: scheduled ? 'Starts' : 'View only since',
-                  value: accessDateTime(grant.startsAt),
+                  label: scheduled ? l.accessStarts : l.accessViewOnlySince,
+                  value: l.accessDateTime(grant.startsAt),
                 ),
               ),
               Expanded(
                 child: _Fact(
-                  label: 'Ends',
-                  value: accessDateTime(grant.expiresAt),
+                  label: l.accessEnds,
+                  value: l.accessDateTime(grant.expiresAt),
                 ),
               ),
             ],
@@ -245,12 +247,16 @@ class _CurrentGrantCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             scheduled
-                ? 'Starts ${accessEnds(grant.startsAt)}'
-                : accessTimeLeft(grant.expiresAt, now),
+                ? l.accessStartsAt(l.accessEndsAt(grant.startsAt))
+                : l.accessTimeLeft(grant.expiresAt, now),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
           ),
           Text(
-            'View only · all ${grant.societyCount} ${grant.districtName} societies · opened ${grant.societiesOpened} so far',
+            l.accessGrantLine(
+              grant.societyCount,
+              grant.districtName,
+              grant.societiesOpened,
+            ),
             style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
           ),
           const SizedBox(height: 10),
@@ -262,7 +268,7 @@ class _CurrentGrantCard extends StatelessWidget {
             ),
             onPressed: ending ? null : onEnd,
             icon: const Icon(Icons.highlight_off),
-            label: Text(ending ? 'Ending…' : 'End access now'),
+            label: Text(ending ? l.accessEnding : l.accessEndNow),
           ),
         ],
       ),
@@ -274,89 +280,95 @@ class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.events});
   final List<AccessEvent> events;
 
-  String _title(AccessEvent event) => switch (event.kind) {
-    AccessEventKind.given => 'Access given · view only',
-    AccessEventKind.started => 'Access started',
-    AccessEventKind.opened => 'Opened ${event.societyName ?? 'a society'}',
-    AccessEventKind.ended => 'Access ended on its own',
-    AccessEventKind.endedEarly => 'Access ended early',
+  String _title(AppLocalizations l, AccessEvent event) => switch (event.kind) {
+    AccessEventKind.given => l.accessEventGiven,
+    AccessEventKind.started => l.accessEventStarted,
+    AccessEventKind.opened =>
+      event.societyName == null
+          ? l.accessEventOpenedUnnamed
+          : l.accessEventOpened(event.societyName!),
+    AccessEventKind.ended => l.accessEventEnded,
+    AccessEventKind.endedEarly => l.accessEventEndedEarly,
   };
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      border: Border.all(color: AppColors.line),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Access History',
-                style: TextStyle(fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.accessHistory,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                l.accessRecorded,
+                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (events.isEmpty)
+            Text(
+              l.accessNothingRecorded,
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          for (final event in events)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_box_outline_blank,
+                    size: 16,
+                    color: event.kind == AccessEventKind.opened
+                        ? AppColors.bannerTemporaryText
+                        : AppColors.orangeChanged,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _title(l, event),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        Text(
+                          [
+                            if (event.actorName != null) event.actorName!,
+                            l.accessDateTime(event.at),
+                          ].join(' · '),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              'Recorded',
-              style: TextStyle(fontSize: 11, color: AppColors.muted),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (events.isEmpty)
-          const Text(
-            'Nothing recorded yet.',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
-        for (final event in events)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.check_box_outline_blank,
-                  size: 16,
-                  color: event.kind == AccessEventKind.opened
-                      ? AppColors.bannerTemporaryText
-                      : AppColors.orangeChanged,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _title(event),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12.5,
-                        ),
-                      ),
-                      Text(
-                        [
-                          if (event.actorName != null) event.actorName!,
-                          accessDateTime(event.at),
-                        ].join(' · '),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _EarlierGrants extends StatelessWidget {
@@ -364,34 +376,37 @@ class _EarlierGrants extends StatelessWidget {
   final List<AccessGrant> grants;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Earlier Grants',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      for (final grant in grants)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(grant.deputyName),
-          subtitle: Text(
-            '${accessDateTime(grant.startsAt)} → ${accessDateTime(grant.expiresAt)}',
-          ),
-          trailing: _Chip(
-            label: switch (grant.status) {
-              AccessStatus.endedEarly =>
-                grant.endedEarlyByName == null
-                    ? 'Ended early'
-                    : 'Ended early by ${grant.endedEarlyByName}',
-              AccessStatus.ended => 'Ended on its own',
-              AccessStatus.scheduled => 'Starts later',
-              AccessStatus.active => 'Active',
-            },
-          ),
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l.accessEarlier,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-    ],
-  );
+        for (final grant in grants)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(grant.deputyName),
+            subtitle: Text(
+              '${l.accessDateTime(grant.startsAt)} → ${l.accessDateTime(grant.expiresAt)}',
+            ),
+            trailing: _Chip(
+              label: switch (grant.status) {
+                AccessStatus.endedEarly =>
+                  grant.endedEarlyByName == null
+                      ? l.accessEndedEarly
+                      : l.accessEndedEarlyBy(grant.endedEarlyByName!),
+                AccessStatus.ended => l.accessEndedOnItsOwn,
+                AccessStatus.scheduled => l.accessStartsLater,
+                AccessStatus.active => l.accessActive,
+              },
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 class _Chip extends StatelessWidget {
@@ -472,7 +487,7 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
           });
         }
       } on DistrictAccessException catch (error) {
-        if (mounted) setState(() => _error = error.message);
+        if (mounted) setState(() => _error = _message(context.l10n, error));
       }
     });
     final now = DateTime.now();
@@ -511,10 +526,11 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
   }
 
   void _continue() {
+    final l = context.l10n;
     final problem = !_end.isAfter(_start)
-        ? 'The end time must be after the start time.'
+        ? l.accessErrorEndBeforeStart
         : _end.difference(_start) > Duration(days: widget.maxDays)
-        ? 'Temporary access can last at most ${widget.maxDays} days.'
+        ? l.accessErrorTooLong(widget.maxDays)
         : null;
     setState(() => _error = problem);
     if (problem != null) return;
@@ -537,38 +553,37 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final deputies = _deputies;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Close',
+          tooltip: l.commonClose,
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.maybePop(context),
         ),
-        title: const Text('Give Temporary Access'),
+        title: Text(l.accessGiveTitle),
       ),
       body: deputies == null && _error == null
-          ? const LoadingSkeleton(label: 'Loading DDMs')
+          ? LoadingSkeleton(label: l.accessLoadingDeputies)
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const AccessBanner(
+                AccessBanner(
                   tone: AccessBannerTone.temporary,
-                  child: Text(
-                    'Use this when you are away. Your DDM can view all societies in your district until the end time. They cannot edit them.',
-                  ),
+                  child: Text(l.accessGiveIntro),
                 ),
                 const SizedBox(height: 14),
                 if (deputies != null && deputies.isEmpty)
-                  const Text(
-                    'There are no active DDM accounts in your district yet. Ask HQ to create one.',
-                  )
+                  Text(l.accessNoDeputies)
                 else if (deputies != null) ...[
                   DropdownButtonFormField<String>(
+                    // Longer Sinhala and Tamil text wraps instead of overflowing.
+                    isExpanded: true,
                     initialValue: _deputyId,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'DDM *',
-                      helperText: 'Only DDMs in your district are listed.',
+                      helperText: l.accessDeputyHelp,
                     ),
                     items: [
                       for (final d in deputies)
@@ -577,46 +592,49 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
                     onChanged: (value) => setState(() => _deputyId = value),
                   ),
                   const SizedBox(height: 14),
-                  const InputDecorator(
+                  InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Access',
-                      suffixIcon: Icon(Icons.lock_outline, size: 16),
+                      labelText: l.accessScopeField,
+                      suffixIcon: const Icon(Icons.lock_outline, size: 16),
                     ),
-                    child: Text('View only · all societies in your district'),
+                    child: Text(l.accessScopeValue),
                   ),
                   const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
                         child: _DateField(
-                          label: 'Starts *',
-                          value: accessDateTime(_start),
+                          label: l.accessStartsField,
+                          value: l.accessDateTime(_start),
                           onTap: () => _pick(true),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: _DateField(
-                          label: 'Ends *',
-                          value: accessDateTime(_end),
+                          label: l.accessEndsField,
+                          value: l.accessDateTime(_end),
                           onTap: () => _pick(false),
                         ),
                       ),
                     ],
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'Access ends on its own at this time. You can end it earlier.',
-                      style: TextStyle(fontSize: 11, color: AppColors.muted),
+                      l.accessEndsHelp,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: _reason,
                     maxLength: 1000,
-                    decoration: const InputDecoration(
-                      labelText: 'Reason (optional)',
+                    decoration: InputDecoration(
+                      labelText: l.accessReasonField,
                       counterText: '',
                     ),
                   ),
@@ -642,7 +660,7 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.maybePop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l.commonCancel),
                 ),
               ),
               const SizedBox(width: 10),
@@ -650,7 +668,7 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
                 flex: 2,
                 child: FilledButton(
                   onPressed: _deputyId == null ? null : _continue,
-                  child: const Text('Continue'),
+                  child: Text(l.commonContinue),
                 ),
               ),
             ],
@@ -710,9 +728,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
     final store = DemoScope.read(context);
     final districtId = store.user?.districtIds.firstOrNull;
     if (districtId == null) {
-      setState(
-        () => _error = 'Your account has no district. Ask HQ to check it.',
-      );
+      setState(() => _error = context.l10n.accessNoDistrict);
       return;
     }
     setState(() {
@@ -729,7 +745,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } on DistrictAccessException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = _message(context.l10n, error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -737,6 +753,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final name = widget.deputy.name;
     Widget line(IconData icon, String text, Color color) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -749,7 +766,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Check and Confirm')),
+      appBar: AppBar(title: Text(l.accessConfirmTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -766,23 +783,26 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                       fontSize: 15,
                     ),
                   ),
-                  const Text(
-                    'Deputy District Manager',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                  Text(
+                    l.accessDeputyRole,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
                         child: _Fact(
-                          label: 'Starts',
-                          value: accessEnds(widget.startsAt),
+                          label: l.accessStarts,
+                          value: l.accessEndsAt(widget.startsAt),
                         ),
                       ),
                       Expanded(
                         child: _Fact(
-                          label: 'Ends',
-                          value: accessEnds(widget.expiresAt),
+                          label: l.accessEnds,
+                          value: l.accessEndsAt(widget.expiresAt),
                         ),
                       ),
                     ],
@@ -792,8 +812,8 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                     children: [
                       Expanded(
                         child: _Fact(
-                          label: 'Length',
-                          value: accessLength(
+                          label: l.accessLength,
+                          value: l.accessDuration(
                             widget.startsAt,
                             widget.expiresAt,
                           ),
@@ -801,9 +821,9 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                       ),
                       Expanded(
                         child: _Fact(
-                          label: 'Reason',
+                          label: l.accessReason,
                           value: widget.reason.isEmpty
-                              ? 'Not given'
+                              ? l.accessReasonNone
                               : widget.reason,
                         ),
                       ),
@@ -820,7 +840,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$name Will Be Able To',
+                    l.accessWillBeAbleTo(name),
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
@@ -829,42 +849,28 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                   ),
                   line(
                     Icons.check_circle_outline,
-                    'View all societies in your district',
+                    l.accessCanView,
                     AppColors.leaf,
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'They Will Not Be Able To',
-                    style: TextStyle(
+                  Text(
+                    l.accessWillNotBeAbleTo,
+                    style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.danger,
                     ),
                   ),
-                  line(
-                    Icons.close,
-                    'Edit societies outside their own',
-                    AppColors.muted,
-                  ),
-                  line(
-                    Icons.close,
-                    'Request grade changes for those societies',
-                    AppColors.muted,
-                  ),
-                  line(
-                    Icons.close,
-                    'Give access to anyone else',
-                    AppColors.muted,
-                  ),
+                  line(Icons.close, l.accessCannotEdit, AppColors.muted),
+                  line(Icons.close, l.accessCannotRequest, AppColors.muted),
+                  line(Icons.close, l.accessCannotShare, AppColors.muted),
                 ],
               ),
             ),
           ),
-          const AccessBanner(
+          AccessBanner(
             tone: AccessBannerTone.edit,
-            child: Text(
-              'The grant, any early end and the societies opened are recorded in the access history. HQ can see it too.',
-            ),
+            child: Text(l.accessRecordedNote),
           ),
           if (_error != null)
             Padding(
@@ -887,7 +893,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : () => Navigator.maybePop(context),
-                  child: const Text('Back'),
+                  child: Text(l.commonBack),
                 ),
               ),
               const SizedBox(width: 10),
@@ -895,7 +901,7 @@ class _ConfirmAccessScreenState extends State<ConfirmAccessScreen> {
                 flex: 2,
                 child: FilledButton(
                   onPressed: _saving ? null : _give,
-                  child: Text(_saving ? 'Giving access…' : 'Give access'),
+                  child: Text(_saving ? l.accessGiving : l.accessGiveButton),
                 ),
               ),
             ],

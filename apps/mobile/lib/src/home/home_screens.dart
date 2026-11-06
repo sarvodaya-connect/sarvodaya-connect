@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../district_access/access_format.dart';
 import '../district_access/district_access_screens.dart';
-import '../format.dart';
 import '../incidents/incident_screens.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../models/user.dart';
-import '../national/national_screens.dart' show GradeBadge, count;
+import '../national/national_screens.dart' show GradeBadge;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
@@ -16,18 +16,19 @@ import 'home_api.dart';
 void _open(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 
-String _greeting(DateTime now) => now.hour < 12
-    ? 'Good morning'
-    : now.hour < 17
-    ? 'Good afternoon'
-    : 'Good evening';
-
-String _roleLine(UserRole role) => switch (role) {
-  UserRole.programmeCoordinator => 'Society Program Coordinator (SPC)',
-  UserRole.deputyDistrictManager => 'Deputy District Manager (DDM)',
-  UserRole.districtManager => 'District Manager (DM)',
+String _roleLine(AppLocalizations l, UserRole role) => switch (role) {
+  UserRole.programmeCoordinator => l.roleSpc,
+  UserRole.deputyDistrictManager => l.roleDdm,
+  UserRole.districtManager => l.roleDm,
   _ => role.label,
 };
+
+/// The message for a failed home request: the app's own wording in the
+/// chosen language, or what the server said (still English, phase 9).
+String _errorText(AppLocalizations l, Object? error, String fallback) =>
+    error is HomeException
+    ? (error.failure == null ? error.message : l.failure(error.failure!))
+    : fallback;
 
 /// V5 M05t: the DDM's temporary district-wide view, with the time left as
 /// words. Their own societies stay editable; the rest open view only.
@@ -44,69 +45,76 @@ class TemporaryViewCard extends StatelessWidget {
   final VoidCallback? onBrowse;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: 'Temporary District-Wide View',
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F3A5F),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.schedule, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Temporary District-Wide View',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Semantics(
+      container: true,
+      label: l.homeTempViewTitle,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F3A5F),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.schedule, size: 16, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l.homeTempViewTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              grant.grantedByName == null
+                  ? l.homeTempViewBody
+                  : l.homeTempViewBodyGrantedBy(grant.grantedByName!),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'All societies in your district · view only.'
-            '${grant.grantedByName == null ? '' : ' Granted by ${grant.grantedByName} (DM).'}',
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Ends ${accessEnds(grant.expiresAt)} · ${accessTimeLeft(grant.expiresAt, now)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+              child: Text(
+                l.homeTempViewEnds(
+                  l.accessEndsAt(grant.expiresAt),
+                  l.accessTimeLeft(grant.expiresAt, now),
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.bannerTemporaryBg,
-              padding: EdgeInsets.zero,
+            const SizedBox(height: 8),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.bannerTemporaryBg,
+                padding: EdgeInsets.zero,
+              ),
+              onPressed: onBrowse,
+              child: Text(l.homeTempViewBrowse),
             ),
-            onPressed: onBrowse,
-            child: const Text('Browse district societies'),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Loads [load] with the V5 loading, error · retry and no-access states.
@@ -144,6 +152,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
   Widget build(BuildContext context) => FutureBuilder<T>(
     future: _future,
     builder: (context, snapshot) {
+      final l = context.l10n;
       if (snapshot.connectionState != ConnectionState.done) {
         if (!widget.inline) return LoadingSkeleton(label: widget.label);
         return Semantics(
@@ -177,16 +186,14 @@ class _LoaderState<T> extends State<_Loader<T>> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              error is HomeException
-                  ? error.message
-                  : 'Could not load the societies.',
+              _errorText(l, error, l.homeErrorSocieties),
               style: const TextStyle(color: AppColors.danger),
             ),
             TextButton(
               onPressed: () => setState(
                 () => _future = widget.load(DemoScope.of(context).home),
               ),
-              child: const Text('Try again'),
+              child: Text(l.commonTryAgain),
             ),
           ],
         );
@@ -194,13 +201,11 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'Something Went Wrong',
-          message: error is HomeException
-              ? error.message
-              : 'Could not load your overview.',
+          title: l.homeErrorTitle,
+          message: _errorText(l, error, l.homeErrorOverview),
           tone: StateTone.error,
           isAlert: true,
-          primaryLabel: 'Try again',
+          primaryLabel: l.commonTryAgain,
           onPrimary: () =>
               setState(() => _future = widget.load(DemoScope.of(context).home)),
         );
@@ -303,44 +308,56 @@ class _SocietyRow extends StatelessWidget {
   final bool showScope;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: GradeBadge(society.grade),
-    title: Text(
-      society.name,
-      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-    ),
-    subtitle: Text(
-      '${society.code}${society.members == null ? '' : ' · ${count(society.members!)} members'} · updated ${formatDate(society.updatedAt)}',
-      style: const TextStyle(fontSize: 12),
-    ),
-    trailing: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showScope)
-          society.yours
-              ? const _Pill(
-                  'Yours · edit',
-                  colour: AppColors.leaf,
-                  background: AppColors.mint,
-                )
-              : const _Pill(
-                  'View only',
-                  colour: AppColors.inkSoft,
-                  background: AppColors.stateGrey,
-                )
-        else if (society.pending != null)
-          const _Pill('Grade request')
-        else if (society.stale)
-          const _Pill(
-            '90+ days',
-            colour: AppColors.danger,
-            background: AppColors.dangerSoft,
-          ),
-        const Icon(Icons.chevron_right),
-      ],
-    ),
-    onTap: () => _open(context, SocietyRecordScreen(societyId: society.id)),
-  );
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return ListTile(
+      leading: GradeBadge(society.grade),
+      title: Text(
+        society.name,
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+      ),
+      subtitle: Text(
+        society.members == null
+            ? l.homeSocietyLineNoMembers(
+                society.code,
+                l.date(society.updatedAt),
+              )
+            : l.homeSocietyLine(
+                society.code,
+                society.members!,
+                l.date(society.updatedAt),
+              ),
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showScope)
+            society.yours
+                ? _Pill(
+                    l.homeYoursEdit,
+                    colour: AppColors.leaf,
+                    background: AppColors.mint,
+                  )
+                : _Pill(
+                    l.homeViewOnly,
+                    colour: AppColors.inkSoft,
+                    background: AppColors.stateGrey,
+                  )
+          else if (society.pending != null)
+            _Pill(l.homeGradeRequest)
+          else if (society.stale)
+            _Pill(
+              l.homeStale,
+              colour: AppColors.danger,
+              background: AppColors.dangerSoft,
+            ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => _open(context, SocietyRecordScreen(societyId: society.id)),
+    );
+  }
 }
 
 /// The list of societies with search and filters (M05s, M05d, DD04, M20).
@@ -348,12 +365,14 @@ class _SocietyList extends StatefulWidget {
   const _SocietyList({
     required this.showScope,
     this.district = false,
-    this.searchHint = 'Search name or S number',
+    this.searchHint,
   });
 
   final bool showScope;
   final bool district;
-  final String searchHint;
+
+  /// Defaults to "Search name or S number" in the chosen language.
+  final String? searchHint;
 
   @override
   State<_SocietyList> createState() => _SocietyListState();
@@ -389,87 +408,93 @@ class _SocietyListState extends State<_SocietyList> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      TextField(
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search),
-          hintText: widget.searchHint,
-          suffixIcon: IconButton(
-            tooltip: 'Filter Societies',
-            onPressed: _filters,
-            icon: const Icon(Icons.tune),
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search),
+            hintText: widget.searchHint ?? l.homeSearchHint,
+            suffixIcon: IconButton(
+              tooltip: l.homeFilterTitle,
+              onPressed: _filters,
+              icon: const Icon(Icons.tune),
+            ),
           ),
+          textInputAction: TextInputAction.search,
+          onSubmitted: (value) => _set(_query.copyWith(search: value.trim())),
         ),
-        textInputAction: TextInputAction.search,
-        onSubmitted: (value) => _set(_query.copyWith(search: value.trim())),
-      ),
-      const SizedBox(height: 8),
-      _Loader<HomeSocietyList>(
-        key: ValueKey(_version),
-        inline: true,
-        label: 'Loading societies',
-        load: (api) => api.fetchSocieties(_query),
-        builder: (context, list) {
-          _last = list;
-          if (list.rows.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+        const SizedBox(height: 8),
+        _Loader<HomeSocietyList>(
+          key: ValueKey(_version),
+          inline: true,
+          label: l.homeLoadingSocieties,
+          load: (api) => api.fetchSocieties(_query),
+          builder: (context, list) {
+            _last = list;
+            if (list.rows.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  children: [
+                    const Icon(Icons.search, color: AppColors.forest),
+                    const SizedBox(height: 8),
+                    Text(
+                      l.homeNoMatchTitle,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      _query.filtered
+                          ? l.homeNoMatchFiltered
+                          : l.homeNoMatchEmpty,
+                      style: const TextStyle(color: AppColors.inkBody),
+                    ),
+                    if (_query.filtered)
+                      TextButton(
+                        onPressed: () => _set(_query.cleared()),
+                        child: Text(l.homeClearAllFilters),
+                      ),
+                  ],
+                ),
+              );
+            }
+            return Material(
+              color: AppColors.surface,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.line),
+              ),
               child: Column(
                 children: [
-                  const Icon(Icons.search, color: AppColors.forest),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'No Societies Match',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  Text(
-                    _query.filtered
-                        ? 'Try fewer filters.'
-                        : 'No society is in your view yet.',
-                    style: const TextStyle(color: AppColors.inkBody),
-                  ),
-                  if (_query.filtered)
-                    TextButton(
-                      onPressed: () => _set(_query.cleared()),
-                      child: const Text('Clear all filters'),
+                  for (final (index, society) in list.rows.indexed) ...[
+                    if (index > 0) const Divider(height: 1),
+                    _SocietyRow(society, showScope: widget.showScope),
+                  ],
+                  if (list.total > list.rows.length)
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(
+                        l.homeShowingOf(list.rows.length, list.total),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                        ),
+                      ),
                     ),
                 ],
               ),
             );
-          }
-          return Material(
-            color: AppColors.surface,
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: AppColors.line),
-            ),
-            child: Column(
-              children: [
-                for (final (index, society) in list.rows.indexed) ...[
-                  if (index > 0) const Divider(height: 1),
-                  _SocietyRow(society, showScope: widget.showScope),
-                ],
-                if (list.total > list.rows.length)
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(
-                      'Showing ${list.rows.length} of ${count(list.total)} · search to narrow the list',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
-    ],
-  );
+          },
+        ),
+      ],
+    );
+  }
 }
 
 /// V5 M20 "Filter societies": grade, SPC, DS division, not updated, grade request.
@@ -488,6 +513,7 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final list = widget.list;
     return SafeArea(
       child: SingleChildScrollView(
@@ -497,10 +523,13 @@ class _FilterSheetState extends State<_FilterSheet> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Filter Societies',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    l.homeFilterTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -509,11 +538,14 @@ class _FilterSheetState extends State<_FilterSheet> {
                       search: _query.search,
                     ),
                   ),
-                  child: const Text('Clear all'),
+                  child: Text(l.homeFilterClearAll),
                 ),
               ],
             ),
-            const Text('Grade', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              l.homeFilterGrade,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
@@ -533,10 +565,15 @@ class _FilterSheetState extends State<_FilterSheet> {
             if (list != null && list.spcs.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
+                // Longer Sinhala and Tamil labels wrap instead of overflowing.
+                isExpanded: true,
                 initialValue: _query.spcId,
-                decoration: const InputDecoration(labelText: 'Assigned SPC'),
+                decoration: InputDecoration(labelText: l.homeFilterSpc),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Any SPC')),
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(l.homeFilterAnySpc),
+                  ),
                   for (final (id, name) in list.spcs)
                     DropdownMenuItem(value: id, child: Text(name)),
                 ],
@@ -548,13 +585,11 @@ class _FilterSheetState extends State<_FilterSheet> {
             if (list != null && list.dsDivisions.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
+                isExpanded: true,
                 initialValue: _query.dsDivision,
-                decoration: const InputDecoration(labelText: 'DS division'),
+                decoration: InputDecoration(labelText: l.homeFilterDs),
                 items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('Any DS division'),
-                  ),
+                  DropdownMenuItem(value: null, child: Text(l.homeFilterAnyDs)),
                   for (final ds in list.dsDivisions)
                     DropdownMenuItem(value: ds, child: Text(ds)),
                 ],
@@ -566,14 +601,14 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Not Updated in 90 Days'),
+              title: Text(l.homeFilterNotUpdated),
               value: _query.needsUpdate,
               onChanged: (value) =>
                   setState(() => _query = _query.copyWith(needsUpdate: value)),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Has a Grade-Change Request'),
+              title: Text(l.homeFilterHasRequest),
               value: _query.gradeRequest,
               onChanged: (value) =>
                   setState(() => _query = _query.copyWith(gradeRequest: value)),
@@ -583,7 +618,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(_query),
-                child: const Text('Show societies'),
+                child: Text(l.homeFilterShow),
               ),
             ),
           ],
@@ -606,6 +641,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user!;
     final name =
@@ -617,7 +653,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: _Loader<RoleHome>(
-          label: 'Loading your home',
+          label: l.homeLoading,
           load: (api) => api.fetchHome(),
           builder: (context, home) => ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -625,7 +661,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
               Semantics(
                 header: true,
                 child: Text(
-                  '${_greeting(store.now)}, $name',
+                  l.greeting(store.now, name),
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -633,11 +669,14 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                 ),
               ),
               Text(
-                '${_roleLine(user.primaryRole)}${home.districtName == null ? '' : ' · ${home.districtName}'}',
+                [
+                  _roleLine(l, user.primaryRole),
+                  ?home.districtName,
+                ].join(' · '),
                 style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
               ),
               const SizedBox(height: 10),
-              ..._body(context, store, user, home),
+              ..._body(context, l, store, user, home),
             ],
           ),
         ),
@@ -647,6 +686,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
 
   List<Widget> _body(
     BuildContext context,
+    AppLocalizations l,
     DemoStore store,
     AuthenticatedUser user,
     RoleHome home,
@@ -658,8 +698,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
       tone: home.viewOnly ? AccessBannerTone.viewOnly : AccessBannerTone.edit,
       child: Text(
         home.viewOnly
-            ? 'Your access: all ${count(home.total)} ${home.districtName ?? ''} societies · view only'
-            : 'Your access: ${count(home.total)} assigned societies · view and edit',
+            ? (home.districtName == null
+                  ? l.homeAccessAll(home.total)
+                  : l.homeAccessAllDistrict(home.total, home.districtName!))
+            : l.homeAccessAssigned(home.total),
       ),
     );
     switch (user.primaryRole) {
@@ -669,32 +711,37 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           _Card(
-            title: 'District Overview',
+            title: l.homeDistrictOverview,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _TileRow([
-                  _Tile('Societies', count(home.total)),
+                  _Tile(l.homeTileSocieties, l.number(home.total)),
                   _Tile(
-                    'Members',
-                    home.members == null ? '—' : count(home.members!),
+                    l.homeTileMembers,
+                    home.members == null ? '—' : l.number(home.members!),
                   ),
                   _Tile(
-                    'Not Updated 90d',
-                    count(home.notUpdated),
+                    l.homeTileNotUpdated,
+                    l.number(home.notUpdated),
                     colour: AppColors.danger,
                   ),
                 ]),
                 const SizedBox(height: 8),
                 Text(
-                  'Grades: A ${home.gradeA}, B ${home.gradeB}, C ${home.gradeC}, ${home.notActive} not active',
+                  l.homeGradesLine(
+                    home.gradeA,
+                    home.gradeB,
+                    home.gradeC,
+                    home.notActive,
+                  ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
                   ),
                 ),
                 Text(
-                  '${home.gradeRequests} grade requests with HQ',
+                  l.homeGradeRequestsWithHq(home.gradeRequests),
                   style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
@@ -702,15 +749,15 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ),
           const SizedBox(height: 12),
           _Card(
-            title: 'Temporary Access for Your DDM',
+            title: l.homeTempAccessTitle,
             trailing: home.temporaryAccess.isEmpty
-                ? const _Pill(
-                    'None active',
+                ? _Pill(
+                    l.homeNoneActive,
                     colour: AppColors.inkSoft,
                     background: AppColors.stateGrey,
                   )
                 : _Pill(
-                    '${home.temporaryAccess.length} active',
+                    l.homeActiveCount(home.temporaryAccess.length),
                     colour: AppColors.bannerTemporaryText,
                     background: AppColors.bannerTemporaryBg,
                   ),
@@ -718,14 +765,17 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (home.temporaryAccess.isEmpty)
-                  const Text(
-                    'When you are away, give a DDM view-only access to all societies in your district for a set time.',
-                    style: TextStyle(fontSize: 12.5),
+                  Text(
+                    l.homeTempAccessIntro,
+                    style: const TextStyle(fontSize: 12.5),
                   )
                 else
                   for (final grant in home.temporaryAccess)
                     Text(
-                      '${grant.deputyName} · view only · ends ${accessEnds(grant.expiresAt)}',
+                      l.homeTempAccessLine(
+                        grant.deputyName,
+                        l.accessEndsAt(grant.expiresAt),
+                      ),
                       style: const TextStyle(fontSize: 12.5),
                     ),
                 const SizedBox(height: 8),
@@ -737,8 +787,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                     icon: const Icon(Icons.key_outlined),
                     label: Text(
                       home.temporaryAccess.isEmpty
-                          ? 'Give temporary access'
-                          : 'Manage temporary access',
+                          ? l.homeGiveAccess
+                          : l.homeManageAccess,
                     ),
                   ),
                 ),
@@ -747,9 +797,9 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ),
           if (home.needsAttention.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Text(
-              'Needs Attention',
-              style: TextStyle(
+            Text(
+              l.homeNeedsAttention,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.6,
@@ -784,8 +834,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (item.pending != null)
-                            const _Pill('Grade request'),
+                          if (item.pending != null) _Pill(l.homeGradeRequest),
                           const Icon(Icons.chevron_right),
                         ],
                       ),
@@ -813,12 +862,14 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             segments: [
               ButtonSegment(
                 value: false,
-                label: Text('My ${home.total} · Edit'),
+                label: Text(l.homeMyEdit(home.total)),
               ),
               ButtonSegment(
                 value: true,
                 label: Text(
-                  'District ${home.districtViewCount ?? ''} · view only',
+                  home.districtViewCount == null
+                      ? l.homeDistrictViewOnly
+                      : l.homeDistrictCountViewOnly(home.districtViewCount!),
                 ),
               ),
             ],
@@ -831,8 +882,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             showScope: true,
             district: _district,
             searchHint: _district
-                ? 'Search ${home.districtName ?? 'district'} societies'
-                : 'Search my ${home.total} societies',
+                ? (home.districtName == null
+                      ? l.homeSearchDistrictPlain
+                      : l.homeSearchDistrict(home.districtName!))
+                : l.homeSearchMine(home.total),
           ),
         ];
       case UserRole.deputyDistrictManager:
@@ -841,22 +894,22 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           _TileRow([
-            _Tile('Assigned', count(home.total)),
+            _Tile(l.homeTileAssigned, l.number(home.total)),
             _Tile(
-              'Grade Requests',
-              count(home.gradeRequests),
+              l.homeTileGradeRequests,
+              l.number(home.gradeRequests),
               colour: AppColors.warning,
             ),
             _Tile(
-              'Not Updated 90d',
-              count(home.notUpdated),
+              l.homeTileNotUpdated,
+              l.number(home.notUpdated),
               colour: AppColors.danger,
             ),
           ]),
           const SizedBox(height: 12),
           _SocietyList(
             showScope: false,
-            searchHint: 'Search my ${home.total} societies',
+            searchHint: l.homeSearchMine(home.total),
           ),
         ];
       default:
@@ -874,10 +927,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
               child: ListTile(
                 leading: const Icon(Icons.task_alt, color: AppColors.warning),
                 title: Text(
-                  '${home.activitiesWaiting} ${home.activitiesWaiting == 1 ? 'Activity' : 'Activities'} to Approve',
+                  l.homeActivitiesToApprove(home.activitiesWaiting),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
-                subtitle: const Text('Choose the UN SDGs and approve'),
+                subtitle: Text(l.homeChooseSdgs),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _open(context, const ActivitiesToApproveScreen()),
               ),
@@ -886,20 +939,28 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ],
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'My Societies',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  l.homeMySocieties,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Text(
-                '${home.total} assigned',
+                l.homeAssignedCount(home.total),
                 style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ],
           ),
           Text(
-            'Grade A ${home.gradeA} · B ${home.gradeB} · C ${home.gradeC} · ${home.notUpdated} need an update',
+            l.homeGradeSummary(
+              home.gradeA,
+              home.gradeB,
+              home.gradeC,
+              home.notUpdated,
+            ),
             style: const TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 8),

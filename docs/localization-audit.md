@@ -2,7 +2,7 @@
 
 Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is a real screen. Issue #108 stays open until every row is done and reviewed.
 
-**Status:** `Done` means the screen's application-owned text comes from the catalogs. `Not started` means its own text is still English, although the navigation around it is translated on every screen. No Sinhala or Tamil text is reviewed yet, so `Done` doesn't mean approved. Phase assignments are a first grouping and may move as each phase is planned.
+**Status:** `Done` means the screen's application-owned text comes from the catalogs. `Partly done` means some of it does and the rest is listed under [Remaining exceptions](#remaining-exceptions). `Not started` means its own text is still English, although the navigation around it is translated on every screen. No Sinhala or Tamil text is reviewed yet, so `Done` doesn't mean approved. Phase assignments are a first grouping and may move as each phase is planned.
 
 ## Platform and role combinations
 
@@ -143,11 +143,11 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | M02 | Choose language | All phone roles | 1 Foundation |
 | Done | M03 | Sign in | All phone roles | 1 Foundation |
 | Not started | M05 | Home: Society Officer | Society Officer | 3 Society records |
-| Not started | M05s | Home: SPC | SPC | 2 Homes, lists and national views |
-| Not started | M05d | Home: DDM | DDM | 2 Homes, lists and national views |
-| Not started | M05t | Home: DDM with temporary access | DDM | 2 Homes, lists and national views |
-| Not started | M05m | Home: DM | DM | 2 Homes, lists and national views |
-| Not started | M05h | Home: HQ National Dashboard | HQ | 2 Homes, lists and national views |
+| Done | M05s | Home: SPC | SPC | 2 Homes, lists and national views |
+| Done | M05d | Home: DDM | DDM | 2 Homes, lists and national views |
+| Done | M05t | Home: DDM with temporary access | DDM | 2 Homes, lists and national views |
+| Done | M05m | Home: DM | DM | 2 Homes, lists and national views |
+| Done | M05h | Home: HQ National Dashboard | HQ | 2 Homes, lists and national views |
 | Not started | M20 | Society list: filters | DM, HQ | 3 Society records |
 | Not started | M06 | Society detail (Society Officer) | Society Officer, DM (view only) | 3 Society records |
 | Not started | M06_SPC | M06 Society detail (SPC) | SPC | 3 Society records |
@@ -173,10 +173,10 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | M09 | Annual work plan | Society Officer | 5 Activities and work plans |
 | Not started | M09c | Work plan calendar | Society Officer | 5 Activities and work plans |
 | Not started | M09a | New activity: details and sector | Society Officer | 5 Activities and work plans |
-| Not started | M30 | Give temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
-| Not started | M31 | Confirm temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
-| Not started | M32 | Active temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
-| Not started | M33 | End access early | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
+| Done | M30 | Give temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
+| Done | M31 | Confirm temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
+| Done | M32 | Active temporary access | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
+| Done | M33 | End access early | DM (M30–M33), DDM (M32 view) | 2 Homes, lists and national views |
 | Not started | M16 | Notifications | Each role | 7 Administration and notifications |
 | Not started | M16_SPC | Notifications | Each role | 7 Administration and notifications |
 | Not started | M16_DDM | Notifications | Each role | 7 Administration and notifications |
@@ -198,12 +198,12 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | M45h | Helping another society | Society Officer, SPC, DDM, DM, HQ | 6 Disaster response |
 | Not started | M46 | Update delivery | Society Officer, SPC, DDM, DM, HQ | 6 Disaster response |
 | Not started | M47 | Situation report on the phone | Society Officer, SPC, DDM, DM, HQ | 6 Disaster response |
-| Not started | M26_Loading | M26 Loading | All phone roles | 2 Homes, lists and national views |
-| Not started | M26_Empty | M26 Empty | All phone roles | 2 Homes, lists and national views |
-| Not started | M26_Error | M26 Error · retry | All phone roles | 2 Homes, lists and national views |
-| Not started | M26_Success | M26 Success | All phone roles | 2 Homes, lists and national views |
+| Partly done | M26_Loading | M26 Loading | All phone roles | 2 Homes, lists and national views |
+| Partly done | M26_Empty | M26 Empty | All phone roles | 2 Homes, lists and national views |
+| Partly done | M26_Error | M26 Error · retry | All phone roles | 2 Homes, lists and national views |
+| Partly done | M26_Success | M26 Success | All phone roles | 2 Homes, lists and national views |
 | Done | M03e | Sign in: wrong password | All phone roles | 1 Foundation |
-| Not started | M26_Denied | M26 No access | All phone roles | 2 Homes, lists and national views |
+| Partly done | M26_Denied | M26 No access | All phone roles | 2 Homes, lists and national views |
 | Not started | M09b | New activity: participants and beneficiaries | Society Officer | 5 Activities and work plans |
 | Not started | M09d | New activity: resources and partners | Society Officer | 5 Activities and work plans |
 | Not started | M09r | New activity: check and send | Society Officer | 5 Activities and work plans |
@@ -212,19 +212,19 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | M51 | SPC: review activity and choose UN SDGs | SPC | 5 Activities and work plans |
 | Not started | M51b | SPC: send activity back | SPC | 5 Activities and work plans |
 | Not started | M52 | SPC: activity approved | SPC | 5 Activities and work plans |
-| Not started | M61 | HQ: membership | HQ | 2 Homes, lists and national views |
+| Done | M61 | HQ: membership | HQ | 2 Homes, lists and national views |
 | Not started | M62 | HQ: audit and AGM | HQ | 4 Records and documents |
 | Not started | M63 | HQ: profit and expenses | HQ | 4 Records and documents |
 | Not started | M64 | HQ: activities | HQ | 5 Activities and work plans |
-| Not started | M65 | HQ: districts | HQ | 2 Homes, lists and national views |
+| Done | M65 | HQ: districts | HQ | 2 Homes, lists and national views |
 | Not started | M66 | HQ: societies | HQ | 3 Society records |
 | Not started | M67 | HQ: society summary | HQ | 3 Society records |
 | Not started | M67x | HQ: society, figures not added | HQ | 3 Society records |
-| Not started | M68 | HQ: map | HQ | 2 Homes, lists and national views |
-| Not started | M69a | HQ: dashboard loading | HQ | 2 Homes, lists and national views |
+| Done | M68 | HQ: map | HQ | 2 Homes, lists and national views |
+| Done | M69a | HQ: dashboard loading | HQ | 2 Homes, lists and national views |
 | Not started | M69b | HQ: no societies match | HQ | 3 Society records |
-| Not started | M69c | HQ: could not load | HQ | 2 Homes, lists and national views |
-| Not started | M69d | No access to the national view | HQ | 2 Homes, lists and national views |
+| Done | M69c | HQ: could not load | HQ | 2 Homes, lists and national views |
+| Done | M69d | No access to the national view | HQ | 2 Homes, lists and national views |
 | Not started | M80 | SarvoAI: ask a question | HQ | 8 SarvoAI |
 | Not started | M80b | SarvoAI: question typed | HQ | 8 SarvoAI |
 | Not started | M81 | SarvoAI: answering | HQ | 8 SarvoAI |
@@ -244,3 +244,24 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | M84h | SarvoAI: how the president was found | HQ | 8 SarvoAI |
 | Not started | M86h | SarvoAI: how the five-year answer was found | HQ | 8 SarvoAI |
 | Not started | M87h | SarvoAI: how the not-submitted list was found | HQ | 8 SarvoAI |
+
+## Remaining exceptions
+
+`Done` means the text is in the catalogs, with an AI-assisted Sinhala and Tamil draft. **No Sinhala or Tamil is approved yet**: approval needs a native speaker's review (`docs/localization.md`), and these drafts stay hidden in production and release builds until then.
+
+### Phone, phase 2 (homes, national views, temporary access)
+
+| Text | Where | Why it is still English | Phase |
+|---|---|---|---|
+| "Needs attention" reasons on the DM home (M05m) | `GET /home` | Written by the API | 9 |
+| Messages the server sends when a request fails, such as a refused temporary access grant | API errors | Sent as English sentences; the app's own connection and server messages are translated | 9 |
+| Messages from the demonstration APIs, such as "Could not load your overview." when a demo load fails | `demo_*_api.dart` | They stand in for server messages | 9 |
+| The active incident card on each home | `IncidentHomeSection` (M40) | Disaster response screens | 6 |
+| UN SDG titles in the SDG tiles' screen-reader label (M05h) | `sdgTitle` | Shared with the activity screens | 5 |
+| Province names in the district list (M65) | API data | Stored place names | — |
+| Text each screen passes to the shared states (M26) | Each caller | The shared widgets' own text, such as "Loading" and "You Don't Have Access to This", is translated; each screen's message follows that screen's phase | By screen |
+| The Districts, Societies and Map pages' society directory (M66) and summary (M67), and the DM's society list header (M20) | `national_screens.dart`, `home_screens.dart` | Society records | 3 |
+
+The filter sheet that M20 opens is translated already, because the role homes use the same sheet.
+
+Numbers on the converted screens use the language's digit grouping (Tamil groups by lakh). Dates there use the language's month and day names. Phase 10 covers the rest of the app.
