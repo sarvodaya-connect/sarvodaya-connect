@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
 import 'society_record_models.dart';
@@ -136,7 +138,9 @@ class GradeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: grade == null ? 'Grade not set' : 'Grade $grade',
+    label: grade == null
+        ? context.l10n.recGradeNotSet
+        : context.l10n.gradeOf(grade!),
     child: Container(
       width: size,
       height: size,
@@ -223,7 +227,15 @@ class LockedNote extends StatelessWidget {
     children: [
       const Icon(Icons.lock_outline, size: 12, color: AppColors.muted),
       const SizedBox(width: 3),
-      Text(text, style: RecordStyle.caption),
+      // Longer Sinhala and Tamil notes shorten rather than overflow.
+      Flexible(
+        child: Text(
+          text,
+          style: RecordStyle.caption,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     ],
   );
 }
@@ -445,14 +457,20 @@ class ScopeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final permissions = record.permissions;
     if (permissions.viewOnlyReason == ViewOnlyReason.temporaryDistrictAccess) {
+      final until = permissions.viewOnlyUntil;
       return _strip(
         icon: Icons.schedule,
-        bold: 'Temporary District-Wide View',
-        text: permissions.viewOnlyUntil == null
+        bold: l.recScopeTemporary,
+        text: until == null
             ? ''
-            : ' · ends ${formatEnds(permissions.viewOnlyUntil!)}',
+            : l.recScopeEnds(
+                l.localeName == 'en'
+                    ? formatEnds(until)
+                    : l.accessEndsAt(until),
+              ),
         foreground: const Color(0xFF1F4E7A),
         background: const Color(0xFFE3EDF8),
       );
@@ -461,20 +479,17 @@ class ScopeBanner extends StatelessWidget {
       return _strip(
         icon: Icons.lock_outline,
         text: permissions.viewOnlyReason == ViewOnlyReason.districtManager
-            ? 'District Manager · ${record.districtName} · view only'
-            : 'View only',
+            ? l.recScopeDm(record.districtName)
+            : l.recViewOnly,
         foreground: const Color(0xFF1F4E7A),
         background: const Color(0xFFE3EDF8),
       );
     }
     final text = switch (user.primaryRole) {
-      UserRole.societyOfficer =>
-        'Your access: this society only · view and edit',
-      UserRole.programmeCoordinator =>
-        'SPC · your ${user.societyIds.length} assigned societies · view and edit',
-      UserRole.deputyDistrictManager =>
-        'DDM · your ${user.societyIds.length} assigned societies · view and edit',
-      _ => 'HQ · national access · view and edit',
+      UserRole.societyOfficer => l.recScopeOfficer,
+      UserRole.programmeCoordinator => l.recScopeSpc(user.societyIds.length),
+      UserRole.deputyDistrictManager => l.recScopeDdm(user.societyIds.length),
+      _ => l.recScopeHq,
     };
     return _strip(
       icon: Icons.shield_outlined,
@@ -653,9 +668,11 @@ class UnsavedChip extends StatelessWidget {
   const UnsavedChip({super.key});
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.only(right: 12),
-    child: Center(child: RecordChip('Unsaved changes', tone: ChipTone.warning)),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 12),
+    child: Center(
+      child: RecordChip(context.l10n.recUnsaved, tone: ChipTone.warning),
+    ),
   );
 }
 
@@ -684,7 +701,7 @@ class ReadOnlyField extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        const LockedNote('Read only'),
+        Flexible(child: LockedNote(context.l10n.recReadOnly)),
       ],
     ),
   );
@@ -701,7 +718,7 @@ PreferredSizeWidget recordFormAppBar(
 }) => AppBar(
   toolbarHeight: 58,
   leading: IconButton(
-    tooltip: 'Close',
+    tooltip: context.l10n.commonClose,
     icon: const Icon(Icons.close, size: 22),
     onPressed: onClose ?? () => Navigator.of(context).maybePop(),
   ),

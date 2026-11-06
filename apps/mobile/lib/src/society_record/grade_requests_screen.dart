@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -42,6 +45,7 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final requests = _requests;
     final open = requests?.where(
       (request) => request.status == GradeRequestStatus.pending,
@@ -57,7 +61,7 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Grade-Change Requests', style: RecordStyle.screenTitle),
+            Text(l.gradeReqTitle, style: RecordStyle.screenTitle),
             Text(widget.record.nameEn, style: RecordStyle.screenSubtitle),
           ],
         ),
@@ -67,18 +71,18 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
               icon: Icons.error_outline,
               tone: StateTone.error,
               isAlert: true,
-              title: "Couldn't load grade-change requests",
-              message: _error!.message,
-              primaryLabel: 'Try again',
+              title: l.gradeReqLoadError,
+              message: l.recordError(_error!),
+              primaryLabel: l.commonTryAgain,
               onPrimary: _load,
             )
           : requests == null
-          ? const LoadingSkeleton(label: 'Loading grade-change requests')
+          ? LoadingSkeleton(label: l.gradeReqLoading)
           : requests.isEmpty
-          ? const StateMessage(
+          ? StateMessage(
               icon: Icons.workspace_premium_outlined,
-              title: 'No Grade-Change Requests Yet',
-              message: 'Requests sent to HQ for this society will appear here.',
+              title: l.gradeReqNoneTitle,
+              message: l.gradeReqNoneBody,
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -87,10 +91,10 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
                 children: [
                   for (final request in open!) _RequestCard(request: request),
                   if (earlier!.isNotEmpty)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(2, 6, 2, 8),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
                       child: Text(
-                        'Earlier Requests',
+                        l.gradeReqEarlier,
                         style: RecordStyle.sectionLabel,
                       ),
                     ),
@@ -102,7 +106,8 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
   }
 }
 
-String _dateTime(DateTime when) {
+String _dateTime(AppLocalizations l, DateTime when) {
+  if (l.localeName != 'en') return '${l.date(when)}, ${l.clock(when)}';
   final hour = when.hour % 12 == 0 ? 12 : when.hour % 12;
   return '${formatDate(when)}, $hour:${when.minute.toString().padLeft(2, '0')} ${when.hour < 12 ? 'a.m.' : 'p.m.'}';
 }
@@ -114,10 +119,11 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final (label, tone) = switch (request.status) {
-      GradeRequestStatus.pending => ('Waiting for HQ', ChipTone.warning),
-      GradeRequestStatus.approved => ('Approved', ChipTone.success),
-      GradeRequestStatus.rejected => ('Rejected', ChipTone.danger),
+      GradeRequestStatus.pending => (l.gradeReqWaitingHq, ChipTone.warning),
+      GradeRequestStatus.approved => (l.gradeReqApproved, ChipTone.success),
+      GradeRequestStatus.rejected => (l.gradeReqRejected, ChipTone.danger),
     };
     final pending = request.status == GradeRequestStatus.pending;
     return Padding(
@@ -136,33 +142,39 @@ class _RequestCard extends StatelessWidget {
           const SizedBox(height: 10),
           if (pending) ...[
             RecordTimelineEntry(
-              title: 'Sent to HQ',
+              title: l.gradeReqSentToHq,
               detail:
-                  '${request.requestedBy.label} · ${_dateTime(request.requestedAt)}',
+                  '${l.actor(request.requestedBy)} · ${_dateTime(l, request.requestedAt)}',
               quote: request.reason,
               ringColor: AppColors.danger,
             ),
-            const RecordTimelineEntry(
-              title: 'Waiting for an HQ Decision',
-              detail: 'Usually within 5 working days',
+            RecordTimelineEntry(
+              title: l.gradeReqWaitingDecision,
+              detail: l.gradeReqUsually,
               ringColor: AppColors.muted,
               last: true,
             ),
           ] else ...[
             RecordTimelineEntry(
               title:
-                  '${request.status == GradeRequestStatus.approved ? 'Approved' : 'Rejected'} by ${request.decidedBy?.label ?? 'HQ'}',
+                  (request.status == GradeRequestStatus.approved
+                  ? l.gradeReqApprovedBy
+                  : l.gradeReqRejectedBy)(
+                    request.decidedBy == null
+                        ? 'HQ'
+                        : l.actor(request.decidedBy!),
+                  ),
               detail: request.decidedAt == null
                   ? ''
-                  : _dateTime(request.decidedAt!),
+                  : _dateTime(l, request.decidedAt!),
               quote: request.decisionComment,
               ringColor: request.status == GradeRequestStatus.approved
                   ? AppColors.forest
                   : AppColors.danger,
             ),
             RecordTimelineEntry(
-              title: 'Sent by ${request.requestedBy.label}',
-              detail: formatDate(request.requestedAt),
+              title: l.gradeReqSentBy(l.actor(request.requestedBy)),
+              detail: l.date(request.requestedAt),
               ringColor: AppColors.danger,
               last: true,
             ),

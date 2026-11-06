@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { NoAccessState } from "@/components/dashboard/data-states";
 import { ExcoEditForm } from "@/components/dashboard/society-record/exco-edit-form";
+import { getT } from "@/i18n/server";
 import { getSocietyRecord } from "@/lib/society-record-api";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
@@ -11,8 +12,8 @@ import { updateExco } from "../../record-actions";
 export default async function EditExcoPage({ params, searchParams }: PageProps<"/societies/[id]/exco/edit">) {
   const { id } = await params;
   if (!isSocietyRecordId(id)) notFound();
-  const [record, { focus }] = await Promise.all([getSocietyRecord(id), searchParams]);
-  if (!record.permissions.canEdit) return <NoAccessState description="Your role can view this Exco but not change it." title="You Can’t Edit This Exco" />;
+  const [record, { focus }, t] = await Promise.all([getSocietyRecord(id), searchParams, getT()]);
+  if (!record.permissions.canEdit) return <NoAccessState description={t("sr.ex.cantEditBody")} t={t} title={t("sr.ex.cantEditTitle")} />;
   return (
     <ExcoEditForm
       action={updateExco.bind(null, id)}
