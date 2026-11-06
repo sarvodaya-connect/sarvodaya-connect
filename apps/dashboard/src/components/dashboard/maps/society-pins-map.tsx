@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { loadNationalMapPins } from "@/app/(dashboard)/map/actions";
-import { GRADE_COLOURS, gradeText } from "@/lib/mapbox";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/messages/en";
+import type { Translator } from "@/i18n/translate";
+import { GRADE_COLOURS } from "@/lib/mapbox";
 
 import { MapStatus } from "./map-status";
 import { type Mapbox, useMapbox } from "./use-mapbox";
@@ -19,11 +22,11 @@ type SourceFeature = { properties: Record<string, unknown> | null; geometry: { c
 const SOURCE = "societies";
 const INDEX_LAYER = "societies-index";
 
-const LEGEND: { label: string; classes: MapSocietyClass[] }[] = [
-  { label: "A · Strong", classes: ["A"] },
-  { label: "B · Developing", classes: ["B"] },
-  { label: "C · Needs Strengthening", classes: ["C"] },
-  { label: "No Grade or Not Active", classes: ["UNGRADED", "NOT_ACTIVE"] },
+const LEGEND: { label: MessageKey; classes: MapSocietyClass[] }[] = [
+  { label: "grade.A", classes: ["A"] },
+  { label: "grade.B", classes: ["B"] },
+  { label: "grade.C", classes: ["C"] },
+  { label: "map.noGrade", classes: ["UNGRADED", "NOT_ACTIVE"] },
 ];
 
 /** Societies recorded at exactly the same position share one marker, so a list can be offered. */
@@ -36,9 +39,11 @@ export function groupByPosition(points: Pin[]) {
   return groups;
 }
 
-const pinLabel = (pin: Pin) => `${pin.name}, ${gradeText(pin.class)}, open record`;
-const tipText = (pin: Pin) => {
-  const grade = gradeText(pin.class);
+const gradeText = (mapClass: MapSocietyClass, t: Translator) =>
+  mapClass === "NOT_ACTIVE" ? t("map.gradeNotActive") : mapClass === "UNGRADED" ? t("map.gradeNotGraded") : t("map.gradeOf", { grade: mapClass });
+const pinLabel = (pin: Pin, t: Translator) => t("map.pinLabel", { name: pin.name, grade: gradeText(pin.class, t) });
+const tipText = (pin: Pin, t: Translator) => {
+  const grade = gradeText(pin.class, t);
   return `${pin.name} · ${pin.societyCode} · ${grade[0]!.toUpperCase()}${grade.slice(1)}`;
 };
 const plainClick = (event: MouseEvent) => !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0);
@@ -47,17 +52,17 @@ const TIP_CLASS =
   "pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1d2a22] px-2 py-1 text-[11px] font-semibold text-white group-hover:block group-focus-visible:block";
 const RING_CLASS = "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1d2a22] focus-visible:ring-offset-1";
 
-function pinElement(pin: Pin, open: (id: string) => void) {
+function pinElement(pin: Pin, open: (id: string) => void, t: Translator) {
   const link = document.createElement("a");
   link.href = `/societies/${pin.id}`;
   link.className = `group relative block size-4 cursor-pointer rounded-full border-2 border-white shadow ${RING_CLASS}`;
   link.style.backgroundColor = GRADE_COLOURS[pin.class];
   link.dataset.mapClass = pin.class;
-  link.setAttribute("aria-label", pinLabel(pin));
+  link.setAttribute("aria-label", pinLabel(pin, t));
   const tip = document.createElement("span");
   tip.className = TIP_CLASS;
   tip.setAttribute("aria-hidden", "true");
-  tip.textContent = tipText(pin);
+  tip.textContent = tipText(pin, t);
   link.append(tip);
   link.addEventListener("click", (event) => {
     if (!plainClick(event)) return;
@@ -85,6 +90,7 @@ function bubble(count: number, label: string, className: string, onClick: () => 
  * clicked. A pin opens the society record.
  */
 export function SocietyPinsMap({ token }: { token: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [pins, setPins] = useState<Pin[]>([]);
   const [truncated, setTruncated] = useState(false);
@@ -130,7 +136,7 @@ export function SocietyPinsMap({ token }: { token: string }) {
           let element: HTMLElement;
           if (properties.cluster) {
             const count = Number(properties.societies);
-            element = bubble(count, `${count} societies, zoom in`, "border-2 border-white bg-[#24492f] text-white", () => {
+            element = bubble(count, t("map.clusterLabel", { count }), "border-2 border-white bg-[#24492f] text-white", () => {
               (map.getSource(SOURCE) as GeoJSONSource).getClusterExpansionZoom(Number(properties.cluster_id), (error, zoom) => {
                 if (!error && zoom !== null && zoom !== undefined) map.easeTo({ center: [lng, lat], zoom });
               });
@@ -139,8 +145,8 @@ export function SocietyPinsMap({ token }: { token: string }) {
             const group = groups.get(String(properties.key)) ?? [];
             element =
               group.length === 1
-                ? pinElement(group[0]!, open)
-                : bubble(group.length, `${group.length} societies at the same place, choose one`, "border-2 border-[#24492f] bg-white text-[#24492f]", () => {
+                ? pinElement(group[0]!, open, t)
+                : bubble(group.length, t("map.samePlace", { count: group.length }), "border-2 border-[#24492f] bg-white text-[#24492f]", () => {
                     setChooser(group);
                     requestAnimationFrame(() => chooserHeading.current?.focus());
                   });
@@ -162,23 +168,23 @@ export function SocietyPinsMap({ token }: { token: string }) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="relative h-[340px] overflow-hidden rounded-lg bg-[#e9eef1]">
-        <div aria-label="Map of societies in Sri Lanka, coloured by grade" className="h-full w-full" ref={container} role="region" />
+        <div aria-label={t("map.region")} className="h-full w-full" ref={container} role="region" />
         <MapStatus phase={phase} retry={retry} />
       </div>
       {chooser && (
         <section aria-labelledby="map-chooser" className="mt-2 rounded-lg border border-line px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-[12px] font-bold text-ink" id="map-chooser" ref={chooserHeading} tabIndex={-1}>
-              {chooser.length} Societies at This Place
+              {t("map.atThisPlace", { count: chooser.length })}
             </h3>
             <button className="text-[11px] font-semibold text-brand-forest hover:underline" onClick={() => setChooser(null)} type="button">
-              Close
+              {t("map.close")}
             </button>
           </div>
           <ul className="mt-1 divide-y divide-line-soft text-[12px]">
             {chooser.map((pin) => (
               <li key={pin.id}>
-                <Link aria-label={pinLabel(pin)} className="flex items-center gap-2 py-1.5 text-ink hover:underline" href={`/societies/${pin.id}`}>
+                <Link aria-label={pinLabel(pin, t)} className="flex items-center gap-2 py-1.5 text-ink hover:underline" href={`/societies/${pin.id}`}>
                   <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: GRADE_COLOURS[pin.class] }} />
                   {pin.name} <span className="text-muted">{pin.societyCode}</span>
                 </Link>
@@ -188,17 +194,17 @@ export function SocietyPinsMap({ token }: { token: string }) {
         </section>
       )}
       {phase === "ready" && (
-        <ul aria-label="Grade" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink">
+        <ul aria-label={t("home.grade")} className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink">
           {LEGEND.map((item) => (
             <li className="flex items-center gap-1.5" key={item.label}>
               <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: GRADE_COLOURS[item.classes[0]!] }} />
-              {item.label}
+              {t(item.label)}
               <strong>{pins.filter((pin) => item.classes.includes(pin.class)).length.toLocaleString("en-GB")}</strong>
             </li>
           ))}
         </ul>
       )}
-      {truncated && <p className="mt-1 text-[11px] text-muted">The map shows the first 10,000 societies. Use the list view to see them all.</p>}
+      {truncated && <p className="mt-1 text-[11px] text-muted">{t("map.truncated")}</p>}
     </div>
   );
 }

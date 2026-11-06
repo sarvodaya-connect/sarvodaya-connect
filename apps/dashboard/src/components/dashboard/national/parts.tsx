@@ -1,27 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Pill } from "@/components/dashboard/ui/pill";
+import { useI18n } from "@/i18n/provider";
 import { sdgIconPath, sdgName } from "@/lib/sdg";
 
-export const count = (value: number) => value.toLocaleString("en-GB");
-
-/** "LKR 312.4 m" for totals of a million or more, "LKR 412,500" below. */
-export function lkrShort(value: string | number | null) {
-  if (value === null) return "Not added";
-  const amount = Number(value);
-  if (Math.abs(amount) >= 1_000_000) return `LKR ${(amount / 1_000_000).toLocaleString("en-GB", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} m`;
-  return `LKR ${amount.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
-}
-
-export function share(part: number, whole: number) {
-  return whole === 0 ? 0 : Math.round((part / whole) * 100);
-}
+import { count, GRADE_STYLE } from "./format";
 
 export function Breadcrumb({ current }: { current: string }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Breadcrumb" className="text-[11px] text-ink-soft">
-      <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">National Overview</Link>
+    <nav aria-label={t("n.breadcrumb")} className="text-[11px] text-ink-soft">
+      <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">{t("nav.nationalOverview")}</Link>
       <span aria-hidden> › </span>
       <span aria-current="page">{current}</span>
     </nav>
@@ -41,8 +33,9 @@ export function PageTitle({ actions, description, title }: { actions?: ReactNode
 }
 
 /** Shown only in demonstration mode, so seeded figures are never mistaken for real ones. */
-export function SampleBadge({ demo, label = "Demonstration data" }: { demo: boolean; label?: string }) {
-  return demo ? <Pill tone="preview">{label}</Pill> : null;
+export function SampleBadge({ demo, label }: { demo: boolean; label?: string }) {
+  const { t } = useI18n();
+  return demo ? <Pill tone="preview">{label ?? t("n.demoData")}</Pill> : null;
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
@@ -88,17 +81,12 @@ export function Stat({ label, tone = "plain", value }: { label: ReactNode; tone?
   );
 }
 
-export const GRADE_STYLE = {
-  A: { label: "A · Strong", colour: "#3f7d4f", text: "text-[#2f6b3e]" },
-  B: { label: "B · Developing", colour: "#e1b84a", text: "text-[#8a6100]" },
-  C: { label: "C · Needs Strengthening", colour: "#de7c3a", text: "text-[#a2470f]" },
-} as const;
-
 export function GradeBadge({ grade }: { grade: "A" | "B" | "C" | null }) {
+  const { t } = useI18n();
   if (!grade) return <span className="text-muted">—</span>;
   return (
     <span
-      aria-label={`Grade ${grade}`}
+      aria-label={t("n.gradeOf", { grade })}
       className="inline-flex size-6 items-center justify-center rounded-md text-[12px] font-bold text-white"
       style={{ backgroundColor: GRADE_STYLE[grade].colour }}
     >
@@ -122,6 +110,7 @@ export function GradeLine({ grades }: { grades: { A: number; B: number; C: numbe
 
 /** The official UN SDG icon with its rank and completed count. */
 export function SdgTile({ completed, rank, sdg }: { completed: number; rank: number; sdg: number }) {
+  const { t } = useI18n();
   return (
     <li className="flex h-full flex-col rounded-tile border border-line bg-surface p-2.5">
       <div className="flex items-start gap-2.5">
@@ -130,7 +119,7 @@ export function SdgTile({ completed, rank, sdg }: { completed: number; rank: num
         <div>
           <span className="text-[10px] text-muted">#{rank}</span>
           <strong className="block text-[20px] font-bold leading-tight text-ink">{count(completed)}</strong>
-          <span className="text-[10px] text-muted">completed</span>
+          <span className="text-[10px] text-muted">{t("n.completed")}</span>
         </div>
       </div>
       <p className="mt-2 text-[11px] text-ink">
@@ -141,16 +130,17 @@ export function SdgTile({ completed, rank, sdg }: { completed: number; rank: num
 }
 
 /** Financial-year links (FY 2025/26 …) that keep the other parameters. */
-export function YearLinks({ current, href, years }: { current: number; href: (year: number) => string; years: number[] }) {
+export function YearLinksView({ current, links }: { current: number; links: { href: string; year: number }[] }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Financial Year" className="flex flex-wrap gap-1.5">
-      {years.map((year) => (
+    <nav aria-label={t("n.financialYear")} className="flex flex-wrap gap-1.5">
+      {links.map(({ href, year }) => (
         <Link
           aria-current={year === current ? "true" : undefined}
           className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
             year === current ? "border-brand-forest bg-brand-forest text-white" : "border-line bg-surface text-ink-soft"
           }`}
-          href={href(year)}
+          href={href}
           key={year}
         >
           FY {year}/{String((year + 1) % 100).padStart(2, "0")}
@@ -160,17 +150,14 @@ export function YearLinks({ current, href, years }: { current: number; href: (ye
   );
 }
 
-export function Pagination({ href, page, totalPages }: { href: (page: number) => string; page: number; totalPages: number }) {
+export function PaginationView({ nextHref, page, previousHref, totalPages }: { nextHref: string; page: number; previousHref: string; totalPages: number }) {
+  const { t } = useI18n();
   if (totalPages <= 1) return null;
   return (
     <span className="flex gap-3">
-      {page > 1 && <Link className="font-semibold text-brand-forest underline" href={href(page - 1)}>Previous</Link>}
-      <span>Page {page} of {totalPages}</span>
-      {page < totalPages && <Link className="font-semibold text-brand-forest underline" href={href(page + 1)}>Next</Link>}
+      {page > 1 && <Link className="font-semibold text-brand-forest underline" href={previousHref}>{t("n.previous")}</Link>}
+      <span>{t("n.pageOf", { page, totalPages })}</span>
+      {page < totalPages && <Link className="font-semibold text-brand-forest underline" href={nextHref}>{t("n.next")}</Link>}
     </span>
   );
-}
-
-export function first(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
 }

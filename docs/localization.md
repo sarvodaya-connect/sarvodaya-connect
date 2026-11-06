@@ -54,3 +54,10 @@ English Title Case (issue #100) is an English rule. Don't apply it to Sinhala or
 - **API messages are still English.** They need structured codes, in a later phase.
 - **Browser and device only:** the language doesn't follow someone to another device.
 - **Dashboard rendering:** reading the cookie in the root layout makes every dashboard route render per request.
+
+## Translating a dashboard screen
+
+- A server page calls `await getT()`. A synchronous server component takes a `t` prop that defaults to `ENGLISH` from `src/i18n/english.ts`, so screens that have not been converted keep working.
+- A client component calls `useI18n()`. Never pass `t` or any other function from a server component to a client one; Next.js refuses it at render time, and unit tests do not catch that. `national/links.tsx` shows how to work out the links on the server side instead.
+- Write whole sentences with placeholders. For a styled part inside a sentence use `t.rich("key", { name: <strong>…</strong> })`, so a translation can move it.
+- Text that comes from the API, such as report titles and "needs attention" reasons, stays as sent until the API messages phase.

@@ -18,8 +18,8 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 
 | Phase | Scope |
 |---|---|
-| 1 Foundation (this PR) | Catalogs, persistence, checks, sign-in, navigation shell, Settings, More |
-| 2 Homes, lists and national views | Role homes, society lists, national dashboards, maps, reports |
+| 1 Foundation (#109) | Catalogs, persistence, checks, sign-in, navigation shell, Settings, More |
+| 2 Homes, lists and national views | Dashboard: role homes, society lists, national dashboards, maps, reports, search, requests, temporary access. Phone: the same screens, in a separate PR. |
 | 3 Society records | Society record, Exco, grade requests, staff assignment |
 | 4 Records and documents | Documents, audits, yearly figures |
 | 5 Activities and work plans | Work plans, activities, approvals, SDGs |
@@ -34,8 +34,8 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | Frame | Screen | Roles | Phase |
 |---|---|---|---|---|
 | Done | D01 | Sign in | All desktop roles | 1 Foundation |
-| Not started | D02 | National Dashboard | HQ | 2 Homes, lists and national views |
-| Not started | D04 | Societies list | HQ | 3 Society records |
+| Done | D02 | National Dashboard | HQ | 2 Homes, lists and national views |
+| Done | D04 | Societies list | HQ | 2 Homes, lists and national views |
 | Not started | D05 | Society record: overview | HQ | 3 Society records |
 | Not started | D05m | Summary not added yet | HQ | 4 Records and documents |
 | Not started | D05e | HQ: edit society information | HQ | 3 Society records |
@@ -50,21 +50,21 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | D22 | Grade-change queue | HQ | 3 Society records |
 | Not started | D22r | Grade-change request | HQ | 3 Society records |
 | Not started | D24 | Change & access log | HQ | 4 Records and documents |
-| Not started | D21 | Page states | All desktop roles | 2 Homes, lists and national views |
+| Not started | D21 | Page states | All desktop roles | 3 Society records |
 | Not started | D30 | Incidents: open an incident | HQ | 6 Disaster response |
 | Not started | D31 | Live incident | HQ | 6 Disaster response |
 | Not started | D32 | Response actions: assign helping societies | HQ | 6 Disaster response |
 | Not started | D33 | Situation report | HQ | 6 Disaster response |
 | Done | D01e | Sign in: wrong password | All desktop roles | 1 Foundation |
-| Not started | D03 | Map view | HQ | 2 Homes, lists and national views |
-| Not started | D03b | District view | HQ | 2 Homes, lists and national views |
-| Not started | D08 | Membership | HQ | 2 Homes, lists and national views |
+| Done | D03 | Map view | HQ | 2 Homes, lists and national views |
+| Done | D03b | District view | HQ | 2 Homes, lists and national views |
+| Done | D08 | Membership | HQ | 2 Homes, lists and national views |
 | Not started | D11 | Audits and AGM | HQ | 4 Records and documents |
 | Not started | D07 | Programmes and activities | HQ | 5 Activities and work plans |
-| Not started | D18 | Search | HQ | 2 Homes, lists and national views |
+| Done | D18 | Search | HQ | 2 Homes, lists and national views |
 | Not started | D19 | Alerts | HQ | 7 Administration and notifications |
-| Not started | D13 | Requests and tasks | HQ | 2 Homes, lists and national views |
-| Not started | D15 | Reports | HQ | 2 Homes, lists and national views |
+| Done | D13 | Requests and tasks | HQ | 2 Homes, lists and national views |
+| Done | D15 | Reports | HQ | 2 Homes, lists and national views |
 | Not started | D12 | Documents | HQ | 4 Records and documents |
 | Done | D17 | Settings | HQ | 7 Administration and notifications |
 | Not started | D40 | SarvoAI: ask a question | HQ | 8 SarvoAI |
@@ -86,32 +86,32 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | D49f | SarvoAI: no access | SPC, DDM, DM | 8 SarvoAI |
 | Not started | D46h | SarvoAI: how the five-year answer was found | HQ | 8 SarvoAI |
 | Not started | D47h | SarvoAI: how the not-submitted list was found | HQ | 8 SarvoAI |
-| Not started | D02k | Dashboard: map zoomed to Kurunegala | HQ | 2 Homes, lists and national views |
+| Done | D02k | Dashboard: map zoomed to Kurunegala | HQ | 2 Homes, lists and national views |
 | Not started | D02o | Dashboard: two societies at the same place | HQ | 3 Society records |
 | Not started | D02s | Dashboard: society chosen on the map | HQ | 3 Society records |
 | Not started | D02n | Dashboard: societies with no location | HQ | 3 Society records |
-| Not started | D02l | Dashboard: loading | HQ | 2 Homes, lists and national views |
-| Not started | D02e | Dashboard: map could not load | HQ | 2 Homes, lists and national views |
-| Not started | D02x | Dashboard: period with no data yet | HQ | 2 Homes, lists and national views |
-| Not started | SP01 | SPC home | SPC | 3 Society records |
-| Not started | SP02 | SPC: my societies | SPC | 3 Society records |
+| Done | D02l | Dashboard: loading | HQ | 2 Homes, lists and national views |
+| Done | D02e | Dashboard: map could not load | HQ | 2 Homes, lists and national views |
+| Done | D02x | Dashboard: period with no data yet | HQ | 2 Homes, lists and national views |
+| Done | SP01 | SPC home | SPC | 2 Homes, lists and national views |
+| Done | SP02 | SPC: my societies | SPC | 2 Homes, lists and national views |
 | Not started | SP03 | SPC: society record | SPC | 3 Society records |
 | Not started | SP04 | SPC: edit society information | SPC | 3 Society records |
 | Not started | SP05 | SPC: request a grade change | SPC | 3 Society records |
-| Not started | DD01 | DDM home | DDM | 3 Society records |
-| Not started | DD02 | DDM home: temporary district access | DDM | 3 Society records |
-| Not started | DD03 | DDM: my societies | DDM | 3 Society records |
-| Not started | DD04 | DDM: district societies, view only | DDM | 3 Society records |
+| Done | DD01 | DDM home | DDM | 2 Homes, lists and national views |
+| Done | DD02 | DDM home: temporary district access | DDM | 2 Homes, lists and national views |
+| Done | DD03 | DDM: my societies | DDM | 2 Homes, lists and national views |
+| Done | DD04 | DDM: district societies, view only | DDM | 2 Homes, lists and national views |
 | Not started | DD05 | DDM: assigned society record | DDM | 3 Society records |
 | Not started | DD08 | DDM: edit society information | DDM | 3 Society records |
 | Not started | DD09 | DDM: request a grade change | DDM | 3 Society records |
 | Not started | DD06 | DDM: district society, view only | DDM | 3 Society records |
-| Not started | DD07 | DDM: after temporary access ends | DDM | 3 Society records |
-| Not started | DM01 | DM: district overview | DM | 3 Society records |
-| Not started | DM02 | DM: societies | DM | 3 Society records |
+| Done | DD07 | DDM: after temporary access ends | DDM | 2 Homes, lists and national views |
+| Done | DM01 | DM: district overview | DM | 2 Homes, lists and national views |
+| Done | DM02 | DM: societies | DM | 2 Homes, lists and national views |
 | Not started | DM03 | DM: society record, view only | DM | 3 Society records |
-| Not started | DM04 | DM: temporary DDM access | DM | 2 Homes, lists and national views |
-| Not started | DM05 | DM: give temporary access | DM | 2 Homes, lists and national views |
+| Done | DM04 | DM: temporary DDM access | DM | 2 Homes, lists and national views |
+| Done | DM05 | DM: give temporary access | DM | 2 Homes, lists and national views |
 | Not started | IR01 | Live incident (SPC) | SPC | 6 Disaster response |
 | Not started | IR02 | Report an incident (SPC) | SPC | 6 Disaster response |
 | Not started | IR03 | Rapid assessment (SPC) | SPC | 6 Disaster response |
@@ -127,9 +127,9 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | IR03_DM | Rapid assessment (DM) | DM | 6 Disaster response |
 | Not started | IR04_DM | Close incident (DM) | DM | 6 Disaster response |
 | Not started | IR05_DM | Notifications (DM) | DM | 6 Disaster response |
-| Not started | ST01 | Loading | All desktop roles | 2 Homes, lists and national views |
+| Done | ST01 | Loading | All desktop roles | 2 Homes, lists and national views |
 | Not started | ST02 | Empty: no matching societies | All desktop roles | 3 Society records |
-| Not started | ST03 | Error: page could not load | All desktop roles | 2 Homes, lists and national views |
+| Done | ST03 | Error: page could not load | All desktop roles | 2 Homes, lists and national views |
 | Not started | ST04 | No access to this society | All desktop roles | 3 Society records |
 | Not started | SP06 | SPC: activities to approve | SPC | 5 Activities and work plans |
 | Not started | SP07 | SPC: review activity and choose UN SDGs | SPC | 5 Activities and work plans |

@@ -1,14 +1,25 @@
-/** Membership categories as the API stores them (To Confirm against V5, see the PR). */
-export const MEMBERSHIP_LABELS: Record<string, string> = {
-  CHILDREN: "Child Members",
-  YOUTH: "Youth Members",
-  MOTHERS: "Mothers",
-  ORDINARY: "Ordinary Members",
-  ELDERS_COUNCIL: "Elders’ Council",
+"use client";
+
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/messages/en";
+
+/** Membership categories as the API stores them, with their display names. */
+const CATEGORY_KEYS: Record<string, MessageKey> = {
+  CHILDREN: "member.CHILDREN",
+  YOUTH: "member.YOUTH",
+  MOTHERS: "member.MOTHERS",
+  ORDINARY: "member.ORDINARY",
+  ELDERS_COUNCIL: "member.ELDERS_COUNCIL",
 };
 
-/** "Counts only, no personal data · 1,018 of 1,076 societies reported for 2026". */
-export function membershipNote(year: number | null, reported: number, active: number) {
-  if (year === null) return "Counts only, no personal data · no society has entered membership counts yet";
-  return `Counts only, no personal data · ${reported.toLocaleString("en-GB")} of ${active.toLocaleString("en-GB")} active societies reported for ${year} · ${Math.max(0, active - reported).toLocaleString("en-GB")} not submitted`;
+export function useMembershipLabels() {
+  const { t } = useI18n();
+  return {
+    label: (category: string) => (CATEGORY_KEYS[category] ? t(CATEGORY_KEYS[category]) : category),
+    /** "Counts only, no personal data · 1,018 of 1,076 societies reported for 2026". */
+    note: (year: number | null, reported: number, active: number) =>
+      year === null
+        ? t("member.noteNone")
+        : t("member.note", { reported: reported.toLocaleString("en-GB"), active: active.toLocaleString("en-GB"), year, missing: Math.max(0, active - reported).toLocaleString("en-GB") }),
+  };
 }
