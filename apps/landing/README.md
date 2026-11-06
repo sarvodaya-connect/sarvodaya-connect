@@ -8,4 +8,6 @@ npm run dev     # http://localhost:3100
 npm run build   # static site in out/
 ```
 
-Set `NEXT_PUBLIC_DASHBOARD_URL` (see `.env.example`) to change where the **Go to dashboard** button points. It defaults to `https://dashboard.sarvodayaconnect.com`.
+All dashboard links, including the **Go to dashboard** buttons, use `NEXT_PUBLIC_DASHBOARD_URL` (see `.env.example`). It defaults to the current AWS TEST dashboard at `https://main.d2ejee92ehqzxv.amplifyapp.com`.
+
+Set this variable in the landing site's hosting environment to use a different dashboard address, such as a permanent custom domain. The URL is included during the static build, so rebuild and redeploy the landing site after changing it.
