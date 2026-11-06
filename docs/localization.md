@@ -61,6 +61,8 @@ English Title Case (issue #100) is an English rule. Don't apply it to Sinhala or
 - A client component calls `useI18n()`. Never pass `t` or any other function from a server component to a client one; Next.js refuses it at render time, and unit tests do not catch that. `national/links.tsx` shows how to work out the links on the server side instead.
 - Write whole sentences with placeholders. For a styled part inside a sentence use `t.rich("key", { name: <strong>…</strong> })`, so a translation can move it.
 - Text that comes from the API, such as report titles and "needs attention" reasons, stays as sent until the API messages phase.
+- The shared states in `data-states.tsx` (no access, no results, error, conflict, loading) take an optional `t`. Pass the one from `getT()` or `useI18n()`; without it they keep their English defaults. `NoResultsState` also takes a translated `title`.
+- Stored values such as office titles ("President"), seat groups, grades and statuses stay as the API sends them. `src/i18n/society-record.ts` turns them into display labels.
 
 ## Translating a phone screen
 
@@ -68,5 +70,6 @@ English Title Case (issue #100) is an English rule. Don't apply it to Sinhala or
 - For numbers, dates and time left, use the `LocalizedFormat` extension in `lib/src/l10n/l10n_format.dart`: `l.number`, `l.date`, `l.accessEndsAt`, `l.accessTimeLeft` and `l.greeting`. English keeps exactly the text it showed before.
 - For a styled part inside a sentence, pass `styledSlot` as the placeholder's value and build the spans with `styledSpans`, so a translation can move the styled part.
 - When the app, not the server, writes an error message, give the exception a `ClientFailure` and show `l.failure(...)`. Messages the server sends stay as sent until phase 9.
+- Society record labels (offices, seat groups, grades, roles, "today 10:02") come from `RecordL10n` in `lib/src/l10n/record_l10n.dart`. The validators take an optional `AppLocalizations`; without it they stay in English.
 - Long Sinhala and Tamil labels need room: give dropdowns `isExpanded: true` and check the screen at 320 × 568 with 2× text.
 

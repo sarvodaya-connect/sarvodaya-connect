@@ -7,9 +7,10 @@ import type { CommitteeMember, ExcoStatus } from "@sarvodaya-connect/api-contrac
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
+import { useI18n } from "@/i18n/provider";
+import { excoMissing, officeName } from "@/i18n/society-record";
+import { formatDate } from "@/i18n/translate";
 import { excoProgress } from "@/lib/society-record-format";
-
-const dobFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
 const OFFICES = ["President", "Secretary", "Treasurer"];
 const HIDE_AFTER_SECONDS = 30;
@@ -22,6 +23,7 @@ function NicCell({
   masked?: string;
   reveal: () => Promise<{ nic?: string; error?: string }>;
 }) {
+  const { t } = useI18n();
   const [nic, setNic] = useState<string>();
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string>();
@@ -41,14 +43,14 @@ function NicCell({
     return () => clearInterval(timer);
   }, [nic]);
 
-  if (!masked) return <span className="text-muted">Not recorded</span>;
+  if (!masked) return <span className="text-muted">{t("sr.ov.notRecorded")}</span>;
   if (nic) {
     return (
       <span className="inline-flex items-center gap-2">
         <span className="rounded bg-[#fff6d9] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-ink">{nic}</span>
-        <span className="text-[10px] text-warn-text">hides in 0:{String(seconds).padStart(2, "0")}</span>
+        <span className="text-[10px] text-warn-text">{t("sr.ex.hidesIn", { seconds: String(seconds).padStart(2, "0") })}</span>
         <button className="text-[11px] text-brand-leaf underline" onClick={() => setNic(undefined)} type="button">
-          Hide
+          {t("sr.ex.hide")}
         </button>
       </span>
     );
@@ -67,11 +69,11 @@ function NicCell({
           if (result.nic) {
             setNic(result.nic);
             setSeconds(HIDE_AFTER_SECONDS);
-          } else setError(result.error ?? "The NIC could not be shown.");
+          } else setError(result.error ?? t("sr.ex.nicFailed"));
         }}
         type="button"
       >
-        {busy ? "Showing…" : "Show"}
+        {busy ? t("sr.ex.showing") : t("sr.ex.show")}
       </button>
       {error && <span className="text-[10px] text-danger-text" role="alert">{error}</span>}
     </span>
@@ -99,46 +101,52 @@ export function ExcoTable({
   /** The API's completion for this Exco (record.excoStatus). */
   status?: ExcoStatus;
 }) {
+  const { t } = useI18n();
   const active = members
     .filter((member) => member.isActive)
     .sort((a, b) => (a.seatNumber ?? 99) - (b.seatNumber ?? 99));
   const exco = excoProgress(status, members);
+  const dateOfBirth = (value: string) =>
+    formatDate(t.locale, new Date(`${value}T00:00:00Z`), { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
   return (
     <>
       <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#c6e2cd] bg-[#eef6ef] px-3 py-2 text-[11px] text-ink-soft">
         <Icon className="mt-0.5 size-3.5 shrink-0 text-brand-leaf" name="shield" />
         <span>
-          <strong>Personal details.</strong> You can see them because {accessNote}. NIC numbers stay hidden until you
-          choose “Show”, and hide again after {HIDE_AFTER_SECONDS} seconds.
+          {t.rich("sr.ex.personal", {
+            personal: <strong>{t("sr.ex.personalTitle")}</strong>,
+            reason: accessNote,
+            seconds: HIDE_AFTER_SECONDS,
+          })}
         </span>
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <h3 className="text-[15px] font-bold text-ink">{exco.filled} of 25 Exco Seats Filled</h3>
+        <h3 className="text-[15px] font-bold text-ink">{t("sr.ex.seatsFilled", { filled: exco.filled })}</h3>
         <span
           className={`rounded-pill px-2 py-0.5 text-[10px] font-semibold ${
             exco.complete ? "bg-success-bg text-success-text" : "bg-warn-bg text-warn-text"
           }`}
         >
-          {exco.complete ? "✓ Complete" : exco.toFill ? `Incomplete · ${exco.toFill} to fill` : "Incomplete"}
+          {exco.complete ? t("sr.ex.complete") : exco.toFill ? t("sr.ex.incompleteToFill", { count: exco.toFill }) : t("sr.ex.incomplete")}
         </span>
         {editHref && (
           <span className="ml-auto flex flex-wrap gap-2.5">
             <Link className={secondaryButtonClass} href={`${editHref}?focus=offices`}>
               <Icon className="size-4" name="user" strokeWidth={2} />
-              Change office bearers
+              {t("sr.ex.changeOffices")}
             </Link>
             <Link className={primaryButtonClass} href={editHref}>
               <Icon className="size-4" name="clipboard" strokeWidth={2} />
-              {active.length === 0 ? "Add Exco members" : exco.complete ? "Edit Exco" : "Continue the Exco"}
+              {active.length === 0 ? t("sr.ov.addExco") : exco.complete ? t("sr.ex.editExco") : t("sr.ex.continueExco")}
             </Link>
           </span>
         )}
       </div>
       {!exco.complete && active.length > 0 && (
         <div className="mt-3 rounded-lg border border-[var(--warn-ring)] bg-warn-bg px-3 py-2 text-[12px] text-warn-text" role="status">
-          <strong className="block">Still missing</strong>
+          <strong className="block">{t("sr.ex.stillMissing")}</strong>
           <ul className="mt-0.5 list-disc pl-4">
-            {exco.problems.map((problem) => (
+            {excoMissing(t, status, exco.toFill).map((problem) => (
               <li key={problem}>{problem}</li>
             ))}
           </ul>
@@ -146,15 +154,23 @@ export function ExcoTable({
       )}
       {active.length === 0 ? (
         <p className="mt-3 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
-          No Exco members have been entered for this society yet. The Society Officer assigned to it adds the 25 members
-          {editHref ? " and can save them a few at a time." : "."}
+          {editHref ? t("sr.ex.noneEnteredEditable") : t("sr.ex.noneEntered")}
         </p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-card border border-line bg-surface">
           <table className="w-full min-w-[1080px] text-left text-[12.5px]">
             <thead className="bg-surface-muted text-[11.5px] text-ink-soft">
               <tr>
-                {["No.", "Name and office", "NIC", "Date of birth", "Age", "Profession", "Phone", "Address"].map((heading) => (
+                {[
+                  t("sr.ex.colNo"),
+                  t("sr.ex.colNameOffice"),
+                  "NIC",
+                  t("sr.ex.colDob"),
+                  t("sr.ov.colAge"),
+                  t("sr.ov.colProfession"),
+                  t("sr.ex.colPhone"),
+                  t("sr.ov.address"),
+                ].map((heading) => (
                   <th className="px-3 py-2.5 font-semibold first:pl-4" key={heading} scope="col">{heading}</th>
                 ))}
               </tr>
@@ -167,7 +183,7 @@ export function ExcoTable({
                     {member.fullName}
                     {OFFICES.includes(member.position) && (
                       <span className="ml-2 rounded-pill bg-info-bg px-2 py-0.5 text-[9px] font-semibold text-info-text">
-                        ● {member.position}
+                        ● {officeName(t, member.position)}
                       </span>
                     )}
                   </td>
@@ -175,7 +191,7 @@ export function ExcoTable({
                     <NicCell masked={member.nicMasked} reveal={() => revealNic(member.id)} />
                   </td>
                   <td className="px-3 py-2.5 text-ink-soft">
-                    {member.dateOfBirth ? dobFormat.format(new Date(`${member.dateOfBirth}T00:00:00Z`)) : "—"}
+                    {member.dateOfBirth ? dateOfBirth(member.dateOfBirth) : "—"}
                   </td>
                   <td className="px-3 py-2.5 text-ink-soft">{member.age ?? "—"}</td>
                   <td className="px-3 py-2.5 text-ink-soft">{member.profession ?? "—"}</td>
@@ -186,7 +202,7 @@ export function ExcoTable({
             </tbody>
           </table>
           <p className="border-t border-line-soft px-4 py-2 text-[10px] text-muted">
-            {exco.complete ? "Complete: 25 seats and all three office bearers" : `${exco.toFill} of 25 seats still to fill`} · ages are worked out from the date of birth · office bearers are chosen from these members · every NIC shown is recorded in the change &amp; access log.
+            {exco.complete ? t("sr.ex.footerComplete") : t("sr.ex.footerIncomplete", { count: exco.toFill })}
           </p>
         </div>
       )}

@@ -7,6 +7,7 @@ import { useActionState, useState, useTransition } from "react";
 import type { SocietyRecord, StaffOption, StaffOptions } from "@sarvodaya-connect/api-contracts";
 
 import type { RecordFormResult } from "@/app/(dashboard)/societies/[id]/record-actions";
+import { useI18n } from "@/i18n/provider";
 import { submitWithoutReset } from "@/lib/use-form-submit";
 
 import { Icon } from "../icon";
@@ -26,25 +27,24 @@ type Field = {
  * can be submitted and no one mistakes this for a district without staff.
  */
 export function AssignStaffUnavailable({ record }: { record: SocietyRecord }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [retrying, startRetry] = useTransition();
   const close = `/societies/${record.id}`;
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <Link aria-label="Close" className="absolute inset-0 bg-[#1b261f]/45" href={close} />
+      <Link aria-label={t("sr.close")} className="absolute inset-0 bg-[#1b261f]/45" href={close} />
       <aside
         aria-labelledby="assign-staff-heading"
         aria-modal="true"
         className="relative h-full w-full max-w-[560px] overflow-y-auto bg-surface px-6 py-5 shadow-2xl"
         role="dialog"
       >
-        <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign Responsible Staff</h2>
+        <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">{t("sr.as.title")}</h2>
         <p className="text-[12px] text-ink-soft">{record.nameEn} · {record.societyCode}</p>
         <div className="mt-5 rounded-card border border-[#ead9a7] bg-warn-bg px-4 py-3" role="alert">
-          <p className="text-[13px] font-semibold text-warn-text">We Couldn’t Load the Staff Choices</p>
-          <p className="mt-1 text-[12px] text-warn-text">
-            The service is busy. Nothing has been changed, and the current assignments are as they were. Try again in a moment.
-          </p>
+          <p className="text-[13px] font-semibold text-warn-text">{t("sr.as.unavailableTitle")}</p>
+          <p className="mt-1 text-[12px] text-warn-text">{t("sr.as.unavailableBody")}</p>
         </div>
         <div className="mt-4 flex gap-2">
           <button
@@ -53,10 +53,10 @@ export function AssignStaffUnavailable({ record }: { record: SocietyRecord }) {
             onClick={() => startRetry(() => router.refresh())}
             type="button"
           >
-            {retrying ? "Trying again…" : "Try again"}
+            {retrying ? t("sr.as.retrying") : t("n.tryAgain")}
           </button>
           <Link className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft" href={close}>
-            Close
+            {t("sr.close")}
           </Link>
         </div>
       </aside>
@@ -82,11 +82,12 @@ export function AssignStaffPanel({
   options: StaffOptions;
   record: SocietyRecord;
 }) {
+  const { t } = useI18n();
   const close = `/societies/${record.id}`;
   const fields: Field[] = [
-    { name: "deputyId", label: "Deputy District Manager (DDM)", options: options.deputies, hint: "Can view and edit this society." },
-    { name: "coordinatorId", label: "Society Program Coordinator (SPC)", options: options.coordinators, hint: "Can view and edit this society." },
-    { name: "officerId", label: "Society Officer", options: options.officers, hint: "One officer per society. Can view and edit only this society." },
+    { name: "deputyId", label: t("sr.as.deputy"), options: options.deputies, hint: t("sr.as.viewEdit") },
+    { name: "coordinatorId", label: t("sr.as.coordinator"), options: options.coordinators, hint: t("sr.as.viewEdit") },
+    { name: "officerId", label: t("sr.role.societyOfficer"), options: options.officers, hint: t("sr.as.officerHint") },
   ];
   const before = Object.fromEntries(fields.map((field) => [field.name, current(field.options)]));
   const [values, setValues] = useState<Record<string, string>>(before);
@@ -96,7 +97,7 @@ export function AssignStaffPanel({
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <Link aria-label="Close" className="absolute inset-0 bg-[#1b261f]/45" href={close} />
+      <Link aria-label={t("sr.close")} className="absolute inset-0 bg-[#1b261f]/45" href={close} />
       <aside
         aria-labelledby="assign-staff-heading"
         aria-modal="true"
@@ -105,25 +106,25 @@ export function AssignStaffPanel({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">Assign Responsible Staff</h2>
+            <h2 className="text-[18px] font-bold text-ink" id="assign-staff-heading">{t("sr.as.title")}</h2>
             <p className="text-[12px] text-ink-soft">
               {record.nameEn} · {record.societyCode} · {district}
             </p>
           </div>
-          <Link aria-label="Close" className="grid size-8 place-items-center rounded-lg text-ink hover:bg-brand-mint-soft" href={close}>
+          <Link aria-label={t("sr.close")} className="grid size-8 place-items-center rounded-lg text-ink hover:bg-brand-mint-soft" href={close}>
             <Icon className="size-4" name="close" strokeWidth={2} />
           </Link>
         </div>
 
         <form className="mt-5 space-y-4" onSubmit={submitWithoutReset(submit)}>
           <div className="text-[12px] font-semibold text-ink">
-            District Manager (DM)
+            {t("sr.as.dm")}
             <p className="mt-1 rounded-input border border-line bg-surface-muted px-3 py-2.5 text-[12.5px] font-normal">
               {options.districtManagers.length
                 ? options.districtManagers.map((dm) => `${dm.displayName} · ${district}`).join(", ")
-                : `No DM has ${district} yet`}
+                : t("sr.as.noDm", { district })}
             </p>
-            <span className="mt-1 block text-[11px] font-normal text-ink-soft">Views all {district} societies. View only.</span>
+            <span className="mt-1 block text-[11px] font-normal text-ink-soft">{t("sr.as.dmViews", { district })}</span>
           </div>
           {fields.map((field) => {
             const changed = values[field.name] !== before[field.name];
@@ -137,18 +138,20 @@ export function AssignStaffPanel({
                   required
                   value={values[field.name]}
                 >
-                  <option value="">Choose a person</option>
-                  {field.options.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.displayName}
-                      {field.name === "officerId" ? ` · ${option.username}` : ""}
-                      {field.name === "officerId" && !option.assignedHere && option.otherSocieties ? " (moves from another society)" : ""}
-                    </option>
-                  ))}
+                  <option value="">{t("sr.as.choose")}</option>
+                  {field.options.map((option) => {
+                    const name = field.name === "officerId" ? `${option.displayName} · ${option.username}` : option.displayName;
+                    return (
+                      <option key={option.id} value={option.id}>
+                        {field.name === "officerId" && !option.assignedHere && option.otherSocieties ? t("sr.as.moves", { name }) : name}
+                      </option>
+                    );
+                  })}
                 </select>
                 <span className="mt-1 block text-[11px] font-normal text-ink-soft">
-                  {changed && before[field.name] ? `Changing from ${nameOf(field, before[field.name]!)}. ` : ""}
-                  {field.hint}
+                  {changed && before[field.name]
+                    ? t("sr.as.changingFrom", { name: nameOf(field, before[field.name]!) ?? "", hint: field.hint })
+                    : field.hint}
                 </span>
               </label>
             );
@@ -157,16 +160,16 @@ export function AssignStaffPanel({
           <p className="flex gap-2.5 rounded-xl border border-[var(--banner-temporary-line)] bg-[var(--banner-temporary-bg)] px-3.5 py-2.5 text-[12px] text-[var(--banner-temporary-text)]">
             <Icon className="mt-0.5 size-4 shrink-0" name="user" strokeWidth={2} />
             <span>
-              <strong className="block">Person not in the list?</strong>
-              Create an account first, then come back.{" "}
+              <strong className="block">{t("sr.as.notListedTitle")}</strong>
+              {t("sr.as.notListed")}{" "}
               <Link className="font-semibold underline underline-offset-2" href="/accounts">
-                Create an account
+                {t("sr.as.createAccount")}
               </Link>
             </span>
           </p>
           <p className="flex gap-2.5 rounded-xl border border-[var(--banner-edit-line)] bg-[var(--banner-edit-bg)] px-3.5 py-2.5 text-[12px] text-[var(--banner-edit-text)]">
             <Icon className="mt-0.5 size-4 shrink-0" name="clock" strokeWidth={2} />
-            The change is recorded in the society history with your name and the time. Anyone whose access changes is signed out.
+            {t("sr.as.recorded")}
           </p>
 
           {state.error && (
@@ -177,14 +180,14 @@ export function AssignStaffPanel({
 
           <div className="flex gap-2.5">
             <Link className="inline-flex h-[38px] items-center rounded-button border border-button-line px-4 text-[13px] font-semibold text-ink hover:bg-brand-mint-soft" href={close}>
-              Cancel
+              {t("sr.cancel")}
             </Link>
             <button
               className="inline-flex h-[38px] items-center rounded-button bg-brand-action px-4 text-[13px] font-semibold text-white hover:bg-brand-action-pressed disabled:cursor-not-allowed disabled:bg-[#dfe3dd] disabled:text-[#9aa39d]"
               disabled={pending || fields.some((field) => !values[field.name])}
               type="submit"
             >
-              {pending ? "Saving…" : "Save assignments"}
+              {pending ? t("sr.saving") : t("sr.as.save")}
             </button>
           </div>
         </form>

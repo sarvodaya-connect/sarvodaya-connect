@@ -52,6 +52,12 @@ extension LocalizedFormat on AppLocalizations {
   String date(DateTime value) =>
       _date('dd MMM y', value, () => english.formatDate(value));
 
+  /// "6:00 p.m." in the language's own way of writing the time.
+  String clock(DateTime value) => _date('h:mm a', value, () {
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    return '$hour:${value.minute.toString().padLeft(2, '0')} ${value.hour < 12 ? 'a.m.' : 'p.m.'}';
+  });
+
   /// "27 Oct, 8:00 a.m." in Sri Lanka time.
   String accessDateTime(DateTime value) => _date(
     'd MMM, h:mm a',

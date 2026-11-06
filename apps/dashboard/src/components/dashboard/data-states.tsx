@@ -1,7 +1,16 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { ENGLISH } from "@/i18n/english";
+import type { Translator } from "@/i18n/translate";
+
 import { Icon, type IconName } from "./icon";
+
+/*
+ * The shared states take `t` for their default wording. Server components pass
+ * the one from getT(); client components pass the one from useI18n(). Without
+ * it they keep the English defaults, so screens not yet converted are unchanged.
+ */
 
 /** V5 buttons: 38px high, 9px corners, 13px semibold. */
 export const primaryButtonClass =
@@ -15,13 +24,16 @@ export const secondaryButtonClass =
  * hidden from assistive technology; a single status message is announced instead.
  */
 export function TableSkeleton({
-  label = "Loading societies",
+  label,
   rows = 5,
+  t = ENGLISH,
 }: {
   /** Kept for existing callers; V5 skeleton rows have one fixed layout. */
   columns?: number;
+  /** Defaults to "Loading societies". */
   label?: string;
   rows?: number;
+  t?: Translator;
 }) {
   return (
     <div
@@ -30,7 +42,7 @@ export function TableSkeleton({
       className="rounded-card border border-line bg-surface p-4"
       role="status"
     >
-      <span className="sr-only">{label}…</span>
+      <span className="sr-only">{label ?? t("st.loadingSocieties")}…</span>
       <div aria-hidden="true" className="flex flex-col gap-3">
         {Array.from({ length: rows }, (_, row) => (
           <div className="flex items-center gap-2.5" key={row}>
@@ -115,14 +127,16 @@ export function EmptyState({
  * so staff can report it.
  */
 export function ErrorState({
-  description = "The connection to the server dropped. Nothing you entered was lost.",
+  t = ENGLISH,
+  description = t("st.errorBody"),
   onRetry,
   reference,
-  referenceLabel = "Reference",
-  retryLabel = "Try again",
+  referenceLabel = t("st.reference"),
+  retryLabel = t("n.tryAgain"),
   secondaryAction,
-  title = "We Couldn’t Load This Page",
+  title = t("st.errorTitle"),
 }: {
+  t?: Translator;
   description?: string;
   onRetry: () => void;
   reference?: string;
@@ -175,16 +189,16 @@ export function SuccessState({
 }
 
 /** Conflict state shown when a record changed after it was opened. */
-export function ConflictState({ onReload }: { onReload: () => void }) {
+export function ConflictState({ onReload, t = ENGLISH }: { onReload: () => void; t?: Translator }) {
   return (
     <StateLayout
-      actions={<button className={secondaryButtonClass} onClick={onReload} type="button">Reload record</button>}
+      actions={<button className={secondaryButtonClass} onClick={onReload} type="button">{t("st.reload")}</button>}
       icon="conflict"
       role="alert"
-      title="This Record Was Updated Elsewhere"
+      title={t("st.conflictTitle")}
       tone="grey"
     >
-      <p>Your changes have not been saved. Reload the latest version before continuing.</p>
+      <p>{t("st.conflictBody")}</p>
     </StateLayout>
   );
 }
@@ -196,11 +210,17 @@ export function ConflictState({ onReload }: { onReload: () => void }) {
  * data as well; this is only what the viewer sees.
  */
 export function NoAccessState({
-  action = <Link className={secondaryButtonClass} href="/dashboard">Back to overview</Link>,
-  description = "Your role cannot open it. Ask HQ if you think you need it.",
+  t = ENGLISH,
+  action = (
+    <Link className={secondaryButtonClass} href="/dashboard">
+      {t("st.backToOverview")}
+    </Link>
+  ),
+  description = t("st.noAccessBody"),
   heading = "h2",
-  title = "You Don’t Have Access to This Page",
+  title = t("st.noAccessTitle"),
 }: {
+  t?: Translator;
   action?: ReactNode;
   description?: string;
   heading?: "h1" | "h2";
@@ -225,21 +245,27 @@ export function NoResultsState({
   itemLabel,
   onClearAll,
   onRemoveFilter,
+  t = ENGLISH,
+  title,
 }: {
   filters: ActiveFilter[];
+  /** English only: builds "No Societies Match" where no translated title is given. */
   itemLabel: string;
   onClearAll: () => void;
   onRemoveFilter: (id: string) => void;
+  t?: Translator;
+  /** The heading in the chosen language, for example t("st.noResultsSocieties"). */
+  title?: string;
 }) {
   return (
     <StateLayout
-      actions={<button className={primaryButtonClass} onClick={onClearAll} type="button">Clear all filters</button>}
+      actions={<button className={primaryButtonClass} onClick={onClearAll} type="button">{t("st.clearAll")}</button>}
       icon="search"
-      title={`No ${itemLabel.charAt(0).toUpperCase()}${itemLabel.slice(1)} Match`}
+      title={title ?? `No ${itemLabel.charAt(0).toUpperCase()}${itemLabel.slice(1)} Match`}
     >
-      <p>Try a different search term, or remove one of the filters below.</p>
+      <p>{t("st.noResultsBody")}</p>
       {filters.length > 0 && (
-        <ul aria-label="Active Filters" className="mt-3 flex flex-wrap justify-center gap-2">
+        <ul aria-label={t("st.activeFilters")} className="mt-3 flex flex-wrap justify-center gap-2">
           {filters.map((filter) => (
             <li
               className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0d1] bg-brand-mint-soft py-1 pl-3 pr-1 text-xs text-[#2f4a39]"
@@ -248,7 +274,7 @@ export function NoResultsState({
               <span className="font-semibold">{filter.label}:</span>
               <span>{filter.value}</span>
               <button
-                aria-label={`Remove ${filter.label} filter`}
+                aria-label={t("st.removeFilter", { label: filter.label })}
                 className="grid size-6 place-items-center rounded-full text-[#4d6455] transition hover:bg-[#e1ece2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
                 onClick={() => onRemoveFilter(filter.id)}
                 type="button"
