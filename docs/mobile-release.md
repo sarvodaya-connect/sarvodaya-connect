@@ -10,6 +10,7 @@ The app reads two compile-time values (`--dart-define`):
 |---|---|---|---|
 | `API_BASE_URL` | Config | **none** | The API, e.g. `https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/api/v1`. A release build without it, or with an address that is not `https://`, opens a "This app is not set up yet" screen and never signs in. |
 | `SC_DEMO_MODE` | Config | `false` | Fictional demonstration data and the demo account. On by default only in debug builds and tests. Never set it to `true` for a store build. |
+| `SC_SHOW_UNREVIEWED_TRANSLATIONS` | Config | `false` | Offers Sinhala and Tamil before a native speaker approves them, for translation review only (`docs/localization.md`). On by default only in debug builds |
 | `AUTH_PROVIDER` | Config | `cognito` | `cognito` signs in with the Sarvodaya user pool. `local` (the API's development passwords) is the debug default and is refused in release builds. |
 | `COGNITO_USER_POOL_ID` | Config | **none** | e.g. `ap-southeast-1_AbC123xyZ`. Without it, or `COGNITO_CLIENT_ID`, a release build opens "This app is not set up yet". |
 | `COGNITO_CLIENT_ID` | Config | **none** | The phone's public app client (no client secret). |

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/app_language.dart';
 import '../models/user.dart';
 import '../state/demo_store.dart';
@@ -19,9 +20,12 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
     final user = store.user!;
+    final l10n = context.l10n;
+    // The translation decides what goes around the brand, and the brand stays whole.
+    final askAround = l10n.moreAsk('\u0000').split('\u0000');
     return Scaffold(
       appBar: AppBar(
-        title: const Text('More'),
+        title: Text(l10n.moreTitle),
         actions: [
           if (store.isDemo)
             IconButton(
@@ -53,24 +57,25 @@ class MoreScreen extends StatelessWidget {
                   color: Color(0xFFF3C44E),
                 ),
                 title: Text.rich(
-                  const TextSpan(
+                  TextSpan(
                     children: [
-                      TextSpan(text: 'Ask Sarvo'),
-                      TextSpan(
+                      TextSpan(text: '${askAround.first}Sarvo'),
+                      const TextSpan(
                         text: 'AI',
                         style: TextStyle(color: Color(0xFFF0A040)),
                       ),
+                      TextSpan(text: askAround.last),
                     ],
                   ),
-                  semanticsLabel: 'Ask SarvoAI',
+                  semanticsLabel: l10n.moreAskSemantic,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                subtitle: const Text(
-                  'Questions about societies and yearly figures · HQ only',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                subtitle: Text(
+                  l10n.moreAskSubtitle,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.white),
                 onTap: () => Navigator.of(context).push(
@@ -110,7 +115,7 @@ class MoreScreen extends StatelessWidget {
                   ),
                 ),
                 subtitle: Text(
-                  _scopeLabel(store, user),
+                  _scopeLabel(l10n, store, user),
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: AppColors.muted,
@@ -124,17 +129,17 @@ class MoreScreen extends StatelessWidget {
             children: [
               _MenuRow(
                 icon: Icons.language,
-                title: 'Language',
-                trailing: store.selectedLanguage.englishLabel,
+                title: l10n.moreLanguage,
+                trailing: store.selectedLanguage.nativeLabel,
                 onTap: () => _chooseLanguage(context),
               ),
               _MenuRow(
                 icon: Icons.notifications_none,
-                title: 'Notifications',
+                title: l10n.moreNotifications,
                 chevron: true,
                 trailing: store.unreadNotificationCount == 0
                     ? null
-                    : '${store.unreadNotificationCount} unread',
+                    : l10n.moreUnread(store.unreadNotificationCount),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const NotificationsScreen(),
@@ -143,7 +148,7 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.health_and_safety_outlined,
-                title: 'Disaster Response',
+                title: l10n.moreDisasterResponse,
                 chevron: true,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -153,19 +158,17 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.help_outline,
-                title: 'Help and HQ Contact',
+                title: l10n.moreHelp,
                 chevron: true,
                 onTap: () => showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Need Help?'),
-                    content: const Text(
-                      'Contact your District Centre if your account, society assignment or submitted information is incorrect.',
-                    ),
+                    title: Text(context.l10n.moreNeedHelp),
+                    content: Text(context.l10n.moreHelpBody),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
+                        child: Text(context.l10n.moreClose),
                       ),
                     ],
                   ),
@@ -173,8 +176,8 @@ class MoreScreen extends StatelessWidget {
               ),
               _MenuRow(
                 icon: Icons.logout,
-                title: 'Sign Out',
-                subtitle: 'Back to the sign-in screen',
+                title: l10n.moreSignOut,
+                subtitle: l10n.moreSignOutSubtitle,
                 danger: true,
                 last: true,
                 onTap: store.signOut,
@@ -187,21 +190,21 @@ class MoreScreen extends StatelessWidget {
   }
 
   /// V5 M17: "Society Program Coordinator (SPC) · 12 societies".
-  static String _scopeLabel(DemoStore store, AuthenticatedUser user) {
-    final societies = user.societyIds.length;
-    final count = '$societies ${societies == 1 ? 'society' : 'societies'}';
+  static String _scopeLabel(
+    AppLocalizations l10n,
+    DemoStore store,
+    AuthenticatedUser user,
+  ) {
+    final count = l10n.scopeSocieties(user.societyIds.length);
     return switch (user.primaryRole) {
       // The store's society is fictional, so only a demonstration shows it.
-      UserRole.societyOfficer =>
-        store.isDemo
-            ? 'Society Officer · ${store.society.nameEn}'
-            : 'Society Officer · $count',
-      UserRole.programmeCoordinator =>
-        'Society Program Coordinator (SPC) · $count',
-      UserRole.deputyDistrictManager =>
-        'Deputy District Manager (DDM) · $count',
-      UserRole.districtManager => 'District Manager (DM) · view only',
-      UserRole.hqAdmin => 'HQ · National',
+      UserRole.societyOfficer => l10n.scopeOfficerSociety(
+        store.isDemo ? store.society.nameEn : count,
+      ),
+      UserRole.programmeCoordinator => '${l10n.roleSpc} · $count',
+      UserRole.deputyDistrictManager => '${l10n.roleDdm} · $count',
+      UserRole.districtManager => l10n.roleDmViewOnly,
+      UserRole.hqAdmin => l10n.roleHqNational,
     };
   }
 
@@ -233,13 +236,13 @@ class MoreScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(
+              ListTile(
                 title: Text(
-                  'Choose Language',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  context.l10n.languageChooseSheet,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              for (final language in AppLanguage.values)
+              for (final language in store.languages)
                 RadioListTile<AppLanguage>(
                   value: language,
                   title: Text(language.nativeLabel),
