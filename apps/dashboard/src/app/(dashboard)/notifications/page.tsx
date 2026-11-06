@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { EmptyState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Icon, type IconName } from "@/components/dashboard/icon";
-import { Pagination, first } from "@/components/dashboard/national/parts";
+import { Pagination } from "@/components/dashboard/national/links";
+import { first } from "@/components/dashboard/national/format";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { type Alert, getAlerts } from "@/lib/national-api";
 

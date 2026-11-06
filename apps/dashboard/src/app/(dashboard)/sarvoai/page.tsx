@@ -1,4 +1,4 @@
-import { first } from "@/components/dashboard/national/parts";
+import { first } from "@/components/dashboard/national/format";
 import { SarvoAiChat } from "@/components/dashboard/sarvoai/sarvoai-chat";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { isDemoMode } from "@/lib/platform-api";

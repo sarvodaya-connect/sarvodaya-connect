@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { MySocieties } from "@/components/dashboard/role-home/my-societies";
+import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { getHomeSocieties } from "@/lib/home-api";
 import { parseSocietyFilters } from "@/lib/home-format";
@@ -18,5 +19,5 @@ export default async function MySocietiesPage({ searchParams }: PageProps<"/my-s
     if (filters.scope !== "DISTRICT" || !(error instanceof Error) || !/ended/i.test(error.message)) throw error;
     redirect("/my-societies");
   }
-  return <MySocieties filters={filters} list={list} role={viewer.role === "SYSTEM_ADMIN" ? undefined : viewer.role} />;
+  return <MySocieties filters={filters} list={list} t={await getT()} role={viewer.role === "SYSTEM_ADMIN" ? undefined : viewer.role} />;
 }

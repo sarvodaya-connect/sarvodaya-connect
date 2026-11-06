@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import { primaryButtonClass } from "@/components/dashboard/data-states";
-import { Breadcrumb, PageTitle, SampleBadge, YearLinks, count, first, share } from "@/components/dashboard/national/parts";
+import { Breadcrumb, PageTitle, SampleBadge } from "@/components/dashboard/national/parts";
+import { YearLinks } from "@/components/dashboard/national/links";
+import { count, first, share } from "@/components/dashboard/national/format";
 import { SdgChips } from "@/components/dashboard/sdg/sdg-chip";
 import { DataTable, Tbody, Td, Th, Thead, Tr } from "@/components/dashboard/ui/data-table";
 import { DIMENSION_LABELS, approvedLabel, selectableStartYears } from "@/lib/activity-format";

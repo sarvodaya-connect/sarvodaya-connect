@@ -4,17 +4,19 @@ import type { SearchResultType } from "@sarvodaya-connect/api-contracts";
 
 import { EmptyState } from "@/components/dashboard/data-states";
 import { Icon, type IconName } from "@/components/dashboard/icon";
-import { first } from "@/components/dashboard/national/parts";
+import { first } from "@/components/dashboard/national/format";
 import { Pill, type PillTone } from "@/components/dashboard/ui/pill";
+import type { MessageKey } from "@/i18n/messages/en";
+import { getT } from "@/i18n/server";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { searchRecords } from "@/lib/national-api";
 
-const TYPES: { key: SearchResultType; label: string; icon: IconName }[] = [
-  { key: "society", label: "Societies", icon: "home" },
-  { key: "person", label: "People", icon: "user" },
-  { key: "document", label: "Documents", icon: "document" },
-  { key: "activity", label: "Activities", icon: "clipboard" },
-  { key: "request", label: "Requests", icon: "flag" },
+const TYPES: { key: SearchResultType; label: MessageKey; icon: IconName }[] = [
+  { key: "society", label: "home.societies", icon: "home" },
+  { key: "person", label: "q.people", icon: "user" },
+  { key: "document", label: "q.documents", icon: "document" },
+  { key: "activity", label: "q.activities", icon: "clipboard" },
+  { key: "request", label: "q.requests", icon: "flag" },
 ];
 
 function tone(status: string): PillTone {
@@ -27,6 +29,7 @@ function tone(status: string): PillTone {
 /** V5 D18 Search: what the user may open, from approved records. NICs and phone numbers are never searched. */
 export default async function SearchPage({ searchParams }: PageProps<"/search">) {
   await getCurrentViewer();
+  const t = await getT();
   const params = await searchParams;
   const query = (first(params.q) ?? "").trim();
   const type = TYPES.find((item) => item.key === first(params.type))?.key;
@@ -36,38 +39,38 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
   return (
     <>
-      <h1 className="text-[22px] font-bold text-ink">Search</h1>
-      <p className="text-[12px] text-ink-soft">Societies, people, documents, activities and requests · approved records only</p>
+      <h1 className="text-[22px] font-bold text-ink">{t("s.filterSearch")}</h1>
+      <p className="text-[12px] text-ink-soft">{t("q.description")}</p>
       <form className="mt-4" method="get" role="search">
-        <label className="sr-only" htmlFor="search-query">Search</label>
+        <label className="sr-only" htmlFor="search-query">{t("s.filterSearch")}</label>
         <div className="flex items-center gap-2 rounded-card border-2 border-brand-forest bg-surface px-4 py-3">
           <Icon className="size-4 text-ink-soft" name="search" />
-          <input autoFocus className="flex-1 bg-transparent text-[14px] text-ink outline-none" defaultValue={query} id="search-query" minLength={2} name="q" placeholder="A name, S number, district or person" />
+          <input autoFocus className="flex-1 bg-transparent text-[14px] text-ink outline-none" defaultValue={query} id="search-query" minLength={2} name="q" placeholder={t("q.placeholder")} />
         </div>
       </form>
 
       {!results ? (
         <div className="mt-4">
-          <EmptyState description="Type at least two letters: a society name, S number, district or person." icon="search" title="Search the Records You Can Open" />
+          <EmptyState description={t("q.startHelp")} icon="search" title={t("q.startTitle")} />
         </div>
       ) : (
         <>
-          <nav aria-label="Result Types" className="mt-4 flex flex-wrap gap-2">
+          <nav aria-label={t("q.types")} className="mt-4 flex flex-wrap gap-2">
             <Link aria-current={!type ? "page" : undefined} className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold ${!type ? "border-brand-forest bg-brand-forest text-white" : "border-line bg-surface text-ink"}`} href={href()}>
-              All ({total})
+              {t("q.all", { count: total })}
             </Link>
             {TYPES.map((item) => (
               <Link aria-current={type === item.key ? "page" : undefined} className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold ${type === item.key ? "border-brand-forest bg-brand-forest text-white" : "border-line bg-surface text-ink"}`} href={href(item.key)} key={item.key}>
-                {item.label} ({results.counts[item.key]})
+                {t(item.label)} ({results.counts[item.key]})
               </Link>
             ))}
           </nav>
           <p className="mt-3 text-[11px] text-muted" role="status">
-            {total} {total === 1 ? "result" : "results"} for “{results.query}”{results.data.length < (type ? results.counts[type] : total) ? ` · showing the first ${results.data.length}` : ""}
+            {t.plural("q.results", total, { query: results.query })}{results.data.length < (type ? results.counts[type] : total) ? t("q.showingFirst", { count: results.data.length }) : ""}
           </p>
           {results.data.length === 0 ? (
             <div className="mt-3">
-              <EmptyState description="Try a name, S number, district or person. Only records you can open are searched." icon="search" title="No Results" />
+              <EmptyState description={t("q.noneHelp")} icon="search" title={t("q.none")} />
             </div>
           ) : (
             <ul className="mt-2 divide-y divide-line-soft rounded-card border border-line bg-surface">
@@ -91,7 +94,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       )}
       <p className="mt-4 flex items-center gap-2 rounded-lg border border-line bg-[#f4f5f1] px-3 py-2 text-[11px] text-ink-soft">
         <Icon className="size-3.5" name="help" />
-        NIC numbers, phone numbers and addresses are never searched or shown here.
+        {t("q.privacy")}
       </p>
     </>
   );

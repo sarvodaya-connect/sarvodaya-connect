@@ -23,8 +23,8 @@ const CATALOGS: Record<Locale, Messages> = { en, si, ta };
 const keys = Object.keys(en) as MessageKey[];
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 
-/** Same in every language on purpose: brand names. */
-const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["shell.sarvoai"]);
+/** Same in every language on purpose: brand names, acronyms and pure placeholders. */
+const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "shell.sarvoai"]);
 
 describe.each(["si", "ta"] as const)("the %s catalog", (locale) => {
   const catalog = CATALOGS[locale];
@@ -45,6 +45,15 @@ describe.each(["si", "ta"] as const)("the %s catalog", (locale) => {
   it.each(["Sarvodaya Connect", "HQ", "SPC", "DDM"])("keeps %s where the English has it, except where a reviewed term replaces it", (brand) => {
     const dropped = keys.filter((key) => en[key].includes(brand) && !catalog[key].includes(brand) && !/මූලස්ථාන|தலைமையக/.test(catalog[key]));
     expect(dropped).toEqual([]);
+  });
+});
+
+describe("sentences with styled parts", () => {
+  it("lets a translation move the styled part", () => {
+    const t = createTranslator({ ...en, "ms.accessDm": "{scope} ඔබේ ප්‍රවේශය" }, "si");
+    const { container } = render(<p>{t.rich("ms.accessDm", { scope: <strong>x</strong> })}</p>);
+    expect(container.querySelector("strong")).toHaveTextContent("x");
+    expect(container.firstChild?.firstChild).toBe(container.querySelector("strong"));
   });
 });
 
