@@ -124,7 +124,14 @@ class FoundationSafety(unittest.TestCase):
             self.assertEqual(statement['Effect'], 'Deny')
             self.assertEqual(statement['Condition']['Bool']['aws:SecureTransport'], 'false')
         cors = self.resources['Documents']['Properties']['CorsConfiguration']['If'][1]['CorsRules'][0]
-        self.assertEqual(cors['AllowedOrigins'], [{'Ref': 'DashboardOrigin'}])
+        self.assertEqual(cors['AllowedOrigins'], {'Split': [',', {'Ref': 'DashboardOrigin'}]})
+        pattern = re.compile(self.template['Parameters']['DashboardOrigin']['AllowedPattern'])
+        for origin in ['', 'https://dashboard.sarvodayaconnect.com',
+                       'https://dashboard.sarvodayaconnect.com,https://main.d2ejee92ehqzxv.amplifyapp.com']:
+            self.assertTrue(pattern.fullmatch(origin), origin)
+        for origin in ['*', 'http://dashboard.sarvodayaconnect.com', 'https://a.example, https://b.example',
+                       'https://dashboard.sarvodayaconnect.com/', 'https://a.example,']:
+            self.assertFalse(pattern.fullmatch(origin), origin)
         self.assertIn('x-amz-checksum-sha256', cors['AllowedHeaders'])
 
     def test_cognito_admin_only_public_clients_no_users(self):

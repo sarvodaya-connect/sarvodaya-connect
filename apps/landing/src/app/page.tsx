@@ -5,7 +5,7 @@ import { HeroScrubFrames } from "./hero-scrub";
 
 const DASHBOARD_URL =
   process.env.NEXT_PUBLIC_DASHBOARD_URL?.trim() ||
-  "https://main.d2ejee92ehqzxv.amplifyapp.com";
+  "https://dashboard.sarvodayaconnect.com";
 const CONTACT_EMAIL = "info@sarvodayaconnect.com";
 
 const navLinks = [
