@@ -5,7 +5,8 @@ import '../incidents/incident_screens.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../models/user.dart';
-import '../national/national_screens.dart' show GradeBadge;
+import '../national/national_screens.dart'
+    show GradeBadge, NationalActivitiesScreen;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
@@ -206,8 +207,10 @@ class _LoaderState<T> extends State<_Loader<T>> {
           tone: StateTone.error,
           isAlert: true,
           primaryLabel: l.commonTryAgain,
-          onPrimary: () =>
-              setState(() => _future = widget.load(DemoScope.of(context).home)),
+          // A block body: setState refuses a callback that returns the Future.
+          onPrimary: () => setState(() {
+            _future = widget.load(DemoScope.of(context).home);
+          }),
         );
       }
       return widget.builder(context, snapshot.data as T);
@@ -748,6 +751,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          const _ProgrammesLink(district: true),
+          const SizedBox(height: 12),
           _Card(
             title: l.homeTempAccessTitle,
             trailing: home.temporaryAccess.isEmpty
@@ -858,6 +863,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ),
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _ProgrammesLink(district: false),
+          const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: [
               ButtonSegment(
@@ -907,6 +914,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             ),
           ]),
           const SizedBox(height: 12),
+          const _ProgrammesLink(district: false),
+          const SizedBox(height: 12),
           _SocietyList(
             showScope: false,
             searchHint: l.homeSearchMine(home.total),
@@ -937,6 +946,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
             ),
             const SizedBox(height: 12),
           ],
+          const _ProgrammesLink(district: false),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -967,6 +978,39 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const _SocietyList(showScope: false),
         ];
     }
+  }
+}
+
+/// Issue #117: M64 Programmes & Activities over the role's own societies.
+class _ProgrammesLink extends StatelessWidget {
+  const _ProgrammesLink({required this.district});
+
+  /// A DM's line names the district; the others name their societies.
+  final bool district;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.eco_outlined, color: AppColors.leaf),
+        title: Text(
+          l.progHomeLink,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          district ? l.progHomeLinkDistrict : l.progHomeLinkAssigned,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () =>
+            _open(context, const NationalActivitiesScreen(scoped: true)),
+      ),
+    );
   }
 }
 
