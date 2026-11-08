@@ -14,6 +14,39 @@ import {
 const int = (value: unknown) => Number(value ?? 0);
 
 /**
+ * Issue #117: the societies a DM, DDM or SPC may count. Whole districts (a
+ * DM's own, or a DDM's while a temporary grant is valid) and named societies
+ * (assignments). Both empty means nothing at all.
+ */
+export interface SocietyScope {
+  districtIds: string[];
+  societyIds: string[];
+}
+
+/** `a` is the work_plan_activities alias. */
+function activityInScope(within: SocietyScope) {
+  const parts = [
+    within.districtIds.length
+      ? Prisma.sql`s.district_id = ANY(${within.districtIds}::uuid[])`
+      : null,
+    within.societyIds.length
+      ? Prisma.sql`s.id = ANY(${within.societyIds}::uuid[])`
+      : null,
+  ].filter((part) => part !== null);
+  if (!parts.length) return Prisma.sql`FALSE`;
+  return Prisma.sql`a.society_id IN (SELECT s.id FROM societies s WHERE ${Prisma.join(parts, ' OR ')})`;
+}
+
+function societyWhere(within: SocietyScope): Prisma.SocietyWhereInput {
+  return {
+    OR: [
+      { districtId: { in: within.districtIds } },
+      { id: { in: within.societyIds } },
+    ],
+  };
+}
+
+/**
  * PostgreSQL access for the national figures. Every count is a grouped query
  * over all societies, never a loop over them, so the cost does not grow with
  * the number of requests a page makes.
@@ -145,9 +178,15 @@ export class NationalRepository {
     };
   }
 
-  /** Approved activities in the financial year by dimension and sector, and UN SDGs. */
-  async activities(startYear: number, now = new Date()) {
-    const scope = approvedInYear(startYear);
+  /**
+   * Approved activities in the financial year by dimension and sector, and UN
+   * SDGs. `within` limits them to some societies (issue #117); without it the
+   * figures are national, for HQ.
+   */
+  async activities(startYear: number, now = new Date(), within?: SocietyScope) {
+    const scope = within
+      ? Prisma.sql`${approvedInYear(startYear)} AND ${activityInScope(within)}`
+      : approvedInYear(startYear);
     const done = completed(now);
     const [dimensions, sectors, sdgs] = await this.run(() =>
       Promise.all([
@@ -182,10 +221,14 @@ export class NationalRepository {
     return { dimensions, sectors, sdgs };
   }
 
-  recentApprovedActivities(limit: number) {
+  recentApprovedActivities(limit: number, within?: SocietyScope) {
     return this.run(() =>
       this.prisma.workPlanActivity.findMany({
-        where: { status: 'APPROVED', reviewedAt: { not: null } },
+        where: {
+          status: 'APPROVED',
+          reviewedAt: { not: null },
+          ...(within ? { society: societyWhere(within) } : {}),
+        },
         include: {
           sdgs: { orderBy: { sdg: 'asc' } },
           society: { select: { id: true, nameEn: true } },
@@ -194,6 +237,21 @@ export class NationalRepository {
         take: limit,
       }),
     );
+  }
+
+  /** Issue #117: how many societies, and which districts, a scope covers. */
+  async scopeSummary(within: SocietyScope) {
+    const [societies, districts] = await this.run(() =>
+      Promise.all([
+        this.prisma.society.count({ where: societyWhere(within) }),
+        this.prisma.district.findMany({
+          where: { id: { in: within.districtIds } },
+          select: { id: true, nameEn: true },
+          orderBy: { nameEn: 'asc' },
+        }),
+      ]),
+    );
+    return { societies, districts };
   }
 
   async finance(startYear: number) {
