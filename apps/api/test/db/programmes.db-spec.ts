@@ -351,4 +351,54 @@ describe('Issue #117 scoped Programmes & Activities (PostgreSQL)', () => {
     await grant(-6, -1);
     await assignedOnly();
   });
+
+  it('lists only recent activities in the chosen financial year, as the totals count them', async () => {
+    // April to March: March of the next calendar year is in the year; April of
+    // it, and March of the start year, are not. Approved most recently, so
+    // they would top the list without the year filter.
+    const rows = await Promise.all(
+      (
+        [
+          ['Fictional March close', fy + 1, 3],
+          ['Fictional next year start', fy + 1, 4],
+          ['Fictional last year end', fy, 3],
+        ] as const
+      ).map(([name, year, month]) =>
+        db.workPlanActivity.create({
+          data: {
+            societyId: society.n1,
+            year,
+            month,
+            name: `${name} ${suffix}`,
+            description: 'Fictional',
+            sector: 'Community education',
+            allocatedCost: '1000',
+            dimension: 'SOCIAL',
+            status: 'APPROVED',
+            reviewedAt: new Date(Date.now() + HOUR),
+            reviewedByName: 'Fictional SPC',
+          },
+        }),
+      ),
+    );
+    try {
+      const body = await programmes('dmNorth');
+      expect(body).toMatchObject({ planned: 3 });
+      expect(shown(body)).toEqual([
+        'Fictional clinic day',
+        'Fictional March close',
+        'Fictional youth camp',
+      ]);
+      const national = (
+        await get(`/national/programmes?year=${fy}`, 'hq').expect(200)
+      ).body;
+      expect(JSON.stringify(national.recent)).not.toMatch(
+        /Fictional (next year start|last year end)/,
+      );
+    } finally {
+      await db.workPlanActivity.deleteMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+      });
+    }
+  });
 });

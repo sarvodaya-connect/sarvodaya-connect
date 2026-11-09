@@ -221,12 +221,25 @@ export class NationalRepository {
     return { dimensions, sectors, sdgs };
   }
 
-  recentApprovedActivities(limit: number, within?: SocietyScope) {
+  /**
+   * The latest approved activities in the financial year, by the same April to
+   * March rule as `approvedInYear`, so the list never shows an activity the
+   * year's totals leave out.
+   */
+  recentApprovedActivities(
+    startYear: number,
+    limit: number,
+    within?: SocietyScope,
+  ) {
     return this.run(() =>
       this.prisma.workPlanActivity.findMany({
         where: {
           status: 'APPROVED',
           reviewedAt: { not: null },
+          OR: [
+            { year: startYear, month: { gte: 4 } },
+            { year: startYear + 1, month: { lt: 4 } },
+          ],
           ...(within ? { society: societyWhere(within) } : {}),
         },
         include: {

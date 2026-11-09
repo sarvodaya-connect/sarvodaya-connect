@@ -334,7 +334,11 @@ export class NationalService {
   ) {
     const [activities, recent] = await Promise.all([
       this.repository.activities(startYear, now, within),
-      this.repository.recentApprovedActivities(RECENT_ACTIVITIES, within),
+      this.repository.recentApprovedActivities(
+        startYear,
+        RECENT_ACTIVITIES,
+        within,
+      ),
     ]);
     const planned = activities.sectors.reduce(
       (sum, row) => sum + row.planned,

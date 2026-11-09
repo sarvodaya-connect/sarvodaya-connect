@@ -175,7 +175,7 @@ describe('Issue #117 scoped programme figures', () => {
     const result = await service(repo).scopedProgrammes(active, 2025, now);
     const within = { districtIds: [NORTH], societyIds: [SUNRISE] };
     expect(repo.activities).toHaveBeenCalledWith(2025, now, within);
-    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(6, within);
+    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(2025, 6, within);
     expect(repo.scopeSummary).toHaveBeenCalledWith(within);
     expect(result).toMatchObject({
       financialYear: { startYear: 2025 },
@@ -221,6 +221,10 @@ describe('Issue #117 scoped programme figures', () => {
     const repo = repository();
     await service(repo).programmes(2025, now);
     expect(repo.activities).toHaveBeenCalledWith(2025, now, undefined);
-    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(6, undefined);
+    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(
+      2025,
+      6,
+      undefined,
+    );
   });
 });
