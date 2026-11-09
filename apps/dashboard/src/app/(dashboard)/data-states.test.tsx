@@ -23,23 +23,23 @@ describe("Dashboard route states", () => {
   it("shows a safe error message, a reference and recovery actions", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const user = userEvent.setup();
-    const retry = vi.fn();
     const error = Object.assign(new Error("connection to db-internal-01 refused"), { digest: "4021984" });
 
     const reset = vi.fn();
 
-    render(<DashboardError error={error} reset={reset} retry={retry} />);
+    render(<DashboardError error={error} reset={reset} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("We Couldn't Load This Page");
     expect(screen.queryByText(/db-internal-01/)).not.toBeInTheDocument();
     expect(screen.getByText("4021984")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to societies" })).toHaveAttribute("href", "/societies");
 
+    // Next.js passes only `error` and `reset`; Try again must use reset.
     await user.click(screen.getByRole("button", { name: "Try again" }));
-    expect(retry).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("link", { name: "Back to societies" }));
     expect(push).toHaveBeenCalledWith("/societies");
-    expect(reset).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenCalledTimes(2);
   });
 });
