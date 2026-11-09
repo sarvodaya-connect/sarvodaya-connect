@@ -659,5 +659,6 @@
   "adminLater": "பின்னர்",
   "adminSaveAssignments": "ஒதுக்கீடுகளைச் சேமி",
   "adminLocationAt": "வரைபட இடம் {location}",
-  "adminCreated": "{name} உருவாக்கப்பட்டது"
+  "adminCreated": "{name} உருவாக்கப்பட்டது",
+  "homeAccessNational": "உங்கள் அணுகல்: நாடு முழுவதுமுள்ள அனைத்து சங்கங்களும் · பார்க்கவும் திருத்தவும்"
 }

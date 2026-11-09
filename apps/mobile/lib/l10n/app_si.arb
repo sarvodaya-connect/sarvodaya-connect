@@ -659,5 +659,6 @@
   "adminLater": "පසුව",
   "adminSaveAssignments": "පැවරීම් සුරකින්න",
   "adminLocationAt": "සිතියම් ස්ථානය {location}",
-  "adminCreated": "{name} සාදන ලදී"
+  "adminCreated": "{name} සාදන ලදී",
+  "homeAccessNational": "ඔබගේ ප්‍රවේශය: දිවයින පුරා සියලු සමිති · බැලීම සහ සංස්කරණය"
 }

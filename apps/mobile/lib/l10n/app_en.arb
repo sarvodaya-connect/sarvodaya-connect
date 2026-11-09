@@ -1954,5 +1954,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "homeAccessNational": "Your access: all societies nationally · view and edit"
 }

@@ -500,7 +500,7 @@ class _NationalHeader extends StatelessWidget {
     final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user;
-    final name = user?.displayName.split(' ').first;
+    final name = user?.displayName;
     final role = user == null
         ? null
         : user.primaryRole == UserRole.hqAdmin
@@ -510,132 +510,90 @@ class _NationalHeader extends StatelessWidget {
     const brand = 'SarvoAI';
     final ask = l.moreAsk(brand);
     final at = ask.indexOf(brand);
-    return ColoredBox(
-      color: AppColors.surface,
-      child: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            const Positioned.fill(
-              child: ExcludeSemantics(
-                child: CustomPaint(painter: HillsPainter()),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 12, 22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const MastheadLogo(),
-                      const Spacer(),
-                      // The phone has no search across all records (D18 is on
-                      // the dashboard), so this says what it searches.
-                      MastheadButton(
-                        tooltip: l.nationalSearchSocieties,
-                        icon: const Icon(
-                          Icons.search,
-                          size: 19,
-                          color: AppColors.ink,
-                        ),
-                        onPressed: () => _push(
-                          context,
-                          const NationalSocietiesScreen(autofocusSearch: true),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const NotificationsButton(),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      l.nationalTitle,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    [l.greeting(store.now, name), ?role].join(' · '),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Material(
-                    color: AppColors.pine,
-                    shape: const StadiumBorder(),
-                    child: InkWell(
-                      customBorder: const StadiumBorder(),
-                      onTap: () => _push(context, const SarvoAiScreen()),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome,
-                              size: 18,
-                              color: Color(0xFFF3C44E),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Wrap(
-                                alignment: WrapAlignment.spaceBetween,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: ask.substring(0, at + 5),
-                                        ),
-                                        const TextSpan(
-                                          text: 'AI',
-                                          style: TextStyle(
-                                            color: Color(0xFFF0A040),
-                                          ),
-                                        ),
-                                        TextSpan(text: ask.substring(at + 7)),
-                                      ],
-                                    ),
-                                    semanticsLabel: ask,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    l.nationalHqOnly,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HomeMasthead(
+          title: l.greeting(store.now, name),
+          subtitle: [l.nationalTitle, ?role].join(' · '),
+          actions: [
+            MastheadButton(
+              tooltip: l.nationalSearchSocieties,
+              icon: const Icon(Icons.search, size: 19, color: AppColors.ink),
+              onPressed: () => _push(
+                context,
+                const NationalSocietiesScreen(autofocusSearch: true),
               ),
             ),
           ],
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: AccessBanner(
+            tone: AccessBannerTone.edit,
+            child: Text(l.homeAccessNational),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          child: Material(
+            color: AppColors.pine,
+            shape: const StadiumBorder(),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () => _push(context, const SarvoAiScreen()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: Color(0xFFF3C44E),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: ask.substring(0, at + 5)),
+                                const TextSpan(
+                                  text: 'AI',
+                                  style: TextStyle(color: Color(0xFFF0A040)),
+                                ),
+                                TextSpan(text: ask.substring(at + 7)),
+                              ],
+                            ),
+                            semanticsLabel: ask,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            l.nationalHqOnly,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

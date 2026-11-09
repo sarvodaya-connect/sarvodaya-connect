@@ -11,6 +11,7 @@ import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
+import '../widgets/masthead.dart';
 import 'home_api.dart';
 
 void _open(BuildContext context, Widget screen) =>
@@ -644,41 +645,32 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
     final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user!;
-    final name =
-        user.displayName
-            .split(' ')
-            .where((part) => !part.endsWith('.'))
-            .firstOrNull ??
-        user.displayName;
     return Scaffold(
-      body: SafeArea(
-        child: _Loader<RoleHome>(
-          label: l.homeLoading,
-          load: (api) => api.fetchHome(),
-          builder: (context, home) => ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  l.greeting(store.now, name),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
+      body: _Loader<RoleHome>(
+        label: l.homeLoading,
+        load: (api) => api.fetchHome(),
+        builder: (context, home) => ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            HomeMasthead(
+              title: l.greeting(store.now, user.displayName),
+              subtitle: [
+                _roleLine(l, user.primaryRole),
+                ?home.districtName,
+              ].join(' · '),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _body(context, l, store, user, home),
                 ),
               ),
-              Text(
-                [
-                  _roleLine(l, user.primaryRole),
-                  ?home.districtName,
-                ].join(' · '),
-                style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
-              ),
-              const SizedBox(height: 10),
-              ..._body(context, l, store, user, home),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -851,6 +843,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
         ];
       case UserRole.deputyDistrictManager when grant != null:
         return [
+          banner,
+          const SizedBox(height: 12),
           TemporaryViewCard(
             grant: grant,
             now: store.now,
