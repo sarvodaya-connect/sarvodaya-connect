@@ -1071,6 +1071,23 @@ export const en = {
   "st.society.endedCount.one": "This society is not your {count} assigned society, and your temporary district-wide view ended on {date}. Ask your DM if you need it again.",
   "st.society.endedCount.other": "This society is not one of your {count} assigned societies, and your temporary district-wide view ended on {date}. Ask your DM if you need it again.",
   "sr.openedRecorded": "Opening this record was added to the access history ({name} · {time}).",
+  "mb.scopeDm": "Counts only — no personal data · all societies in {district}",
+  "mb.scopeMine.one": "Counts only — no personal data · your {count} assigned society",
+  "mb.scopeMine.other": "Counts only — no personal data · your {count} assigned societies",
+  "mb.scopeDistrict": "Counts only — no personal data · all {district} societies, view only until {date}",
+  "mb.latestYear": "latest counts, {year}",
+  "mb.tabMine": "My Societies",
+  "mb.tabDistrict": "District · view only",
+  "mb.noSocietiesTitle": "No Active Societies",
+  "mb.noSocieties": "There are no active societies in your scope yet, so there are no membership counts to show.",
+  "mb.noneYetTitle": "No Membership Counts Yet",
+  "mb.noneYet": "None of these societies has entered membership counts by category. The zeros below mean not reported, not zero members.",
+  "mb.profileTitle": "Society Profile Member Counts",
+  "mb.profileBody": "Society profiles record {members} members across {societies} active societies. A profile count has no female/male or category split, so it is not added to the figures here.",
+  "mb.profileMissing.one": "{count} of these societies has no category counts for {year}.",
+  "mb.profileMissing.other": "{count} of these societies have no category counts for {year}.",
+  "mb.profileMissingNoYear.one": "{count} of these societies has not entered category counts yet.",
+  "mb.profileMissingNoYear.other": "{count} of these societies have not entered category counts yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;

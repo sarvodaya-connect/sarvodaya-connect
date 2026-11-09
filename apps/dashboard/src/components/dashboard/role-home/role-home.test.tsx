@@ -312,8 +312,8 @@ describe("role pages and filters", () => {
   it("keeps SPCs, DDMs and DMs to their own pages", () => {
     const record = "/societies/3f2b8c1e-7a4d-4b8e-9c2a-1d5e6f7a8b9c";
     for (const role of ["PROGRAMME_COORDINATOR", "DEPUTY_DISTRICT_MANAGER", "DISTRICT_MANAGER"]) {
-      for (const path of ["/dashboard", "/my-societies", record, `${record}/exco`, "/activities-to-approve"]) expect(canOpen(role, path)).toBe(true);
-      for (const path of ["/accounts", "/audit", "/reviews", "/societies", "/societies/new", "/search", "/membership", "/districts/kurunegala", "/sarvoai", "/sarvoai?q=x"])
+      for (const path of ["/dashboard", "/my-societies", "/membership", record, `${record}/exco`, "/activities-to-approve"]) expect(canOpen(role, path)).toBe(true);
+      for (const path of ["/accounts", "/audit", "/reviews", "/societies", "/societies/new", "/search", "/districts/kurunegala", "/sarvoai", "/sarvoai?q=x"])
         expect(canOpen(role, path)).toBe(false);
     }
     expect(canOpen("HQ_ADMIN", "/accounts")).toBe(true);

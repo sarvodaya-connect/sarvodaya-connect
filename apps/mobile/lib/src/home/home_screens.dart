@@ -5,7 +5,8 @@ import '../incidents/incident_screens.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../models/user.dart';
-import '../national/national_screens.dart' show GradeBadge;
+import '../national/national_screens.dart'
+    show GradeBadge, RoleMembershipScreen;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
@@ -710,6 +711,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 12),
           _Card(
             title: l.homeDistrictOverview,
             child: Column(
@@ -858,6 +861,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           ),
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: [
               ButtonSegment(
@@ -893,6 +898,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 12),
           _TileRow([
             _Tile(l.homeTileAssigned, l.number(home.total)),
             _Tile(
@@ -917,6 +924,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 12),
           if (home.activitiesWaiting > 0) ...[
             Material(
               color: AppColors.warningSoft,
@@ -1036,6 +1045,33 @@ class DistrictSocietiesScreen extends StatelessWidget {
             const _SocietyList(showScope: false),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Issue #118: Membership for the user's own societies.
+class _MembershipLink extends StatelessWidget {
+  const _MembershipLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.groups_outlined, color: AppColors.leaf),
+        title: Text(
+          l.nationalMembershipTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(l.roleMembershipTileSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, const RoleMembershipScreen()),
       ),
     );
   }

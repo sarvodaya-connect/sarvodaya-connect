@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { HomeSocietyList, HomeSummary } from "@sarvodaya-connect/api-contracts";
+import type { HomeSocietyList, HomeSummary, ScopedMembership } from "@sarvodaya-connect/api-contracts";
 
 import type { SocietyFilters } from "./home-format";
 import { platformApi } from "./platform-api";
@@ -17,4 +17,9 @@ export function getHomeSocieties(filters: SocietyFilters): Promise<HomeSocietyLi
   const query = new URLSearchParams({ pageSize: "20" });
   for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
   return platformApi(`/home/societies?${query}`);
+}
+
+/** Issue #118: D08 Membership for the user's own societies; a DDM may ask for their temporary district view. */
+export function getHomeMembership(scope?: "DISTRICT"): Promise<ScopedMembership> {
+  return platformApi(scope ? "/home/membership?scope=DISTRICT" : "/home/membership");
 }
