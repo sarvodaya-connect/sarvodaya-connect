@@ -11,8 +11,8 @@ Parameters:
   DashboardOrigin:
     Type: String
     Default: ''
-    AllowedPattern: '^$|^https://[a-zA-Z0-9.-]+$'
-    Description: Leave blank until Amplify provides its test HTTPS origin; then update this stack for browser signed uploads
+    AllowedPattern: '^$|^https://[a-zA-Z0-9.-]+(,https://[a-zA-Z0-9.-]+)*$'
+    Description: Dashboard HTTPS origins for browser signed uploads, comma-separated (for example the custom domain and the Amplify default during a switchover); blank until Amplify provides one
 Rules:
   ExistingAccountOnly:
     Assertions:
@@ -234,7 +234,7 @@ Resources:
       CorsConfiguration: !If
         - HasDashboardOrigin
         - CorsRules:
-            - AllowedOrigins: [!Ref DashboardOrigin]
+            - AllowedOrigins: !Split [',', !Ref DashboardOrigin]
               AllowedMethods: [GET, PUT, HEAD]
               AllowedHeaders: [content-type, x-amz-checksum-sha256]
               ExposedHeaders: [ETag]
