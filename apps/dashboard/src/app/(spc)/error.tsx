@@ -7,10 +7,10 @@ import { useI18n } from "@/i18n/provider";
 
 export default function SpcError({
   error,
-  retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  retry: () => void;
+  reset: () => void;
 }) {
   const { t } = useI18n();
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function SpcError({
     <section className="rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
       <ErrorState
         description={t("err.activities")}
-        onRetry={retry}
+        onRetry={reset}
         reference={error.digest}
         referenceLabel={t("err.reference")}
         retryLabel={t("n.tryAgain")}

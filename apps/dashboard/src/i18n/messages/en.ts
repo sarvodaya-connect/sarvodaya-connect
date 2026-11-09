@@ -95,8 +95,6 @@ export const en = {
   "signIn.error.unavailable": "Sign-in is not available right now. Try again in a few minutes.",
   "signIn.error.notReady": "This account cannot sign in yet. Ask HQ to check it.",
   "signIn.error.notHq": "This dashboard is for HQ. Please use the mobile app.",
-  "signIn.heroTitle": "One trusted record for every village society.",
-  "signIn.heroBody": "Desktop dashboard for HQ, District Managers, DDMs and SPCs.",
   "signIn.heroFooter": "Sarvodaya Shramadana Movement · Moratuwa, Sri Lanka",
   "language.choose": "Choose Language",
   "settings.title": "Settings",
