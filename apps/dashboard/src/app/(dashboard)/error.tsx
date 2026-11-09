@@ -10,11 +10,9 @@ import { useI18n } from "@/i18n/provider";
 export default function DashboardError({
   error,
   reset,
-  retry,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
-  retry: () => void;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -38,7 +36,7 @@ export default function DashboardError({
     <section className="rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
       <ErrorState
         description={t("err.dashboard")}
-        onRetry={retry}
+        onRetry={reset}
         reference={error.digest}
         referenceLabel={t("err.reference")}
         retryLabel={t("n.tryAgain")}
