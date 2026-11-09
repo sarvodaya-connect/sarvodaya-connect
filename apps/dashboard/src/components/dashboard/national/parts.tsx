@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 import { Pill } from "@/components/dashboard/ui/pill";
 import { useI18n } from "@/i18n/provider";
@@ -42,9 +42,13 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{children}</p>;
 }
 
-/** A card with the V5 eyebrow, title and an optional link at the top right. */
+/**
+ * A card with the V5 eyebrow, title and an optional link at the top right.
+ * The heading id comes from React, not the eyebrow text: Sinhala and Tamil
+ * eyebrows have no ASCII letters, so ids built from them all collided.
+ */
 export function Panel({ children, eyebrow, link, title }: { children: ReactNode; eyebrow: string; link?: { href: string; label: string }; title: string }) {
-  const id = `panel-${eyebrow.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const id = `panel-${useId()}`;
   return (
     <section aria-labelledby={id} className="flex h-full flex-col rounded-card border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
