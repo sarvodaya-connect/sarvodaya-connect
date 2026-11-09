@@ -168,9 +168,11 @@ class _LoaderState<T> extends State<_Loader<T>> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '${widget.label}…',
-                  style: const TextStyle(color: AppColors.muted),
+                Flexible(
+                  child: Text(
+                    '${widget.label}…',
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
                 ),
               ],
             ),
@@ -317,22 +319,26 @@ class _SocietyRow extends StatelessWidget {
         society.name,
         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
       ),
-      subtitle: Text(
-        society.members == null
-            ? l.homeSocietyLineNoMembers(
-                society.code,
-                l.date(society.updatedAt),
-              )
-            : l.homeSocietyLine(
-                society.code,
-                society.members!,
-                l.date(society.updatedAt),
-              ),
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      // The pill sits under the line, not beside the chevron: a longer
+      // translation with large text otherwise takes the tile's whole width.
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            society.members == null
+                ? l.homeSocietyLineNoMembers(
+                    society.code,
+                    l.date(society.updatedAt),
+                  )
+                : l.homeSocietyLine(
+                    society.code,
+                    society.members!,
+                    l.date(society.updatedAt),
+                  ),
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (showScope || society.pending != null || society.stale)
+            const SizedBox(height: 4),
           if (showScope)
             society.yours
                 ? _Pill(
@@ -353,9 +359,9 @@ class _SocietyRow extends StatelessWidget {
               colour: AppColors.danger,
               background: AppColors.dangerSoft,
             ),
-          const Icon(Icons.chevron_right),
         ],
       ),
+      trailing: const Icon(Icons.chevron_right),
       onTap: () => _open(context, SocietyRecordScreen(societyId: society.id)),
     );
   }
@@ -819,17 +825,23 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                           fontSize: 14,
                         ),
                       ),
-                      subtitle: Text(
-                        item.reason,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      // The grade request pill sits under the reason, not
+                      // beside the chevron: a longer translation with large
+                      // text otherwise takes the tile's whole width.
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (item.pending != null) _Pill(l.homeGradeRequest),
-                          const Icon(Icons.chevron_right),
+                          Text(
+                            item.reason,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (item.pending != null) ...[
+                            const SizedBox(height: 4),
+                            _Pill(l.homeGradeRequest),
+                          ],
                         ],
                       ),
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () => _open(
                         context,
                         SocietyRecordScreen(societyId: item.societyId),
@@ -993,7 +1005,9 @@ class _Card extends StatelessWidget {
                 ),
               ),
             ),
-            ?trailing,
+            // Flexible, so a long translated link wraps instead of pushing
+            // past the card with large text.
+            if (trailing != null) Flexible(child: trailing!),
           ],
         ),
         const SizedBox(height: 8),
