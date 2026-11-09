@@ -178,6 +178,9 @@ stack without an explicit recovery plan.
 - Connect Amplify through the owner's GitHub authorization flow and use the
   repository's Next.js 15 build settings. Once its test hostname exists, update
   `DashboardOrigin` to that exact HTTPS origin for signed document PUT/GET/HEAD.
+  It takes several origins separated by commas, with no spaces. While moving to
+  `https://dashboard.sarvodayaconnect.com`, set it to that origin and the Amplify
+  default together, then drop the Amplify one once everyone uses the new address.
   CORS does not make the bucket public or grant unauthenticated file access.
 - Obtain specific owner instruction before creating fictional test/staff sign-ins
   or setting passwords. Test real Cognito tokens, roles/society restrictions,
