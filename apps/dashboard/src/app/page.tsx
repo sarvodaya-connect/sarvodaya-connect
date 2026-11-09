@@ -7,25 +7,32 @@ import { getT } from "@/i18n/server";
 export default async function Home() {
   const t = await getT();
   return (
-    <main className="grid min-h-screen grid-cols-1 bg-surface md:grid-cols-[42%_58%]">
-      <aside className="flex min-h-[240px] flex-col justify-between bg-brand-forest p-7 text-white md:min-h-0 md:p-9">
-        <span className="w-fit rounded-xl bg-white px-4 py-2.5">
-          <Image
-            alt="Sarvodaya Connect"
-            className="h-[52px] w-auto"
-            height={180}
-            priority
-            src="/brand/sarvodaya-connect-wordmark.png"
-            width={472}
-          />
-        </span>
-        <div className="max-w-[460px] py-8 md:py-0">
-          <p className="text-[28px] font-bold leading-tight md:text-[32px]">{t("signIn.heroTitle")}</p>
-          <p className="mt-3 text-sm text-[#d6e2d9]">{t("signIn.heroBody")}</p>
-        </div>
-        <p className="text-[11px] text-[#bdcec2]">{t("signIn.heroFooter")}</p>
+    <main className="grid min-h-screen grid-cols-1 bg-surface md:grid-cols-[48.7%_51.3%]">
+      <aside className="relative isolate flex min-h-[240px] flex-col justify-end overflow-hidden bg-brand-forest p-7 text-white md:min-h-0 md:p-9">
+        <Image
+          alt=""
+          className="-z-10 object-cover object-top"
+          fill
+          priority
+          sizes="(min-width: 768px) 49vw, 100vw"
+          src="/brand/sign-in-village.jpg"
+        />
+        {/* Dark green fade so the footer stays readable over the illustration. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,rgba(31,60,42,0)_38%,rgba(31,60,42,0.86)_66%,rgba(31,60,42,0.94)_100%)]"
+        />
+        <p className="text-[11px] text-[#c4d6c8]">{t("signIn.heroFooter")}</p>
       </aside>
-      <div className="flex items-center justify-center px-6 py-10 sm:px-10">
+      <div className="relative flex items-center justify-center px-6 pb-10 pt-24 sm:px-10 md:py-10">
+        <Image
+          alt="Sarvodaya Connect"
+          className="absolute right-6 top-6 h-12 w-auto sm:right-10 md:right-[78px] md:top-[54px] md:h-[58px]"
+          height={180}
+          priority
+          src="/brand/sarvodaya-connect-wordmark.png"
+          width={472}
+        />
         <SignInForm />
       </div>
     </main>

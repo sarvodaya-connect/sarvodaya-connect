@@ -97,8 +97,6 @@ export const si: Record<MessageKey, string> = {
   "signIn.error.unavailable": "පිවිසීම දැන් ලබා ගත නොහැක. මිනිත්තු කිහිපයකින් නැවත උත්සාහ කරන්න.",
   "signIn.error.notReady": "මෙම ගිණුමට තවම පිවිසිය නොහැක. එය පරීක්ෂා කිරීමට මූලස්ථානයෙන් ඉල්ලන්න.",
   "signIn.error.notHq": "මෙම පුවරුව මූලස්ථානය සඳහාය. කරුණාකර ජංගම යෙදුම භාවිත කරන්න.",
-  "signIn.heroTitle": "සෑම ගම් සමිතියකටම විශ්වාසදායක එක් වාර්තාවක්.",
-  "signIn.heroBody": "HQ, දිස්ත්‍රික් කළමනාකරුවන්, DDM සහ SPC සඳහා පරිගණක පුවරුව.",
   "signIn.heroFooter": "සර්වෝදය ශ්‍රමදාන ව්‍යාපාරය · මොරටුව, ශ්‍රී ලංකාව",
   "language.choose": "භාෂාව තෝරන්න",
   "settings.title": "සැකසුම්",
