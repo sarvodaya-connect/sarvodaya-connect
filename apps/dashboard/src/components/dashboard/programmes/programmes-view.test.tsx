@@ -28,7 +28,7 @@ vi.mock("next/link", () => ({
 const CATALOGS: Record<Locale, Messages> = { en, si, ta };
 
 const national: NationalProgrammes = {
-  financialYear: { startYear: 2025, label: "FY 2025/26" },
+  financialYear: { startYear: 2025, label: "FY 2025/26", startsOn: "2025-04-01", endsOn: "2026-03-31" },
   planned: 3,
   completed: 2,
   sectors: [
