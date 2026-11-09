@@ -22,12 +22,12 @@ const exportLine = amplify
 function exported(env: Record<string, string>) {
   const dir = mkdtempSync(join(tmpdir(), "amplify-env-"));
   try {
-    execFileSync("/bin/sh", ["-c", exportLine!], { cwd: dir, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", ...env } });
+    execFileSync("/bin/sh", ["-c", exportLine!], { cwd: dir, env: { NODE_ENV: "production", PATH: process.env.PATH ?? "/usr/bin:/bin", ...env } });
     return Object.fromEntries(
       readFileSync(join(dir, ".env.production"), "utf8")
         .split("\n")
         .filter(Boolean)
-        .map((line) => line.split(/=(.*)/s).slice(0, 2)),
+        .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
     ) as Record<string, string>;
   } finally {
     rmSync(dir, { recursive: true, force: true });
