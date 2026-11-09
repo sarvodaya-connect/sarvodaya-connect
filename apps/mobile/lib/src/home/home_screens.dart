@@ -6,7 +6,7 @@ import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../models/user.dart';
 import '../national/national_screens.dart'
-    show GradeBadge, RoleMembershipScreen;
+    show GradeBadge, RoleAuditsScreen, RoleMembershipScreen;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
@@ -712,6 +712,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
           const SizedBox(height: 12),
           _Card(
             title: l.homeDistrictOverview,
@@ -862,6 +864,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: [
@@ -899,6 +903,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
           const SizedBox(height: 12),
           _TileRow([
             _Tile(l.homeTileAssigned, l.number(home.total)),
@@ -925,6 +931,8 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
           const SizedBox(height: 12),
           if (home.activitiesWaiting > 0) ...[
             Material(
@@ -1072,6 +1080,33 @@ class _MembershipLink extends StatelessWidget {
         subtitle: Text(l.roleMembershipTileSubtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _open(context, const RoleMembershipScreen()),
+      ),
+    );
+  }
+}
+
+/// Issue #119: Audits & AGM for the user's own societies.
+class _AuditsLink extends StatelessWidget {
+  const _AuditsLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.fact_check_outlined, color: AppColors.leaf),
+        title: Text(
+          l.roleAuditsTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(l.roleAuditsTileSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, const RoleAuditsScreen()),
       ),
     );
   }

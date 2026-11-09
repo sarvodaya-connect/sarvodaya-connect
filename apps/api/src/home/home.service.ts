@@ -5,6 +5,7 @@ import type {
   HomeRole,
   HomeSocietyList,
   HomeSummary,
+  ScopedAudits,
   ScopedMembership,
 } from './home.types.js';
 
@@ -13,6 +14,13 @@ import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { incidentReference } from '../emergencies/emergency-format.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DistrictAccessService } from '../identity/district-access.service.js';
+import { RegistrarDocumentsRepository } from '../documents/registrar-documents.repository.js';
+import {
+  auditReportDueDate,
+  registrarYear,
+  yearOf,
+} from '../documents/registrar-documents.service.js';
+import { REGISTRAR_DOCUMENT_TYPES } from '../documents/upload-rules.js';
 import {
   financialYear,
   latestCompletedFinancialYear,
@@ -31,13 +39,13 @@ const RECENT_LIMIT = 4;
 const HIDDEN_ACTIONS = ['MEMBER_NIC_REVEALED', 'MEMBER_NIC_UPDATED'];
 
 /**
- * Issue #118: which societies a Membership view may count. The DM gets their
+ * Issues #118 and #119: which societies a Membership or Audits view may count. The DM gets their
  * own district; the SPC and DDM get only the societies assigned to them. A
  * DDM gets the district only with `DISTRICT`, and only while a temporary grant
  * is valid now. The principal is loaded on every request without revoked
  * grants, and `readableDistrictIds` checks the start and end times again.
  */
-export function membershipScope(
+export function homeViewScope(
   role: HomeRole,
   principal: Principal,
   requested: 'MINE' | 'DISTRICT' | undefined,
@@ -90,7 +98,91 @@ export class HomeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: DistrictAccessService,
+    private readonly registrar: RegistrarDocumentsRepository,
   ) {}
+
+  /** The DDM's grant that is valid now, if any. */
+  private validGrant(principal: Principal, now: Date) {
+    return (principal.delegatedDistrictAccess ?? []).find(
+      (g) =>
+        readableDistrictIds({ ...principal, delegatedDistrictAccess: [g] }, now)
+          .length,
+    );
+  }
+
+  /**
+   * Issue #119: D11 Audits & AGM for the user's own scope and one financial
+   * year. Same rules as HQ: active societies are the denominator, and the
+   * audit report is past due after 30 September following the year.
+   */
+  async audits(
+    principal: Principal,
+    query: {
+      scope?: 'MINE' | 'DISTRICT';
+      year?: number;
+      page: number;
+      pageSize: number;
+    },
+    now = new Date(),
+  ): Promise<ScopedAudits> {
+    const role = homeRoleOf(principal);
+    if (!role)
+      throw new ForbiddenException(
+        'Audits here are for SPCs, DDMs and District Managers',
+      );
+    const resolved = homeViewScope(role, principal, query.scope, now);
+    if ('refused' in resolved) throw new ForbiddenException(resolved.refused);
+    const startYear = registrarYear(query.year);
+    const dueOn = auditReportDueDate(startYear);
+    const grant =
+      role === 'DEPUTY_DISTRICT_MANAGER'
+        ? this.validGrant(principal, now)
+        : undefined;
+    const [totals, missing] = await Promise.all([
+      this.registrar.scopedTotals(startYear, resolved.where),
+      this.registrar.missing(
+        'AUDIT_REPORT',
+        startYear,
+        query.page,
+        query.pageSize,
+        resolved.where,
+      ),
+    ]);
+    return {
+      scope: resolved.scope,
+      financialYear: yearOf(startYear),
+      activeSocieties: totals.activeSocieties,
+      byType: REGISTRAR_DOCUMENT_TYPES.map((documentType) => {
+        const submitted = totals.byType.get(documentType) ?? 0;
+        return {
+          documentType,
+          submitted,
+          missing: Math.max(totals.activeSocieties - submitted, 0),
+        };
+      }),
+      allFour: totals.allFour,
+      auditReportDueOn: dueOn,
+      followUp: {
+        pastDue: now.getTime() > Date.parse(`${dueOn}T23:59:59+05:30`),
+        data: missing.societies.map((society) => ({
+          id: society.id,
+          name: society.nameEn,
+          societyCode: society.societyCode,
+          district: society.district.nameEn,
+        })),
+        meta: {
+          page: query.page,
+          pageSize: query.pageSize,
+          totalItems: missing.totalItems,
+          totalPages: Math.ceil(missing.totalItems / query.pageSize),
+        },
+      },
+      districtView:
+        role === 'DEPUTY_DISTRICT_MANAGER'
+          ? { available: Boolean(grant), expiresAt: grant?.expiresAt ?? null }
+          : null,
+    };
+  }
 
   /** Active grants with names and counts, in the home's shape. */
   private async accessGrants(
@@ -160,17 +252,11 @@ export class HomeService {
       throw new ForbiddenException(
         'Membership here is for SPCs, DDMs and District Managers',
       );
-    const resolved = membershipScope(role, principal, requested, now);
+    const resolved = homeViewScope(role, principal, requested, now);
     if ('refused' in resolved) throw new ForbiddenException(resolved.refused);
     const grant =
       role === 'DEPUTY_DISTRICT_MANAGER'
-        ? (principal.delegatedDistrictAccess ?? []).find(
-            (g) =>
-              readableDistrictIds(
-                { ...principal, delegatedDistrictAccess: [g] },
-                now,
-              ).length,
-          )
+        ? this.validGrant(principal, now)
         : undefined;
     return executeDatabaseOperation(async () => {
       const db = this.prisma;

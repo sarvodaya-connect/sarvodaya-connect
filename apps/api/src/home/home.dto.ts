@@ -78,3 +78,19 @@ export class HomeMembershipQueryDto {
   @IsIn(['MINE', 'DISTRICT'])
   scope?: 'MINE' | 'DISTRICT';
 }
+
+/** Issue #119: D11 for one financial year, the follow-up list one page at a time. */
+export class HomeAuditsQueryDto extends HomeMembershipQueryDto {
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => Number(value))
+  @IsInt()
+  @Min(2000)
+  @Max(2200)
+  year?: number;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => Number(value))
+  @IsInt()
+  @Min(1)
+  page = 1;
+}

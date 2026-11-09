@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Principal } from '../auth/principal.js';
-import { membershipScope } from './home.service.js';
+import { homeViewScope } from './home.service.js';
 import {
   composeMembership,
   type MembershipSociety,
@@ -37,7 +37,7 @@ const grant = (startsAt: string, expiresAt: string) => ({
 describe('who a Membership view may count (issue #118)', () => {
   it('gives the DM their own district only', () => {
     expect(
-      membershipScope(
+      homeViewScope(
         'DISTRICT_MANAGER',
         principal('DISTRICT_MANAGER'),
         undefined,
@@ -51,7 +51,7 @@ describe('who a Membership view may count (issue #118)', () => {
 
   it('gives the SPC only assigned societies, even with a district on the account', () => {
     expect(
-      membershipScope(
+      homeViewScope(
         'PROGRAMME_COORDINATOR',
         principal('PROGRAMME_COORDINATOR'),
         undefined,
@@ -62,7 +62,7 @@ describe('who a Membership view may count (issue #118)', () => {
       where: { id: { in: [S1] } },
     });
     expect(
-      membershipScope(
+      homeViewScope(
         'PROGRAMME_COORDINATOR',
         principal('PROGRAMME_COORDINATOR'),
         'DISTRICT',
@@ -78,7 +78,7 @@ describe('who a Membership view may count (issue #118)', () => {
       ],
     });
     expect(
-      membershipScope('DEPUTY_DISTRICT_MANAGER', ddm, undefined, now),
+      homeViewScope('DEPUTY_DISTRICT_MANAGER', ddm, undefined, now),
     ).toEqual({ scope: 'MINE', where: { id: { in: [S1] } } });
   });
 
@@ -104,7 +104,7 @@ describe('who a Membership view may count (issue #118)', () => {
       const ddm = principal('DEPUTY_DISTRICT_MANAGER', {
         delegatedDistrictAccess: [g],
       });
-      const result = membershipScope(
+      const result = homeViewScope(
         'DEPUTY_DISTRICT_MANAGER',
         ddm,
         'DISTRICT',
@@ -127,7 +127,7 @@ describe('who a Membership view may count (issue #118)', () => {
       delegatedDistrictAccess: [],
     });
     expect(
-      membershipScope('DEPUTY_DISTRICT_MANAGER', ddm, 'DISTRICT', now),
+      homeViewScope('DEPUTY_DISTRICT_MANAGER', ddm, 'DISTRICT', now),
     ).toHaveProperty('refused');
   });
 });
