@@ -705,6 +705,8 @@
   "roleAuditsNothing": "සෑම ක්‍රියාකාරී සමිතියක්ම සිය {year} විගණන වාර්තාව උඩුගත කර ඇත.",
   "roleAuditsShowing": "{total}න් {shown} පෙන්වයි",
   "roleAuditsMore": "තවත් පෙන්වන්න",
+  "roleAuditsMoreError": "තවත් සමිති පූරණය කළ නොහැකි විය",
+  "roleAuditsMoreErrorCheck": "ඉහත සමිති තවමත් පෙන්වයි. ඔබගේ සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
   "roleAuditsEmptyTitle": "ක්‍රියාකාරී සමිති නැත",
   "roleAuditsEmptyMessage": "ඔබේ විෂය පථයේ තවම ක්‍රියාකාරී සමිති නැති නිසා පසු විපරම් කළ යුතු රෙජිස්ට්‍රාර් ලේඛන නැත.",
   "roleAuditsDocAudit": "විගණන වාර්තාව",

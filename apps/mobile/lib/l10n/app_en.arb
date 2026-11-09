@@ -2178,6 +2178,8 @@
     }
   },
   "roleAuditsMore": "Show more",
+  "roleAuditsMoreError": "More societies could not be loaded",
+  "roleAuditsMoreErrorCheck": "The societies above are still shown. Check your connection and try again.",
   "roleAuditsEmptyTitle": "No Active Societies",
   "roleAuditsEmptyMessage": "There are no active societies in your scope yet, so there are no Registrar documents to follow up.",
   "roleAuditsDocAudit": "Audit Report",

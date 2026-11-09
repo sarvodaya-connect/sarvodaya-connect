@@ -2123,21 +2123,38 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
   final _more = <({String id, String name, String code, String district})>[];
   int _page = 1;
   bool _loadingMore = false;
+  // Why the last "Show more" failed; the rows already shown stay.
+  Object? _moreError;
+  // The year and scope of the figures on screen. "Show more" asks for the
+  // next page of exactly these, never of a choice made since.
+  ({int year, bool district})? _shown;
+  // Bumped by every reload and on leaving the screen, so a response to an
+  // older request (a page, or a whole load) never changes what is shown.
+  int _generation = 0;
 
   Future<ScopedAudits> _load() async {
+    final generation = ++_generation;
     final home = DemoScope.of(context).home;
     _more.clear();
     _page = 1;
+    _loadingMore = false;
+    _moreError = null;
+    _shown = null;
+    var district = _district;
+    ScopedAudits audits;
     try {
-      return await home.fetchAudits(year: _year, district: _district);
+      audits = await home.fetchAudits(year: _year, district: district);
     } on HomeException catch (error) {
       // The temporary district view ended: show the user's own societies.
-      if (_district && error.status == 403) {
-        _district = false;
-        return home.fetchAudits(year: _year);
-      }
-      rethrow;
+      if (!district || error.status != 403) rethrow;
+      district = false;
+      if (generation == _generation) _district = false;
+      audits = await home.fetchAudits(year: _year);
     }
+    if (generation == _generation) {
+      _shown = (year: audits.startYear, district: district);
+    }
+    return audits;
   }
 
   @override
@@ -2146,27 +2163,59 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
     _future ??= _load();
   }
 
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
   void _reload() {
     setState(() {
       _future = _load();
     });
   }
 
-  Future<void> _loadMore(ScopedAudits audits) async {
-    setState(() => _loadingMore = true);
+  Future<void> _loadMore() async {
+    final shown = _shown;
+    if (shown == null || _loadingMore) return;
+    final generation = _generation;
+    final home = DemoScope.of(context).home;
+    bool current() => mounted && generation == _generation;
+    setState(() {
+      _loadingMore = true;
+      _moreError = null;
+    });
     try {
-      final next = await DemoScope.of(context).home.fetchAudits(
-        year: audits.startYear,
-        district: _district,
+      final next = await home.fetchAudits(
+        year: shown.year,
+        district: shown.district,
         page: _page + 1,
       );
-      if (!mounted) return;
+      if (!current()) return;
       setState(() {
         _page = next.page;
         _more.addAll(next.followUp);
+        _loadingMore = false;
       });
-    } finally {
-      if (mounted) setState(() => _loadingMore = false);
+    } on HomeException catch (error) {
+      if (!current()) return;
+      if (shown.district && error.status == 403) {
+        // The temporary district view ended between pages. As on the first
+        // load, go back to the user's own societies; no district rows stay.
+        _district = false;
+        _reload();
+        return;
+      }
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!current()) return;
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
     }
   }
 
@@ -2475,9 +2524,11 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
                       color: AppColors.muted,
                     ),
                   ),
-                  if (_page < a.totalPages)
+                  if (_moreError != null)
+                    _MoreError(error: _moreError!, onRetry: _loadMore)
+                  else if (_page < a.totalPages)
                     TextButton(
-                      onPressed: _loadingMore ? null : () => _loadMore(a),
+                      onPressed: _loadingMore ? null : _loadMore,
                       child: Text(l.roleAuditsMore),
                     ),
                 ],
@@ -2486,6 +2537,44 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "Show more" failed: says so in the chosen language, under the rows that
+/// are still shown, with a way to ask for the same page again.
+class _MoreError extends StatelessWidget {
+  const _MoreError({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final error = this.error;
+    final reason = error is HomeException && error.failure != null
+        ? l.failure(error.failure!)
+        : l.roleAuditsMoreErrorCheck;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.roleAuditsMoreError,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.danger,
+              ),
+            ),
+            Text(reason, style: const TextStyle(fontSize: 12)),
+            TextButton(onPressed: onRetry, child: Text(l.commonTryAgain)),
+          ],
+        ),
+      ),
     );
   }
 }
