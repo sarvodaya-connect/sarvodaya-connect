@@ -60,6 +60,7 @@ describe("sentences with styled parts", () => {
 describe("which languages people can choose", () => {
   it("hides unreviewed drafts in production", () => {
     expect(availableLocales({ NODE_ENV: "production" })).toEqual(REVIEWED_LOCALES);
+    expect(availableLocales({ NODE_ENV: "production", SHOW_UNREVIEWED_TRANSLATIONS: "false" })).toEqual(REVIEWED_LOCALES);
     expect(REVIEWED_LOCALES).toEqual(["en"]);
   });
 
