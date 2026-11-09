@@ -11,6 +11,9 @@
 #   NEXT_PUBLIC_MAPBOX_TOKEN  public config  Mapbox public token (pk.), URL-restricted in the
 #                         Mapbox account; built into the browser code. Optional: without it the
 #                         dashboard shows its drawn maps.
+#   SHOW_UNREVIEWED_TRANSLATIONS  config  true in TEST only, so reviewers can check the
+#                         Sinhala and Tamil drafts. Leave it unset in production: unset
+#                         (or anything but "true") keeps unreviewed languages hidden.
 # None of these are secrets. Never add AWS keys or a client secret here.
 # Amplify only passes variables to the server at run time when they are written
 # to .env.production during the build (see the build step below).
@@ -26,7 +29,7 @@ applications:
         build:
           commands:
             # Server-side variables, plus the one public browser value (the Mapbox pk. token).
-            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE|AUTH_PROVIDER|COGNITO_USER_POOL_ID|COGNITO_CLIENT_ID|COGNITO_REGION|NEXT_PUBLIC_MAPBOX_TOKEN)=' > .env.production || true
+            - env | grep -E '^(API_BASE_URL|PLATFORM_DEMO_MODE|AUTH_PROVIDER|COGNITO_USER_POOL_ID|COGNITO_CLIENT_ID|COGNITO_REGION|NEXT_PUBLIC_MAPBOX_TOKEN|SHOW_UNREVIEWED_TRANSLATIONS)=' > .env.production || true
             - npm run build
       artifacts:
         baseDirectory: .next
