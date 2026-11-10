@@ -90,6 +90,8 @@ export function OpenIncidentForm({
   now: Date;
 }) {
   const [state, submit, pending] = useActionState(action, {});
+  // One id per form: a double click or a resubmit returns the same incident.
+  const [clientMutationId] = useState(() => crypto.randomUUID());
   const [societyId, setSocietyId] = useState(societies.length === 1 ? societies[0]!.id : "");
   const society = societies.find((s) => s.id === societyId);
   const [areaIds, setAreaIds] = useState<string[]>(society ? [society.districtId] : []);
@@ -134,6 +136,7 @@ export function OpenIncidentForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={submitWithoutReset(submit)}>
+      <input name="clientMutationId" type="hidden" value={clientMutationId} />
       {variant === "role" && (
         <p className="flex gap-2.5 rounded-xl border border-[var(--banner-view-line)] bg-info-bg px-3.5 py-2.5 text-[12px] text-info-text">
           <Icon className="mt-0.5 size-4 shrink-0" name="help" />

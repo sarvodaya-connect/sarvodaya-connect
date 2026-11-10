@@ -689,7 +689,7 @@ class HttpIncidentApi implements IncidentApi {
         'districtIds': districtIds,
         'description': description.trim(),
         'startedAt': startedAt.toUtc().toIso8601String(),
-        if (clientMutationId != null) 'clientMutationId': clientMutationId,
+        'clientMutationId': ?clientMutationId,
       },
     ) as Map<String, dynamic>;
     return opened['id'] as String;
