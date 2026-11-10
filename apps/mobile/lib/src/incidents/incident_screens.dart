@@ -592,6 +592,8 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                                   const Expanded(
                                     child: Text(
                                       'Sarvodaya Connect',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 10.5,
                                         color: AppColors.muted,
@@ -599,11 +601,16 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                                       ),
                                     ),
                                   ),
-                                  Text(
-                                    accessDateTime(alert.at),
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: AppColors.muted,
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      accessDateTime(alert.at),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        color: AppColors.muted,
+                                      ),
                                     ),
                                   ),
                                 ],

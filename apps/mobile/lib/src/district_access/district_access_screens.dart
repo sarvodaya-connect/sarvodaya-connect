@@ -565,6 +565,7 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
                   )
                 else if (deputies != null) ...[
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _deputyId,
                     decoration: const InputDecoration(
                       labelText: 'DDM *',
@@ -572,7 +573,10 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
                     ),
                     items: [
                       for (final d in deputies)
-                        DropdownMenuItem(value: d.id, child: Text(d.name)),
+                        DropdownMenuItem(
+                          value: d.id,
+                          child: Text(d.name, overflow: TextOverflow.ellipsis),
+                        ),
                     ],
                     onChanged: (value) => setState(() => _deputyId = value),
                   ),
