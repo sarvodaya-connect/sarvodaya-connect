@@ -222,6 +222,8 @@ export class EmergenciesService {
 
   /** V5 D30, IR02, M48: anyone may open an incident for a society they act for. */
   async open(input: OpenIncidentDto, principal: Principal) {
+    const replay = await this.findOpenReplay(input, principal);
+    if (replay) return (await this.summaries([replay]))[0]!;
     const now = new Date();
     const society = await executeDatabaseOperation(() =>
       this.prisma.society.findUnique({
@@ -260,42 +262,51 @@ export class EmergenciesService {
     }
     const names = new Map(districts.map((d) => [d.id, d.nameEn]));
     const areaNames = districtIds.map((id) => names.get(id)!);
-    const incident = await executeDatabaseOperation(() =>
-      this.prisma.$transaction(async (tx) => {
-        const created = await tx.emergencyIncident.create({
-          data: {
-            districtId: society.districtId,
-            areaDistrictIds: districtIds,
-            reportingSocietyId: society.id,
-            title: input.title ?? defaultIncidentTitle(input.type, areaNames),
-            type: input.type,
-            description: input.description ?? '',
-            message: input.message ?? '',
-            location: areaNames.join(', ').slice(0, 200),
-            createdById: principal.id,
-            createdByName: principal.displayName,
-            createdByRole: principal.roles[0] ?? null,
-            startedAt,
-            assessmentsDueAt: dueAt,
-          },
-          include: incidentInclude,
-        });
-        await tx.platformAuditEvent.create({
-          data: {
-            ...actorFields(principal),
-            action: 'INCIDENT_OPENED',
-            targetId: created.id,
-            societyId: society.id,
-            districtId: society.districtId,
-            detail: incidentReference(
-              created.referenceNumber,
-              created.activatedAt,
-            ),
-          },
-        });
-        return created;
-      }),
-    );
+    let incident: IncidentRecord;
+    try {
+      incident = await executeDatabaseOperation(() =>
+        this.prisma.$transaction(async (tx) => {
+          const created = await tx.emergencyIncident.create({
+            data: {
+              clientMutationId: input.clientMutationId,
+              districtId: society.districtId,
+              areaDistrictIds: districtIds,
+              reportingSocietyId: society.id,
+              title: input.title ?? defaultIncidentTitle(input.type, areaNames),
+              type: input.type,
+              description: input.description ?? '',
+              message: input.message ?? '',
+              location: areaNames.join(', ').slice(0, 200),
+              createdById: principal.id,
+              createdByName: principal.displayName,
+              createdByRole: principal.roles[0] ?? null,
+              startedAt,
+              assessmentsDueAt: dueAt,
+            },
+            include: incidentInclude,
+          });
+          await tx.platformAuditEvent.create({
+            data: {
+              ...actorFields(principal),
+              action: 'INCIDENT_OPENED',
+              targetId: created.id,
+              societyId: society.id,
+              districtId: society.districtId,
+              detail: incidentReference(
+                created.referenceNumber,
+                created.activatedAt,
+              ),
+            },
+          });
+          return created;
+        }),
+      );
+    } catch (error) {
+      // A double tap can race: the other request won, so return its incident.
+      const raced = await this.findOpenReplay(input, principal);
+      if (raced) return (await this.summaries([raced]))[0]!;
+      throw error;
+    }
     await this.notify(
       () => this.audience({ districtIds, includeHq: true }),
       principal,
@@ -1356,6 +1367,33 @@ export class EmergenciesService {
     helperSociety: { id: string; districtId: string },
   ) {
     return coversSociety(actingScope(principal), helperSociety);
+  }
+
+  /** An incident this user already opened with the same client id, if any. */
+  private async findOpenReplay(input: OpenIncidentDto, principal: Principal) {
+    const clientMutationId = input.clientMutationId;
+    if (!clientMutationId) return null;
+    const existing = await executeDatabaseOperation(() =>
+      this.prisma.emergencyIncident.findUnique({
+        where: {
+          createdById_clientMutationId: {
+            createdById: principal.id,
+            clientMutationId,
+          },
+        },
+        include: incidentInclude,
+      }),
+    );
+    if (!existing) return null;
+    if (
+      existing.reportingSocietyId !== input.reportingSocietyId ||
+      existing.type !== input.type
+    ) {
+      throw new ConflictException(
+        'This incident ID was already used for another report',
+      );
+    }
+    return existing;
   }
 
   private async summaries(incidents: IncidentRecord[]) {
