@@ -384,9 +384,10 @@ describe('Issue #117 scoped Programmes & Activities (PostgreSQL)', () => {
     try {
       const body = await programmes('dmNorth');
       expect(body).toMatchObject({ planned: 3 });
+      // shown() uses a plain sort, so capitals come first.
       expect(shown(body)).toEqual([
-        'Fictional clinic day',
         'Fictional March close',
+        'Fictional clinic day',
         'Fictional youth camp',
       ]);
       const national = (
