@@ -2081,11 +2081,12 @@ class ProfitExpensesScreen extends StatelessWidget {
   );
 }
 
-/// The latest financial year that has ended (April to March), as the server
-/// chooses by default, and the four before it.
+/// The financial year in progress (issue #131), then the latest one that has
+/// ended (April to March), as the server chooses by default, and the four
+/// before it.
 List<int> selectableProgrammeYears(DateTime now) {
   final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
-  return [for (var i = 0; i < 5; i++) latest - i];
+  return [latest + 1, for (var i = 0; i < 5; i++) latest - i];
 }
 
 String _fyLabel(int year) =>
@@ -2229,6 +2230,17 @@ class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
           ),
         ),
         const SizedBox(height: 8),
+        if (programmes.year.inProgress) ...[
+          _Card(
+            colour: AppColors.warningSoft,
+            border: const Color(0xFFE8D28A),
+            child: Text(
+              l.progInProgress(programmes.year.label),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (scope != null) ...[
           _Card(
             child: Text.rich(

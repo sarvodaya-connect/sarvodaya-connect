@@ -2105,5 +2105,13 @@
   "progSdg14": "Life Below Water",
   "progSdg15": "Life on Land",
   "progSdg16": "Peace, Justice and Strong Institutions",
-  "progSdg17": "Partnerships for the Goals"
+  "progSdg17": "Partnerships for the Goals",
+  "progInProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "@progInProgress": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  }
 }
