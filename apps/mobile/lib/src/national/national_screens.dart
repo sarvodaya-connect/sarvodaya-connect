@@ -5,7 +5,12 @@ import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
 import '../models/user.dart';
 import '../society_record/society_record_models.dart'
-    show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
+    show
+        documentTypeLabels,
+        registrarDocumentTypes,
+        sarvodayaSectors,
+        sdgAsset,
+        sdgTitle;
 import '../sarvoai/sarvoai_screen.dart';
 import '../society_admin/assign_staff_screen.dart';
 import '../society_admin/create_society_screen.dart';
@@ -60,9 +65,18 @@ class _Loader<T> extends StatefulWidget {
     required this.load,
     required this.builder,
     this.loadingLabel,
+    this.errorTitle,
+    this.hqOnly = true,
   });
 
   final Future<T> Function(NationalApi api) load;
+
+  /// Defaults to the national error title.
+  final String? errorTitle;
+
+  /// Whether a refusal says "HQ only"; screens for other roles (issue #117)
+  /// show the shared no-access state instead.
+  final bool hqOnly;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
 
@@ -82,8 +96,10 @@ class _LoaderState<T> extends State<_Loader<T>> {
     _future ??= widget.load(DemoScope.of(context).national);
   }
 
-  void _reload() =>
-      setState(() => _future = widget.load(DemoScope.of(context).national));
+  // A block body: setState refuses a callback that returns the Future.
+  void _reload() => setState(() {
+    _future = widget.load(DemoScope.of(context).national);
+  });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<T>(
@@ -94,6 +110,11 @@ class _LoaderState<T> extends State<_Loader<T>> {
         return LoadingSkeleton(label: widget.loadingLabel ?? l.nationalLoading);
       }
       final error = snapshot.error;
+      if (error is SocietyRecordException &&
+          error.status == 403 &&
+          !widget.hqOnly) {
+        return const NoAccessView();
+      }
       if (error is SocietyRecordException && error.status == 403) {
         final user = DemoScope.of(context).user;
         return NoAccessView(
@@ -113,7 +134,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: l.nationalErrorTitle,
+          title: widget.errorTitle ?? l.nationalErrorTitle,
           message: error is SocietyRecordException
               ? (error.failure == null
                     ? error.message
@@ -2060,9 +2081,89 @@ class ProfitExpensesScreen extends StatelessWidget {
   );
 }
 
-/// V5 M63 Activities: done vs planned, SPC-approved only.
+/// The latest financial year that has ended (April to March), as the server
+/// chooses by default, and the four before it.
+List<int> selectableProgrammeYears(DateTime now) {
+  final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+  return [for (var i = 0; i < 5; i++) latest - i];
+}
+
+String _fyLabel(int year) =>
+    'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}';
+
+/// A stored sector in the reader's language; one the app does not know
+/// stays as stored.
+String programmeSectorLabel(AppLocalizations l, String sector) =>
+    switch (sarvodayaSectors.indexOf(sector)) {
+      0 => l.progSector1,
+      1 => l.progSector2,
+      2 => l.progSector3,
+      3 => l.progSector4,
+      4 => l.progSector5,
+      5 => l.progSector6,
+      6 => l.progSector7,
+      7 => l.progSector8,
+      8 => l.progSector9,
+      9 => l.progSector10,
+      _ => sector,
+    };
+
+/// A UN SDG's title in the reader's language.
+String programmeSdgLabel(AppLocalizations l, int sdg) => switch (sdg) {
+  1 => l.progSdg1,
+  2 => l.progSdg2,
+  3 => l.progSdg3,
+  4 => l.progSdg4,
+  5 => l.progSdg5,
+  6 => l.progSdg6,
+  7 => l.progSdg7,
+  8 => l.progSdg8,
+  9 => l.progSdg9,
+  10 => l.progSdg10,
+  11 => l.progSdg11,
+  12 => l.progSdg12,
+  13 => l.progSdg13,
+  14 => l.progSdg14,
+  15 => l.progSdg15,
+  16 => l.progSdg16,
+  17 => l.progSdg17,
+  _ => sdgTitle(sdg),
+};
+
+String _dimensionLabel(AppLocalizations l, String dimension) =>
+    switch (dimension) {
+      'SOCIAL' => l.progDimSocial,
+      'ECONOMIC' => l.progDimEconomic,
+      'GOVERNANCE' => l.progDimGovernance,
+      _ => dimension,
+    };
+
+/// Who the figures cover, for a DM, DDM or SPC.
+String programmeScopeLine(AppLocalizations l, ProgrammeScope scope) {
+  final district = scope.districts.join(', ');
+  return switch (scope.kind) {
+    ProgrammeScopeKind.district => l.progScopeDistrict(
+      district,
+      scope.societies,
+    ),
+    ProgrammeScopeKind.assignedAndDistrict
+        when scope.temporaryAccessEndsAt != null =>
+      l.progScopeTemporary(
+        district,
+        l.number(scope.societies),
+        l.accessEndsAt(scope.temporaryAccessEndsAt!),
+      ),
+    _ => l.progScopeAssigned(scope.societies),
+  };
+}
+
+/// V5 M64 Programmes & Activities: done vs planned, SPC-approved only.
+/// HQ sees the nation; with [scoped] a DM, DDM or SPC sees the same screen
+/// over the societies the server lets them count (issue #117).
 class NationalActivitiesScreen extends StatefulWidget {
-  const NationalActivitiesScreen({super.key});
+  const NationalActivitiesScreen({super.key, this.scoped = false});
+
+  final bool scoped;
 
   @override
   State<NationalActivitiesScreen> createState() =>
@@ -2071,182 +2172,263 @@ class NationalActivitiesScreen extends StatefulWidget {
 
 class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
   bool _bySector = true;
+  int? _year;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Activities',
-    subtitle: 'Done vs planned · SPC-approved only',
-    body: _Loader<NationalProgrammes>(
-      load: (api) => api.fetchProgrammes(),
-      builder: (context, programmes, _) {
-        final ranked = programmes.sdgs
-            .where((row) => row.completed > 0)
-            .toList();
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(text: 'Demonstration data · ${programmes.year.label}'),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.progTitle,
+      subtitle: l.progSubtitle,
+      body: _Loader<NationalProgrammes>(
+        // A new year is a new request.
+        key: ValueKey(_year),
+        loadingLabel: l.progLoading,
+        errorTitle: l.progErrorTitle,
+        hqOnly: !widget.scoped,
+        load: (api) => widget.scoped
+            ? api.fetchScopedProgrammes(year: _year)
+            : api.fetchProgrammes(year: _year),
+        builder: (context, programmes, _) =>
+            _programmes(context, l, programmes),
+      ),
+    );
+  }
+
+  Widget _programmes(
+    BuildContext context,
+    AppLocalizations l,
+    NationalProgrammes programmes,
+  ) {
+    final ranked = programmes.sdgs.where((row) => row.completed > 0).toList();
+    final scope = programmes.scope;
+    final years = selectableProgrammeYears(DemoScope.of(context).now);
+    final summary = l.progSummary(
+      styledSlot,
+      l.number(programmes.planned),
+      l.number(sharePercent(programmes.completed, programmes.planned)),
+    );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.progDemo(programmes.year.label)),
+        Semantics(
+          label: l.progFinancialYear,
+          container: true,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final year in years)
+                ChoiceChip(
+                  label: Text(_fyLabel(year)),
+                  selected: year == programmes.year.startYear,
+                  onSelected: (_) => setState(() => _year = year),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (scope != null) ...[
+          _Card(
+            child: Text.rich(
+              TextSpan(
                 children: [
-                  Text.rich(
+                  TextSpan(
+                    text: '${l.progCountedOver} ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.leaf,
+                    ),
+                  ),
+                  TextSpan(text: programmeScopeLine(l, scope)),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (scope.societies == 0)
+            StateMessage(
+              icon: Icons.groups_outlined,
+              title: l.progNoSocietiesTitle,
+              message: l.progNoSocietiesBody,
+            )
+          else if (programmes.planned == 0)
+            Semantics(
+              liveRegion: true,
+              child: _Card(
+                colour: AppColors.stateGrey,
+                child: Text(
+                  l.progZeroYear(programmes.year.label),
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: styledSpans(
+                    summary,
                     TextSpan(
+                      text: l.number(programmes.completed),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: true, label: Text(l.progTenSectors)),
+                  ButtonSegment(value: false, label: Text(l.progDimensions)),
+                ],
+                selected: {_bySector},
+                onSelectionChanged: (value) =>
+                    setState(() => _bySector = value.first),
+              ),
+              const SizedBox(height: 6),
+              if (_bySector)
+                for (final (index, sector) in sarvodayaSectors.indexed)
+                  _sectorRow(l, index, sector, programmes.sectors[sector])
+              else
+                for (final row in programmes.byDimension)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
                       children: [
-                        TextSpan(
-                          text: count(programmes.completed),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Expanded(
+                          child: Text(_dimensionLabel(l, row.dimension)),
                         ),
-                        TextSpan(
-                          text:
-                              ' of ${count(programmes.planned)} planned completed — ${sharePercent(programmes.completed, programmes.planned)}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
+                        Text(
+                          '${l.number(row.completed)} / ${l.number(row.planned)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('10 Sectors')),
-                      ButtonSegment(value: false, label: Text('Dimensions')),
-                    ],
-                    selected: {_bySector},
-                    onSelectionChanged: (value) =>
-                        setState(() => _bySector = value.first),
-                  ),
-                  const SizedBox(height: 6),
-                  if (_bySector)
-                    for (final (
-                          index,
-                          MapEntry(key: sector, value: (done, planned)),
-                        )
-                        in programmes.sectors.entries.indexed)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 11,
-                              backgroundColor: AppColors.leaf,
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(sector)),
-                            Text(
-                              '${count(done)} / ${count(planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                  else
-                    for (final row in programmes.byDimension)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${row.dimension[0]}${row.dimension.substring(1).toLowerCase()}',
-                              ),
-                            ),
-                            Text(
-                              '${count(row.completed)} / ${count(row.planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Eyebrow(l.progSdgEyebrow),
+              Text(
+                l.progSdgNote(programmes.year.label),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _Eyebrow('UN SDGs · Ranked by Completed Activities'),
-                  Text(
-                    '${programmes.year.label} · equal counts listed by SDG number',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+              if (ranked.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(l.progNoSdg(programmes.year.label)),
+                ),
+              for (final (index, row) in ranked.indexed)
+                Semantics(
+                  container: true,
+                  label: l.progSdgSemantics(
+                    l.number(index + 1),
+                    '${row.sdg}',
+                    programmeSdgLabel(l, row.sdg),
+                    l.number(row.completed),
                   ),
-                  if (ranked.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('No completed activity with a UN SDG yet.'),
-                    ),
-                  for (final (index, row) in ranked.indexed)
-                    Semantics(
-                      container: true,
-                      label:
-                          'Number ${index + 1}, SDG ${row.sdg}: ${sdgTitle(row.sdg)}, ${count(row.completed)} completed',
-                      child: ExcludeSemantics(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: Text(
-                                  '#${index + 1}',
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Image.asset(
-                                  sdgAsset(row.sdg),
-                                  width: 48,
-                                  height: 48,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'SDG ${row.sdg}\n${sdgTitle(row.sdg)}',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              Text(
-                                count(row.completed),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                  child: ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              '#${index + 1}',
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
                           ),
-                        ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.asset(
+                              sdgAsset(row.sdg),
+                              width: 48,
+                              height: 48,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'SDG ${row.sdg}\n${programmeSdgLabel(l, row.sdg)}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            l.number(row.completed),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectorRow(
+    AppLocalizations l,
+    int index,
+    String sector,
+    (int, int, int)? figures,
+  ) {
+    final (done, planned, societies) = figures ?? (0, 0, 0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 11,
+            backgroundColor: AppColors.leaf,
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(fontSize: 11, color: Colors.white),
             ),
-          ],
-        );
-      },
-    ),
-  );
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(programmeSectorLabel(l, sector)),
+                Text(
+                  l.progSectorSocieties(societies),
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${l.number(done)} / ${l.number(planned)}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
 }

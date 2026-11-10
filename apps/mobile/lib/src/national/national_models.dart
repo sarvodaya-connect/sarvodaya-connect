@@ -481,7 +481,45 @@ class SocietyAtAGlance {
   final List<String> excoMissingOffices;
 }
 
-/// M63: done vs planned by sector, dimension and UN SDG.
+/// Issue #117: whose societies a DM, DDM or SPC sees on M64.
+enum ProgrammeScopeKind { district, assigned, assignedAndDistrict }
+
+class ProgrammeScope {
+  const ProgrammeScope({
+    required this.kind,
+    required this.societies,
+    this.districts = const [],
+    this.temporaryAccessEndsAt,
+  });
+
+  factory ProgrammeScope.fromJson(Json json) => ProgrammeScope(
+    kind: switch (json['kind']) {
+      'DISTRICT' => ProgrammeScopeKind.district,
+      'ASSIGNED_AND_DISTRICT' => ProgrammeScopeKind.assignedAndDistrict,
+      _ => ProgrammeScopeKind.assigned,
+    },
+    societies: _int(json['societies']),
+    districts: [
+      for (final row in json['districts'] as List? ?? const [])
+        (row as Json)['name'] as String,
+    ],
+    temporaryAccessEndsAt: json['temporaryAccessEndsAt'] == null
+        ? null
+        : DateTime.parse(json['temporaryAccessEndsAt'] as String),
+  );
+
+  final ProgrammeScopeKind kind;
+
+  /// Societies in scope, whether or not they have activities.
+  final int societies;
+  final List<String> districts;
+
+  /// When a DDM's temporary district access ends.
+  final DateTime? temporaryAccessEndsAt;
+}
+
+/// M64: done vs planned by sector, dimension and UN SDG. HQ's figures
+/// are national; a DM's, DDM's or SPC's carry the [scope] they cover.
 class NationalProgrammes {
   const NationalProgrammes(
     this.year,
@@ -489,8 +527,9 @@ class NationalProgrammes {
     this.completed,
     this.sectors,
     this.byDimension,
-    this.sdgs,
-  );
+    this.sdgs, {
+    this.scope,
+  });
 
   factory NationalProgrammes.fromJson(Json json) => NationalProgrammes(
     FinancialYearLabel.fromJson(json['financialYear'] as Json),
@@ -501,6 +540,7 @@ class NationalProgrammes {
         (row as Json)['sector'] as String: (
           _int(row['completed']),
           _int(row['planned']),
+          _int(row['societies']),
         ),
     },
     [
@@ -508,16 +548,20 @@ class NationalProgrammes {
         DimensionCount.fromJson(row as Json),
     ],
     [for (final row in json['sdgs'] as List) SdgCount.fromJson(row as Json)],
+    scope: json['scope'] == null
+        ? null
+        : ProgrammeScope.fromJson(json['scope'] as Json),
   );
 
   final FinancialYearLabel year;
   final int planned;
   final int completed;
 
-  /// Sector → (completed, planned).
-  final Map<String, (int, int)> sectors;
+  /// Sector → (completed, planned, societies with activities).
+  final Map<String, (int, int, int)> sectors;
   final List<DimensionCount> byDimension;
   final List<SdgCount> sdgs;
+  final ProgrammeScope? scope;
 }
 
 /// M62b: societies that have not added both yearly figures.

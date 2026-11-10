@@ -80,10 +80,11 @@ describe("provisional role-based visibility", () => {
       "Administration",
       "Settings",
     ]);
-    // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8).
-    expect(labels(districtManager)).toEqual(["District Overview", "Societies", "Temporary DDM Access", "Disaster Response"]);
-    expect(labels(coordinator)).toEqual(["Home", "My Societies", "Activities to Approve", "Disaster Response"]);
-    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster Response"]);
+    // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8,
+    // Programmes over the role's own scope from issue #117).
+    expect(labels(districtManager)).toEqual(["District Overview", "Societies", "Programmes", "Temporary DDM Access", "Disaster Response"]);
+    expect(labels(coordinator)).toEqual(["Home", "My Societies", "Activities to Approve", "Programmes", "Disaster Response"]);
+    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Programmes", "Disaster Response"]);
     expect(labels(systemAdmin)).toEqual(["Platform Access", "Notifications"]);
   });
 

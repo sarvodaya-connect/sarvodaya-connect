@@ -55,6 +55,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
           { href: "/dashboard", icon: "home", label: t("nav.home") },
           { href: "/my-societies", icon: "list", label: t("nav.mySocieties"), alsoActiveOn: ["/societies"] },
           { href: "/activities-to-approve", icon: "check", label: t("nav.activitiesToApprove") },
+          { href: "/activities", icon: "leaf", label: t("nav.programmes") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],
         secondary: [],
@@ -64,6 +65,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
         main: [
           { href: "/dashboard", icon: "home", label: t("nav.home") },
           { href: "/my-societies", icon: "list", label: t("nav.societies"), alsoActiveOn: ["/societies"] },
+          { href: "/activities", icon: "leaf", label: t("nav.programmes") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],
         secondary: [],
@@ -73,6 +75,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
         main: [
           { href: "/dashboard", icon: "home", label: t("nav.districtOverview") },
           { href: "/my-societies", icon: "list", label: t("nav.societies"), alsoActiveOn: ["/societies"] },
+          { href: "/activities", icon: "leaf", label: t("nav.programmes") },
           { href: "/district-access", icon: "key", label: t("nav.temporaryDdmAccess") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],

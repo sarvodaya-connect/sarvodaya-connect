@@ -7,15 +7,19 @@ import 'national_models.dart';
 /// Demonstration mode only: fictional national figures shaped like the V5
 /// prototype, so every HQ screen can be shown without a server. The screens
 /// label them "Demonstration data". Like the server, it refuses every role
-/// but HQ.
+/// but HQ, except the scoped Programmes figures (issue #117).
 class DemoNationalApi implements NationalApi {
   DemoNationalApi({
     required this.user,
     this.delay = const Duration(milliseconds: 500),
-  });
+    DateTime Function()? clock,
+  }) : clock = clock ?? DateTime.now;
 
   final AuthenticatedUser? Function() user;
   final Duration delay;
+
+  /// Checks a DDM's temporary grant against the demo's own time.
+  final DateTime Function() clock;
 
   Future<T> _hq<T>(T Function() build) async {
     if (delay > Duration.zero) await Future<void>.delayed(delay);
@@ -282,50 +286,148 @@ class DemoNationalApi implements NationalApi {
     );
   });
 
+  static FinancialYearLabel _fy(int? year) => year == null
+      ? _year
+      : FinancialYearLabel(
+          year,
+          'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}',
+        );
+
+  // sector, completed, planned, societies with activities (national).
+  static const _sectorFigures = [
+    ('Community education', 520, 580, 612),
+    ('Child wellbeing', 410, 450, 480),
+    ('Health and nutrition', 455, 500, 531),
+    ('Agriculture', 380, 440, 402),
+    ('Environment', 340, 390, 377),
+    ('Economy', 300, 360, 341),
+    ('Culture', 255, 290, 268),
+    ('Governance', 190, 240, 233),
+    ('Spiritual development', 330, 360, 352),
+    ('Housing and infrastructure', 280, 320, 296),
+  ];
+
+  static const _sdgFigures = [
+    (4, 980),
+    (3, 860),
+    (2, 720),
+    (6, 640),
+    (16, 410),
+    (8, 380),
+  ];
+
+  /// The national figures, or a share of them for a DM's, DDM's or SPC's
+  /// fictional societies. Every goal is listed; equal counts by SDG number.
+  static NationalProgrammes _figures(
+    FinancialYearLabel year,
+    double share, {
+    ProgrammeScope? scope,
+    int maxSocieties = 1 << 30,
+  }) {
+    int part(int value) => (value * share).round();
+    final sectors = {
+      for (final (sector, done, planned, societies) in _sectorFigures)
+        sector: (
+          part(done),
+          part(planned),
+          math.min(part(societies), maxSocieties),
+        ),
+    };
+    final sdgs =
+        [
+          for (var sdg = 1; sdg <= 17; sdg++)
+            SdgCount(
+              sdg,
+              part(
+                _sdgFigures
+                        .where((row) => row.$1 == sdg)
+                        .map((row) => row.$2)
+                        .firstOrNull ??
+                    0,
+              ),
+            ),
+        ]..sort(
+          (a, b) => b.completed.compareTo(a.completed) != 0
+              ? b.completed.compareTo(a.completed)
+              : a.sdg.compareTo(b.sdg),
+        );
+    return NationalProgrammes(
+      year,
+      sectors.values.fold(0, (sum, row) => sum + row.$2),
+      sectors.values.fold(0, (sum, row) => sum + row.$1),
+      sectors,
+      [
+        DimensionCount('SOCIAL', part(2180), part(1940)),
+        DimensionCount('ECONOMIC', part(1400), part(1210)),
+        DimensionCount('GOVERNANCE', part(350), part(310)),
+      ],
+      sdgs,
+      scope: scope,
+    );
+  }
+
   @override
-  Future<NationalProgrammes> fetchProgrammes() => _hq(
-    () => const NationalProgrammes(
-      _year,
-      3930,
-      3460,
-      {
-        'Community education': (520, 580),
-        'Child wellbeing': (410, 450),
-        'Health and nutrition': (455, 500),
-        'Agriculture': (380, 440),
-        'Environment': (340, 390),
-        'Economy': (300, 360),
-        'Culture': (255, 290),
-        'Governance': (190, 240),
-        'Spiritual development': (330, 360),
-        'Housing and infrastructure': (280, 320),
-      },
-      [
-        DimensionCount('SOCIAL', 2180, 1940),
-        DimensionCount('ECONOMIC', 1400, 1210),
-        DimensionCount('GOVERNANCE', 350, 310),
-      ],
-      [
-        SdgCount(4, 980),
-        SdgCount(3, 860),
-        SdgCount(2, 720),
-        SdgCount(6, 640),
-        SdgCount(16, 410),
-        SdgCount(8, 380),
-        SdgCount(1, 0),
-        SdgCount(5, 0),
-        SdgCount(7, 0),
-        SdgCount(9, 0),
-        SdgCount(10, 0),
-        SdgCount(11, 0),
-        SdgCount(12, 0),
-        SdgCount(13, 0),
-        SdgCount(14, 0),
-        SdgCount(15, 0),
-        SdgCount(17, 0),
-      ],
-    ),
-  );
+  Future<NationalProgrammes> fetchProgrammes({int? year}) =>
+      _hq(() => _figures(_fy(year), 1));
+
+  /// Issue #117: like the server, a DM sees their district, an SPC their
+  /// assigned societies, and a DDM their societies plus the district only
+  /// while a temporary grant is valid. HQ and Society Officers are refused.
+  @override
+  Future<NationalProgrammes> fetchScopedProgrammes({int? year}) async {
+    if (delay > Duration.zero) await Future<void>.delayed(delay);
+    final signedIn = user();
+    final role = signedIn?.primaryRole;
+    if (signedIn == null ||
+        role == UserRole.hqAdmin ||
+        role == UserRole.societyOfficer) {
+      throw const SocietyRecordException(
+        'This page is for SPCs, DDMs and DMs',
+        status: 403,
+      );
+    }
+    final fy = _fy(year);
+    if (role == UserRole.districtManager) {
+      return _figures(
+        fy,
+        0.04,
+        scope: const ProgrammeScope(
+          kind: ProgrammeScopeKind.district,
+          societies: 106,
+          districts: ['Kurunegala'],
+        ),
+        maxSocieties: 106,
+      );
+    }
+    final assigned = signedIn.societyIds.toSet().length;
+    final grant = role == UserRole.deputyDistrictManager
+        ? signedIn.delegatedDistrictAccess
+              .where((g) => g.activeAt(clock()))
+              .firstOrNull
+        : null;
+    if (grant != null) {
+      return _figures(
+        fy,
+        0.04,
+        scope: ProgrammeScope(
+          kind: ProgrammeScopeKind.assignedAndDistrict,
+          societies: 106,
+          districts: const ['Kurunegala'],
+          temporaryAccessEndsAt: grant.expiresAt,
+        ),
+        maxSocieties: 106,
+      );
+    }
+    return _figures(
+      fy,
+      0.0026 * assigned,
+      scope: ProgrammeScope(
+        kind: ProgrammeScopeKind.assigned,
+        societies: assigned,
+      ),
+      maxSocieties: assigned,
+    );
+  }
 
   @override
   Future<FiguresNotAdded> fetchFiguresNotAdded() => _hq(
