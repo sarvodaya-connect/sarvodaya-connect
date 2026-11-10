@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -42,10 +44,10 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
   }
 
   String? get _gradeError =>
-      _grade == null ? 'Choose the grade you propose.' : null;
+      _grade == null ? context.l10n.gradeReqChooseGrade : null;
 
   String? get _reasonError => _reason.text.trim().length < _minReason
-      ? 'Explain the reason in at least $_minReason characters.'
+      ? context.l10n.gradeReqReasonShort(_minReason)
       : null;
 
   Future<void> _send() async {
@@ -62,19 +64,16 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
         reason: _reason.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Request sent to HQ. You will get a notification with HQ's decision.",
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.gradeReqSent)));
       Navigator.of(context).pop(true);
     } on SocietyRecordException catch (error) {
       if (mounted) {
         setState(() {
           _sending = false;
-          _error = '${error.message} Your reason is still here.';
+          _error = context.l10n.recReasonStillHere(
+            context.l10n.recordError(error),
+          );
         });
       }
     }
@@ -82,10 +81,11 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final record = widget.record;
     final current = record.grade;
     return Scaffold(
-      appBar: recordFormAppBar(context, title: 'Request a Grade Change'),
+      appBar: recordFormAppBar(context, title: l.gradeReqFormTitle),
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -118,14 +118,14 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const FieldLabel('Current grade'),
+                FieldLabel(l.gradeReqCurrent),
                 ReadOnlyField(
                   current == null
-                      ? 'Not set'
-                      : '$current · ${gradeLabels[current]}',
+                      ? l.recNotSet
+                      : '$current · ${l.gradeName(current)}',
                 ),
                 const SizedBox(height: 14),
-                const FieldLabel('Requested grade', required: true),
+                FieldLabel(l.gradeReqRequested, required: true),
                 Row(
                   children: [
                     for (final grade in const ['A', 'B', 'C']) ...[
@@ -155,10 +155,7 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
                     ),
                   ),
                 const SizedBox(height: 14),
-                const FieldLabel(
-                  'Why should the grade change?',
-                  required: true,
-                ),
+                FieldLabel(l.gradeReqWhy, required: true),
                 TextField(
                   controller: _reason,
                   maxLines: 5,
@@ -178,23 +175,24 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'HQ reads this before deciding. ${_reason.text.length} of $_maxReason characters.',
+                  l.gradeReqHqReads(_reason.text.length, _maxReason),
                   style: RecordStyle.caption,
                 ),
                 const SizedBox(height: 12),
                 RecordNote(
                   icon: Icons.info_outline,
                   tone: NoteTone.warning,
-                  title: 'HQ Approval Needed',
-                  message:
-                      "The grade stays ${current ?? 'as it is'} until HQ approves. You will get a notification with HQ's decision.",
+                  title: l.gradeReqApprovalTitle,
+                  message: current == null
+                      ? l.gradeReqStaysAsIs
+                      : l.gradeReqStays(current),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 10),
                   RecordNote(
                     icon: Icons.error_outline,
                     tone: NoteTone.error,
-                    title: 'Not Sent',
+                    title: l.gradeReqNotSent,
                     message: _error!,
                   ),
                 ],
@@ -206,11 +204,11 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
       bottomNavigationBar: BottomActionBar(
         secondary: OutlinedButton(
           onPressed: () => Navigator.of(context).maybePop(),
-          child: const Text('Cancel'),
+          child: Text(l.commonCancel),
         ),
         primary: FilledButton(
           onPressed: _sending ? null : _send,
-          child: Text(_sending ? 'Sending…' : 'Send to HQ'),
+          child: Text(_sending ? l.gradeReqSending : l.gradeReqSend),
         ),
       ),
     );
@@ -231,45 +229,50 @@ class _GradeOption extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    enabled: onTap != null,
-    label:
-        'Grade $grade, ${gradeLabels[grade]}${isCurrent ? ', current grade' : ''}',
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Opacity(
-        opacity: isCurrent ? 0.45 : 1,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.mintSoft : AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? AppColors.forest : AppColors.line,
-              width: selected ? 2 : 1,
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: onTap != null,
+      label: (isCurrent ? l.gradeReqOptionLabelCurrent : l.gradeReqOptionLabel)(
+        grade,
+        l.gradeName(grade),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Opacity(
+          opacity: isCurrent ? 0.45 : 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.mintSoft : AppColors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? AppColors.forest : AppColors.line,
+                width: selected ? 2 : 1,
+              ),
             ),
-          ),
-          child: ExcludeSemantics(
-            child: Column(
-              children: [
-                GradeBadge(grade),
-                const SizedBox(height: 6),
-                Text(
-                  isCurrent ? 'Current' : gradeLabels[grade]!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            child: ExcludeSemantics(
+              child: Column(
+                children: [
+                  GradeBadge(grade),
+                  const SizedBox(height: 6),
+                  Text(
+                    isCurrent ? l.gradeReqOptionCurrent : l.gradeName(grade),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 import '../models/society.dart';
 import '../screens/manual_pin_screen.dart';
 import '../state/demo_store.dart';
@@ -29,7 +31,8 @@ class _Field {
     : original = original ?? '',
       controller = TextEditingController(text: original ?? '');
 
-  final String label;
+  /// Its name in the M06u warning, in the chosen language.
+  final String Function(AppLocalizations l) label;
   final String original;
   final TextEditingController controller;
 
@@ -40,15 +43,21 @@ class _Field {
 final _landlinePattern = RegExp(r'^(0\d{9}|\+94\d{9})$');
 
 class _EditSocietyScreenState extends State<EditSocietyScreen> {
-  late final _name = _Field('society name', widget.record.nameEn);
+  late final _name = _Field((l) => l.editFieldName, widget.record.nameEn);
   late final _members = _Field(
-    'number of members',
+    (l) => l.editFieldMembers,
     widget.record.memberCount?.toString(),
   );
-  late final _address = _Field('address', widget.record.addressLine);
-  late final _landline = _Field('landline', widget.record.landline);
+  late final _address = _Field(
+    (l) => l.editFieldAddress,
+    widget.record.addressLine,
+  );
+  late final _landline = _Field(
+    (l) => l.editFieldLandline,
+    widget.record.landline,
+  );
   late final _business = _Field(
-    'business run by the society',
+    (l) => l.editFieldBusiness,
     widget.record.businessDescription,
   );
   late final _fields = [_name, _members, _address, _landline, _business];
@@ -84,30 +93,31 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       (_location!.latitude != widget.record.latitude ||
           _location!.longitude != widget.record.longitude);
 
+  AppLocalizations get _l => context.l10n;
+
   /// Labels of the changed fields, for the M06u warning.
   List<String> get _changed => [
     for (final field in _fields)
-      if (field.changed) field.label,
-    if (_locationChanged) 'map location',
+      if (field.changed) field.label(_l),
+    if (_locationChanged) _l.editFieldLocation,
   ];
 
-  String? get _nameError =>
-      _name.value.length < 2 ? 'Enter the society name.' : null;
+  String? get _nameError => _name.value.length < 2 ? _l.editNameError : null;
 
   String? get _membersError {
-    if (_members.value.isEmpty) return 'Enter the number of members.';
+    if (_members.value.isEmpty) return _l.editMembersRequired;
     return RegExp(r'^\d{1,7}$').hasMatch(_members.value)
         ? null
-        : 'Use numbers only, for example 418.';
+        : _l.editMembersFormat;
   }
 
   String? get _addressError =>
-      _address.value.isEmpty ? 'Enter the address.' : null;
+      _address.value.isEmpty ? _l.valAddressRequired : null;
 
   String? get _landlineError {
     final digits = _landline.value.replaceAll(RegExp(r'[\s-]'), '');
     if (digits.isEmpty || _landlinePattern.hasMatch(digits)) return null;
-    return 'Enter a 10-digit number, for example 037 000 0000, or leave it empty.';
+    return _l.editLandlineFormat;
   }
 
   bool get _valid => [
@@ -139,18 +149,15 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       await DemoScope.read(context).societyRecords
           .updateRecord(widget.record.id, changes);
       if (!mounted) return true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Saved. The change is in the society history.'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_l.editSaved)));
       Navigator.of(context).pop(true);
       return true;
     } on SocietyRecordException catch (error) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _serverError = '${error.message} Your changes are still here.';
+          _serverError = _l.recStillHere(_l.recordError(error));
         });
       }
       return false;
@@ -167,9 +174,12 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// M06u: names the fields that would be lost.
   Future<void> _confirmLeave() async {
     final changed = _changed;
+    // English keeps "a, b and c"; other languages list the fields with commas.
     final list = changed.length == 1
         ? changed.single
-        : '${changed.sublist(0, changed.length - 1).join(', ')} and ${changed.last}';
+        : _l.localeName == 'en'
+        ? '${changed.sublist(0, changed.length - 1).join(', ')} and ${changed.last}'
+        : changed.join(', ');
     final choice = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
@@ -199,10 +209,10 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Leave Without Saving?',
+              Text(
+                context.l10n.editLeaveTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppColors.ink,
@@ -210,8 +220,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'You changed ${changed.length} ${changed.length == 1 ? 'field' : 'fields'}: $list. '
-                'If you leave now, these changes are lost.',
+                context.l10n.editLeaveBody(changed.length, list),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
@@ -223,13 +232,13 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               FilledButton(
                 style: compactFilledStyle,
                 onPressed: () => Navigator.pop(context, 'keep'),
-                child: const Text('Keep editing'),
+                child: Text(context.l10n.editKeepEditing),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 style: compactOutlinedStyle,
                 onPressed: () => Navigator.pop(context, 'save'),
-                child: const Text('Save and leave'),
+                child: Text(context.l10n.editSaveLeave),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
@@ -242,7 +251,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                   ),
                 ),
                 onPressed: () => Navigator.pop(context, 'discard'),
-                child: const Text('Discard changes'),
+                child: Text(context.l10n.editDiscard),
               ),
             ],
           ),
@@ -277,7 +286,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
           decoration: changedDecoration(
             changed: field.changed,
             helper: field.changed && field.original.isNotEmpty
-                ? 'Was ${field.original}'
+                ? _l.editWas(field.original)
                 : hint,
             error: _submitted || field.changed ? error : null,
           ),
@@ -288,6 +297,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final record = widget.record;
     final dirty = _changed.isNotEmpty;
     return PopScope(
@@ -298,7 +308,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Edit Society Information',
+          title: l.editTitle,
           actions: [if (dirty) const UnsavedChip()],
         ),
         body: Column(
@@ -317,7 +327,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '${record.nameEn} · you can edit this society',
+                      l.editYouCanEdit(record.nameEn),
                       style: const TextStyle(
                         color: AppColors.pine,
                         fontSize: 11,
@@ -334,7 +344,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                 children: [
                   _text(
                     _name,
-                    'Society name',
+                    l.recSocietyName,
                     required: true,
                     error: _nameError,
                   ),
@@ -346,7 +356,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const FieldLabel('S number'),
+                            FieldLabel(l.recSNumber),
                             ReadOnlyField(record.societyCode),
                           ],
                         ),
@@ -357,7 +367,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const FieldLabel('Grade'),
+                            FieldLabel(l.recGrade),
                             ReadOnlyField(record.grade ?? '–'),
                           ],
                         ),
@@ -376,37 +386,37 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                                 GradeChangeRequestScreen(record: record),
                           ),
                         ),
-                        child: const Text('Request a grade change →'),
+                        child: Text(l.editRequestLink),
                       ),
                     ),
                   const SizedBox(height: 12),
                   _text(
                     _members,
-                    'Number of members',
+                    l.editMembers,
                     required: true,
                     error: _membersError,
                     keyboard: TextInputType.number,
                   ),
                   _text(
                     _address,
-                    'Address',
+                    l.recAddress,
                     required: true,
                     error: _addressError,
                   ),
                   _text(
                     _landline,
-                    'Landline (if the society has one)',
+                    l.editLandline,
                     error: _landlineError,
                     keyboard: TextInputType.phone,
-                    hint: 'For example 037 000 0000. Leave empty if none.',
+                    hint: l.editLandlineHint,
                   ),
                   _text(
                     _business,
-                    'Business run by the society',
+                    l.editBusiness,
                     maxLines: 4,
-                    hint: 'Information only — no sales, stock or accounts.',
+                    hint: l.editBusinessHint,
                   ),
-                  const FieldLabel('Map location'),
+                  FieldLabel(l.editMapLocation),
                   Stack(
                     children: [
                       SocietyStreetMap(
@@ -415,8 +425,11 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                         onPick: (location) =>
                             setState(() => _location = location),
                         semanticLabel: _location == null
-                            ? 'No map location set'
-                            : 'Map location ${_location!.latitude.toStringAsFixed(4)}, ${_location!.longitude.toStringAsFixed(4)}',
+                            ? l.editNoLocation
+                            : l.editLocationAt(
+                                _location!.latitude.toStringAsFixed(4),
+                                _location!.longitude.toStringAsFixed(4),
+                              ),
                       ),
                       Positioned(
                         right: 8,
@@ -432,7 +445,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                           ),
                           onPressed: _movePin,
                           icon: const Icon(Icons.place_outlined, size: 14),
-                          label: const Text('Move pin'),
+                          label: Text(l.editMovePin),
                         ),
                       ),
                     ],
@@ -440,8 +453,13 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                   const SizedBox(height: 4),
                   Text(
                     _location == null
-                        ? 'No location set yet.'
-                        : '${_location!.latitude.toStringAsFixed(4)}° N, ${_location!.longitude.toStringAsFixed(4)}° E${_locationChanged ? ' · changed' : ''}',
+                        ? l.editNoLocationYet
+                        : (_locationChanged
+                              ? l.editCoordinatesChanged
+                              : l.editCoordinates)(
+                            _location!.latitude.toStringAsFixed(4),
+                            _location!.longitude.toStringAsFixed(4),
+                          ),
                     style: RecordStyle.caption,
                   ),
                   if (_serverError != null) ...[
@@ -449,7 +467,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                     NoticeBanner(
                       icon: Icons.error_outline,
                       tone: NoticeTone.error,
-                      title: 'Not Saved',
+                      title: l.editNotSaved,
                       message: _serverError,
                     ),
                   ],
@@ -461,11 +479,11 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
         bottomNavigationBar: BottomActionBar(
           secondary: OutlinedButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+            child: Text(l.editCancel),
           ),
           primary: FilledButton(
             onPressed: dirty && !_saving && _valid ? _save : null,
-            child: Text(_saving ? 'Saving…' : 'Save changes'),
+            child: Text(_saving ? l.recSaving : l.editSave),
           ),
         ),
       ),

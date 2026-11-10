@@ -1,4 +1,5 @@
 import { SocietyNoAccess } from "@/components/dashboard/district-access/no-access-views";
+import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { getHome } from "@/lib/home-api";
 
@@ -7,8 +8,8 @@ import { getHome } from "@/lib/home-api";
  * society outside the user's scope, so this page never says whether it exists.
  */
 export default async function SocietyNotFound() {
-  const viewer = await getDesktopViewer();
-  if (viewer.role === "HQ_ADMIN" || viewer.role === "SYSTEM_ADMIN") return <SocietyNoAccess isHq />;
+  const [viewer, t] = await Promise.all([getDesktopViewer(), getT()]);
+  if (viewer.role === "HQ_ADMIN" || viewer.role === "SYSTEM_ADMIN") return <SocietyNoAccess isHq t={t} />;
   const home = await getHome().catch(() => null);
-  return <SocietyNoAccess assigned={home?.societies.total} isHq={false} recentlyEnded={home?.recentlyEnded ?? null} />;
+  return <SocietyNoAccess assigned={home?.societies.total} isHq={false} recentlyEnded={home?.recentlyEnded ?? null} t={t} />;
 }

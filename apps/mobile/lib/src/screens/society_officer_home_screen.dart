@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/user.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../society_record/record_widgets.dart';
 import '../society_record/society_record_api.dart';
 import '../society_record/society_record_models.dart';
@@ -88,6 +90,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user!;
     final record = _record;
@@ -96,11 +99,8 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
       body: Column(
         children: [
           _OfficerHeader(
-            title: '${_greeting(DateTime.now())}, $firstName',
-            subtitle: [
-              UserRole.societyOfficer.label,
-              ?record?.nameEn,
-            ].join(' · '),
+            title: l.greeting(DateTime.now(), firstName),
+            subtitle: [l.recRoleSocietyOfficer, ?record?.nameEn].join(' · '),
           ),
           if (record != null) _AccessStrip(record: record),
           Expanded(child: _body(record)),
@@ -110,19 +110,20 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
   }
 
   Widget _body(SocietyRecord? record) {
+    final l = context.l10n;
     if (record == null) {
       if (_error != null) {
         return StateMessage(
           icon: Icons.cloud_off_outlined,
-          title: 'Your Society Could Not Be Loaded',
-          message: _error!.message,
-          primaryLabel: 'Try again',
+          title: l.officerLoadError,
+          message: l.recordError(_error!),
+          primaryLabel: l.commonTryAgain,
           onPrimary: _load,
         );
       }
       return Center(
         child: Semantics(
-          label: 'Loading your society',
+          label: l.officerLoading,
           child: const CircularProgressIndicator(),
         ),
       );
@@ -137,14 +138,14 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
           if (_loading)
-            const Row(
+            Row(
               children: [
-                SizedBox.square(
+                const SizedBox.square(
                   dimension: 14,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 8),
-                Text('Refreshing…'),
+                const SizedBox(width: 8),
+                Text(l.officerRefreshing),
               ],
             ),
           // V5 M40: the live incident and what HQ has arranged for this society.
@@ -156,57 +157,58 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
             onRequest: () => store.selectTab(OfficerTabs.society),
           ),
           const SizedBox(height: 18),
-          const Padding(
-            padding: EdgeInsets.only(left: 2, bottom: 8),
-            child: Text('Update Your Society', style: _HomeStyle.section),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: Text(l.officerUpdate, style: _HomeStyle.section),
           ),
           _TileGrid(
             tiles: [
               _UpdateTile(
                 icon: Icons.apartment_outlined,
-                title: 'Society Information',
-                subtitle: 'Details, yearly profit and expenses',
+                title: l.officerInfo,
+                subtitle: l.officerInfoSub,
                 onTap: () => store.selectTab(OfficerTabs.society),
               ),
               _UpdateTile(
                 icon: Icons.people_outline,
-                title: 'Exco Members',
+                title: l.officerExco,
                 subtitle: exco == _excoSeats
-                    ? '$exco of $_excoSeats · complete'
+                    ? l.officerExcoComplete(exco)
                     : exco == 0
-                    ? 'Not entered yet'
-                    : '$exco of $_excoSeats',
+                    ? l.officerExcoNone
+                    : l.officerExcoOf(exco),
                 onTap: () => store.selectTab(OfficerTabs.exco),
               ),
               _UpdateTile(
                 icon: Icons.calendar_today_outlined,
-                title: 'Annual Work Plan',
+                title: l.officerPlan,
                 subtitle: plan == null
-                    ? 'Activities and allocations'
-                    : '${plan.year} · ${plan.activities.length} '
-                          '${plan.activities.length == 1 ? 'activity' : 'activities'}',
+                    ? l.officerPlanSub
+                    : l.officerPlanLine('${plan.year}', plan.activities.length),
                 onTap: () => store.selectTab(OfficerTabs.workPlan),
               ),
               _UpdateTile(
                 icon: Icons.history,
-                title: 'Change History',
+                title: l.officerHistory,
                 subtitle: record.lastChangeAt == null
-                    ? 'No changes yet'
-                    : 'Last change ${formatWhen(record.lastChangeAt!, DateTime.now())}',
+                    ? l.recNoChanges
+                    : l.officerLastChange(
+                        l.recordWhen(record.lastChangeAt!, DateTime.now()),
+                      ),
                 onTap: () => _openRecordTab(4),
               ),
             ],
           ),
           const SizedBox(height: 10),
           _LinkCard(
-            title: '${summary.financialYear.label} Summary and Audit Report',
+            title: l.officerSummaryAudit(summary.financialYear.label),
             subtitle: [
               summary.totalProfit != null && summary.totalExpenses != null
-                  ? 'Yearly figures added'
-                  : 'Yearly figures not added',
+                  ? l.officerFiguresAdded
+                  : l.officerFiguresMissing,
               summary.auditReport != null
-                  ? 'audit report uploaded'
-                  : 'audit report missing',
+                  ? l.officerAuditUploaded
+                  : l.officerAuditMissing,
             ].join(' · '),
             attention:
                 summary.totalProfit == null ||
@@ -218,12 +220,6 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
       ),
     );
   }
-
-  static String _greeting(DateTime now) => now.hour < 12
-      ? 'Good morning'
-      : now.hour < 17
-      ? 'Good afternoon'
-      : 'Good evening';
 }
 
 /// Prototype M05 type scale (compact phone scale, as in the record screens).
@@ -340,8 +336,9 @@ class _AccessStrip extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'Your access: ${record.nameEn} only · '
-            '${record.permissions.canEdit ? 'view and edit' : 'view only'}',
+            record.permissions.canEdit
+                ? context.l10n.officerAccess(record.nameEn)
+                : context.l10n.officerAccessViewOnly(record.nameEn),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -373,6 +370,7 @@ class _SocietySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final request = record.openGradeRequest;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -423,8 +421,12 @@ class _SocietySummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _Stat(
-                  label: 'Members',
-                  value: record.memberCount?.toString() ?? '—',
+                  label: l.recMembers,
+                  value: record.memberCount == null
+                      ? '—'
+                      : l.localeName == 'en'
+                      ? record.memberCount.toString()
+                      : l.number(record.memberCount!),
                 ),
               ),
               const SizedBox(width: 8),
@@ -437,7 +439,9 @@ class _SocietySummaryCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _Stat(
-                  label: plan == null ? 'Work Plan' : '${plan!.year} Plan',
+                  label: plan == null
+                      ? l.recTabWorkPlan
+                      : l.officerPlanYear('${plan!.year}'),
                   value: plan?.activities.length.toString() ?? '—',
                 ),
               ),
@@ -459,7 +463,7 @@ class _SocietySummaryCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'All changes synced · ${formatWhen(syncedAt!, DateTime.now())}',
+                    l.officerSynced(l.recordWhen(syncedAt!, DateTime.now())),
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
@@ -541,16 +545,17 @@ class _GradeRequestBanner extends StatelessWidget {
             Expanded(
               child: Text.rich(
                 TextSpan(
-                  text:
-                      'Grade change ${request.fromGrade ?? '–'} → '
-                      '${request.toGrade} requested by '
-                      '${request.requestedBy.displayName}. ',
-                  children: const [
-                    TextSpan(
-                      text: 'Waiting for HQ.',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                  children: styledSpans(
+                    context.l10n.officerGradeRequest(
+                      '${request.fromGrade ?? '–'} → ${request.toGrade}',
+                      request.requestedBy.displayName,
+                      styledSlot,
                     ),
-                  ],
+                    TextSpan(
+                      text: context.l10n.officerWaitingHq,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
                 ),
                 style: const TextStyle(
                   fontSize: 12,

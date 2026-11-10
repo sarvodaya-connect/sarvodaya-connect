@@ -5,10 +5,18 @@ import { useMemo, useState } from "react";
 import type { CommitteeMember, MembershipCategory } from "@sarvodaya-connect/api-contracts";
 
 import { Icon } from "../icon";
+import { ENGLISH } from "@/i18n/english";
+import type { MessageKey } from "@/i18n/messages/en";
+import { useI18n } from "@/i18n/provider";
+import { officeList, officeName } from "@/i18n/society-record";
+import type { Translator } from "@/i18n/translate";
 
 export const OFFICE_BEARERS = ["President", "Secretary", "Treasurer"] as const;
 
 export const EXCO_SEATS = 25;
+
+/** A seat group's name in the chosen language; the API's value stays as it is. */
+export const seatGroupName = (t: Translator, group: MembershipCategory) => t(`sr.seat.${group}` as MessageKey);
 
 /** Names for the seat groups the API requires (3 children, 3 youth, 3 mothers, 9 ordinary, 7 elders). */
 export const SEAT_GROUP_LABELS: Record<MembershipCategory, string> = {
@@ -125,20 +133,20 @@ export function rowComplete(row: ExcoRow) {
  * (see excoStillMissing). The API checks the same rules, plus each seat
  * group's number and age range.
  */
-export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().slice(0, 10)) {
+export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().slice(0, 10), t: Translator = ENGLISH) {
   const problems: string[] = [];
   for (const row of rows) {
-    if (!rowFilled(row) && !rowEmpty(row)) problems.push(`Seat ${row.seatNumber}: enter the full name, or clear the seat.`);
+    if (!rowFilled(row) && !rowEmpty(row)) problems.push(t("sr.ee.seatName", { seat: row.seatNumber }));
   }
   for (const office of OFFICE_BEARERS) {
     const holders = rows.filter((row) => row.position === office);
-    if (holders.length > 1) problems.push(`Choose only one ${office}.`);
+    if (holders.length > 1) problems.push(t("sr.ee.onlyOne", { office: officeName(t, office) }));
     const empty = holders.find((row) => !rowFilled(row));
-    if (empty) problems.push(`Seat ${empty.seatNumber} is the ${office}: enter their name, or choose another member.`);
+    if (empty) problems.push(t("sr.ee.officeEmpty", { seat: empty.seatNumber, office: officeName(t, office) }));
   }
   for (const row of rows) {
-    if (row.dateOfBirth && row.dateOfBirth > today) problems.push(`Seat ${row.seatNumber}: the date of birth is in the future.`);
-    if (row.nic && !NIC.test(row.nic.trim())) problems.push(`Seat ${row.seatNumber}: enter a valid NIC (9 digits and V or X, or 12 digits).`);
+    if (row.dateOfBirth && row.dateOfBirth > today) problems.push(t("sr.ee.dobFuture", { seat: row.seatNumber }));
+    if (row.nic && !NIC.test(row.nic.trim())) problems.push(t("sr.ee.nicInvalid", { seat: row.seatNumber }));
   }
   return problems;
 }
@@ -148,14 +156,14 @@ export function excoProblems(rows: ExcoRow[], today = new Date().toISOString().s
  * API's words: seats to fill and office bearers not chosen. It does not stop
  * saving; the record shows the API's own status once saved.
  */
-export function excoStillMissing(rows: ExcoRow[]) {
+export function excoStillMissing(rows: ExcoRow[], t: Translator = ENGLISH) {
   const filled = rows.filter(rowFilled);
   const missing: string[] = [];
   const toFill = EXCO_SEATS - filled.length;
-  if (filled.length === 0) return ["No Exco members have been entered yet."];
-  if (toFill > 0) missing.push(`${toFill} of ${EXCO_SEATS} ${toFill === 1 ? "seat is" : "seats are"} still to fill.`);
+  if (filled.length === 0) return [t("sr.ee.noneYet")];
+  if (toFill > 0) missing.push(t.plural("sr.ee.toFill", toFill));
   const offices = OFFICE_BEARERS.filter((office) => !filled.some((row) => row.position === office));
-  if (offices.length) missing.push(`No ${offices.join(", ").replace(/, ([^,]*)$/, " or $1")} chosen yet.`);
+  if (offices.length) missing.push(t("sr.ee.noOffices", { offices: officeList(t, offices, "disjunction") }));
   return missing;
 }
 
@@ -207,9 +215,10 @@ export function ExcoEditor({
   rows: ExcoRow[];
   setRows: (rows: ExcoRow[]) => void;
 }) {
+  const { t } = useI18n();
   const [showAll, setShowAll] = useState(true);
   const filled = rows.filter(rowFilled).length;
-  const stillMissing = excoStillMissing(rows);
+  const stillMissing = excoStillMissing(rows, t);
   const payload = useMemo(() => JSON.stringify(excoPayload(rows)), [rows]);
   const update = (seat: number, key: keyof ExcoRow, value: string) =>
     setRows(rows.map((row) => (row.seatNumber === seat ? { ...row, [key]: value } : row)));
@@ -231,16 +240,28 @@ export function ExcoEditor({
       <input name={name} type="hidden" value={payload} />
       <section className="overflow-hidden rounded-card border border-line bg-surface">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-[15px] font-bold text-ink">Exco · 25 Members</h3>
+          <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.title")}</h3>
           <button className="text-[12px] text-ink-soft underline underline-offset-2" onClick={() => setShowAll((all) => !all)} type="button">
-            {showAll ? "Show only office bearers and seats still to complete" : "Show all 25"}
+            {showAll ? t("sr.ee.showSome") : t("sr.ee.showAll")}
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1400px] text-left text-[12px]">
             <thead className="bg-surface-muted text-[11px] text-ink-soft">
               <tr>
-                {["No.", "Group", "Full name", "Office", "NIC", "Date of birth", "Age", "Profession", "Phone", "Address", ""].map((heading, index) => (
+                {[
+                  t("sr.ex.colNo"),
+                  t("sr.ee.colGroup"),
+                  t("sr.ee.colFullName"),
+                  t("sr.ov.colOffice"),
+                  "NIC",
+                  t("sr.ex.colDob"),
+                  t("sr.ov.colAge"),
+                  t("sr.ov.colProfession"),
+                  t("sr.ex.colPhone"),
+                  t("sr.ov.address"),
+                  "",
+                ].map((heading, index) => (
                   <th className="px-2 py-2 font-semibold first:pl-4" key={`${heading}-${index}`} scope="col">{heading}</th>
                 ))}
               </tr>
@@ -251,63 +272,65 @@ export function ExcoEditor({
                 const filledSeat = rowFilled(row);
                 // Typed details without a name stop saving; an empty seat is simply left for later.
                 const needsName = !filledSeat && !rowEmpty(row);
-                const label = (field: string) => `Seat ${row.seatNumber} ${field}`;
+                const seat = { seat: row.seatNumber };
                 return (
                   <tr className={needsName ? "bg-[var(--banner-incident-bg)]" : ""} key={row.seatNumber}>
                     <td className={`py-1.5 pl-4 pr-2 font-semibold ${needsName ? "text-danger-text" : "text-ink-soft"}`}>{row.seatNumber}</td>
-                    <td className="px-2 py-1.5 text-[11px] text-ink-soft">{SEAT_GROUP_LABELS[row.seatType]}</td>
+                    <td className="px-2 py-1.5 text-[11px] text-ink-soft">{seatGroupName(t, row.seatType)}</td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("full name")} className={`${cell} min-w-[160px]`} maxLength={150} onChange={(event) => update(row.seatNumber, "fullName", event.target.value)} placeholder={filledSeat ? undefined : "Not entered yet"} value={row.fullName} />
+                      <input aria-label={t("sr.ee.fieldFullName", seat)} className={`${cell} min-w-[160px]`} maxLength={150} onChange={(event) => update(row.seatNumber, "fullName", event.target.value)} placeholder={filledSeat ? undefined : t("sr.ee.notEntered")} value={row.fullName} />
                     </td>
                     <td className="px-2 py-1.5">
                       <select
-                        aria-label={label("office")}
+                        aria-label={t("sr.ee.fieldOffice", seat)}
                         autoFocus={focusOffices && row.seatNumber === 1}
                         className={`${cell} min-w-[115px]`}
                         onChange={(event) => chooseOffice(row.seatNumber, event.target.value)}
                         value={OFFICE_BEARERS.includes(row.position as never) ? row.position : "Member"}
                       >
                         {[...OFFICE_BEARERS, "Member"].map((office) => (
-                          <option key={office}>{office}</option>
+                          <option key={office} value={office}>
+                            {officeName(t, office)}
+                          </option>
                         ))}
                       </select>
                     </td>
                     <td className="px-2 py-1.5">
                       <input
-                        aria-label={label("NIC")}
+                        aria-label={t("sr.ee.fieldNic", seat)}
                         autoComplete="off"
                         className={`${cell} min-w-[130px] font-mono`}
                         maxLength={12}
                         onChange={(event) => update(row.seatNumber, "nic", event.target.value)}
-                        placeholder={row.nicMasked ? `${row.nicMasked} · new` : "Optional"}
+                        placeholder={row.nicMasked ? t("sr.ee.nicNew", { masked: row.nicMasked }) : t("sr.ee.optional")}
                         value={row.nic}
                       />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("date of birth")} className={`${cell} min-w-[140px]`} max={new Date().toISOString().slice(0, 10)} onChange={(event) => update(row.seatNumber, "dateOfBirth", event.target.value)} type="date" value={row.dateOfBirth} />
+                      <input aria-label={t("sr.ee.fieldDob", seat)} className={`${cell} min-w-[140px]`} max={new Date().toISOString().slice(0, 10)} onChange={(event) => update(row.seatNumber, "dateOfBirth", event.target.value)} type="date" value={row.dateOfBirth} />
                     </td>
                     <td className="px-2 py-1.5 text-ink-soft">{ageFrom(row.dateOfBirth)}</td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("profession")} className={`${cell} min-w-[120px]`} maxLength={100} onChange={(event) => update(row.seatNumber, "profession", event.target.value)} value={row.profession} />
+                      <input aria-label={t("sr.ee.fieldProfession", seat)} className={`${cell} min-w-[120px]`} maxLength={100} onChange={(event) => update(row.seatNumber, "profession", event.target.value)} value={row.profession} />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("phone")} className={`${cell} min-w-[120px]`} inputMode="tel" maxLength={30} onChange={(event) => update(row.seatNumber, "phone", event.target.value)} value={row.phone} />
+                      <input aria-label={t("sr.ee.fieldPhone", seat)} className={`${cell} min-w-[120px]`} inputMode="tel" maxLength={30} onChange={(event) => update(row.seatNumber, "phone", event.target.value)} value={row.phone} />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input aria-label={label("address")} className={`${cell} min-w-[150px]`} maxLength={255} onChange={(event) => update(row.seatNumber, "addressLine", event.target.value)} value={row.addressLine} />
+                      <input aria-label={t("sr.ee.fieldAddress", seat)} className={`${cell} min-w-[150px]`} maxLength={255} onChange={(event) => update(row.seatNumber, "addressLine", event.target.value)} value={row.addressLine} />
                     </td>
                     <td className="px-2 py-1.5">
                       {complete ? (
                         <span className="text-brand-action">
                           <Icon className="size-4" name="success" strokeWidth={2} />
-                          <span className="sr-only">Complete</span>
+                          <span className="sr-only">{t("sr.ee.rowComplete")}</span>
                         </span>
                       ) : needsName ? (
-                        <span className="text-[11px] font-semibold text-danger-text">Name needed</span>
+                        <span className="text-[11px] font-semibold text-danger-text">{t("sr.ee.nameNeeded")}</span>
                       ) : filledSeat ? (
-                        <span className="whitespace-nowrap text-[11px] font-semibold text-warn-text">Details to add</span>
+                        <span className="whitespace-nowrap text-[11px] font-semibold text-warn-text">{t("sr.ee.detailsToAdd")}</span>
                       ) : (
-                        <span className="text-[11px] text-muted">Empty</span>
+                        <span className="text-[11px] text-muted">{t("sr.ee.empty")}</span>
                       )}
                     </td>
                   </tr>
@@ -316,18 +339,15 @@ export function ExcoEditor({
             </tbody>
           </table>
         </div>
-        <p className="border-t border-line-soft px-4 py-2 text-[11px] text-ink-soft">
-          Save at any time: empty seats are left for later. Each seat needs a full name to be saved, and should also have the NIC, date of birth,
-          profession, phone and address. The age is worked out from the date of birth. NICs are stored encrypted and shown only on request.
-        </p>
+        <p className="border-t border-line-soft px-4 py-2 text-[11px] text-ink-soft">{t("sr.ee.footer")}</p>
       </section>
       <aside className="flex flex-col gap-4">
         <section className="rounded-card border border-line bg-surface p-4">
-          <h3 className="text-[15px] font-bold text-ink">Progress</h3>
+          <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.progress")}</h3>
           <p className={`mt-2 text-[26px] font-bold ${stillMissing.length === 0 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
           {/* V5 PR 10: the count as words, never a progress bar. */}
           {stillMissing.length === 0 ? (
-            <p className="mt-1 text-[12px] text-ink-soft">All 25 seats and the three office bearers are in. Saving completes the Exco.</p>
+            <p className="mt-1 text-[12px] text-ink-soft">{t("sr.ee.allIn")}</p>
           ) : (
             <>
               <ul className="mt-1 list-disc pl-4 text-[12px] text-ink-soft">
@@ -335,23 +355,28 @@ export function ExcoEditor({
                   <li key={item}>{item}</li>
                 ))}
               </ul>
-              <p className="mt-1 text-[12px] text-ink-soft">You can save now and finish later. The Exco shows as incomplete until all of this is done.</p>
+              <p className="mt-1 text-[12px] text-ink-soft">{t("sr.ee.saveLater")}</p>
             </>
           )}
         </section>
         <section className="rounded-card border border-line bg-surface p-4">
-          <h3 className="text-[15px] font-bold text-ink">Office Bearers</h3>
+          <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.officeBearers")}</h3>
           <ul className="mt-2 space-y-1 text-[12.5px]">
             {OFFICE_BEARERS.map((office) => {
               const holder = rows.find((row) => row.position === office);
               return (
                 <li className={holder ? "text-brand-action" : "text-danger-text"} key={office}>
-                  {holder ? "✓" : "✕"} {office} {holder ? `· ${holder.fullName || `seat ${holder.seatNumber}`}` : "not chosen"}
+                  {holder ? "✓" : "✕"}{" "}
+                  {holder
+                    ? holder.fullName
+                      ? `${officeName(t, office)} · ${holder.fullName}`
+                      : t("sr.ee.officeSeat", { office: officeName(t, office), seat: holder.seatNumber })
+                    : t("sr.ee.officeNone", { office: officeName(t, office) })}
                 </li>
               );
             })}
           </ul>
-          <p className="mt-3 text-[12px] text-ink-soft">Chosen from the Exco members. The Exco is not complete until all three are chosen.</p>
+          <p className="mt-3 text-[12px] text-ink-soft">{t("sr.ee.officeNote")}</p>
         </section>
       </aside>
     </div>

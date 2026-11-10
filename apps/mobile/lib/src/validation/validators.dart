@@ -1,7 +1,10 @@
+import '../l10n/l10n.dart';
 import '../models/committee.dart';
 
 /// Form validators for SC-26. Each returns an error message, or null when valid.
-/// Messages are written for society volunteers, not technical users.
+/// Messages are written for society volunteers, not technical users. Pass
+/// [AppLocalizations] where a screen is translated (issue #108); without it
+/// the messages stay in English.
 class Validators {
   const Validators._();
 
@@ -12,33 +15,40 @@ class Validators {
   static final RegExp _phonePattern = RegExp(r'^(?:\+94|0)\d{9}$');
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
-  static String? required(String? value, String label) {
-    if (value == null || value.trim().isEmpty) return 'Enter the $label.';
+  /// [message] is the whole sentence in the chosen language, when given.
+  static String? required(String? value, String label, [String? message]) {
+    if (value == null || value.trim().isEmpty) {
+      return message ?? 'Enter the $label.';
+    }
     return null;
   }
 
-  static String? personName(String? value) {
-    final missing = required(value, 'full name');
+  static String? personName(String? value, [AppLocalizations? l]) {
+    final missing = required(value, 'full name', l?.valFullName);
     if (missing != null) return missing;
     final name = value!.trim();
     if (name.replaceAll(RegExp(r"[ .'\-]"), '').length < 2) {
-      return 'Enter at least 2 letters.';
+      return l?.valTwoLetters ?? 'Enter at least 2 letters.';
     }
-    if (name.length > 80) return 'Use 80 characters or fewer.';
+    if (name.length > 80) {
+      return l?.valMaxChars(80) ?? 'Use 80 characters or fewer.';
+    }
     if (!_namePattern.hasMatch(name)) {
-      return 'Use letters, spaces, full stops, hyphens or apostrophes only.';
+      return l?.valNameChars ??
+          'Use letters, spaces, full stops, hyphens or apostrophes only.';
     }
     return null;
   }
 
   /// Sri Lankan numbers: +94 followed by 9 digits, or 0 followed by 9 digits.
   /// Spaces and hyphens are ignored. The final format is still to be confirmed by Sarvodaya.
-  static String? sriLankanPhone(String? value) {
-    final missing = required(value, 'phone number');
+  static String? sriLankanPhone(String? value, [AppLocalizations? l]) {
+    final missing = required(value, 'phone number', l?.valPhoneRequired);
     if (missing != null) return missing;
     final digits = normalisePhone(value!);
     if (!_phonePattern.hasMatch(digits)) {
-      return 'Use a Sri Lankan number, for example +94 00 000 0001.';
+      return l?.valPhoneFormat ??
+          'Use a Sri Lankan number, for example +94 00 000 0001.';
     }
     return null;
   }
@@ -89,14 +99,17 @@ class Validators {
     return null;
   }
 
-  static String? addressLine(String? value) {
-    final missing = required(value, 'address');
+  static String? addressLine(String? value, [AppLocalizations? l]) {
+    final missing = required(value, 'address', l?.valAddressRequired);
     if (missing != null) return missing;
     final text = value!.trim();
     if (text.length < 5) {
-      return 'Enter the full address, for example No. 12, Temple Road.';
+      return l?.valAddressShort ??
+          'Enter the full address, for example No. 12, Temple Road.';
     }
-    if (text.length > 120) return 'Use 120 characters or fewer.';
+    if (text.length > 120) {
+      return l?.valMaxChars(120) ?? 'Use 120 characters or fewer.';
+    }
     return null;
   }
 

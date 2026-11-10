@@ -130,10 +130,12 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
       throw const SocietyRecordException(
         'The server did not answer. Check your connection and try again.',
         offline: true,
+        failure: ClientFailure.offline,
       );
     } on AuthServiceException {
       throw const SocietyRecordException(
         'Something went wrong on the server. Try again.',
+        failure: ClientFailure.server,
       );
     }
   }

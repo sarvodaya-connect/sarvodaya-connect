@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../format.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../models/user.dart';
 import '../society_record/society_record_models.dart'
     show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
@@ -438,18 +438,22 @@ class _Pill extends StatelessWidget {
   );
 }
 
-/// " · Exco 3 of 25" or " · Exco: no Treasurer" for an incomplete Exco
-/// (the API's completion), nothing once it is complete.
-String _excoNote(int? filled, bool? complete, List<String> missingOffices) =>
-    complete != false || filled == null
-    ? ''
+/// "Exco 3 of 25" or "Exco: no Treasurer" for an incomplete Exco (the API's
+/// completion), null once it is complete.
+String? _excoNote(
+  AppLocalizations l,
+  int? filled,
+  bool? complete,
+  List<String> missingOffices,
+) => complete != false || filled == null
+    ? null
     : filled == 0
-    ? ' · Exco not entered'
+    ? l.dirExcoNone
     : filled < 25
-    ? ' · Exco $filled of 25'
+    ? l.dirExcoSeats(filled)
     : missingOffices.isNotEmpty
-    ? ' · Exco: no ${missingOffices.join(', ')}'
-    : ' · Exco needs checking';
+    ? l.dirExcoOffices(l.offices(missingOffices))
+    : l.dirExcoCheck;
 
 void _push(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
@@ -1078,9 +1082,10 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final list = _Loader<DirectoryPage>(
       key: ValueKey(_version),
-      loadingLabel: 'Loading societies',
+      loadingLabel: l.dirLoading,
       load: (api) => api.fetchDirectory(_query),
       builder: (context, page, _) => ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -1088,11 +1093,11 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
           if (page.rows.isEmpty)
             StateMessage(
               icon: Icons.search,
-              title: 'No Societies Match',
+              title: l.homeNoMatchTitle,
               message: _query.filtered
-                  ? 'Try fewer filters.'
-                  : 'No society is in your view yet.',
-              primaryLabel: _query.filtered ? 'Clear all filters' : null,
+                  ? l.homeNoMatchFiltered
+                  : l.homeNoMatchEmpty,
+              primaryLabel: _query.filtered ? l.homeClearAllFilters : null,
               onPrimary: () => _set(const DirectoryQuery()),
             )
           else ...[
@@ -1100,7 +1105,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${count(page.total)} active societies',
+                    l.dirActiveCount(page.total),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.muted,
@@ -1131,20 +1136,37 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                           fontSize: 14,
                         ),
                       ),
-                      subtitle: Text(
-                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}${_excoNote(row.excoSeatsFilled, row.excoComplete, row.excoMissingOffices)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      subtitle: Text(() {
+                        final state = row.figuresAdded
+                            ? l.dirUpdated(l.date(row.updatedAt))
+                            : l.dirFiguresNotAdded;
+                        final exco = _excoNote(
+                          l,
+                          row.excoSeatsFilled,
+                          row.excoComplete,
+                          row.excoMissingOffices,
+                        );
+                        return [
+                          row.members == null
+                              ? '${row.societyCode} · $state'
+                              : l.dirRowMembers(
+                                  row.societyCode,
+                                  row.members!,
+                                  state,
+                                ),
+                          ?exco,
+                        ].join(' · ');
+                      }(), style: const TextStyle(fontSize: 12)),
                       trailing: row.requestedGrade != null
                           ? _Pill('${row.grade ?? '–'} → ${row.requestedGrade}')
                           : row.notUpdatedIn90Days
-                          ? const _Pill(
-                              '90+ days',
+                          ? _Pill(
+                              l.dir90Days,
                               colour: AppColors.danger,
                               background: AppColors.dangerSoft,
                             )
                           : !row.figuresAdded
-                          ? const _Pill('Not added')
+                          ? _Pill(l.dirNotAdded)
                           : const Icon(Icons.chevron_right),
                       onTap: () => _push(
                         context,
@@ -1166,9 +1188,9 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         children: [
           TextField(
             autofocus: widget.autofocusSearch,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Name or S number',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: l.dirSearchHint,
             ),
             textInputAction: TextInputAction.search,
             onSubmitted: (value) => _set(_query.copyWith(search: value.trim())),
@@ -1180,25 +1202,38 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
             children: [
               if (_query.districtId != null)
                 InputChip(
-                  label: Text('District: ${_query.districtName ?? 'chosen'}'),
+                  label: Text(
+                    _query.districtName == null
+                        ? l.dirDistrictChosen
+                        : l.dirDistrictChip(_query.districtName!),
+                  ),
                   selected: true,
                   deleteIconColor: Colors.white,
                   onDeleted: () => _set(_query.copyWith(district: () => null)),
-                  deleteButtonTooltipMessage: 'Remove the district filter',
+                  deleteButtonTooltipMessage: l.dirRemoveDistrict,
                 ),
               PopupMenuButton<String?>(
-                tooltip: 'Class',
+                tooltip: l.dirClass,
                 onSelected: (grade) =>
                     _set(_query.copyWith(grade: () => grade)),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: null, child: Text('All classes')),
+                  PopupMenuItem(value: null, child: Text(l.dirAllClasses)),
                   for (final grade in ['A', 'B', 'C'])
-                    PopupMenuItem(value: grade, child: Text('Class $grade')),
+                    PopupMenuItem(
+                      value: grade,
+                      child: Text(l.dirClassOf(grade)),
+                    ),
                 ],
-                child: Chip(label: Text('Class: ${_query.grade ?? 'All'}')),
+                child: Chip(
+                  label: Text(
+                    _query.grade == null
+                        ? l.dirClassAll
+                        : l.dirClassChip(_query.grade!),
+                  ),
+                ),
               ),
               FilterChip(
-                label: const Text('90+ Days'),
+                label: Text(l.dir90DaysChip),
                 selected: _query.notUpdated,
                 onSelected: (value) => _set(_query.copyWith(notUpdated: value)),
               ),
@@ -1214,8 +1249,8 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
       ],
     );
     final subtitle = _query.districtName == null
-        ? 'Active societies'
-        : 'Filtered to ${_query.districtName}';
+        ? l.dirActive
+        : l.dirFiltered(_query.districtName!);
     if (widget.asTab) {
       return Scaffold(
         // V5 D05n on the phone: HQ creates a society, then assigns its staff.
@@ -1229,17 +1264,20 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
             if (mounted) setState(() => _version++);
           },
           icon: const Icon(Icons.add),
-          label: const Text('Create society'),
+          label: Text(l.dirCreate),
         ),
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  'Societies',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  l.listTitle,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Padding(
@@ -1255,7 +1293,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         ),
       );
     }
-    return _Page(title: 'Societies', subtitle: subtitle, body: body);
+    return _Page(title: l.listTitle, subtitle: subtitle, body: body);
   }
 }
 
@@ -1266,214 +1304,238 @@ class SocietySummaryScreen extends StatelessWidget {
   final String societyId;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Society Summary',
-    subtitle: 'Counts and yearly totals',
-    body: _Loader<SocietyAtAGlance>(
-      loadingLabel: 'Loading the society',
-      load: (api) => api.fetchSociety(societyId),
-      builder: (context, society, _) {
-        final uploaded = society.uploaded.values.where((value) => value).length;
-        final completeTone = society.recordsCompletePercent >= 90;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            _Card(
-              child: Row(
-                children: [
-                  GradeBadge(society.grade, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          society.name,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          '${society.societyCode} · ${society.district} · ${society.hasSocietyOfficer ? 'updated ${formatDate(society.updatedAt)}' : 'no Society Officer'}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Pair(
-              _Figure(
-                'Members',
-                society.members == null
-                    ? 'Not entered'
-                    : count(society.members!),
-                society.membershipYear == null
-                    ? 'No counts yet'
-                    : '${society.membershipYear}',
-              ),
-              _Figure(
-                'Records Complete',
-                '${society.recordsCompletePercent}%',
-                society.missingFields == 0
-                    ? 'Every field entered'
-                    : '${society.missingFields} fields missing',
-                colour: completeTone ? AppColors.leaf : AppColors.warning,
-                background: completeTone
-                    ? const Color(0xFFEEF6EF)
-                    : AppColors.warningSoft,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Pair(
-              _Figure(
-                'Profit for the Year',
-                lkr(society.profit),
-                society.profit == null
-                    ? 'Waiting for the society'
-                    : society.year.label,
-                colour: AppColors.leaf,
-              ),
-              _Figure(
-                'Expenses for the Year',
-                lkr(society.expenses),
-                society.expenses == null
-                    ? 'Waiting for the society'
-                    : society.year.label,
-                colour: const Color(0xFF9A4F12),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Eyebrow(
-                    'Registrar Documents · $uploaded of ${registrarDocumentTypes.length}',
-                  ),
-                  for (final type in registrarDocumentTypes)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    String docLabel(String type) => switch (type) {
+      'AUDIT_REPORT' => l.summDocAudit,
+      'AGM_MINUTES' => l.summDocAgm,
+      'OFFICE_BEARER_LIST' => l.summDocOfficeBearers,
+      'MEMBERS_LIST' => l.summDocMembers,
+      _ => documentTypeLabels[type] ?? type,
+    };
+    return _Page(
+      title: l.summTitle,
+      subtitle: l.summSubtitle,
+      body: _Loader<SocietyAtAGlance>(
+        loadingLabel: l.summLoading,
+        load: (api) => api.fetchSociety(societyId),
+        builder: (context, society, _) {
+          final uploaded = society.uploaded.values
+              .where((value) => value)
+              .length;
+          final completeTone = society.recordsCompletePercent >= 90;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _Card(
+                child: Row(
+                  children: [
+                    GradeBadge(society.grade, size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              documentTypeLabels[type] ?? type,
-                              style: const TextStyle(fontSize: 13),
+                          Text(
+                            society.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          society.uploaded[type] == true
-                              ? const _Pill(
-                                  'Uploaded',
-                                  colour: AppColors.leaf,
-                                  background: AppColors.mint,
-                                )
-                              : type == 'AUDIT_REPORT' && society.auditPastDue
-                              ? const _Pill(
-                                  'Past due',
-                                  colour: AppColors.danger,
-                                  background: AppColors.dangerSoft,
-                                )
-                              : const _Pill('Missing'),
+                          Text(
+                            society.hasSocietyOfficer
+                                ? l.summLine(
+                                    society.societyCode,
+                                    society.district,
+                                    l.date(society.updatedAt),
+                                  )
+                                : l.summLineNoOfficer(
+                                    society.societyCode,
+                                    society.district,
+                                  ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
-            if (!society.hasSocietyOfficer) ...[
-              const SizedBox(height: 8),
-              NoticeBanner(
-                icon: Icons.warning_amber_outlined,
-                title: '${society.name} Has No Society Officer',
-                message: society.spcName == null
-                    ? 'Its SPC adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.'
-                    : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.',
-              ),
-            ],
-            if (society.excoComplete == false) ...[
-              const SizedBox(height: 8),
-              NoticeBanner(
-                icon: Icons.groups_outlined,
-                tone: NoticeTone.warning,
-                title: society.excoSeatsFilled == 0
-                    ? 'Exco not entered yet'
-                    : (society.excoSeatsFilled ?? 0) < 25
-                    ? 'Exco incomplete · ${society.excoSeatsFilled} of 25'
-                    : society.excoMissingOffices.isNotEmpty
-                    ? 'Exco incomplete · no ${society.excoMissingOffices.join(', ')} chosen'
-                    : 'Exco incomplete · needs checking',
-                message: 'The Society Officer enters the Exco and can save it as they go. HQ can also add members from the society record.',
-              ),
-            ],
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (society.gradeRequest != null) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Grade change ${society.gradeRequest}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        const _Pill('Waiting for HQ'),
-                      ],
-                    ),
-                    const Divider(height: 18),
                   ],
-                  Text(
-                    'Activities this year: ${society.approved} of ${society.planned} approved',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  if (society.latestActivity != null)
-                    Text(
-                      'Latest: ${society.latestActivity}${society.latestSdgs.isEmpty ? '' : ' · SDG ${society.latestSdgs.join(', ')}'}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () =>
-                  _push(context, SocietyRecordScreen(societyId: society.id)),
-              child: const Text('Open society record'),
-            ),
-            const SizedBox(height: 8),
-            // V5 D05a on the phone. The server allows it to HQ only.
-            OutlinedButton.icon(
-              onPressed: () => _push(
-                context,
-                AssignStaffScreen(
-                  societyId: society.id,
-                  societyName: society.name,
                 ),
               ),
-              icon: const Icon(Icons.manage_accounts_outlined, size: 18),
-              label: Text(
-                society.hasSocietyOfficer
-                    ? 'Change assigned staff'
-                    : 'Assign staff',
+              const SizedBox(height: 8),
+              _Pair(
+                _Figure(
+                  l.recMembers,
+                  society.members == null
+                      ? l.summNotEntered
+                      : l.number(society.members!),
+                  society.membershipYear == null
+                      ? l.summNoCounts
+                      : '${society.membershipYear}',
+                ),
+                _Figure(
+                  l.summComplete,
+                  '${society.recordsCompletePercent}%',
+                  society.missingFields == 0
+                      ? l.summEveryField
+                      : l.summFieldsMissing(society.missingFields),
+                  colour: completeTone ? AppColors.leaf : AppColors.warning,
+                  background: completeTone
+                      ? const Color(0xFFEEF6EF)
+                      : AppColors.warningSoft,
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
+              const SizedBox(height: 8),
+              _Pair(
+                _Figure(
+                  l.summProfit,
+                  lkr(society.profit, notAdded: l.nationalNotAdded),
+                  society.profit == null ? l.summWaiting : society.year.label,
+                  colour: AppColors.leaf,
+                ),
+                _Figure(
+                  l.summExpenses,
+                  lkr(society.expenses, notAdded: l.nationalNotAdded),
+                  society.expenses == null ? l.summWaiting : society.year.label,
+                  colour: const Color(0xFF9A4F12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Eyebrow(
+                      l.summRegistrar(uploaded, registrarDocumentTypes.length),
+                    ),
+                    for (final type in registrarDocumentTypes)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                docLabel(type),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            society.uploaded[type] == true
+                                ? _Pill(
+                                    l.summUploaded,
+                                    colour: AppColors.leaf,
+                                    background: AppColors.mint,
+                                  )
+                                : type == 'AUDIT_REPORT' && society.auditPastDue
+                                ? _Pill(
+                                    l.summPastDue,
+                                    colour: AppColors.danger,
+                                    background: AppColors.dangerSoft,
+                                  )
+                                : _Pill(l.summMissing),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!society.hasSocietyOfficer) ...[
+                const SizedBox(height: 8),
+                NoticeBanner(
+                  icon: Icons.warning_amber_outlined,
+                  title: l.summNoOfficerTitle(society.name),
+                  message: society.spcName == null
+                      ? l.summNoOfficerBody
+                      : l.summNoOfficerBodyNamed(society.spcName!),
+                ),
+              ],
+              if (society.excoComplete == false) ...[
+                const SizedBox(height: 8),
+                NoticeBanner(
+                  icon: Icons.groups_outlined,
+                  tone: NoticeTone.warning,
+                  title: society.excoSeatsFilled == 0
+                      ? l.summExcoNone
+                      : (society.excoSeatsFilled ?? 0) < 25
+                      ? l.summExcoSeats(society.excoSeatsFilled ?? 0)
+                      : society.excoMissingOffices.isNotEmpty
+                      ? l.summExcoOffices(l.offices(society.excoMissingOffices))
+                      : l.summExcoCheck,
+                  message: l.summExcoBody,
+                ),
+              ],
+              const SizedBox(height: 8),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (society.gradeRequest != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l.summGradeChange('${society.gradeRequest}'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          _Pill(l.gradeReqWaitingHq),
+                        ],
+                      ),
+                      const Divider(height: 18),
+                    ],
+                    Text(
+                      l.summActivities(society.approved, society.planned),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    if (society.latestActivity != null)
+                      Text(
+                        society.latestSdgs.isEmpty
+                            ? l.summLatest(society.latestActivity!)
+                            : l.summLatestSdgs(
+                                society.latestActivity!,
+                                society.latestSdgs.join(', '),
+                              ),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () =>
+                    _push(context, SocietyRecordScreen(societyId: society.id)),
+                child: Text(l.summOpenRecord),
+              ),
+              const SizedBox(height: 8),
+              // V5 D05a on the phone. The server allows it to HQ only.
+              OutlinedButton.icon(
+                onPressed: () => _push(
+                  context,
+                  AssignStaffScreen(
+                    societyId: society.id,
+                    societyName: society.name,
+                  ),
+                ),
+                icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                label: Text(
+                  society.hasSocietyOfficer
+                      ? l.summChangeStaff
+                      : l.summAssignStaff,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// The island outline in latitude and longitude, simplified by hand.

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 import '../state/demo_store.dart';
 import 'society_record_api.dart';
 
@@ -66,7 +68,9 @@ class _NicRevealState extends State<NicRevealButton>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e is SocietyRecordException ? e.message : 'Could not reveal NIC.',
+              e is SocietyRecordException
+                  ? context.l10n.recordError(e)
+                  : context.l10n.excoNicCouldNot,
             ),
           ),
         );
@@ -80,7 +84,12 @@ class _NicRevealState extends State<NicRevealButton>
   Widget build(BuildContext context) => TextButton(
     onPressed: _busy || widget.masked == null ? null : _show,
     child: Text(
-      _busy ? 'Loading…' : _nic ?? '${widget.masked ?? 'No NIC'} · Show',
+      _busy
+          ? context.l10n.excoNicLoading
+          : _nic ??
+                context.l10n.excoNicShow(
+                  widget.masked ?? context.l10n.excoNicNone,
+                ),
     ),
   );
 }

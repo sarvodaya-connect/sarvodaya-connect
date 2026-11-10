@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { platformApi } from "@/lib/platform-api";
 
@@ -19,7 +20,7 @@ export async function updateSocietyRecord(
   _previous: RecordFormResult,
   form: FormData,
 ): Promise<RecordFormResult> {
-  await getDesktopViewer();
+  const [, t] = await Promise.all([getDesktopViewer(), getT()]);
   const body: Record<string, string | number> = {};
   for (const field of TEXT_FIELDS) {
     const value = form.get(field);
@@ -28,7 +29,7 @@ export async function updateSocietyRecord(
   }
   const members = form.get("memberCount");
   if (typeof members === "string" && members !== form.get("memberCount__before")) {
-    if (!/^\d+$/.test(members.trim())) return { error: "Enter the number of members using numbers only, for example 418." };
+    if (!/^\d+$/.test(members.trim())) return { error: t("sr.err.members") };
     body.memberCount = Number(members.trim());
   }
   const latitude = String(form.get("latitude") ?? "").trim();
@@ -37,22 +38,23 @@ export async function updateSocietyRecord(
     const lat = Number(latitude);
     const lng = Number(longitude);
     if (!latitude || !longitude || !(lat >= -90 && lat <= 90) || !(lng >= -180 && lng <= 180))
-      return { error: "Enter both latitude and longitude, for example 7.6123 and 80.2354." };
+      return { error: t("sr.err.location") };
     body.latitude = lat;
     body.longitude = lng;
   }
   const grade = form.get("grade");
   if (typeof grade === "string" && grade && grade !== form.get("grade__before")) {
     const reason = form.get("gradeReason");
-    if (typeof reason !== "string" || !reason.trim()) return { error: "Enter a reason for the grade change. It is shown in the grade history." };
+    if (typeof reason !== "string" || !reason.trim()) return { error: t("sr.err.gradeReason") };
     body.grade = grade;
     body.gradeReason = reason.trim();
   }
-  if (Object.keys(body).length === 0) return { error: "Nothing has changed." };
+  if (Object.keys(body).length === 0) return { error: t("sr.err.nothing") };
   try {
     await platformApi(`/societies/${id}/profile`, { method: "PATCH", body: JSON.stringify(body) });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The society could not be saved. Try again." };
+    // The API's own message stays as sent until the API messages phase.
+    return { error: error instanceof Error ? error.message : t("sr.err.saveSociety") };
   }
   revalidatePath(`/societies/${id}`, "layout");
   redirect(`/societies/${id}?saved=1`);
@@ -70,16 +72,16 @@ export async function decideGradeRequest(
   /** D22r returns to its own page; the record's Grade tab is the default. */
   returnTo?: "queue",
 ): Promise<{ error?: string }> {
-  await getDesktopViewer();
+  const [, t] = await Promise.all([getDesktopViewer(), getT()]);
   const text = comment.trim();
-  if (decision === "REJECT" && !text) return { error: "Enter a reason for rejecting. The requester will see it." };
+  if (decision === "REJECT" && !text) return { error: t("sr.gr.reasonRequired") };
   try {
     await platformApi(`/societies/${societyId}/grade-requests/${requestId}/decision`, {
       method: "POST",
       body: JSON.stringify(text ? { decision, comment: text } : { decision }),
     });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The decision could not be saved. Try again." };
+    return { error: error instanceof Error ? error.message : t("sr.err.decision") };
   }
   revalidatePath(`/societies/${societyId}`, "layout");
   revalidatePath("/reviews", "layout");
@@ -103,18 +105,18 @@ export async function assignStaff(
   _previous: RecordFormResult,
   form: FormData,
 ): Promise<RecordFormResult> {
-  await getDesktopViewer();
+  const [, t] = await Promise.all([getDesktopViewer(), getT()]);
   const id = (name: string) => {
     const value = form.get(name);
     return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
   };
   const body = { deputyId: id("deputyId"), coordinatorId: id("coordinatorId"), officerId: id("officerId") };
   if (!body.deputyId || !body.coordinatorId || !body.officerId)
-    return { error: "Choose a DDM, an SPC and a Society Officer." };
+    return { error: t("sr.err.chooseStaff") };
   try {
     await platformApi(`/societies/${societyId}/assignments`, { method: "PUT", body: JSON.stringify(body) });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The assignments could not be saved. Try again." };
+    return { error: error instanceof Error ? error.message : t("sr.err.assignments") };
   }
   revalidatePath(`/societies/${societyId}`, "layout");
   redirect(`/societies/${societyId}?saved=1`);
@@ -122,12 +124,12 @@ export async function assignStaff(
 
 /** D05x: shows one member's full NIC. The API checks scope and records the reveal. */
 export async function revealMemberNic(societyId: string, memberId: string): Promise<{ nic?: string; error?: string }> {
-  await getDesktopViewer();
+  const [, t] = await Promise.all([getDesktopViewer(), getT()]);
   try {
     const result = await platformApi(`/societies/${societyId}/council/${memberId}/nic/reveal`, { method: "POST" });
     return { nic: result.nic };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The NIC could not be shown." };
+    return { error: error instanceof Error ? error.message : t("sr.ex.nicFailed") };
   }
 }
 
@@ -166,9 +168,9 @@ async function storeNics(societyId: string, seats: CouncilSeat[], committee: { i
 
 /** V5 Edit Exco: the filled seats, saved together. The API checks scope, seat groups, offices and ages. */
 export async function updateExco(societyId: string, _previous: RecordFormResult, form: FormData): Promise<RecordFormResult> {
-  await getDesktopViewer();
+  const [, t] = await Promise.all([getDesktopViewer(), getT()]);
   const seats = readSeats(form);
-  if (!seats) return { error: "The Exco could not be read. Reload the page and try again." };
+  if (!seats) return { error: t("sr.err.excoRead") };
   let committee: { id: string; seatNumber?: number }[];
   try {
     const record = await platformApi(`/societies/${societyId}/council`, {
@@ -178,12 +180,12 @@ export async function updateExco(societyId: string, _previous: RecordFormResult,
     });
     committee = record.committee;
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The Exco could not be saved. Try again." };
+    return { error: error instanceof Error ? error.message : t("sr.err.excoSave") };
   }
   const failed = await storeNics(societyId, seats, committee);
   revalidatePath(`/societies/${societyId}`, "layout");
   if (failed.length)
-    return { error: `The Exco was saved, but the NIC for seat ${failed.join(", ")} could not be stored. Enter it again.` };
+    return { error: t.plural("sr.err.nicStore", failed.length, { seats: failed.join(", ") }) };
   redirect(`/societies/${societyId}/exco?saved=1`);
 }
 
@@ -194,8 +196,8 @@ export type CreateSocietyResult = RecordFormResult & { field?: "societyCode" };
  * (D05a). The Society Officer enters the Exco afterwards.
  */
 export async function createSociety(_previous: CreateSocietyResult, form: FormData): Promise<CreateSocietyResult> {
-  const viewer = await getDesktopViewer();
-  if (viewer.role !== "HQ_ADMIN") return { error: "Only HQ can create a society record." };
+  const [viewer, t] = await Promise.all([getDesktopViewer(), getT()]);
+  if (viewer.role !== "HQ_ADMIN") return { error: t("sr.err.onlyHqCreate") };
   const text = (name: string) => String(form.get(name) ?? "").trim();
   const number = (name: string) => (text(name) === "" ? undefined : Number(text(name)));
   const body = {
@@ -217,7 +219,7 @@ export async function createSociety(_previous: CreateSocietyResult, form: FormDa
   try {
     created = await platformApi("/societies", { method: "POST", body: JSON.stringify(body) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "The society record could not be saved. Try again.";
+    const message = error instanceof Error ? error.message : t("sr.err.createSave");
     return message.includes("is already used by") ? { error: message, field: "societyCode" } : { error: message };
   }
   revalidatePath("/societies", "layout");

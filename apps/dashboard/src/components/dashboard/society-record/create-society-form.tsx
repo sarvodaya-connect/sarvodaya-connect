@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { CreateSocietyResult } from "@/app/(dashboard)/societies/[id]/record-actions";
+import { useI18n } from "@/i18n/provider";
+import { gradeOption } from "@/i18n/society-record";
+import type { Translator } from "@/i18n/translate";
 import { mapboxToken, typedPosition } from "@/lib/mapbox";
-import { SOCIETY_GRADE_LABELS } from "@/lib/society-record-format";
 import { submitWithoutReset } from "@/lib/use-form-submit";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
@@ -47,18 +49,18 @@ const EMPTY: Details = {
   longitude: "",
 };
 
-function detailProblems(details: Details) {
+function detailProblems(details: Details, t: Translator) {
   const problems: Partial<Record<keyof Details, string>> = {};
-  if (details.nameEn.trim().length < 2) problems.nameEn = "Enter the society name.";
-  if (!/^[A-Za-z0-9][A-Za-z0-9-]{2,19}$/.test(details.societyCode.trim())) problems.societyCode = "Enter the S number, for example S-104233.";
-  if (!details.districtId) problems.districtId = "Choose the district.";
-  if (details.dsDivision.trim().length < 2) problems.dsDivision = "Enter the DS division.";
-  if (details.addressLine.trim().length < 3) problems.addressLine = "Enter the address.";
-  if (!/^\d+$/.test(details.memberCount.trim()) || Number(details.memberCount) < 1) problems.memberCount = "Enter the number of members, for example 164.";
+  if (details.nameEn.trim().length < 2) problems.nameEn = t("sr.cr.required.name");
+  if (!/^[A-Za-z0-9][A-Za-z0-9-]{2,19}$/.test(details.societyCode.trim())) problems.societyCode = t("sr.cr.required.code");
+  if (!details.districtId) problems.districtId = t("sr.cr.required.district");
+  if (details.dsDivision.trim().length < 2) problems.dsDivision = t("sr.cr.required.ds");
+  if (details.addressLine.trim().length < 3) problems.addressLine = t("sr.cr.required.address");
+  if (!/^\d+$/.test(details.memberCount.trim()) || Number(details.memberCount) < 1) problems.memberCount = t("sr.cr.required.members");
   const lat = details.latitude.trim();
   const lng = details.longitude.trim();
-  if (lat && !(Number(lat) >= -90 && Number(lat) <= 90)) problems.latitude = "Use a latitude such as 7.6123.";
-  if (lng && !(Number(lng) >= -180 && Number(lng) <= 180)) problems.longitude = "Use a longitude such as 80.2354.";
+  if (lat && !(Number(lat) >= -90 && Number(lat) <= 90)) problems.latitude = t("sr.cr.invalid.lat");
+  if (lng && !(Number(lng) >= -180 && Number(lng) <= 180)) problems.longitude = t("sr.cr.invalid.lng");
   return problems;
 }
 
@@ -75,11 +77,12 @@ export function CreateSocietyForm({
   action: (previous: CreateSocietyResult, form: FormData) => Promise<CreateSocietyResult>;
   districts: { id: string; nameEn: string }[];
 }) {
+  const { t } = useI18n();
   const [details, setDetails] = useState<Details>(EMPTY);
   const [touched, setTouched] = useState(false);
   const [state, submit, pending] = useActionState(action, {});
   const token = mapboxToken();
-  const problems = detailProblems(details);
+  const problems = detailProblems(details, t);
   const codeError =
     state.field === "societyCode" && details.societyCode.trim() && state.error?.includes(details.societyCode.trim().toUpperCase())
       ? state.error
@@ -106,8 +109,7 @@ export function CreateSocietyForm({
 
   const steps = (
     <p className="text-[12.5px] text-ink-soft">
-      <span className="font-bold text-ink">Step 1 · Society Details</span>
-      {" → "}2 · Assign staff{" → "}3 · The Society Officer enters the Exco
+      {t.rich("sr.cr.steps", { step1: <span className="font-bold text-ink">{t("sr.cr.step1")}</span> })}
     </p>
   );
 
@@ -124,20 +126,20 @@ export function CreateSocietyForm({
         send(event);
       }}
     >
-      <nav aria-label="Breadcrumb" className="flex gap-1.5 text-[11.5px] text-ink-soft">
-        <Link className="font-medium text-brand-action underline underline-offset-2" href="/societies">Societies</Link>
+      <nav aria-label={t("sr.breadcrumb")} className="flex gap-1.5 text-[11.5px] text-ink-soft">
+        <Link className="font-medium text-brand-action underline underline-offset-2" href="/societies">{t("nav.societies")}</Link>
         <span aria-hidden="true">›</span>
-        <span aria-current="page">Create a Society Record</span>
+        <span aria-current="page">{t("sr.cr.title")}</span>
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[22px] font-bold text-ink">Create a Society Record</h2>
+          <h2 className="text-[22px] font-bold text-ink">{t("sr.cr.title")}</h2>
           {steps}
         </div>
         <div className="flex gap-2.5">
-          <Link className={secondaryButtonClass} href="/societies">Cancel</Link>
+          <Link className={secondaryButtonClass} href="/societies">{t("sr.cancel")}</Link>
           <button className={primaryButtonClass} disabled={pending} type="submit">
-            {pending ? "Saving…" : "Save and assign staff"}
+            {pending ? t("sr.saving") : t("sr.cr.submit")}
           </button>
         </div>
       </div>
@@ -146,7 +148,7 @@ export function CreateSocietyForm({
         <div className="flex gap-2.5 rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-4 py-3 text-[12.5px] text-[var(--banner-incident-text)]" role="alert">
           <Icon className="mt-0.5 size-4 shrink-0" name="error" strokeWidth={2} />
           <div>
-            <strong className="block">The society record can&apos;t be saved yet</strong>
+            <strong className="block">{t("sr.cr.cantSave")}</strong>
             {saveError}
           </div>
         </div>
@@ -154,44 +156,44 @@ export function CreateSocietyForm({
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-[16px] font-bold text-ink">Society Details</h3>
+          <h3 className="text-[16px] font-bold text-ink">{t("sr.ov.details")}</h3>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {field("nameEn", "Society name (English)", { required: true })}
-            {field("societyCode", "S number", { required: true })}
-            {field("nameLocal", "Name in Sinhala or Tamil")}
+            {field("nameEn", t("sr.cr.nameEn"), { required: true })}
+            {field("societyCode", t("sr.ov.sNumber"), { required: true })}
+            {field("nameLocal", t("sr.cr.nameLocal"))}
             <label className="block text-[12.5px] font-semibold text-ink">
-              District <span className="text-danger-text">*</span>
+              {t("sr.cr.district")} <span className="text-danger-text">*</span>
               <select aria-invalid={touched && problems.districtId ? true : undefined} className={inputClass} name="districtId" onChange={set("districtId")} value={details.districtId}>
-                <option value="">Choose a district</option>
+                <option value="">{t("sr.cr.chooseDistrict")}</option>
                 {districts.map((district) => (
                   <option key={district.id} value={district.id}>{district.nameEn}</option>
                 ))}
               </select>
               {touched && problems.districtId && <span className="mt-1 block text-[11.5px] text-danger-text" role="alert">{problems.districtId}</span>}
             </label>
-            {field("dsDivision", "DS division", { required: true })}
-            {field("gnDivision", "GN division")}
+            {field("dsDivision", t("sr.ed.ds"), { required: true })}
+            {field("gnDivision", t("sr.ed.gn"))}
           </div>
-          <div className="mt-4">{field("addressLine", "Address", { required: true })}</div>
+          <div className="mt-4">{field("addressLine", t("sr.ov.address"), { required: true })}</div>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            {field("memberCount", "Number of members", { required: true, inputMode: "numeric" })}
-            {field("landline", "Landline (if any)", { hint: "Leave empty if the society has no landline.", inputMode: "tel" })}
+            {field("memberCount", t("sr.ov.members"), { required: true, inputMode: "numeric" })}
+            {field("landline", t("sr.cr.landline"), { hint: t("sr.cr.landlineHint"), inputMode: "tel" })}
             <label className="block text-[12.5px] font-semibold text-ink">
-              Starting grade <span className="text-danger-text">*</span>
+              {t("sr.cr.grade")} <span className="text-danger-text">*</span>
               <select className={inputClass} name="grade" onChange={set("grade")} value={details.grade}>
                 {(["A", "B", "C"] as const).map((grade) => (
-                  <option key={grade} value={grade}>{grade} · {SOCIETY_GRADE_LABELS[grade]}</option>
+                  <option key={grade} value={grade}>{gradeOption(t, grade)}</option>
                 ))}
               </select>
-              <span className="mt-1 block text-[11px] font-normal text-ink-soft">Only HQ sets or changes the grade.</span>
+              <span className="mt-1 block text-[11px] font-normal text-ink-soft">{t("sr.cr.gradeHint")}</span>
             </label>
           </div>
           <div className="mt-4">
-            {field("businessDescription", "Business run by the society (optional)", { hint: "Information only — no sales, stock or accounts." })}
+            {field("businessDescription", t("sr.cr.business"), { hint: t("sr.ed.businessHint") })}
           </div>
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-[16px] font-bold text-ink">Map Location</h3>
+          <h3 className="text-[16px] font-bold text-ink">{t("sr.ed.mapLocation")}</h3>
           {token ? (
             <div className="mt-3">
               <SocietyLocationMap
@@ -208,20 +210,17 @@ export function CreateSocietyForm({
             </div>
           )}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {field("latitude", "Latitude", { inputMode: "decimal" })}
-            {field("longitude", "Longitude", { inputMode: "decimal" })}
+            {field("latitude", t("sr.latitude"), { inputMode: "decimal" })}
+            {field("longitude", t("sr.longitude"), { inputMode: "decimal" })}
           </div>
           <p className="mt-2 text-[11.5px] text-ink-soft">
-            {token ? "Click the map or drag the pin, or type the coordinates." : "Type the coordinates."} They can be corrected later by HQ or the society&apos;s staff.
+            {t("sr.cr.mapLater", { help: token ? t("sr.mapHelpPick") : t("sr.mapHelpType") })}
           </p>
         </section>
       </div>
       <p className="flex items-start gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink-soft">
         <Icon className="mt-0.5 size-4 shrink-0 text-brand-leaf" name="user" strokeWidth={2} />
-        <span>
-          <strong className="text-ink">The Exco is entered later.</strong> After saving, assign a Society Officer. They add the 25 Exco
-          members on the record and can save as they go; the record shows the Exco as incomplete until all 25 seats are filled.
-        </span>
+        <span>{t.rich("sr.cr.excoLater", { title: <strong className="text-ink">{t("sr.cr.excoLaterTitle")}</strong> })}</span>
       </p>
     </form>
   );

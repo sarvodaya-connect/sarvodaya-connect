@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useI18n } from "@/i18n/provider";
+
 import {
   EmptyState,
   ErrorState,
@@ -27,13 +29,14 @@ function StateCard({ children, label }: { children: React.ReactNode; label: stri
 
 /** V5 D21: how every page behaves when data is not normal. */
 export function PageStatesGallery() {
+  const { t } = useI18n();
   const [message, setMessage] = useState("");
 
   return (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-ink">Page States</h2>
-        <p className="mt-0.5 text-xs text-muted">How every page behaves when data is not normal</p>
+        <h2 className="text-xl font-bold text-ink">{t("st.gallery.title")}</h2>
+        <p className="mt-0.5 text-xs text-muted">{t("st.gallery.subtitle")}</p>
       </div>
       {message && (
         <p aria-live="polite" className="mb-3 rounded-button border border-[#d7e7d6] bg-brand-mint-soft px-4 py-3 text-xs text-brand-forest">
@@ -41,39 +44,41 @@ export function PageStatesGallery() {
         </p>
       )}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <StateCard label="Loading">
-          <TableSkeleton label="Loading page" />
+        <StateCard label={t("st.gallery.loading")}>
+          <TableSkeleton label={t("st.gallery.loadingPage")} t={t} />
         </StateCard>
-        <StateCard label="Empty">
+        <StateCard label={t("st.gallery.empty")}>
           <EmptyState
-            action={<Link className={secondaryButtonClass} href="/reviews">See decided requests</Link>}
-            description="New requests from Society Officers, SPCs and DDMs will appear here."
-            title="No Grade Requests Waiting"
+            action={<Link className={secondaryButtonClass} href="/reviews">{t("sr.q.seeDecided")}</Link>}
+            description={t("sr.q.emptyWaitingBody")}
+            title={t("sr.q.emptyWaitingTitle")}
           />
         </StateCard>
-        <StateCard label="No Results for These Filters">
+        <StateCard label={t("st.gallery.noResults")}>
           <NoResultsState
             filters={[
-              { id: "grade", label: "Grade", value: "A" },
-              { id: "division", label: "DS Division", value: "Wariyapola" },
+              { id: "grade", label: t("st.gallery.grade"), value: "A" },
+              { id: "division", label: t("st.gallery.ds"), value: "Wariyapola" },
             ]}
             itemLabel="societies"
-            onClearAll={() => setMessage("All example filters have been cleared.")}
-            onRemoveFilter={(id) => setMessage(`Removed the ${id} example filter.`)}
+            onClearAll={() => setMessage(t("st.gallery.cleared"))}
+            onRemoveFilter={(id) => setMessage(t("st.gallery.removed", { filter: id === "grade" ? t("st.gallery.grade") : t("st.gallery.ds") }))}
+            t={t}
+            title={t("st.noResultsSocieties")}
           />
         </StateCard>
-        <StateCard label="Error · Retry">
-          <ErrorState onRetry={() => setMessage("Retry requested. This page shows examples only.")} />
+        <StateCard label={t("st.gallery.error")}>
+          <ErrorState onRetry={() => setMessage(t("st.gallery.retry"))} t={t} />
         </StateCard>
-        <StateCard label="Success">
+        <StateCard label={t("st.gallery.success")}>
           <SuccessState
-            action={<Link className={primaryButtonClass} href="/reviews">Back to queue</Link>}
-            description="The request has been decided and the people who asked have been told."
-            title="Grade Decision Saved"
+            action={<Link className={primaryButtonClass} href="/reviews">{t("sr.r.backToQueue")}</Link>}
+            description={t("st.gallery.successBody")}
+            title={t("st.gallery.successTitle")}
           />
         </StateCard>
-        <StateCard label="No Access">
-          <NoAccessState />
+        <StateCard label={t("st.gallery.noAccess")}>
+          <NoAccessState t={t} />
         </StateCard>
       </div>
     </>

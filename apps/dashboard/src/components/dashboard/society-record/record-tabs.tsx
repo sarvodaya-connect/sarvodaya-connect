@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useI18n } from "@/i18n/provider";
+
 export type RecordTab = { count?: number; href: string; label: string };
 
 /** D05 tab row: Overview, Exco, Work plan, Documents, Grade and History. */
 export function RecordTabs({ tabs }: { tabs: RecordTab[] }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   return (
-    <nav aria-label="Society Record Sections" className="flex overflow-x-auto border-b border-line">
+    <nav aria-label={t("sr.tabsLabel")} className="flex overflow-x-auto border-b border-line">
       {tabs.map((tab, index) => {
         const active = index === 0 ? pathname === tab.href : pathname.startsWith(tab.href);
         return (
