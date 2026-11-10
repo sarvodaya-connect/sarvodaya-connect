@@ -1954,5 +1954,84 @@
         "type": "String"
       }
     }
+  },
+  "aqPendingTitle": "{count, plural, =1{1 assessment saved on this phone} other{{count} assessments saved on this phone}}",
+  "@aqPendingTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "aqPendingNote": "Not sent yet. They are sent while the app is open: when you open Disaster Response, refresh, or tap Retry sending. Nothing is sent after the app is closed.",
+  "aqItemLine": "{society} · {reference} · saved {date}, {time}",
+  "@aqItemLine": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      },
+      "reference": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "aqWaiting": "Waiting to send.",
+  "aqWaitingOffline": "Waiting for a connection.",
+  "aqWaitingServer": "The server did not answer. It will be tried again.",
+  "aqSignIn": "Sign in again to send it.",
+  "aqNoAccess": "You can no longer send this for this society, for example because temporary district access ended. Ask your DM or HQ.",
+  "aqClosed": "The incident was closed before this arrived.",
+  "aqRejected": "The server did not accept it: {reason}",
+  "@aqRejected": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "aqReceivedPhotosLeft": "{count, plural, =1{The assessment arrived; 1 photo is still to send.} other{The assessment arrived; {count} photos are still to send.}}",
+  "@aqReceivedPhotosLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "aqSyncing": "Sending…",
+  "aqRetry": "Retry sending",
+  "aqRemove": "Remove from this phone",
+  "aqRemoveTitle": "Remove This Saved Assessment?",
+  "aqRemoveMessage": "It has not been sent in full. Removing it deletes its answers and photos from this phone. This cannot be undone.",
+  "aqKeep": "Keep it",
+  "aqRemoveConfirm": "Remove",
+  "aqSent": "{count, plural, =1{1 saved assessment sent.} other{{count} saved assessments sent.}}",
+  "@aqSent": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "aqSaving": "Saving on this phone…",
+  "aqSavedTitle": "Saved on This Phone",
+  "aqSavedNext": "It has not reached the server yet. Keep the app open when you are back online and open Disaster Response, or tap Retry sending there.",
+  "aqBlockedTitle": "Saved, but It Can't Be Sent Yet",
+  "aqBlockedNext": "It stays on this phone until you retry or remove it from Disaster Response.",
+  "aqSaveFailed": "The assessment could not be saved on this phone: {reason}",
+  "@aqSaveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

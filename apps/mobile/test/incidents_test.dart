@@ -10,10 +10,16 @@ import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
 
 import 'test_helpers.dart';
 
-/// The API is unreachable when the assessment is sent.
+/// The API is unreachable until [online] is set, or refuses with [refusal].
+/// Like the real API, one clientMutationId is recorded once.
 class _OfflineIncidentApi extends DemoIncidentApi {
   _OfflineIncidentApi({required super.clock});
   int attempts = 0;
+  bool online = false;
+  IncidentException? refusal;
+  final ids = <String>[];
+  final _seen = <String>{};
+  int get received => _seen.length;
 
   @override
   Future<String> sendAssessment(
@@ -23,9 +29,20 @@ class _OfflineIncidentApi extends DemoIncidentApi {
     AssessmentAnswers answers,
   ) async {
     attempts++;
-    throw const IncidentException(
-      "You're offline or the server did not answer. Your answers stay on this screen; send them when you're back online.",
-      offline: true,
+    ids.add(clientMutationId);
+    if (refusal != null) throw refusal!;
+    if (!online) {
+      throw const IncidentException(
+        "You're offline or the server did not answer.",
+        offline: true,
+      );
+    }
+    _seen.add(clientMutationId);
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
     );
   }
 }
@@ -157,11 +174,11 @@ void main() {
   });
 
   testWidgets(
-    'offline: nothing is queued or sent later, and the answers stay on screen',
+    'offline: the assessment is saved on the phone and sent once on retry',
     (tester) async {
       final api = _OfflineIncidentApi(clock: () => demoNow);
       final detail = await api.detail('incident-demo');
-      await _pump(
+      final store = await _pump(
         tester,
         RapidAssessmentScreen(
           incident: detail.incident,
@@ -176,14 +193,68 @@ void main() {
       await _tap(tester, find.text('Check answers'));
       await _tap(tester, find.text('Send assessment'));
       expect(api.attempts, 1);
-      expect(find.textContaining("You're offline"), findsOneWidget);
-      expect(find.text('Check Before Sending'), findsOneWidget);
-      expect(find.text('Critical'), findsOneWidget);
-      // Sending again is a person's choice, with the same answers.
-      await _tap(tester, find.text('Send assessment'));
+      // Issue #125: saved first, and the screen says it has not been sent.
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.textContaining('Waiting for a connection.'), findsOneWidget);
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(store.assessments.items, hasLength(1));
+      final id = store.assessments.items.single.clientMutationId;
+
+      // The Incident tab shows it and retries it while still offline.
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const IncidentsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(api.attempts, 2);
+      expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+      // Back online: Retry sends it once, with the same id.
+      api.online = true;
+      await _tap(tester, find.text('Retry sending'));
+      expect(find.text('1 saved assessment sent.'), findsOneWidget);
+      expect(find.text('1 assessment saved on this phone'), findsNothing);
+      expect(store.assessments.items, isEmpty);
+      expect(api.ids, [id, id, id]);
+      expect(api.received, 1);
     },
   );
+
+  testWidgets('a closed incident keeps the assessment and explains why', (
+    tester,
+  ) async {
+    final api = _OfflineIncidentApi(clock: () => demoNow)
+      ..refusal = const IncidentException(
+        'This incident is closed',
+        status: 409,
+      );
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(
+      tester,
+      RapidAssessmentScreen(
+        incident: detail.incident,
+        societies: detail.assessableSocieties,
+      ),
+      api: api,
+    );
+    await _tap(tester, find.text('Critical'));
+    for (var i = 0; i < 9; i++) {
+      await _tap(tester, find.text('Next'));
+    }
+    await _tap(tester, find.text('Check answers'));
+    await _tap(tester, find.text('Send assessment'));
+    expect(find.text("Saved, but It Can't Be Sent Yet"), findsOneWidget);
+    expect(
+      find.textContaining('The incident was closed before this arrived.'),
+      findsOneWidget,
+    );
+    expect(store.assessments.items.single.blocked, isTrue);
+  });
 
   testWidgets('M49: closing asks first and records the closer', (tester) async {
     await _pump(tester, const IncidentScreen(incidentId: 'incident-demo'));

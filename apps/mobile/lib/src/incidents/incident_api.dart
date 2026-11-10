@@ -384,6 +384,23 @@ class AssessmentAnswers {
   bool confirmedWithPresident = false;
   final List<PickedDocument> photos = [];
 
+  AssessmentAnswers();
+
+  /// Saved answers back from `toJson` (issue #125). Photos travel separately.
+  factory AssessmentAnswers.fromJson(Map<String, dynamic> json) =>
+      AssessmentAnswers()
+        ..impact = json['impact'] as String
+        ..families = json['families'] as int
+        ..people = json['people'] as int
+        ..housesFully = json['housesFully'] as int
+        ..housesPartly = json['housesPartly'] as int
+        ..injured = json['injured'] as int
+        ..displaced = json['displaced'] as int
+        ..roadAccess = json['roadAccess'] as String
+        ..needs.addAll((json['needs'] as List).cast<String>())
+        ..note = json['note'] as String
+        ..confirmedWithPresident = json['confirmedWithPresident'] as bool;
+
   Map<String, dynamic> toJson(String clientMutationId, String societyId) => {
     'clientMutationId': clientMutationId,
     'societyId': societyId,
@@ -454,11 +471,15 @@ class IncidentNotification {
 }
 
 class IncidentException implements Exception {
-  const IncidentException(this.message, {this.offline = false});
+  const IncidentException(this.message, {this.offline = false, this.status});
   final String message;
 
-  /// The phone could not reach the server. Answers stay on the screen.
+  /// The phone could not reach the server.
   final bool offline;
+
+  /// The API's HTTP status, when it answered (issue #125 decides what a
+  /// saved assessment does next from it).
+  final int? status;
 
   @override
   String toString() => message;
@@ -514,15 +535,16 @@ class HttpIncidentApi implements IncidentApi {
     try {
       return await _api.request(path, method: method, body: body);
     } on IdentityError catch (error) {
-      throw IncidentException(error.message);
+      throw IncidentException(error.message, status: error.status);
     } on AuthNetworkException {
       throw const IncidentException(
-        "You're offline or the server did not answer. Your answers stay on this screen; send them when you're back online.",
+        "You're offline or the server did not answer.",
         offline: true,
       );
     } on AuthServiceException {
       throw const IncidentException(
         'Something went wrong on the server. Try again.',
+        status: 500,
       );
     }
   }
@@ -602,6 +624,7 @@ class HttpIncidentApi implements IncidentApi {
       if (response.statusCode >= 300) {
         throw const IncidentException(
           'The photo did not reach storage. Try again.',
+          status: 502,
         );
       }
     } on http.ClientException {

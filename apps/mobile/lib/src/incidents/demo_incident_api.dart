@@ -4,7 +4,11 @@ import 'incident_api.dart';
 /// Fictional sample incident for demonstration mode and widget tests. The
 /// screens label it "Sample data". Nothing here is real.
 class DemoIncidentApi implements IncidentApi {
-  DemoIncidentApi({required this.clock, this.societyId = 'society-demo'}) {
+  DemoIncidentApi({
+    required this.clock,
+    this.societyId = 'society-demo',
+    bool Function()? isOnline,
+  }) : _isOnline = isOnline ?? _always {
     final now = clock();
     _incident = IncidentSummary(
       id: 'incident-demo',
@@ -178,6 +182,21 @@ class DemoIncidentApi implements IncidentApi {
     String societyId,
   ) async => _updates.reversed.toList();
 
+  static bool _always() => true;
+  final bool Function() _isOnline;
+
+  /// Like the API: a retry with the same id returns the update already received.
+  final _byMutation = <String, String>{};
+
+  void _requireOnline() {
+    if (!_isOnline()) {
+      throw const IncidentException(
+        "You're offline or the server did not answer.",
+        offline: true,
+      );
+    }
+  }
+
   @override
   Future<String> sendAssessment(
     String incidentId,
@@ -185,20 +204,36 @@ class DemoIncidentApi implements IncidentApi {
     String clientMutationId,
     AssessmentAnswers answers,
   ) async {
+    _requireOnline();
+    final replay = _byMutation[clientMutationId];
+    if (replay != null) return replay;
     final id = 'update-${_updates.length + 1}';
+    _byMutation[clientMutationId] = id;
     _updates.add(
       AssessmentUpdate(
         id: id,
         number: _updates.length + 1,
         sentAt: clock(),
-        photos: answers.photos.length,
+        // Photos are counted as each one arrives through addPhoto.
+        photos: 0,
       ),
     );
     return id;
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) async {}
+  Future<void> addPhoto(String assessmentId, PickedDocument photo) async {
+    _requireOnline();
+    final index = _updates.indexWhere((u) => u.id == assessmentId);
+    if (index < 0) return;
+    final update = _updates[index];
+    _updates[index] = AssessmentUpdate(
+      id: update.id,
+      number: update.number,
+      sentAt: update.sentAt,
+      photos: update.photos + 1,
+    );
+  }
 
   @override
   Future<void> updateDelivery(
