@@ -2105,5 +2105,30 @@
   "progSdg14": "Life Below Water",
   "progSdg15": "Life on Land",
   "progSdg16": "Peace, Justice and Strong Institutions",
-  "progSdg17": "Partnerships for the Goals"
+  "progSdg17": "Partnerships for the Goals",
+  "countFewer": "Fewer: {label}",
+  "@countFewer": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "countMore": "More: {label}",
+  "@countMore": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "countInvalid": "Enter a whole number from 0 to {max}.",
+  "@countInvalid": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "countFixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on."
 }

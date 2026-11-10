@@ -1140,6 +1140,8 @@ export const en = {
   "sdg.15": "Life on Land",
   "sdg.16": "Peace, Justice and Strong Institutions",
   "sdg.17": "Partnerships for the Goals",
+  "count.invalid": "Enter a whole number from 0 to {max}.",
+  "count.fixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on.",
 } as const;
 
 export type MessageKey = keyof typeof en;
