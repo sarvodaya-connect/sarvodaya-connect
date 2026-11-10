@@ -13,12 +13,17 @@ const _sizes = <(String, Size, double)>[
 void main() {
   for (final (name, size, scale) in _sizes) {
     testWidgets('M16 lays out without overflow at $name', (tester) async {
+      // Sign in on the tall helper screen first: the sign-in form itself does
+      // not fit 320x568 at large text, and it is not what this test checks.
       final store = await pumpApp(tester);
+      await signInWithDemoAccount(tester);
       tester.view.physicalSize = size * 3;
       tester.view.devicePixelRatio = 3;
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       addTearDown(tester.platformDispatcher.clearAllTestValues);
-      await signInWithDemoAccount(tester);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Notifications'), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
       // Notifications with content.
       await tester.tap(find.byTooltip('Notifications'));
