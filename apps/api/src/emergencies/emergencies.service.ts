@@ -478,7 +478,10 @@ export class EmergenciesService {
     input: SendAssessmentDto,
     principal: Principal,
   ) {
-    const incident = await this.visibleIncident(id, viewingScope(principal));
+    // Issue #125: the phone retries saved assessments after a lost response.
+    // The replay is looked up first, among this user's own sends only, so an
+    // assessment already received is confirmed even if the incident has since
+    // closed or the user's temporary district access has ended.
     const replay = await executeDatabaseOperation(() =>
       this.prisma.emergencyAssessment.findUnique({
         where: {
@@ -490,10 +493,7 @@ export class EmergenciesService {
       }),
     );
     if (replay) {
-      if (
-        replay.incidentId !== incident.id ||
-        replay.societyId !== input.societyId
-      ) {
+      if (replay.incidentId !== id || replay.societyId !== input.societyId) {
         throw new ConflictException(
           'This assessment ID was already used for another society',
         );
@@ -504,6 +504,7 @@ export class EmergenciesService {
         replayed: true,
       };
     }
+    const incident = await this.visibleIncident(id, viewingScope(principal));
     this.assertActive(incident);
     const society = await this.areaSociety(input.societyId, incident);
     if (!coversSociety(actingScope(principal), society)) {
