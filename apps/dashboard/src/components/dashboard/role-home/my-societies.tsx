@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import type { HomeSocietyList } from "@sarvodaya-connect/api-contracts";
 
+import { ENGLISH } from "@/i18n/english";
+import type { Translator } from "@/i18n/translate";
 import { endsLabel, type SocietyFilters as HomeSocietyFilters, updatedLabel } from "@/lib/home-format";
 
 import { EmptyState, secondaryButtonClass } from "../data-states";
@@ -28,21 +30,21 @@ function Select({ label, name, value, options }: { label: string; name: keyof Ho
   );
 }
 
-function AccessCell({ editable, yours }: { editable: boolean; yours: boolean }) {
+function AccessCell({ editable, t, yours }: { editable: boolean; t: Translator; yours: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       {editable ? (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-pill bg-success-bg px-2 py-0.5 text-[10.5px] font-semibold text-success-text">
           <Icon className="size-3" name="check" strokeWidth={2.4} />
-          Editable
+          {t("home.editable")}
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-pill bg-[#f0f1ee] px-2 py-0.5 text-[10.5px] font-semibold text-[#56615a]">
           <Icon className="size-3" name="lock" strokeWidth={2.2} />
-          View only
+          {t("home.viewOnly")}
         </span>
       )}
-      {yours && <span className="rounded-pill bg-warn-bg px-2 py-0.5 text-[10px] font-semibold text-warn-text">Yours</span>}
+      {yours && <span className="rounded-pill bg-warn-bg px-2 py-0.5 text-[10px] font-semibold text-warn-text">{t("ms.yours")}</span>}
     </span>
   );
 }
@@ -64,17 +66,19 @@ export function MySocieties({
   filters,
   role,
   now = new Date(),
+  t = ENGLISH,
 }: {
   list: HomeSocietyList;
   filters: HomeSocietyFilters;
   role?: "PROGRAMME_COORDINATOR" | "DEPUTY_DISTRICT_MANAGER" | "DISTRICT_MANAGER";
   now?: Date;
+  t?: Translator;
 }) {
   const isDm = list.viewOnly;
   const isDdm = role === "DEPUTY_DISTRICT_MANAGER";
   const districtScope = list.scope === "DISTRICT";
   const showSpc = isDm || isDdm;
-  const district = list.district?.name ?? "district";
+  const district = list.district?.name ?? t("home.districtWord");
   const { page, totalItems, totalPages, pageSize } = list.meta;
   const from = totalItems ? (page - 1) * pageSize + 1 : 0;
   const to = Math.min(page * pageSize, totalItems);
@@ -84,41 +88,37 @@ export function MySocieties({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[22px] font-bold text-ink">{isDm || isDdm ? "Societies" : "My Societies"}</h1>
+        <h1 className="text-[22px] font-bold text-ink">{isDm || isDdm ? t("home.societies") : t("home.mySocieties")}</h1>
         <p className="text-[12.5px] text-ink-soft">
           {isDm
-            ? `All ${list.scopeTotal} societies in ${district}`
+            ? t("ms.allIn", { count: list.scopeTotal, district })
             : districtScope && list.access
-              ? `All ${list.scopeTotal} ${district} societies · view only until ${endsLabel(list.access.expiresAt)}`
+              ? t("ms.allViewOnly", { count: list.scopeTotal, district, date: endsLabel(list.access.expiresAt, t) })
               : isDdm
-                ? `Your ${list.tabs.mine} assigned ${list.tabs.mine === 1 ? "society" : "societies"}`
-                : `${list.scopeTotal} ${list.scopeTotal === 1 ? "society" : "societies"} assigned to you by HQ`}
+                ? t.plural("ms.yourAssigned", list.tabs.mine)
+                : t.plural("ms.assignedByHq", list.scopeTotal)}
         </p>
       </div>
 
-      {list.recentlyEnded && <AccessEndedBanner assigned={list.tabs.mine} ended={list.recentlyEnded} />}
+      {list.recentlyEnded && <AccessEndedBanner assigned={list.tabs.mine} ended={list.recentlyEnded} t={t} />}
       {districtScope && list.access ? (
-        <TemporaryViewBanner grant={list.access} now={now} />
+        <TemporaryViewBanner grant={list.access} now={now} t={t} />
       ) : (
       <AccessBanner tone={isDm ? "viewOnly" : "edit"}>
         {isDm ? (
-          <>
-            Your access: <strong>all {list.scopeTotal} {district} societies · view only</strong>. You cannot edit society information or request, approve or change grades.
-          </>
+          t.rich("ms.accessDm", { scope: <strong>{t("ms.accessDmScope", { count: list.scopeTotal, district })}</strong> })
         ) : (
-          <>
-            Your access: <strong>{list.scopeTotal} assigned {list.scopeTotal === 1 ? "society" : "societies"}</strong> · view and edit. Grade changes are decided by HQ.
-          </>
+          t.rich("ms.accessEdit", { scope: <strong>{t.plural("home.assigned", list.scopeTotal)}</strong> })
         )}
       </AccessBanner>
       )}
 
       {isDdm && (
-        <nav aria-label="Which Societies" className="flex gap-1 border-b border-line">
+        <nav aria-label={t("ms.which")} className="flex gap-1 border-b border-line">
           {[
-            { href: "/my-societies", label: "My Societies · Edit", count: list.tabs.mine, active: !districtScope },
+            { href: "/my-societies", label: t("ms.tabMine"), count: list.tabs.mine, active: !districtScope },
             ...(list.tabs.district !== null
-              ? [{ href: "/my-societies?scope=DISTRICT", label: `${district} district · view only`, count: list.tabs.district, active: districtScope }]
+              ? [{ href: "/my-societies?scope=DISTRICT", label: t("ms.tabDistrict", { district }), count: list.tabs.district, active: districtScope }]
               : []),
           ].map((tab) => (
             <Link
@@ -137,76 +137,76 @@ export function MySocieties({
       <form action="/my-societies" className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3" role="search">
         {districtScope && <input name="scope" type="hidden" value="DISTRICT" />}
         <label className="relative min-w-[220px] flex-1">
-          <span className="sr-only">Name or S number</span>
+          <span className="sr-only">{t("s.nameOrNumber")}</span>
           <Icon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
-          <input className={`${field} w-full pl-8`} defaultValue={filters.q ?? ""} name="q" placeholder="Name or S number" type="search" />
+          <input className={`${field} w-full pl-8`} defaultValue={filters.q ?? ""} name="q" placeholder={t("s.nameOrNumber")} type="search" />
         </label>
         {isDm && (
           <Select
-            label="DS Division"
+            label={t("s.filterDs")}
             name="dsDivision"
-            options={[{ value: "", label: "DS Division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
+            options={[{ value: "", label: t("ms.dsAll") }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
             value={filters.dsDivision}
           />
         )}
         <Select
-          label="Grade"
+          label={t("home.grade")}
           name="grade"
-          options={[{ value: "", label: "Grade: All" }, { value: "A", label: "Grade A" }, { value: "B", label: "Grade B" }, { value: "C", label: "Grade C" }]}
+          options={[{ value: "", label: t("s.gradeAll") }, { value: "A", label: t("n.gradeOf", { grade: "A" }) }, { value: "B", label: t("n.gradeOf", { grade: "B" }) }, { value: "C", label: t("n.gradeOf", { grade: "C" }) }]}
           value={filters.grade}
         />
         {!isDm && (
           <Select
-            label="DS Division"
+            label={t("s.filterDs")}
             name="dsDivision"
-            options={[{ value: "", label: "DS Division: All" }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
+            options={[{ value: "", label: t("ms.dsAll") }, ...list.options.dsDivisions.map((d) => ({ value: d, label: d }))]}
             value={filters.dsDivision}
           />
         )}
         {isDm && (
           <>
-            <Select label="SPC" name="spcId" options={[{ value: "", label: "SPC: Any" }, ...list.options.spcs.map((p) => ({ value: p.id, label: p.name }))]} value={filters.spcId} />
-            <Select label="DDM" name="ddmId" options={[{ value: "", label: "DDM: Any" }, ...list.options.ddms.map((p) => ({ value: p.id, label: p.name }))]} value={filters.ddmId} />
+            <Select label={t("s.filterSpc")} name="spcId" options={[{ value: "", label: t("s.spcAny") }, ...list.options.spcs.map((p) => ({ value: p.id, label: p.name }))]} value={filters.spcId} />
+            <Select label="DDM" name="ddmId" options={[{ value: "", label: t("ms.ddmAny") }, ...list.options.ddms.map((p) => ({ value: p.id, label: p.name }))]} value={filters.ddmId} />
           </>
         )}
         <Select
-          label={isDm ? "Records" : "Needs update"}
+          label={isDm ? t("s.filterRecords") : t("ms.needsUpdate")}
           name="needsUpdate"
           options={[
-            { value: "", label: isDm ? "Records: Any" : "Needs update: Any" },
-            { value: "true", label: "Not Updated 90+ Days" },
-            { value: "false", label: "Updated in 90 Days" },
+            { value: "", label: isDm ? t("s.recordsAny") : t("ms.needsUpdateAny") },
+            { value: "true", label: t("ms.notUpdated90") },
+            { value: "false", label: t("ms.updated90") },
           ]}
           value={filters.needsUpdate}
         />
         {districtScope && (
           <Select
-            label="Assigned to Me"
+            label={t("ms.assignedToMe")}
             name="assignedToMe"
             options={[
-              { value: "", label: "Assigned to Me: Any" },
-              { value: "true", label: "Mine" },
-              { value: "false", label: "Not Mine" },
+              { value: "", label: t("ms.assignedAny") },
+              { value: "true", label: t("ms.mine") },
+              { value: "false", label: t("ms.notMine") },
             ]}
             value={filters.assignedToMe}
           />
         )}
         <Select
-          label="Grade Request"
+          label={t("s.filterRequest")}
           name="gradeRequest"
           options={[
-            { value: "", label: "Grade Request: Any" },
-            { value: "PENDING", label: "Waiting for HQ" },
-            { value: "NONE", label: "No Request" },
+            { value: "", label: t("s.requestAny") },
+            { value: "PENDING", label: t("ms.waitingHq") },
+            { value: "NONE", label: t("ms.noRequest") },
           ]}
           value={filters.gradeRequest}
         />
         <button className="h-9 rounded-button bg-brand-action px-3.5 text-[12px] font-semibold text-white hover:bg-brand-action-pressed" type="submit">
-          Apply
+          {t("r.apply")}
         </button>
         {filtered && (
           <Link className="text-[12px] font-semibold text-brand-forest underline underline-offset-2" href={districtScope ? "/my-societies?scope=DISTRICT" : "/my-societies"}>
-            Clear filters
+            {t("s.clearFilters")}
           </Link>
         )}
       </form>
@@ -216,18 +216,18 @@ export function MySocieties({
           <EmptyState
             action={
               <Link className={secondaryButtonClass} href="/my-societies">
-                Clear filters
+                {t("s.clearFilters")}
               </Link>
             }
-            description="Change or clear the filters to see more societies."
+            description={t("ms.changeFilters")}
             icon="search"
-            title="No Societies Match These Filters"
+            title={t("ms.noMatchFilters")}
           />
         ) : (
           <EmptyState
-            description={isDm ? `No societies are recorded in ${district} yet.` : "HQ assigns societies to you. They appear here as soon as they are assigned."}
+            description={isDm ? t("ms.noneInDistrict", { district }) : t("ms.hqAssigns")}
             icon="society"
-            title={isDm ? "No societies yet" : "No societies assigned yet"}
+            title={isDm ? t("ms.noSocieties") : t("ms.noneAssigned")}
           />
         )
       ) : (
@@ -236,22 +236,22 @@ export function MySocieties({
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-muted">
                 <tr>
-                  <th className={th} scope="col">S Number</th>
-                  <th className={th} scope="col">Society</th>
-                  <th className={th} scope="col">Grade</th>
-                  <th className={th} scope="col">Members</th>
+                  <th className={th} scope="col">{t("s.sNumber")}</th>
+                  <th className={th} scope="col">{t("home.society")}</th>
+                  <th className={th} scope="col">{t("home.grade")}</th>
+                  <th className={th} scope="col">{t("nav.membersShort")}</th>
                   {isDm ? (
                     <>
-                      <th className={th} scope="col">SPC</th>
+                      <th className={th} scope="col">{t("s.filterSpc")}</th>
                       <th className={th} scope="col">DDM</th>
                     </>
                   ) : showSpc ? (
-                    <th className={th} scope="col">SPC</th>
+                    <th className={th} scope="col">{t("s.filterSpc")}</th>
                   ) : (
-                    <th className={th} scope="col">Society Officer</th>
+                    <th className={th} scope="col">{t("home.societyOfficer")}</th>
                   )}
-                  <th className={th} scope="col">Updated</th>
-                  {!isDm && <th className={th} scope="col">Your Access</th>}
+                  <th className={th} scope="col">{t("s.updated")}</th>
+                  {!isDm && <th className={th} scope="col">{t("home.yourAccessHead")}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
@@ -267,27 +267,27 @@ export function MySocieties({
                     <td className="px-3 py-3">
                       <span className="inline-flex items-center gap-1.5">
                         <GradeBadge grade={row.grade} />
-                        {row.pendingGrade && <PendingGradeChip pending={row.pendingGrade} />}
+                        {row.pendingGrade && <PendingGradeChip pending={row.pendingGrade} t={t} />}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-[12.5px] text-ink">{row.members?.toLocaleString("en-GB") ?? "Not recorded"}</td>
+                    <td className="px-3 py-3 text-[12.5px] text-ink">{row.members?.toLocaleString("en-GB") ?? t("ms.notRecorded")}</td>
                     {isDm ? (
                       <>
-                        <td className="px-3 py-3 text-[12.5px] text-ink">{row.spcName ?? <span className="text-ink-soft">Not assigned</span>}</td>
-                        <td className="px-3 py-3 text-[12.5px] text-ink">{row.ddmName ?? <span className="text-ink-soft">Not assigned</span>}</td>
+                        <td className="px-3 py-3 text-[12.5px] text-ink">{row.spcName ?? <span className="text-ink-soft">{t("home.notAssigned")}</span>}</td>
+                        <td className="px-3 py-3 text-[12.5px] text-ink">{row.ddmName ?? <span className="text-ink-soft">{t("home.notAssigned")}</span>}</td>
                       </>
                     ) : showSpc ? (
-                      <td className="px-3 py-3 text-[12.5px] text-ink">{row.spcName ?? <span className="text-ink-soft">Not assigned</span>}</td>
+                      <td className="px-3 py-3 text-[12.5px] text-ink">{row.spcName ?? <span className="text-ink-soft">{t("home.notAssigned")}</span>}</td>
                     ) : (
-                      <td className="px-3 py-3 text-[12.5px] text-ink">{row.officerName ?? <span className="text-ink-soft">Not assigned</span>}</td>
+                      <td className="px-3 py-3 text-[12.5px] text-ink">{row.officerName ?? <span className="text-ink-soft">{t("home.notAssigned")}</span>}</td>
                     )}
                     <td className={`px-3 py-3 text-[12.5px] ${row.stale ? "font-semibold text-danger-text" : "text-ink"}`}>
-                      {updatedLabel(row.updatedAt, now)}
-                      {row.stale && <span className="sr-only"> (not updated for 90 days or more)</span>}
+                      {updatedLabel(row.updatedAt, now, t)}
+                      {row.stale && <span className="sr-only"> {t("ms.staleNote")}</span>}
                     </td>
                     {!isDm && (
                       <td className="px-3 py-3">
-                        <AccessCell editable={row.editable} yours={row.yours} />
+                        <AccessCell editable={row.editable} t={t} yours={row.yours} />
                       </td>
                     )}
                   </tr>
@@ -297,22 +297,19 @@ export function MySocieties({
           </div>
           <div className="flex items-center justify-between border-t border-line-soft px-4 py-2.5 text-[11.5px] text-ink-soft">
             <span>
-              Showing {from}–{to} of {totalItems}
-              {isDm || districtScope ? ` in ${district}` : ` assigned ${totalItems === 1 ? "society" : "societies"}`}
+              {isDm || districtScope ? t("s.showingIn", { from, to, total: totalItems, district }) : t.plural("ms.showingAssigned", totalItems, { from, to })}
             </span>
             {totalPages > 1 && (
-              <nav aria-label="Pages" className="flex items-center gap-2">
+              <nav aria-label={t("ms.pages")} className="flex items-center gap-2">
                 {page > 1 && (
                   <Link className="font-semibold text-brand-forest" href={pageHref(filters, page - 1)}>
-                    ‹ Previous
+                    ‹ {t("n.previous")}
                   </Link>
                 )}
-                <span>
-                  Page {page} of {totalPages}
-                </span>
+                <span>{t("n.pageOf", { page, totalPages })}</span>
                 {page < totalPages && (
                   <Link className="font-semibold text-brand-forest" href={pageHref(filters, page + 1)}>
-                    Next ›
+                    {t("n.next")} ›
                   </Link>
                 )}
               </nav>
@@ -324,16 +321,13 @@ export function MySocieties({
       <p className="flex items-start gap-2.5 rounded-card border border-line bg-surface-muted px-4 py-3 text-[12px] text-ink-soft">
         <Icon className="mt-0.5 size-4 shrink-0" name="help" />
         {isDm ? (
-          <span>Every society opens view only. To change a record, ask its SPC or DDM; grade decisions are made by HQ.</span>
+          <span>{t("ms.helpDm")}</span>
         ) : districtScope ? (
-          <span>
-            Your own {list.tabs.mine} {list.tabs.mine === 1 ? "society stays" : "societies stay"} editable and {list.tabs.mine === 1 ? "is" : "are"} marked &quot;Yours&quot;. All others
-            open view only, and each one you open is recorded in the access history.
-          </span>
+          <span>{t.plural("ms.helpDistrict", list.tabs.mine)}</span>
         ) : (
           <span>
-            <strong className="block text-ink">Why can&apos;t I see other societies?</strong>
-            Only the societies HQ has assigned to you are listed. Other societies in {district} do not appear in search.
+            <strong className="block text-ink">{t("ms.whyTitle")}</strong>
+            {t("ms.whyBody", { district })}
           </span>
         )}
       </p>

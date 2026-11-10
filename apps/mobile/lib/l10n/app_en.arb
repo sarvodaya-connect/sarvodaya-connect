@@ -1,0 +1,2109 @@
+{
+  "@@locale": "en",
+  "navHome": "Home",
+  "navSociety": "Society",
+  "navIncident": "Incident",
+  "navExco": "Exco",
+  "navWorkPlan": "Work Plan",
+  "navMore": "More",
+  "navOverview": "Overview",
+  "navDistricts": "Districts",
+  "navSocieties": "Societies",
+  "navAlerts": "Alerts",
+  "navAccess": "Access",
+  "languageChooseTitle": "Choose Your Language",
+  "languageChangeLater": "You can change this any time in More › Language.",
+  "languageContinue": "Continue",
+  "languageChooseSheet": "Choose Language",
+  "signInTitle": "Sign In",
+  "signInSubtitle": "Use the username and password for your Sarvodaya Connect account.",
+  "signInUsername": "Username",
+  "signInPassword": "Password",
+  "signInShowPassword": "Show password",
+  "signInHidePassword": "Hide password",
+  "signInButton": "Sign in",
+  "signInSigningIn": "Signing in",
+  "signInForgot": "Forgot your password? Ask HQ to set a new one.",
+  "signInEnterUsername": "Enter the username.",
+  "signInEnterPassword": "Enter the password.",
+  "signInErrorIncorrect": "The username or password is not correct. Check them and try again.",
+  "signInErrorLocked": "Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.",
+  "signInErrorNotReady": "This account cannot sign in yet. Ask HQ to check it.",
+  "signInErrorOffline": "You need internet to sign in. Connect and try again.",
+  "signInErrorUnavailable": "Authentication is temporarily unavailable. Please try again.",
+  "moreTitle": "More",
+  "moreAsk": "Ask {brand}",
+  "@moreAsk": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "moreAskSemantic": "Ask SarvoAI",
+  "moreAskSubtitle": "Questions about societies and yearly figures · HQ only",
+  "moreLanguage": "Language",
+  "moreNotifications": "Notifications",
+  "moreDisasterResponse": "Disaster Response",
+  "moreHelp": "Help and HQ Contact",
+  "moreNeedHelp": "Need Help?",
+  "moreHelpBody": "Contact your District Centre if your account, society assignment or submitted information is incorrect.",
+  "moreClose": "Close",
+  "moreSignOut": "Sign Out",
+  "moreSignOutSubtitle": "Back to the sign-in screen",
+  "scopeOfficerSociety": "Society Officer · {society}",
+  "@scopeOfficerSociety": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "scopeSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@scopeSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleSpc": "Society Program Coordinator (SPC)",
+  "roleDdm": "Deputy District Manager (DDM)",
+  "roleDmViewOnly": "District Manager (DM) · view only",
+  "roleHqNational": "HQ · National",
+  "moreUnread": "{count} unread",
+  "@moreUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonTryAgain": "Try again",
+  "commonCancel": "Cancel",
+  "commonContinue": "Continue",
+  "commonBack": "Back",
+  "commonClose": "Close",
+  "errorOffline": "The server did not answer. Check your connection and try again.",
+  "errorServer": "Something went wrong on the server. Try again.",
+  "errorUnreachable": "Couldn't reach Sarvodaya Connect. Check your connection and try again.",
+  "greetingMorning": "Good morning",
+  "greetingAfternoon": "Good afternoon",
+  "greetingEvening": "Good evening",
+  "greetingMorningName": "Good morning, {name}",
+  "@greetingMorningName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingAfternoonName": "Good afternoon, {name}",
+  "@greetingAfternoonName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingEveningName": "Good evening, {name}",
+  "@greetingEveningName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "roleDm": "District Manager (DM)",
+  "gradeNone": "No grade",
+  "gradeOf": "Grade {grade}",
+  "@gradeOf": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "stateLoading": "Loading",
+  "stateNoAccessTitle": "You Don't Have Access to This",
+  "stateNoAccessMessage": "It is outside your assigned access, so it cannot be opened. Ask your DM or HQ if you need it.",
+  "stateNoAccessBack": "Back to my societies",
+  "stateOfflineDraft": "Offline · your draft is saved on this phone",
+  "accessEnded": "Ended",
+  "accessDaysLeft": "{days, plural, =1{1 day left} other{{days} days left}}",
+  "@accessDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "accessDaysHoursLeft": "{days, plural, =1{1 day} other{{days} days}} {hours, plural, =1{1 hour} other{{hours} hours}} left",
+  "@accessDaysHoursLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "accessHoursLeft": "{hours, plural, =1{1 hour left} other{{hours} hours left}}",
+  "@accessHoursLeft": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "accessUnderAnHourLeft": "Less than an hour left",
+  "accessLengthDays": "{days, plural, =1{1 day} other{{days} days}}",
+  "@accessLengthDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "accessLengthHours": "{hours, plural, =1{1 hour} other{{hours} hours}}",
+  "@accessLengthHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "accessLengthDaysHours": "{days, plural, =1{1 day} other{{days} days}} {hours, plural, =1{1 hour} other{{hours} hours}}",
+  "@accessLengthDaysHours": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLoading": "Loading your home",
+  "homeLoadingSocieties": "Loading societies",
+  "homeErrorTitle": "Something Went Wrong",
+  "homeErrorOverview": "Could not load your overview.",
+  "homeErrorSocieties": "Could not load the societies.",
+  "homeTempViewTitle": "Temporary District-Wide View",
+  "homeTempViewBody": "All societies in your district · view only.",
+  "homeTempViewBodyGrantedBy": "All societies in your district · view only. Granted by {name} (DM).",
+  "@homeTempViewBodyGrantedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTempViewEnds": "Ends {when} · {left}",
+  "@homeTempViewEnds": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTempViewBrowse": "Browse district societies",
+  "homeSocietyLine": "{code} · {members, plural, =1{1 member} other{{members} members}} · updated {date}",
+  "@homeSocietyLine": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSocietyLineNoMembers": "{code} · updated {date}",
+  "@homeSocietyLineNoMembers": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeYoursEdit": "Yours · edit",
+  "homeViewOnly": "View only",
+  "homeGradeRequest": "Grade request",
+  "homeStale": "90+ days",
+  "homeSearchHint": "Search name or S number",
+  "homeFilterTitle": "Filter Societies",
+  "homeNoMatchTitle": "No Societies Match",
+  "homeNoMatchFiltered": "Try fewer filters.",
+  "homeNoMatchEmpty": "No society is in your view yet.",
+  "homeClearAllFilters": "Clear all filters",
+  "homeShowingOf": "Showing {shown} of {total} · search to narrow the list",
+  "@homeShowingOf": {
+    "placeholders": {
+      "shown": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeFilterClearAll": "Clear all",
+  "homeFilterGrade": "Grade",
+  "homeFilterSpc": "Assigned SPC",
+  "homeFilterAnySpc": "Any SPC",
+  "homeFilterDs": "DS division",
+  "homeFilterAnyDs": "Any DS division",
+  "homeFilterNotUpdated": "Not Updated in 90 Days",
+  "homeFilterHasRequest": "Has a Grade-Change Request",
+  "homeFilterShow": "Show societies",
+  "homeAccessAllDistrict": "Your access: all {count} {district} societies · view only",
+  "@homeAccessAllDistrict": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "homeAccessAll": "Your access: all {count} societies in your district · view only",
+  "@homeAccessAll": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeAccessAssigned": "Your access: {count, plural, =1{1 assigned society} other{{count} assigned societies}} · view and edit",
+  "@homeAccessAssigned": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeDistrictOverview": "District Overview",
+  "homeTileSocieties": "Societies",
+  "homeTileMembers": "Members",
+  "homeTileNotUpdated": "Not Updated 90d",
+  "homeTileAssigned": "Assigned",
+  "homeTileGradeRequests": "Grade Requests",
+  "homeGradesLine": "Grades: A {a}, B {b}, C {c}, {notActive} not active",
+  "@homeGradesLine": {
+    "placeholders": {
+      "a": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "b": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "c": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "notActive": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeGradeRequestsWithHq": "{count, plural, =1{1 grade request with HQ} other{{count} grade requests with HQ}}",
+  "@homeGradeRequestsWithHq": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeTempAccessTitle": "Temporary Access for Your DDM",
+  "homeNoneActive": "None active",
+  "homeActiveCount": "{count} active",
+  "@homeActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeTempAccessIntro": "When you are away, give a DDM view-only access to all societies in your district for a set time.",
+  "homeTempAccessLine": "{name} · view only · ends {when}",
+  "@homeTempAccessLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGiveAccess": "Give temporary access",
+  "homeManageAccess": "Manage temporary access",
+  "homeNeedsAttention": "Needs Attention",
+  "homeMyEdit": "My {count} · Edit",
+  "@homeMyEdit": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeDistrictCountViewOnly": "District {count} · view only",
+  "@homeDistrictCountViewOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeDistrictViewOnly": "District · view only",
+  "homeSearchDistrict": "Search {district} societies",
+  "@homeSearchDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSearchDistrictPlain": "Search district societies",
+  "homeSearchMine": "{count, plural, =1{Search my 1 society} other{Search my {count} societies}}",
+  "@homeSearchMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeActivitiesToApprove": "{count, plural, =1{1 Activity to Approve} other{{count} Activities to Approve}}",
+  "@homeActivitiesToApprove": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeChooseSdgs": "Choose the UN SDGs and approve",
+  "homeMySocieties": "My Societies",
+  "homeAssignedCount": "{count} assigned",
+  "@homeAssignedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "homeGradeSummary": "Grade A {a} · B {b} · C {c} · {count} need an update",
+  "@homeGradeSummary": {
+    "placeholders": {
+      "a": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "b": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "c": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalLoading": "Loading national figures",
+  "nationalHqOnlyTitle": "This Page Is for HQ Only",
+  "nationalHqOnlyMessage": "You are signed in as {name}. Your own societies and figures are on your home page.",
+  "@nationalHqOnlyMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nationalHqOnlyMessageAnother": "You are signed in as another role. Your own societies and figures are on your home page.",
+  "nationalGoHome": "Go to my home",
+  "nationalErrorTitle": "We Couldn’t Load the National Figures",
+  "nationalErrorCheck": "Check the connection and try again.",
+  "nationalDemoData": "Demonstration data · {period}",
+  "@nationalDemoData": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "nationalDemoDataPlain": "Demonstration data",
+  "nationalDemoPositions": "Demonstration data · sample positions",
+  "nationalSearchSocieties": "Search societies",
+  "nationalTitle": "National Dashboard",
+  "nationalHqOnly": "HQ only",
+  "nationalLinkMap": "Map",
+  "nationalLinkMembership": "Membership",
+  "nationalLinkAudit": "Audit & AGM",
+  "nationalLinkProfit": "Profit & Expenses",
+  "nationalLinkActivities": "Activities",
+  "nationalSectionStatus": "1 · Societies Status",
+  "nationalRegistered": "Registered",
+  "nationalActive": "Active",
+  "nationalStatusNote": "{notUpdated} not updated in 90+ days · {requests, plural, =1{1 grade request waiting} other{{requests} grade requests waiting}}",
+  "@nationalStatusNote": {
+    "placeholders": {
+      "notUpdated": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "requests": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalSectionMembers": "2 · Members",
+  "nationalFemaleMaleShare": "Female {female}% · male {male}%",
+  "@nationalFemaleMaleShare": {
+    "placeholders": {
+      "female": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "male": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalSectionAudit": "3–4 · Audit Reports",
+  "nationalUploadedOf": "{count} of {total} uploaded",
+  "@nationalUploadedOf": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalSectionProfit": "5 · Profit for the Year",
+  "nationalSectionExpenses": "5 · Expenses for the Year",
+  "nationalSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@nationalSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalSampleSocieties": "{count, plural, =1{Sample · 1 society} other{Sample · {count} societies}}",
+  "@nationalSampleSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalNotAdded": "Not added",
+  "nationalSectionActivities": "6 · Activities Completed",
+  "nationalCompletedOf": "{completed} of {planned} planned completed — {percent}%",
+  "@nationalCompletedOf": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "planned": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalTopSdgs": "Top UN SDGs by Completed Activities · {period}",
+  "@nationalTopSdgs": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "nationalNoSdgYet": "No completed activity with a UN SDG yet.",
+  "nationalSdgTile": "Number {rank}, SDG {sdg}: {title}, {count} completed",
+  "@nationalSdgTile": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "sdg": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalDistrictsLoading": "Loading districts",
+  "nationalDistrictsFind": "Find a district",
+  "nationalDistrictsNoMatch": "No Districts Match",
+  "nationalDistrictsTryAnother": "Try another name.",
+  "nationalDistrictAudit": "Audit {percent}%",
+  "@nationalDistrictAudit": {
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalDistrictLine": "{province} · {active} active · {members} members · {complete}% complete",
+  "@nationalDistrictLine": {
+    "placeholders": {
+      "province": {
+        "type": "String"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "complete": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalDistrictsSubtitle": "Alphabetical, never ranked",
+  "nationalMapTitle": "Map",
+  "nationalMapSubtitle": "Active societies by class",
+  "nationalMapLoading": "Loading the map",
+  "nationalMapNotActive": "Not active {count}",
+  "@nationalMapNotActive": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalMapSemantics": "{count, plural, =1{1 society on the map.} other{{count} societies on the map.}} Use the Societies list for a screen-reader friendly view.",
+  "@nationalMapSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalMembershipTitle": "Membership",
+  "nationalMembershipSubtitle": "Counts only — no personal data",
+  "nationalTotalMembers": "Total Members",
+  "nationalSocietiesReported": "{count, plural, =1{1 society reported} other{{count} societies reported}}",
+  "@nationalSocietiesReported": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalFemaleMale": "Female · Male",
+  "nationalByCategory": "By Category · Female / Male",
+  "nationalCategoryShare": "{femalePercent} female · {malePercent} male · {female} female · {male} male",
+  "@nationalCategoryShare": {
+    "placeholders": {
+      "femalePercent": {
+        "type": "String"
+      },
+      "malePercent": {
+        "type": "String"
+      },
+      "female": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "male": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "nationalCountsOnlyTitle": "Counts Only",
+  "nationalCountsOnlyMessage": "Members’ names are kept in the signed members list, which only DMs and HQ can open.",
+  "membershipChildren": "Child members",
+  "membershipYouth": "Youth members",
+  "membershipMothers": "Mothers",
+  "membershipOrdinary": "Ordinary members",
+  "membershipElders": "Elders’ council",
+  "accessTitle": "Temporary Access",
+  "accessDistrict": "{district} District",
+  "@accessDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "accessLoadError": "Couldn't load temporary access",
+  "accessLoading": "Loading temporary access",
+  "accessNoneNow": "No DDM has temporary access now. Give it when you are going to be away.",
+  "accessGive": "Give temporary access",
+  "accessEndConfirmTitle": "End {name}'s Access Now?",
+  "@accessEndConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "accessEndConfirmBody": "They lose the district-wide view straight away. Their own assigned societies are not affected.",
+  "accessKeep": "Keep access",
+  "accessEndNow": "End access now",
+  "accessEnding": "Ending…",
+  "accessEndedSnack": "Access ended. The DDM no longer sees the district.",
+  "accessGivenSnack": "Temporary view-only access given.",
+  "accessStartsLater": "Starts later",
+  "accessActive": "Active",
+  "accessStarts": "Starts",
+  "accessViewOnlySince": "View only since",
+  "accessEnds": "Ends",
+  "accessStartsAt": "Starts {when}",
+  "@accessStartsAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "accessGrantLine": "View only · all {count} {district} societies · opened {opened} so far",
+  "@accessGrantLine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "district": {
+        "type": "String"
+      },
+      "opened": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "accessEventGiven": "Access given · view only",
+  "accessEventStarted": "Access started",
+  "accessEventOpened": "Opened {society}",
+  "@accessEventOpened": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "accessEventOpenedUnnamed": "Opened a society",
+  "accessEventEnded": "Access ended on its own",
+  "accessEventEndedEarly": "Access ended early",
+  "accessHistory": "Access History",
+  "accessRecorded": "Recorded",
+  "accessNothingRecorded": "Nothing recorded yet.",
+  "accessEarlier": "Earlier Grants",
+  "accessEndedEarly": "Ended early",
+  "accessEndedEarlyBy": "Ended early by {name}",
+  "@accessEndedEarlyBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "accessEndedOnItsOwn": "Ended on its own",
+  "accessErrorEndBeforeStart": "The end time must be after the start time.",
+  "accessErrorTooLong": "{days, plural, =1{Temporary access can last at most 1 day.} other{Temporary access can last at most {days} days.}}",
+  "@accessErrorTooLong": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "accessGiveTitle": "Give Temporary Access",
+  "accessLoadingDeputies": "Loading DDMs",
+  "accessGiveIntro": "Use this when you are away. Your DDM can view all societies in your district until the end time. They cannot edit them.",
+  "accessNoDeputies": "There are no active DDM accounts in your district yet. Ask HQ to create one.",
+  "accessDeputyHelp": "Only DDMs in your district are listed.",
+  "accessScopeField": "Access",
+  "accessScopeValue": "View only · all societies in your district",
+  "accessStartsField": "Starts *",
+  "accessEndsField": "Ends *",
+  "accessEndsHelp": "Access ends on its own at this time. You can end it earlier.",
+  "accessReasonField": "Reason (optional)",
+  "accessNoDistrict": "Your account has no district. Ask HQ to check it.",
+  "accessConfirmTitle": "Check and Confirm",
+  "accessDeputyRole": "Deputy District Manager",
+  "accessLength": "Length",
+  "accessReason": "Reason",
+  "accessReasonNone": "Not given",
+  "accessWillBeAbleTo": "{name} Will Be Able To",
+  "@accessWillBeAbleTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "accessCanView": "View all societies in your district",
+  "accessWillNotBeAbleTo": "They Will Not Be Able To",
+  "accessCannotEdit": "Edit societies outside their own",
+  "accessCannotRequest": "Request grade changes for those societies",
+  "accessCannotShare": "Give access to anyone else",
+  "accessRecordedNote": "The grant, any early end and the societies opened are recorded in the access history. HQ can see it too.",
+  "accessGiving": "Giving access…",
+  "accessGiveButton": "Give access",
+  "recToday": "today {time}",
+  "@recToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "recNotRecorded": "Not recorded",
+  "recNotAssigned": "Not assigned",
+  "recNotSet": "Not set",
+  "recNotChosen": "Not chosen",
+  "recReadOnly": "Read only",
+  "recUnsaved": "Unsaved changes",
+  "recSaving": "Saving…",
+  "recEdit": "Edit",
+  "recViewOnly": "View only",
+  "recViewOnlyTitle": "View Only",
+  "recRoleSocietyOfficer": "Society Officer",
+  "recRoleDistrictManager": "District Manager",
+  "recOfficePresident": "President",
+  "recOfficeSecretary": "Secretary",
+  "recOfficeTreasurer": "Treasurer",
+  "recOfficeMember": "Member",
+  "recSeatChildren": "Children (7–14)",
+  "recSeatYouth": "Youth (15–25)",
+  "recSeatMothers": "Mothers",
+  "recSeatOrdinary": "Ordinary",
+  "recSeatElders": "Elders’ council",
+  "recGradeA": "Strong",
+  "recGradeB": "Developing",
+  "recGradeC": "Needs Strengthening",
+  "recGradeFull": "Grade {grade} · {name}",
+  "@recGradeFull": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recGradeNotSet": "Grade not set",
+  "recNoAccessSociety": "You don't have access to this society",
+  "recNothingLost": "{message} Nothing you entered has been lost.",
+  "@recNothingLost": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "recStillHere": "{message} Your changes are still here.",
+  "@recStillHere": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "recReasonStillHere": "{message} Your reason is still here.",
+  "@recReasonStillHere": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "recTitle": "Society record",
+  "recTabOverview": "Overview",
+  "recTabWorkPlan": "Work Plan",
+  "recTabDocuments": "Documents",
+  "recTabHistory": "History",
+  "recLoading": "Loading the society record",
+  "recLoadError": "Couldn't load the society record",
+  "recMembers": "Members",
+  "recGrade": "Grade",
+  "recLastUpdate": "Last update",
+  "recNoChanges": "No changes yet",
+  "recSpcAddsFigures": "The SPC can add the figures while this society has no Society Officer.",
+  "recSocietyName": "Society name",
+  "recSNumber": "S number",
+  "recAssignedSpc": "Assigned SPC",
+  "recLandline": "Landline",
+  "recNoLandline": "No landline",
+  "recAddress": "Address",
+  "recAddressLocation": "Address and Location",
+  "recAddressNotRecorded": "Address not recorded",
+  "recBusiness": "Business Run by the Society",
+  "recNoneRecorded": "None recorded.",
+  "recBusinessNote": "Information only — the app keeps no sales, stock or business accounts.",
+  "recStaffTitle": "Responsible Staff",
+  "recAssignedByHq": "Assigned by HQ",
+  "recViewOnlyTemporary": "You can look at this society while your temporary access lasts. You cannot edit it or request a grade change.",
+  "recViewOnlyDm": "District Managers view district societies. You cannot edit this society or request a grade change.",
+  "recLastChangedBy": "Last changed by {actor} · {when}",
+  "@recLastChangedBy": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "recSetByHq": "Set by HQ",
+  "recApprovedByHq": "Approved by HQ · {date}",
+  "@recApprovedByHq": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recNoOpenRequest": "No open grade-change request",
+  "recRequestWaiting": "Request: {change} · Waiting for HQ",
+  "@recRequestWaiting": {
+    "placeholders": {
+      "change": {
+        "type": "String"
+      }
+    }
+  },
+  "recSentBy": "Sent by {actor} · {when}",
+  "@recSentBy": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "recRequestChange": "Request a grade change",
+  "recEarlierRequests": "Earlier requests",
+  "recOfficeBearers": "Exco · Office Bearers",
+  "recAllMembers": "{count, plural, =1{1 Member} other{All {count} Members}}",
+  "@recAllMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recExcoComplete": "25 of 25 · complete",
+  "recExcoShortComplete": "Complete",
+  "recExcoShortNone": "Not entered yet",
+  "recExcoShortSeats": "{filled} of 25",
+  "@recExcoShortSeats": {
+    "placeholders": {
+      "filled": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recExcoShortOffices": "No {offices}",
+  "@recExcoShortOffices": {
+    "placeholders": {
+      "offices": {
+        "type": "String"
+      }
+    }
+  },
+  "recExcoShortCheck": "Needs checking",
+  "recHistoryAll": "All",
+  "recHistorySociety": "Society",
+  "recHistoryAnnual": "Annual Summary",
+  "recHistoryLoading": "Loading the change history",
+  "recHistoryError": "Couldn't load the change history",
+  "recHistoryNone": "No changes recorded here yet.",
+  "recHistoryFooter": "Every change shows who made it and when.",
+  "recScopeTemporary": "Temporary District-Wide View",
+  "recScopeEnds": " · ends {when}",
+  "@recScopeEnds": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "recScopeDm": "District Manager · {district} · view only",
+  "@recScopeDm": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "recScopeOfficer": "Your access: this society only · view and edit",
+  "recScopeSpc": "{count, plural, =1{SPC · your 1 assigned society · view and edit} other{SPC · your {count} assigned societies · view and edit}}",
+  "@recScopeSpc": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recScopeDdm": "{count, plural, =1{DDM · your 1 assigned society · view and edit} other{DDM · your {count} assigned societies · view and edit}}",
+  "@recScopeDdm": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recScopeHq": "HQ · national access · view and edit",
+  "excoNoneTitle": "No Exco Members Yet",
+  "excoNoneBody": "The Society Officer enters the 25 Exco members. They will appear here as they are added.",
+  "excoYears": "{age} yrs",
+  "@excoYears": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "excoChange": "Change",
+  "excoChoose": "Choose",
+  "excoOfficeNotChosen": "{office} Not Chosen",
+  "@excoOfficeNotChosen": {
+    "placeholders": {
+      "office": {
+        "type": "String"
+      }
+    }
+  },
+  "excoAllFilled": "All 25 positions filled",
+  "excoEntered": "{count} of 25 members entered",
+  "@excoEntered": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "excoIncompleteToFill": "Incomplete · {count} to fill",
+  "@excoIncompleteToFill": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "excoIncomplete": "Incomplete",
+  "excoIncompleteTitle": "Exco Incomplete",
+  "excoAddUnderEmpty": "Add members under \"Empty seats\". Each one is saved as you go, so you can finish later.",
+  "excoChooseUnderOffices": "Choose them under \"Office bearers\".",
+  "excoOfficerCompletes": "The Society Officer completes the Exco.",
+  "excoPersonal": "Personal details · {society} · {note}",
+  "@excoPersonal": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      },
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "excoDmNote": "District Manager · {note}",
+  "@excoDmNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "excoNoteDistrict": "you can see personal details for societies in your district",
+  "excoNoteTemporary": "you can see them during your temporary district view",
+  "excoNoteYours": "you can see them because this is your society",
+  "excoNoteAccess": "you can see them because of your access",
+  "excoSearch": "Search name or profession",
+  "excoOfficeBearersSection": "Office Bearers · Chosen From the 25",
+  "excoMembersSection": "Members · {count}",
+  "@excoMembersSection": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "excoNoMatch": "No members match.",
+  "excoShowAll": "Show all {count} members",
+  "@excoShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "excoEmptySeats": "EMPTY SEATS · {count}",
+  "@excoEmptySeats": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "excoSeat": "Seat {seat}",
+  "@excoSeat": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "excoAdd": "Add",
+  "excoAddToSeat": "Add a member to seat {seat}",
+  "@excoAddToSeat": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "excoReplaceTitle": "Replace {name}?",
+  "@excoReplaceTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "excoReplaceBody": "A member can't just be removed from a filled seat. Enter the person who takes this place — both changes are saved together.",
+  "excoReplaceHistory": "{name}'s details stay in the change history.",
+  "@excoReplaceHistory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "excoEnterNew": "Enter the new member",
+  "excoCancel": "Cancel",
+  "excoMemberTitle": "Exco Member",
+  "excoMemberOf": "Exco Member {seat} of 25",
+  "@excoMemberOf": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "excoNicTitle": "NIC Number",
+  "excoNicHidden": "Hidden by default. Anyone who can open this society can show it when they need to check it.",
+  "excoDob": "Date of birth",
+  "excoAge": "Age",
+  "excoAgeCalculated": "{age} · calculated",
+  "@excoAgeCalculated": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "excoProfession": "Profession",
+  "excoPhone": "Phone",
+  "excoReplaceMember": "Replace this member",
+  "excoDmNicOnly": "You can show NIC numbers for {district} societies only. You cannot edit or replace members.",
+  "@excoDmNicOnly": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "excoNicRequired": "Enter the NIC number.",
+  "excoNicFormat": "Use 12 digits, or 9 digits and V.",
+  "excoDobRequired": "Enter the date of birth.",
+  "excoAddTitle": "Add Exco member",
+  "excoReplaceFormTitle": "Replace Exco member",
+  "excoEditTitle": "Edit Exco member",
+  "excoSeatOfGroup": "Seat {seat} of 25 · {group}",
+  "@excoSeatOfGroup": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "excoMemberReplacing": "Member {seat} of 25 · replacing {name}",
+  "@excoMemberReplacing": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "excoMemberOfShort": "Member {seat} of 25",
+  "@excoMemberOfShort": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "excoNicField": "NIC number",
+  "excoNicHintNew": "12 digits, or 9 digits and V. Masked after saving; anyone with access to this society can show it.",
+  "excoNicHintKeep": "Leave empty to keep {masked}. 12 digits, or 9 digits and V.",
+  "@excoNicHintKeep": {
+    "placeholders": {
+      "masked": {
+        "type": "String"
+      }
+    }
+  },
+  "excoFullName": "Full name",
+  "excoChooseDate": "Choose a date",
+  "excoAgeWorkedOut": "Age is worked out from the date of birth.",
+  "excoPhoneNumber": "Phone number",
+  "excoRole": "Role in the Exco",
+  "excoStaysMember": "The current {office} will stay an Exco member, without an office.",
+  "@excoStaysMember": {
+    "placeholders": {
+      "office": {
+        "type": "String"
+      }
+    }
+  },
+  "excoSaveMember": "Save member",
+  "excoChooseOfficeTitle": "Choose the {office}",
+  "@excoChooseOfficeTitle": {
+    "placeholders": {
+      "office": {
+        "type": "String"
+      }
+    }
+  },
+  "excoChooseOfficeIntro": "Office bearers are chosen from the society's Exco members. Pick one person for this office.",
+  "excoSearch25": "Search the 25 Exco members",
+  "excoMemberNumber": "Member {seat}",
+  "@excoMemberNumber": {
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "excoNameStaysMember": "{name} will stay an Exco member, without an office.",
+  "@excoNameStaysMember": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "excoMake": "Make {office}",
+  "@excoMake": {
+    "placeholders": {
+      "office": {
+        "type": "String"
+      }
+    }
+  },
+  "excoNicCouldNot": "Could not reveal NIC.",
+  "excoNicLoading": "Loading…",
+  "excoNicShow": "{masked} · Show",
+  "@excoNicShow": {
+    "placeholders": {
+      "masked": {
+        "type": "String"
+      }
+    }
+  },
+  "excoNicNone": "No NIC",
+  "valFullName": "Enter the full name.",
+  "valTwoLetters": "Enter at least 2 letters.",
+  "valMaxChars": "{count, plural, =1{Use 1 character or fewer.} other{Use {count} characters or fewer.}}",
+  "@valMaxChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "valNameChars": "Use letters, spaces, full stops, hyphens or apostrophes only.",
+  "valPhoneRequired": "Enter the phone number.",
+  "valPhoneFormat": "Use a Sri Lankan number, for example +94 00 000 0001.",
+  "valAddressRequired": "Enter the address.",
+  "valAddressShort": "Enter the full address, for example No. 12, Temple Road.",
+  "valProfessionRequired": "Enter the profession.",
+  "editTitle": "Edit Society Information",
+  "editYouCanEdit": "{name} · you can edit this society",
+  "@editYouCanEdit": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "editFieldName": "society name",
+  "editFieldMembers": "number of members",
+  "editFieldAddress": "address",
+  "editFieldLandline": "landline",
+  "editFieldBusiness": "business run by the society",
+  "editFieldLocation": "map location",
+  "editNameError": "Enter the society name.",
+  "editMembersRequired": "Enter the number of members.",
+  "editMembersFormat": "Use numbers only, for example 418.",
+  "editLandlineFormat": "Enter a 10-digit number, for example 037 000 0000, or leave it empty.",
+  "editSaved": "Saved. The change is in the society history.",
+  "editLeaveTitle": "Leave Without Saving?",
+  "editLeaveBody": "{count, plural, =1{You changed 1 field: {fields}. If you leave now, these changes are lost.} other{You changed {count} fields: {fields}. If you leave now, these changes are lost.}}",
+  "@editLeaveBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "editKeepEditing": "Keep editing",
+  "editSaveLeave": "Save and leave",
+  "editDiscard": "Discard changes",
+  "editWas": "Was {value}",
+  "@editWas": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "editRequestLink": "Request a grade change →",
+  "editMembers": "Number of members",
+  "editLandline": "Landline (if the society has one)",
+  "editLandlineHint": "For example 037 000 0000. Leave empty if none.",
+  "editBusiness": "Business run by the society",
+  "editBusinessHint": "Information only — no sales, stock or accounts.",
+  "editMapLocation": "Map location",
+  "editNoLocation": "No map location set",
+  "editLocationAt": "Map location {lat}, {lng}",
+  "@editLocationAt": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "editMovePin": "Move pin",
+  "editSetPin": "Set pin",
+  "editNoLocationYet": "No location set yet.",
+  "editCoordinates": "{lat}° N, {lng}° E",
+  "@editCoordinates": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "editCoordinatesChanged": "{lat}° N, {lng}° E · changed",
+  "@editCoordinatesChanged": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "editNotSaved": "Not Saved",
+  "editCancel": "Cancel",
+  "editSave": "Save changes",
+  "gradeReqTitle": "Grade-Change Requests",
+  "gradeReqLoadError": "Couldn't load grade-change requests",
+  "gradeReqLoading": "Loading grade-change requests",
+  "gradeReqNoneTitle": "No Grade-Change Requests Yet",
+  "gradeReqNoneBody": "Requests sent to HQ for this society will appear here.",
+  "gradeReqEarlier": "Earlier Requests",
+  "gradeReqWaitingHq": "Waiting for HQ",
+  "gradeReqApproved": "Approved",
+  "gradeReqRejected": "Rejected",
+  "gradeReqSentToHq": "Sent to HQ",
+  "gradeReqWaitingDecision": "Waiting for an HQ Decision",
+  "gradeReqUsually": "Usually within 5 working days",
+  "gradeReqApprovedBy": "Approved by {actor}",
+  "@gradeReqApprovedBy": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "gradeReqRejectedBy": "Rejected by {actor}",
+  "@gradeReqRejectedBy": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "gradeReqSentBy": "Sent by {actor}",
+  "@gradeReqSentBy": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "gradeReqChooseGrade": "Choose the grade you propose.",
+  "gradeReqReasonShort": "{count, plural, =1{Explain the reason in at least 1 character.} other{Explain the reason in at least {count} characters.}}",
+  "@gradeReqReasonShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gradeReqSent": "Request sent to HQ. You will get a notification with HQ's decision.",
+  "gradeReqFormTitle": "Request a Grade Change",
+  "gradeReqCurrent": "Current grade",
+  "gradeReqRequested": "Requested grade",
+  "gradeReqWhy": "Why should the grade change?",
+  "gradeReqHqReads": "HQ reads this before deciding. {count} of {max} characters.",
+  "@gradeReqHqReads": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "max": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "gradeReqApprovalTitle": "HQ Approval Needed",
+  "gradeReqStays": "The grade stays {grade} until HQ approves. You will get a notification with HQ's decision.",
+  "@gradeReqStays": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "gradeReqStaysAsIs": "The grade stays as it is until HQ approves. You will get a notification with HQ's decision.",
+  "gradeReqNotSent": "Not Sent",
+  "gradeReqSending": "Sending…",
+  "gradeReqSend": "Send to HQ",
+  "gradeReqOptionCurrent": "Current",
+  "gradeReqOptionLabel": "Grade {grade}, {name}",
+  "@gradeReqOptionLabel": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gradeReqOptionLabelCurrent": "Grade {grade}, {name}, current grade",
+  "@gradeReqOptionLabelCurrent": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "officerLoadError": "Your Society Could Not Be Loaded",
+  "officerLoading": "Loading your society",
+  "officerRefreshing": "Refreshing…",
+  "officerUpdate": "Update Your Society",
+  "officerInfo": "Society Information",
+  "officerInfoSub": "Details, yearly profit and expenses",
+  "officerExco": "Exco Members",
+  "officerExcoComplete": "{count} of 25 · complete",
+  "@officerExcoComplete": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "officerExcoNone": "Not entered yet",
+  "officerExcoOf": "{count} of 25",
+  "@officerExcoOf": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "officerPlan": "Annual Work Plan",
+  "officerPlanSub": "Activities and allocations",
+  "officerPlanLine": "{year} · {count, plural, =1{1 activity} other{{count} activities}}",
+  "@officerPlanLine": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "officerHistory": "Change History",
+  "officerLastChange": "Last change {when}",
+  "@officerLastChange": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "officerSummaryAudit": "{year} Summary and Audit Report",
+  "@officerSummaryAudit": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "officerFiguresAdded": "Yearly figures added",
+  "officerFiguresMissing": "Yearly figures not added",
+  "officerAuditUploaded": "audit report uploaded",
+  "officerAuditMissing": "audit report missing",
+  "officerAccess": "Your access: {society} only · view and edit",
+  "@officerAccess": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "officerAccessViewOnly": "Your access: {society} only · view only",
+  "@officerAccessViewOnly": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "officerPlanYear": "{year} Plan",
+  "@officerPlanYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "officerSynced": "All changes synced · {when}",
+  "@officerSynced": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "officerGradeRequest": "Grade change {change} requested by {name}. {waiting}",
+  "@officerGradeRequest": {
+    "placeholders": {
+      "change": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "waiting": {
+        "type": "String"
+      }
+    }
+  },
+  "officerWaitingHq": "Waiting for HQ.",
+  "listTitle": "Societies",
+  "listDistrictViewOnly": "Your district · view only",
+  "listYours": "Your societies",
+  "listTempEnded": "Your temporary district-wide view has ended. You are back to your own societies.",
+  "listMine": "My {count} · Edit",
+  "@listMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "listDistrict": "District · View Only",
+  "listSearch": "Search",
+  "listLoadError": "Couldn't load your societies",
+  "listLoading": "Loading your societies",
+  "listNoneAssigned": "No societies assigned yet",
+  "listNoMatchSearch": "No societies match “{search}”",
+  "@listNoMatchSearch": {
+    "placeholders": {
+      "search": {
+        "type": "String"
+      }
+    }
+  },
+  "listHqManages": "HQ manages the societies assigned to you.",
+  "listLoadingDistrict": "Loading district societies",
+  "listTryAnother": "Try another name or S number.",
+  "dirLoading": "Loading societies",
+  "dirActiveCount": "{count, plural, =1{1 active society} other{{count} active societies}}",
+  "@dirActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "dirRowMembers": "{code} · {members, plural, =1{1 member} other{{members} members}} · {state}",
+  "@dirRowMembers": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "dirUpdated": "updated {date}",
+  "@dirUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dirFiguresNotAdded": "figures not added",
+  "dirExcoNone": "Exco not entered",
+  "dirExcoSeats": "Exco {filled} of 25",
+  "@dirExcoSeats": {
+    "placeholders": {
+      "filled": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "dirExcoOffices": "Exco: no {offices}",
+  "@dirExcoOffices": {
+    "placeholders": {
+      "offices": {
+        "type": "String"
+      }
+    }
+  },
+  "dirExcoCheck": "Exco needs checking",
+  "dir90Days": "90+ days",
+  "dirNotAdded": "Not added",
+  "dirSearchHint": "Name or S number",
+  "dirDistrictChip": "District: {district}",
+  "@dirDistrictChip": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "dirDistrictChosen": "District: chosen",
+  "dirRemoveDistrict": "Remove the district filter",
+  "dirClass": "Class",
+  "dirAllClasses": "All classes",
+  "dirClassOf": "Class {grade}",
+  "@dirClassOf": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "dirClassChip": "Class: {grade}",
+  "@dirClassChip": {
+    "placeholders": {
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "dirClassAll": "Class: All",
+  "dir90DaysChip": "90+ Days",
+  "dirActive": "Active societies",
+  "dirFiltered": "Filtered to {district}",
+  "@dirFiltered": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "dirCreate": "Create society",
+  "summTitle": "Society Summary",
+  "summSubtitle": "Counts and yearly totals",
+  "summLoading": "Loading the society",
+  "summLine": "{code} · {district} · updated {date}",
+  "@summLine": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "summLineNoOfficer": "{code} · {district} · no Society Officer",
+  "@summLineNoOfficer": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "summNotEntered": "Not entered",
+  "summNoCounts": "No counts yet",
+  "summComplete": "Records Complete",
+  "summEveryField": "Every field entered",
+  "summFieldsMissing": "{count, plural, =1{1 field missing} other{{count} fields missing}}",
+  "@summFieldsMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "summProfit": "Profit for the Year",
+  "summExpenses": "Expenses for the Year",
+  "summWaiting": "Waiting for the society",
+  "summRegistrar": "Registrar Documents · {count} of {total}",
+  "@summRegistrar": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "summDocAudit": "Audit Report",
+  "summDocAgm": "AGM Minutes",
+  "summDocOfficeBearers": "Office-Bearer List",
+  "summDocMembers": "Signed members list",
+  "summUploaded": "Uploaded",
+  "summPastDue": "Past due",
+  "summMissing": "Missing",
+  "summNoOfficerTitle": "{name} Has No Society Officer",
+  "@summNoOfficerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "summNoOfficerBody": "Its SPC adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.",
+  "summNoOfficerBodyNamed": "Its SPC, {name}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.",
+  "@summNoOfficerBodyNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "summExcoNone": "Exco not entered yet",
+  "summExcoSeats": "Exco incomplete · {filled} of 25",
+  "@summExcoSeats": {
+    "placeholders": {
+      "filled": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "summExcoOffices": "Exco incomplete · no {offices} chosen",
+  "@summExcoOffices": {
+    "placeholders": {
+      "offices": {
+        "type": "String"
+      }
+    }
+  },
+  "summExcoCheck": "Exco incomplete · needs checking",
+  "summExcoBody": "The Society Officer enters the Exco and can save it as they go. HQ can also add members from the society record.",
+  "summGradeChange": "Grade change {change}",
+  "@summGradeChange": {
+    "placeholders": {
+      "change": {
+        "type": "String"
+      }
+    }
+  },
+  "summActivities": "Activities this year: {approved} of {planned} approved",
+  "@summActivities": {
+    "placeholders": {
+      "approved": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "planned": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "summLatest": "Latest: {activity}",
+  "@summLatest": {
+    "placeholders": {
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "summLatestSdgs": "Latest: {activity} · SDG {sdgs}",
+  "@summLatestSdgs": {
+    "placeholders": {
+      "activity": {
+        "type": "String"
+      },
+      "sdgs": {
+        "type": "String"
+      }
+    }
+  },
+  "summOpenRecord": "Open society record",
+  "summChangeStaff": "Change assigned staff",
+  "summAssignStaff": "Assign staff",
+  "adminGradeA": "A · Strong",
+  "adminGradeB": "B · Developing",
+  "adminGradeC": "C · Needs Strengthening",
+  "adminCodeRequired": "Enter the S number, for example S-104233.",
+  "adminCodeTaken": "This S number is already used.",
+  "adminDistrictRequired": "Choose the district.",
+  "adminDsRequired": "Enter the DS division.",
+  "adminMembersRequired": "Enter the number of members, for example 164.",
+  "adminLeaveBody": "The society has not been created. What you typed will be lost.",
+  "adminLeave": "Leave",
+  "adminCreateTitle": "Create a Society Record",
+  "adminStep1": "Step 1 of 2 · Society details",
+  "adminExcoLaterTitle": "The Exco Is Entered Later",
+  "adminExcoLaterBody": "Next, assign a Society Officer. They add the 25 Exco members and can save as they go. The record shows the Exco as incomplete until all 25 seats are filled.",
+  "adminNameEn": "Society name (English)",
+  "adminCodeHint": "For example S-104233.",
+  "adminNameLocal": "Name in Sinhala or Tamil",
+  "adminDistrict": "District",
+  "adminDistrictsError": "The districts could not be loaded.",
+  "adminChooseDistrict": "Choose a district",
+  "adminLoadingDistricts": "Loading districts…",
+  "adminDs": "DS division",
+  "adminGn": "GN division",
+  "adminStartingGrade": "Starting grade",
+  "adminGradeHint": "Only HQ sets or changes the grade.",
+  "adminBusiness": "Business run by the society (optional)",
+  "adminLocationOptional": "Optional. It can be set later by HQ or the society's staff.",
+  "adminNotCreated": "The Society Was Not Created",
+  "adminCheckFields": "Check the Highlighted Fields",
+  "adminSaveAssign": "Save and assign staff",
+  "adminDeputy": "Deputy District Manager (DDM)",
+  "adminCoordinator": "Society Program Coordinator (SPC)",
+  "adminViewEdit": "Can view and edit this society.",
+  "adminOfficerHint": "One officer per society. Can view and edit only this society, and enters its Exco.",
+  "adminStaffAssigned": "Staff assigned. The change is in the society history.",
+  "adminAssignTitle": "Assign Responsible Staff",
+  "adminStep2": "Step 2 of 2 · {name}",
+  "@adminStep2": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminLoadingStaff": "Loading staff",
+  "adminStaffError": "We Couldn’t Load the Staff",
+  "adminCheckConnection": "Check the connection and try again.",
+  "adminExcoNotEntered": "Its Exco is not entered yet. Choose the Society Officer who will add the 25 members.",
+  "adminDm": "District Manager (DM)",
+  "adminNoDm": "No DM has this district yet",
+  "adminDmViews": "Views all societies in the district. View only.",
+  "adminNobody": "Nobody with this role works in the district yet. Create the account on the dashboard first.",
+  "adminChoosePerson": "Choose a person",
+  "adminChangingFrom": "Changing from {name}.",
+  "@adminChangingFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminMoves": "{name} (moves from another society)",
+  "@adminMoves": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminRecordedTitle": "Recorded in the Society History",
+  "adminRecordedBody": "The change is saved with your name and the time. Anyone whose access changes is signed out.",
+  "adminLater": "Later",
+  "adminSaveAssignments": "Save assignments",
+  "adminLocationAt": "Map location {location}",
+  "@adminLocationAt": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "adminCreated": "{name} Was Created",
+  "@adminCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "progTitle": "Programmes & Activities",
+  "progSubtitle": "Done vs planned · SPC-approved only",
+  "progDemo": "Demonstration data · {year}",
+  "@progDemo": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSummary": "{completed} of {planned} planned completed — {percent}%",
+  "@progSummary": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "planned": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "progTenSectors": "10 Sectors",
+  "progDimensions": "Dimensions",
+  "progSectorSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@progSectorSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progSdgEyebrow": "UN SDGs · Ranked by Completed Activities",
+  "progSdgNote": "{year} · equal counts listed by SDG number · an activity can have several SDGs",
+  "@progSdgNote": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSdg": "No completed activity with a UN SDG yet for {year}.",
+  "@progNoSdg": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSdgSemantics": "Number {rank}, SDG {sdg}: {title}, {count} completed",
+  "@progSdgSemantics": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "sdg": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "progFinancialYear": "Financial year",
+  "progCountedOver": "Counted over",
+  "progScopeDistrict": "{district} · {count, plural, =1{1 society} other{{count} societies}}",
+  "@progScopeDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeAssigned": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@progScopeAssigned": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeTemporary": "Your assigned societies and {district} · {count} in all · temporary access until {time}",
+  "@progScopeTemporary": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSocietiesTitle": "No Societies Assigned Yet",
+  "progNoSocietiesBody": "When societies are assigned to you, their programme figures appear here. Every count below is zero until then.",
+  "progZeroYear": "No SPC-approved activities in {year} for these societies yet. The zeros below are real counts, not missing data.",
+  "@progZeroYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progErrorTitle": "Programme Figures Are Unavailable",
+  "progLoading": "Loading programme figures",
+  "progHomeLink": "Programmes & Activities",
+  "progHomeLinkDistrict": "Done vs planned and UN SDGs in your district",
+  "progHomeLinkAssigned": "Done vs planned and UN SDGs for your societies",
+  "progDimSocial": "Social",
+  "progDimEconomic": "Economic",
+  "progDimGovernance": "Governance",
+  "progSector1": "Community education",
+  "progSector2": "Child wellbeing",
+  "progSector3": "Culture",
+  "progSector4": "Economy",
+  "progSector5": "Governance",
+  "progSector6": "Health and nutrition",
+  "progSector7": "Housing and infrastructure",
+  "progSector8": "Spiritual development",
+  "progSector9": "Agriculture",
+  "progSector10": "Environment",
+  "progSdg1": "No Poverty",
+  "progSdg2": "Zero Hunger",
+  "progSdg3": "Good Health and Well-Being",
+  "progSdg4": "Quality Education",
+  "progSdg5": "Gender Equality",
+  "progSdg6": "Clean Water and Sanitation",
+  "progSdg7": "Affordable and Clean Energy",
+  "progSdg8": "Decent Work and Economic Growth",
+  "progSdg9": "Industry, Innovation and Infrastructure",
+  "progSdg10": "Reduced Inequalities",
+  "progSdg11": "Sustainable Cities and Communities",
+  "progSdg12": "Responsible Consumption and Production",
+  "progSdg13": "Climate Action",
+  "progSdg14": "Life Below Water",
+  "progSdg15": "Life on Land",
+  "progSdg16": "Peace, Justice and Strong Institutions",
+  "progSdg17": "Partnerships for the Goals"
+}

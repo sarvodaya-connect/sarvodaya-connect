@@ -26,6 +26,7 @@ import '../auth/auth_service.dart';
 import '../auth/demo_auth_service.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
+import '../l10n/language_preference.dart';
 import '../models/app_language.dart';
 import '../models/audit.dart';
 import '../models/committee.dart';
@@ -89,10 +90,15 @@ class DemoStore extends ChangeNotifier {
     this.languageChosen = false,
     bool? demo,
     IdentityApi? identityApi,
-  }) : isDemo = demo ?? demoMode,
+    LanguagePreference? languagePreference,
+    List<AppLanguage>? languages,
+  }) : _languagePreference = languagePreference ?? MemoryLanguagePreference(),
+       languages = languages ?? availableLanguages(),
+       isDemo = demo ?? demoMode,
        identityApi = identityApi ?? IdentityApi(),
        _clock = clock ?? DateTime.now {
     this.identityApi.onUnauthorized = signOut;
+    _restoreLanguage();
     _authService =
         authService ??
         (isDemo
@@ -111,7 +117,11 @@ class DemoStore extends ChangeNotifier {
     national =
         nationalApi ??
         (isDemo
-            ? DemoNationalApi(user: () => _user, delay: loadDelay)
+            ? DemoNationalApi(
+                user: () => _user,
+                delay: loadDelay,
+                clock: _clock,
+              )
             : HttpNationalApi(this.identityApi));
     societyAdmin =
         societyAdminApi ??
@@ -229,14 +239,33 @@ class DemoStore extends ChangeNotifier {
   bool languageChosen;
   AppLanguage selectedLanguage = AppLanguage.english;
 
+  /// What this build offers. Unreviewed drafts stay out of store builds.
+  final List<AppLanguage> languages;
+  final LanguagePreference _languagePreference;
+
+  /// Restores a saved language this build still offers. With only one language
+  /// to offer, there is nothing to ask on first run.
+  void _restoreLanguage() {
+    final saved = _languagePreference.load();
+    if (saved != null && languages.contains(saved)) {
+      selectedLanguage = saved;
+      languageChosen = true;
+    } else if (languages.length == 1) {
+      selectedLanguage = languages.single;
+      languageChosen = true;
+    }
+  }
+
   void finishSplash() {
     showSplash = false;
     notifyListeners();
   }
 
   void chooseLanguage(AppLanguage language) {
+    if (!languages.contains(language)) return;
     selectedLanguage = language;
     languageChosen = true;
+    _languagePreference.save(language);
     notifyListeners();
   }
 

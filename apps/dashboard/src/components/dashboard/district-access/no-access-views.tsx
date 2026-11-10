@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import type { HomeSummary } from "@sarvodaya-connect/api-contracts";
 
+import { ENGLISH } from "@/i18n/english";
+import type { Translator } from "@/i18n/translate";
 import { endsLabel } from "@/lib/home-format";
 
 import { NoAccessState, primaryButtonClass, secondaryButtonClass } from "../data-states";
@@ -14,37 +16,45 @@ export function SocietyNoAccess({
   isHq,
   assigned,
   recentlyEnded,
+  t = ENGLISH,
 }: {
   isHq: boolean;
   assigned?: number;
   recentlyEnded?: HomeSummary["recentlyEnded"];
+  t?: Translator;
 }) {
   if (isHq) {
     return (
       <NoAccessState
-        action={<Link className={primaryButtonClass} href="/societies">Go to societies</Link>}
-        description="This society record does not exist or may have been removed."
+        action={<Link className={primaryButtonClass} href="/societies">{t("st.society.goToSocieties")}</Link>}
+        description={t("st.society.notFoundBody")}
         heading="h1"
-        title="Society Not Found"
+        t={t}
+        title={t("st.society.notFoundTitle")}
       />
     );
   }
-  const yours = assigned === undefined ? "your assigned societies" : `your ${assigned} assigned ${assigned === 1 ? "society" : "societies"}`;
+  const ended = recentlyEnded ? endsLabel(recentlyEnded.endedAt, t) : undefined;
+  const description =
+    assigned === undefined
+      ? ended
+        ? t("st.society.ended", { date: ended })
+        : t("st.society.notYours")
+      : ended
+        ? t.plural("st.society.endedCount", assigned, { date: ended })
+        : t.plural("st.society.notYoursCount", assigned);
   return (
     <NoAccessState
       action={
         <span className="flex flex-wrap justify-center gap-2.5">
-          <Link className={primaryButtonClass} href="/my-societies">Back to my societies</Link>
-          <Link className={secondaryButtonClass} href="/dashboard">Home</Link>
+          <Link className={primaryButtonClass} href="/my-societies">{t("st.society.backMine")}</Link>
+          <Link className={secondaryButtonClass} href="/dashboard">{t("nav.home")}</Link>
         </span>
       }
-      description={
-        recentlyEnded
-          ? `This society is not one of ${yours}, and your temporary district-wide view ended on ${endsLabel(recentlyEnded.endedAt)}. Ask your DM if you need it again.`
-          : `This society is not one of ${yours}, so it cannot be opened. Ask your DM or HQ if you need it.`
-      }
+      description={description}
       heading="h1"
-      title="You Don't Have Access to This Society"
+      t={t}
+      title={t("st.society.noAccessTitle")}
     />
   );
 }

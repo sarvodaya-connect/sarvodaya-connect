@@ -15,6 +15,9 @@ import {
   type NavigationItem,
 } from "@/lib/navigation";
 
+import { useI18n } from "@/i18n/provider";
+import type { Translator } from "@/i18n/translate";
+
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon } from "./icon";
 
@@ -51,6 +54,13 @@ function SidebarLink({ item, pathname }: { item: NavigationItem; pathname: strin
   );
 }
 
+/** The viewer's reach. A district's name is stored data, so it stays as it is. */
+function scopeFor(viewer: DemoViewer, t: Translator) {
+  if (viewer.scopeLabel === "National") return t("scope.national");
+  if (/^\d+ societ(y|ies)$/.test(viewer.scopeLabel)) return t.plural("scope.societies", viewer.societyIds?.length ?? 0);
+  return viewer.scopeLabel;
+}
+
 /**
  * Prototype V5 desktop shell: 112px header with the logo column, page title,
  * search, alerts and account; 240px green sidebar with role navigation and the
@@ -71,17 +81,20 @@ export function DashboardShell({
   viewer: DemoViewer;
 }) {
   const pathname = usePathname();
-  const navigation = navigationFor(viewer);
-  const { title, subtitle } = headingFor(pathname, viewer);
-  const scope = `${SHORT_ROLE_LABELS[viewer.role]} · ${viewer.scopeLabel}`;
+  const { t } = useI18n();
+  const navigation = navigationFor(viewer, t);
+  const { title, subtitle } = headingFor(pathname, viewer, t);
+  const scope = `${viewer.role === "SYSTEM_ADMIN" ? t("role.systemAdmin") : SHORT_ROLE_LABELS[viewer.role]} · ${scopeFor(viewer, t)}`;
   const homeHref = navigation.main[0]?.href ?? "/dashboard";
+  // The translation decides what goes around the brand, and the brand stays whole.
+  const [askBefore, askAfter] = t("shell.ask").split("{brand}");
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink">
       <header className="relative isolate flex min-h-[112px] shrink-0 items-center overflow-hidden border-b border-header-line bg-surface-wash">
         <HeaderHills />
         <Link
-          aria-label="Sarvodaya Connect home"
+          aria-label={t("shell.home")}
           className="relative z-10 hidden w-[240px] shrink-0 justify-center lg:flex"
           href={homeHref}
         >
@@ -98,7 +111,7 @@ export function DashboardShell({
           <div className="min-w-0">
             <h1 className="text-[20px] font-bold leading-tight md:text-[22px]">{title}</h1>
             <p className="mt-0.5 text-[13px] text-ink-soft">{subtitle}</p>
-            <p className="mt-1.5 text-[10.5px] text-muted">People | Communities | A Just and Compassionate Society</p>
+            <p className="mt-1.5 text-[10.5px] text-muted">{t("shell.tagline")}</p>
           </div>
           <div className="flex items-center gap-4">
             {viewer.role === "HQ_ADMIN" && (
@@ -108,15 +121,15 @@ export function DashboardShell({
                 href="/sarvoai"
               >
                 <Icon className="size-4 text-[#f3c44e]" name="sparkle" />
-                Ask Sarvo<span className="-ml-1.5 text-[#f0a040]">AI</span>
+                <span>{askBefore}Sarvo<span className="text-[#f0a040]">AI</span>{askAfter}</span>
               </Link>
             )}
             <div className="hidden w-[300px] md:block">
-              <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
+              <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer, t)} />
             </div>
             {alerts ?? (
               <Link
-                aria-label={unreadCount > 0 ? `Alerts, ${unreadCount} new` : "Alerts"}
+                aria-label={unreadCount > 0 ? t("shell.alertsNew", { count: unreadCount }) : t("shell.alerts")}
                 className="relative rounded-full p-1 text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
                 href="/notifications"
               >
@@ -133,7 +146,7 @@ export function DashboardShell({
             )}
             <form action={signOut}>
               <button
-                aria-label={`Account: ${viewer.displayName} · sign out`}
+                aria-label={t("shell.accountSignOut", { name: viewer.displayName })}
                 className="grid size-10 place-items-center rounded-full bg-brand-forest text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--brand-mint-ring)]"
                 type="submit"
               >
@@ -142,14 +155,14 @@ export function DashboardShell({
             </form>
           </div>
           <div className="w-full md:hidden">
-            <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer)} />
+            <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer, t)} />
           </div>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <nav
-          aria-label="Main Navigation"
+          aria-label={t("shell.mainNavigation")}
           className="hidden w-[240px] shrink-0 flex-col gap-0.5 bg-brand-forest px-3 py-4 text-sidebar-text lg:flex"
         >
           {navigation.main.map((item) => (
@@ -178,7 +191,7 @@ export function DashboardShell({
           </div>
         </nav>
 
-        <nav aria-label="Main Navigation" className="bg-brand-forest px-4 py-2 lg:hidden">
+        <nav aria-label={t("shell.mainNavigation")} className="bg-brand-forest px-4 py-2 lg:hidden">
           <div className="flex gap-1.5 overflow-x-auto">
             {[...navigation.main, ...navigation.secondary].map((item) => {
               const active = isActiveItem(item, pathname);

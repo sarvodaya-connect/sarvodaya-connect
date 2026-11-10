@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
@@ -15,6 +18,10 @@ final _months = const [
 
 String formatBirthDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')} ${_months[date.month - 1]} ${date.year}';
+
+/// [formatBirthDate] in the chosen language's month names.
+String _birthDate(AppLocalizations l, DateTime date) =>
+    l.localeName == 'en' ? formatBirthDate(date) : l.date(date);
 
 /// Whole years from a date of birth (V5: age is worked out, not typed).
 int ageFrom(DateTime born, DateTime today) {
@@ -118,31 +125,31 @@ class ExcoMemberScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Replace ${member.fullName}?',
+                sheet.l10n.excoReplaceTitle(member.fullName),
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'A member can\'t just be removed from a filled seat. Enter the person who takes this place — both changes are saved together.',
-                style: TextStyle(color: AppColors.inkBody, height: 1.4),
+              Text(
+                sheet.l10n.excoReplaceBody,
+                style: const TextStyle(color: AppColors.inkBody, height: 1.4),
               ),
               const SizedBox(height: 6),
               Text(
-                '${member.fullName}\'s details stay in the change history.',
+                sheet.l10n.excoReplaceHistory(member.fullName),
                 style: RecordStyle.caption,
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.pop(sheet, true),
-                child: const Text('Enter the new member'),
+                child: Text(sheet.l10n.excoEnterNew),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => Navigator.pop(sheet, false),
-                child: const Text('Cancel'),
+                child: Text(sheet.l10n.excoCancel),
               ),
             ],
           ),
@@ -156,13 +163,14 @@ class ExcoMemberScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final canEdit = record.permissions.canEdit;
     final born = member.dateOfBirth;
     final dm =
         record.permissions.viewOnlyReason == ViewOnlyReason.districtManager;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exco Member'),
+        title: Text(l.excoMemberTitle),
         actions: [
           if (canEdit)
             Padding(
@@ -170,7 +178,7 @@ class ExcoMemberScreen extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _openForm(context, replace: false),
                 icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit'),
+                label: Text(l.recEdit),
               ),
             ),
         ],
@@ -181,15 +189,14 @@ class ExcoMemberScreen extends StatelessWidget {
           if (dm)
             RecordNote(
               icon: Icons.lock_outline,
-              title: 'View Only',
-              message: 'District Manager · ${accessNote(record)}',
+              title: l.recViewOnlyTitle,
+              message: l.excoDmNote(l.excoAccessNote(record)),
             )
           else
             RecordNote(
               icon: Icons.shield_outlined,
               tone: NoteTone.success,
-              message:
-                  'Personal details · ${record.nameEn} · ${accessNote(record)}',
+              message: l.excoPersonal(record.nameEn, l.excoAccessNote(record)),
             ),
           const SizedBox(height: 12),
           RecordCard(
@@ -214,21 +221,21 @@ class ExcoMemberScreen extends StatelessWidget {
                       children: [
                         Text(member.fullName, style: RecordStyle.cardTitle),
                         Text(
-                          'Exco Member ${member.seatNumber} of 25',
+                          l.excoMemberOf(member.seatNumber),
                           style: RecordStyle.caption,
                         ),
                       ],
                     ),
                   ),
                   if (member.isOfficeBearer)
-                    RecordChip(member.position, tone: ChipTone.info),
+                    RecordChip(l.office(member.position), tone: ChipTone.info),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 12),
           RecordCard(
-            title: 'NIC Number',
+            title: l.excoNicTitle,
             children: [
               NicRevealButton(
                 societyId: record.id,
@@ -236,10 +243,7 @@ class ExcoMemberScreen extends StatelessWidget {
                 masked: member.nicMasked,
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Hidden by default. Anyone who can open this society can show it when they need to check it.',
-                style: RecordStyle.caption,
-              ),
+              Text(l.excoNicHidden, style: RecordStyle.caption),
             ],
           ),
           const SizedBox(height: 12),
@@ -247,30 +251,30 @@ class ExcoMemberScreen extends StatelessWidget {
             children: [
               KeyValueGrid([
                 KeyValue(
-                  'Date of birth',
-                  born == null ? 'Not recorded' : formatBirthDate(born),
+                  l.excoDob,
+                  born == null ? l.recNotRecorded : _birthDate(l, born),
                   missing: born == null,
                 ),
                 KeyValue(
-                  'Age',
+                  l.excoAge,
                   born != null
-                      ? '${ageFrom(born, DateTime.now())} · calculated'
-                      : member.age?.toString() ?? 'Not recorded',
+                      ? l.excoAgeCalculated(ageFrom(born, DateTime.now()))
+                      : member.age?.toString() ?? l.recNotRecorded,
                   missing: born == null && member.age == null,
                 ),
                 KeyValue(
-                  'Address',
-                  member.addressLine ?? 'Not recorded',
+                  l.recAddress,
+                  member.addressLine ?? l.recNotRecorded,
                   missing: member.addressLine == null,
                 ),
                 KeyValue(
-                  'Profession',
-                  member.profession ?? 'Not recorded',
+                  l.excoProfession,
+                  member.profession ?? l.recNotRecorded,
                   missing: member.profession == null,
                 ),
                 KeyValue(
-                  'Phone',
-                  member.phone ?? 'Not recorded',
+                  l.excoPhone,
+                  member.phone ?? l.recNotRecorded,
                   missing: member.phone == null,
                 ),
               ]),
@@ -281,11 +285,11 @@ class ExcoMemberScreen extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () => _confirmReplace(context),
               icon: const Icon(Icons.sync, size: 18),
-              label: const Text('Replace this member'),
+              label: Text(l.excoReplaceMember),
             )
           else if (dm)
             Text(
-              'You can show NIC numbers for ${record.districtName} societies only. You cannot edit or replace members.',
+              l.excoDmNicOnly(record.districtName),
               style: RecordStyle.caption,
             ),
         ],
@@ -346,16 +350,17 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
   }
 
   String? _validateNic(String? value) {
+    final l = context.l10n;
     final text = value?.trim() ?? '';
     // Replacing needs the new person's NIC; editing keeps the stored one.
     if (text.isEmpty) {
       return widget.replace || widget.member.nicMasked == null
-          ? 'Enter the NIC number.'
+          ? l.excoNicRequired
           : null;
     }
     return RegExp(r'^(?:[0-9]{9}[vVxX]|[0-9]{12})$').hasMatch(text)
         ? null
-        : 'Use 12 digits, or 9 digits and V.';
+        : l.excoNicFormat;
   }
 
   Future<void> _pickBirthDate() async {
@@ -373,7 +378,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
     setState(() => _error = null);
     if (!_form.currentState!.validate()) return;
     if (_born == null) {
-      setState(() => _error = 'Enter the date of birth.');
+      setState(() => _error = context.l10n.excoDobRequired);
       return;
     }
     setState(() => _saving = true);
@@ -407,7 +412,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
       }
       if (mounted) Navigator.of(context).pop(true);
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = context.l10n.recordError(error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -437,12 +442,13 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final member = widget.member;
     final born = _born;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Close',
+          tooltip: l.commonClose,
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(false),
         ),
@@ -451,17 +457,20 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
           children: [
             Text(
               _adding
-                  ? 'Add Exco member'
+                  ? l.excoAddTitle
                   : widget.replace
-                  ? 'Replace Exco member'
-                  : 'Edit Exco member',
+                  ? l.excoReplaceFormTitle
+                  : l.excoEditTitle,
             ),
             Text(
               _adding
-                  ? 'Seat ${member.seatNumber} of $excoSeats · ${seatGroupLabels[member.seatType] ?? member.seatType}'
+                  ? l.excoSeatOfGroup(
+                      member.seatNumber,
+                      l.seatGroup(member.seatType),
+                    )
                   : widget.replace
-                  ? 'Member ${member.seatNumber} of $excoSeats · replacing ${member.fullName}'
-                  : 'Member ${member.seatNumber} of $excoSeats',
+                  ? l.excoMemberReplacing(member.seatNumber, member.fullName)
+                  : l.excoMemberOfShort(member.seatNumber),
               style: RecordStyle.caption,
             ),
           ],
@@ -475,20 +484,26 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
             RecordNote(
               icon: Icons.shield_outlined,
               tone: NoteTone.success,
-              message:
-                  'Personal details · ${widget.record.nameEn} · ${accessNote(widget.record)}',
+              message: l.excoPersonal(
+                widget.record.nameEn,
+                l.excoAccessNote(widget.record),
+              ),
             ),
             const SizedBox(height: 14),
             _field(
-              'NIC number',
+              l.excoNicField,
               _nic,
               validator: _validateNic,
               keyboard: TextInputType.text,
               helper: widget.replace || member.nicMasked == null
-                  ? '12 digits, or 9 digits and V. Masked after saving; anyone with access to this society can show it.'
-                  : 'Leave empty to keep ${member.nicMasked}. 12 digits, or 9 digits and V.',
+                  ? l.excoNicHintNew
+                  : l.excoNicHintKeep(member.nicMasked!),
             ),
-            _field('Full name', _name, validator: Validators.personName),
+            _field(
+              l.excoFullName,
+              _name,
+              validator: (value) => Validators.personName(value, l),
+            ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -497,7 +512,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const FieldLabel('Date of birth', required: true),
+                      FieldLabel(l.excoDob, required: true),
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           alignment: Alignment.centerLeft,
@@ -509,9 +524,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
                           size: 18,
                         ),
                         label: Text(
-                          born == null
-                              ? 'Choose a date'
-                              : formatBirthDate(born),
+                          born == null ? l.excoChooseDate : _birthDate(l, born),
                         ),
                       ),
                     ],
@@ -523,7 +536,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const FieldLabel('Age'),
+                      FieldLabel(l.excoAge),
                       ReadOnlyField(
                         born == null ? '—' : '${ageFrom(born, DateTime.now())}',
                       ),
@@ -532,33 +545,41 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
                 ),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.only(top: 4, bottom: 14),
-              child: Text(
-                'Age is worked out from the date of birth.',
-                style: RecordStyle.caption,
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 14),
+              child: Text(l.excoAgeWorkedOut, style: RecordStyle.caption),
+            ),
+            _field(
+              l.recAddress,
+              _address,
+              validator: (value) => Validators.addressLine(value, l),
+            ),
+            _field(
+              l.excoProfession,
+              _profession,
+              validator: (value) => Validators.required(
+                value,
+                'profession',
+                l.valProfessionRequired,
               ),
             ),
-            _field('Address', _address, validator: Validators.addressLine),
             _field(
-              'Profession',
-              _profession,
-              validator: (value) => Validators.required(value, 'profession'),
-            ),
-            _field(
-              'Phone number',
+              l.excoPhoneNumber,
               _phone,
-              validator: Validators.sriLankanPhone,
+              validator: (value) => Validators.sriLankanPhone(value, l),
               keyboard: TextInputType.phone,
             ),
-            const FieldLabel('Role in the Exco', required: true),
+            FieldLabel(l.excoRole, required: true),
             DropdownButtonFormField<String>(
               initialValue: officeBearers.contains(_office)
                   ? _office
                   : 'Member',
               items: [
                 for (final office in [...officeBearers, 'Member'])
-                  DropdownMenuItem(value: office, child: Text(office)),
+                  DropdownMenuItem(
+                    value: office,
+                    child: Text(l.office(office)),
+                  ),
               ],
               onChanged: (value) => setState(() => _office = value!),
             ),
@@ -568,7 +589,7 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'The current $_office will stay an Exco member, without an office.',
+                  l.excoStaysMember(l.office(_office)),
                   style: RecordStyle.caption,
                 ),
               ),
@@ -593,14 +614,14 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
                   onPressed: _saving
                       ? null
                       : () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text(l.excoCancel),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton(
                   onPressed: _saving ? null : _save,
-                  child: Text(_saving ? 'Saving…' : 'Save member'),
+                  child: Text(_saving ? l.recSaving : l.excoSaveMember),
                 ),
               ),
             ],
@@ -651,7 +672,7 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = context.l10n.recordError(error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -659,6 +680,8 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
+    final office = l.office(widget.office);
     final current = widget.record.exco
         .where((member) => member.position == widget.office)
         .firstOrNull;
@@ -675,19 +698,19 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
         .where((member) => member.seatNumber == _seat)
         .firstOrNull;
     return Scaffold(
-      appBar: AppBar(title: Text('Choose the ${widget.office}')),
+      appBar: AppBar(title: Text(l.excoChooseOfficeTitle(office))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
         children: [
-          const Text(
-            'Office bearers are chosen from the society\'s Exco members. Pick one person for this office.',
-            style: TextStyle(color: AppColors.inkBody),
+          Text(
+            l.excoChooseOfficeIntro,
+            style: const TextStyle(color: AppColors.inkBody),
           ),
           const SizedBox(height: 12),
           TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search the 25 Exco members',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: l.excoSearch25,
+              prefixIcon: const Icon(Icons.search),
             ),
             onChanged: (value) => setState(() => _query = value),
           ),
@@ -703,9 +726,9 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
                     title: Text(member.fullName),
                     subtitle: Text(
                       [
-                        'Member ${member.seatNumber}',
+                        l.excoMemberNumber(member.seatNumber),
                         if (member.profession != null) member.profession!,
-                        if (member.isOfficeBearer) member.position,
+                        if (member.isOfficeBearer) l.office(member.position),
                       ].join(' · '),
                     ),
                   ),
@@ -718,7 +741,7 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                '${current.fullName} will stay an Exco member, without an office.',
+                l.excoNameStaysMember(current.fullName),
                 style: RecordStyle.caption,
               ),
             ),
@@ -742,7 +765,7 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
                   onPressed: _saving
                       ? null
                       : () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text(l.excoCancel),
                 ),
               ),
               const SizedBox(width: 12),
@@ -752,7 +775,7 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
                       _saving || _seat == null || _seat == current?.seatNumber
                       ? null
                       : _save,
-                  child: Text(_saving ? 'Saving…' : 'Make ${widget.office}'),
+                  child: Text(_saving ? l.recSaving : l.excoMake(office)),
                 ),
               ),
             ],

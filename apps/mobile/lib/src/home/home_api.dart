@@ -1,5 +1,6 @@
 import '../auth/api_auth_service.dart';
 import '../auth/auth_service.dart';
+import '../l10n/l10n_format.dart' show ClientFailure;
 import '../models/user.dart';
 
 typedef Json = Map<String, dynamic>;
@@ -270,10 +271,14 @@ class HomeSocietyList {
 }
 
 class HomeException implements Exception {
-  const HomeException(this.message, {this.status = 0});
+  const HomeException(this.message, {this.status = 0, this.failure});
 
   final String message;
   final int status;
+
+  /// Set when the app, not the server, wrote [message], so a screen can show
+  /// it in the chosen language instead.
+  final ClientFailure? failure;
 
   @override
   String toString() => message;
@@ -299,11 +304,13 @@ class HttpHomeApi implements HomeApi {
     } on AuthNetworkException {
       throw const HomeException(
         'The server did not answer. Check your connection and try again.',
+        failure: ClientFailure.offline,
       );
     } on AuthServiceException {
       throw const HomeException(
         'Something went wrong on the server. Try again.',
         status: 500,
+        failure: ClientFailure.server,
       );
     }
   }

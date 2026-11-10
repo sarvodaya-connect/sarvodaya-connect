@@ -193,6 +193,25 @@ export interface NationalProgrammes {
   }[];
 }
 
+/**
+ * Issue #117: D07 / M64 for a DM, DDM or SPC (`GET programmes`), counted over
+ * the societies they may see. DISTRICT: a DM's own district. ASSIGNED: the
+ * societies assigned to an SPC or DDM. ASSIGNED_AND_DISTRICT: a DDM's
+ * societies plus a district while a temporary grant is valid.
+ */
+export type ProgrammeScopeKind = "DISTRICT" | "ASSIGNED" | "ASSIGNED_AND_DISTRICT";
+
+export interface ScopedProgrammes extends NationalProgrammes {
+  scope: {
+    kind: ProgrammeScopeKind;
+    /** Societies in scope, whether or not they have activities. */
+    societies: number;
+    districts: { id: string; name: string }[];
+    /** When a DDM's temporary district access ends; null otherwise. */
+    temporaryAccessEndsAt: string | null;
+  };
+}
+
 /** M62b: the two yearly totals and the societies that have not added them. */
 export interface NationalFinance {
   financialYear: FinancialYearPeriod;

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 /// Grey placeholder rows shown while a screen loads. Announced once to screen readers.
 class LoadingSkeleton extends StatelessWidget {
-  const LoadingSkeleton({super.key, this.cards = 3, this.label = 'Loading'});
+  const LoadingSkeleton({super.key, this.cards = 3, this.label});
 
   final int cards;
-  final String label;
+
+  /// What is loading. Defaults to "Loading" in the chosen language.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$label…',
+      label: '${label ?? context.l10n.stateLoading}…',
       liveRegion: true,
       child: ExcludeSemantics(
         child: ListView.separated(
@@ -190,28 +193,30 @@ enum StateTone { neutral, error, offline, success, noAccess }
 class NoAccessView extends StatelessWidget {
   const NoAccessView({
     super.key,
-    this.title = "You Don't Have Access to This",
-    this.message =
-        'It is outside your assigned access, so it cannot be opened. '
-        'Ask your DM or HQ if you need it.',
-    this.backLabel = 'Back to my societies',
+    this.title,
+    this.message,
+    this.backLabel,
     this.onBack,
   });
 
-  final String title;
-  final String message;
-  final String backLabel;
+  /// The defaults, in the chosen language, never name what was refused.
+  final String? title;
+  final String? message;
+  final String? backLabel;
   final VoidCallback? onBack;
 
   @override
-  Widget build(BuildContext context) => StateMessage(
-    icon: Icons.lock_outline,
-    title: title,
-    message: message,
-    tone: StateTone.noAccess,
-    primaryLabel: onBack == null ? null : backLabel,
-    onPrimary: onBack,
-  );
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return StateMessage(
+      icon: Icons.lock_outline,
+      title: title ?? l.stateNoAccessTitle,
+      message: message ?? l.stateNoAccessMessage,
+      tone: StateTone.noAccess,
+      primaryLabel: onBack == null ? null : backLabel ?? l.stateNoAccessBack,
+      onPrimary: onBack,
+    );
+  }
 }
 
 /// What the viewer may do here, for example "Your access: 12 assigned
@@ -283,12 +288,10 @@ class AccessBanner extends StatelessWidget {
 
 /// Dark strip shown at the top of a screen while the demo is offline.
 class OfflineBanner extends StatelessWidget {
-  const OfflineBanner({
-    super.key,
-    this.message = 'Offline · your draft is saved on this phone',
-  });
+  const OfflineBanner({super.key, this.message});
 
-  final String message;
+  /// Defaults to "your draft is saved" in the chosen language.
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +307,7 @@ class OfflineBanner extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                message,
+                message ?? context.l10n.stateOfflineDraft,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),

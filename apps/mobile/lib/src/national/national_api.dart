@@ -1,5 +1,6 @@
 import '../auth/api_auth_service.dart';
 import '../auth/auth_service.dart';
+import '../l10n/l10n_format.dart' show ClientFailure;
 import '../society_record/society_record_api.dart' show SocietyRecordException;
 import 'national_models.dart';
 
@@ -14,7 +15,11 @@ abstract interface class NationalApi {
   Future<SocietyMapData> fetchMap();
   Future<DirectoryPage> fetchDirectory(DirectoryQuery query);
   Future<SocietyAtAGlance> fetchSociety(String id);
-  Future<NationalProgrammes> fetchProgrammes();
+  Future<NationalProgrammes> fetchProgrammes({int? year});
+
+  /// Issue #117: M64 for a DM, DDM or SPC, over the societies the server
+  /// lets them count. HQ uses [fetchProgrammes].
+  Future<NationalProgrammes> fetchScopedProgrammes({int? year});
   Future<FiguresNotAdded> fetchFiguresNotAdded();
 }
 
@@ -32,10 +37,12 @@ class HttpNationalApi implements NationalApi {
       throw const SocietyRecordException(
         'The server did not answer. Check your connection and try again.',
         offline: true,
+        failure: ClientFailure.offline,
       );
     } on AuthServiceException {
       throw const SocietyRecordException(
         'Something went wrong on the server. Try again.',
+        failure: ClientFailure.server,
       );
     }
   }
@@ -76,8 +83,16 @@ class HttpNationalApi implements NationalApi {
       SocietyAtAGlance.fromJson(await _get('/societies/$id/summary'));
 
   @override
-  Future<NationalProgrammes> fetchProgrammes() async =>
-      NationalProgrammes.fromJson(await _get('/national/programmes'));
+  Future<NationalProgrammes> fetchProgrammes({int? year}) async =>
+      NationalProgrammes.fromJson(
+        await _get('/national/programmes${year == null ? '' : '?year=$year'}'),
+      );
+
+  @override
+  Future<NationalProgrammes> fetchScopedProgrammes({int? year}) async =>
+      NationalProgrammes.fromJson(
+        await _get('/programmes${year == null ? '' : '?year=$year'}'),
+      );
 
   @override
   Future<FiguresNotAdded> fetchFiguresNotAdded() async =>

@@ -9,11 +9,13 @@ import '../widgets/state_views.dart';
 import '../widgets/street_map.dart';
 import 'assign_staff_screen.dart';
 import 'society_admin_api.dart';
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 
-const _gradeLabels = {
-  'A': 'A · Strong',
-  'B': 'B · Developing',
-  'C': 'C · Needs Strengthening',
+String _gradeLabel(AppLocalizations l, String grade) => switch (grade) {
+  'A' => l.adminGradeA,
+  'B' => l.adminGradeB,
+  _ => l.adminGradeC,
 };
 
 final _codePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9-]{2,19}$');
@@ -31,6 +33,8 @@ class CreateSocietyScreen extends StatefulWidget {
 }
 
 class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
+  AppLocalizations get _l => context.l10n;
+
   final _name = TextEditingController();
   final _code = TextEditingController();
   final _local = TextEditingController();
@@ -93,22 +97,21 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
       _location != null;
 
   Map<String, String> get _errors => {
-    if (_text(_name).length < 2) 'name': 'Enter the society name.',
-    if (!_codePattern.hasMatch(_text(_code)))
-      'code': 'Enter the S number, for example S-104233.',
+    if (_text(_name).length < 2) 'name': _l.editNameError,
+    if (!_codePattern.hasMatch(_text(_code))) 'code': _l.adminCodeRequired,
     if (_takenCode != null && _text(_code).toUpperCase() == _takenCode)
-      'code': _serverError ?? 'This S number is already used.',
-    if (_districtId == null) 'district': 'Choose the district.',
-    if (_text(_ds).length < 2) 'ds': 'Enter the DS division.',
-    if (_text(_address).length < 3) 'address': 'Enter the address.',
+      'code': _serverError ?? _l.adminCodeTaken,
+    if (_districtId == null) 'district': _l.adminDistrictRequired,
+    if (_text(_ds).length < 2) 'ds': _l.adminDsRequired,
+    if (_text(_address).length < 3) 'address': _l.valAddressRequired,
     if (!RegExp(r'^\d{1,7}$').hasMatch(_text(_members)) ||
         (int.tryParse(_text(_members)) ?? 0) < 1)
-      'members': 'Enter the number of members, for example 164.',
+      'members': _l.adminMembersRequired,
     if (_text(_landline).isNotEmpty &&
         !_landlinePattern.hasMatch(
           _text(_landline).replaceAll(RegExp(r'[\s-]'), ''),
         ))
-      'landline': 'Enter a 10-digit number, for example 037 000 0000, or leave it empty.',
+      'landline': _l.editLandlineFormat,
   };
 
   Future<void> _save() async {
@@ -154,7 +157,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _serverError = error.message;
+        _serverError = _l.recordError(error);
         if (error.message.contains('is already used by')) {
           _takenCode = _text(_code).toUpperCase();
         }
@@ -173,18 +176,16 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Leave Without Saving?'),
-        content: const Text(
-          'The society has not been created. What you typed will be lost.',
-        ),
+        title: Text(_l.editLeaveTitle),
+        content: Text(_l.adminLeaveBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Keep editing'),
+            child: Text(_l.editKeepEditing),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Leave'),
+            child: Text(_l.adminLeave),
           ),
         ],
       ),
@@ -237,33 +238,28 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Create a Society Record',
-          subtitle: 'Step 1 of 2 · Society details',
+          title: _l.adminCreateTitle,
+          subtitle: _l.adminStep1,
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           children: [
-            const NoticeBanner(
+            NoticeBanner(
               icon: Icons.groups_outlined,
-              title: 'The Exco Is Entered Later',
-              message: 'Next, assign a Society Officer. They add the 25 Exco members and can save as they go. The record shows the Exco as incomplete until all 25 seats are filled.',
+              title: _l.adminExcoLaterTitle,
+              message: _l.adminExcoLaterBody,
             ),
             const SizedBox(height: 14),
-            _field(
-              _name,
-              'Society name (English)',
-              errorKey: 'name',
-              required: true,
-            ),
+            _field(_name, _l.adminNameEn, errorKey: 'name', required: true),
             _field(
               _code,
-              'S number',
+              _l.recSNumber,
               errorKey: 'code',
               required: true,
-              hint: 'For example S-104233.',
+              hint: _l.adminCodeHint,
             ),
-            _field(_local, 'Name in Sinhala or Tamil'),
-            const FieldLabel('District', required: true),
+            _field(_local, _l.adminNameLocal),
+            FieldLabel(_l.adminDistrict, required: true),
             FutureBuilder<List<DistrictChoice>>(
               future: _districts,
               builder: (context, snapshot) {
@@ -272,9 +268,9 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'The districts could not be loaded.',
+                            _l.adminDistrictsError,
                             style: RecordStyle.caption,
                           ),
                         ),
@@ -285,7 +281,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                                     .societyAdmin
                                     .fetchDistricts(),
                           ),
-                          child: const Text('Try again'),
+                          child: Text(_l.commonTryAgain),
                         ),
                       ],
                     ),
@@ -299,8 +295,8 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                     isExpanded: true,
                     hint: Text(
                       snapshot.connectionState == ConnectionState.done
-                          ? 'Choose a district'
-                          : 'Loading districts…',
+                          ? _l.adminChooseDistrict
+                          : _l.adminLoadingDistricts,
                     ),
                     decoration: changedDecoration(
                       changed: false,
@@ -318,24 +314,29 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                 );
               },
             ),
-            _field(_ds, 'DS division', errorKey: 'ds', required: true),
-            _field(_gn, 'GN division'),
-            _field(_address, 'Address', errorKey: 'address', required: true),
+            _field(_ds, _l.adminDs, errorKey: 'ds', required: true),
+            _field(_gn, _l.adminGn),
+            _field(
+              _address,
+              _l.recAddress,
+              errorKey: 'address',
+              required: true,
+            ),
             _field(
               _members,
-              'Number of members',
+              _l.editMembers,
               errorKey: 'members',
               required: true,
               keyboard: TextInputType.number,
             ),
             _field(
               _landline,
-              'Landline (if the society has one)',
+              _l.editLandline,
               errorKey: 'landline',
               keyboard: TextInputType.phone,
-              hint: 'For example 037 000 0000. Leave empty if none.',
+              hint: _l.editLandlineHint,
             ),
-            const FieldLabel('Starting grade', required: true),
+            FieldLabel(_l.adminStartingGrade, required: true),
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: DropdownButtonFormField<String>(
@@ -343,13 +344,13 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                 isExpanded: true,
                 decoration: changedDecoration(
                   changed: false,
-                  helper: 'Only HQ sets or changes the grade.',
+                  helper: _l.adminGradeHint,
                 ),
                 items: [
-                  for (final entry in _gradeLabels.entries)
+                  for (final grade in const ['A', 'B', 'C'])
                     DropdownMenuItem(
-                      value: entry.key,
-                      child: Text(entry.value),
+                      value: grade,
+                      child: Text(_gradeLabel(_l, grade)),
                     ),
                 ],
                 onChanged: (value) => setState(() => _grade = value ?? 'C'),
@@ -357,11 +358,11 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
             ),
             _field(
               _business,
-              'Business run by the society (optional)',
+              _l.adminBusiness,
               maxLines: 3,
-              hint: 'Information only — no sales, stock or accounts.',
+              hint: _l.editBusinessHint,
             ),
-            const FieldLabel('Map location'),
+            FieldLabel(_l.editMapLocation),
             Stack(
               children: [
                 SocietyStreetMap(
@@ -369,8 +370,8 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                   location: _location,
                   onPick: (location) => setState(() => _location = location),
                   semanticLabel: _location == null
-                      ? 'No map location set'
-                      : 'Map location ${_location!.label}',
+                      ? _l.editNoLocation
+                      : _l.adminLocationAt(_location!.label),
                 ),
                 Positioned(
                   right: 8,
@@ -384,16 +385,16 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
                     ),
                     onPressed: _movePin,
                     icon: const Icon(Icons.place_outlined, size: 14),
-                    label: Text(_location == null ? 'Set pin' : 'Move pin'),
+                    label: Text(
+                      _location == null ? _l.editSetPin : _l.editMovePin,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              _location == null
-                  ? 'Optional. It can be set later by HQ or the society\'s staff.'
-                  : _location!.label,
+              _location == null ? _l.adminLocationOptional : _location!.label,
               style: RecordStyle.caption,
             ),
             if (_serverError != null && _takenCode == null) ...[
@@ -401,7 +402,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'The Society Was Not Created',
+                title: _l.adminNotCreated,
                 message: '$_serverError What you typed is still here.',
               ),
             ],
@@ -410,7 +411,7 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
               NoticeBanner(
                 icon: Icons.error_outline,
                 tone: NoticeTone.error,
-                title: 'Check the Highlighted Fields',
+                title: _l.adminCheckFields,
                 message: errors.values.first,
               ),
             ],
@@ -419,11 +420,11 @@ class _CreateSocietyScreenState extends State<CreateSocietyScreen> {
         bottomNavigationBar: BottomActionBar(
           secondary: OutlinedButton(
             onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+            child: Text(_l.editCancel),
           ),
           primary: FilledButton(
             onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving…' : 'Save and assign staff'),
+            child: Text(_saving ? _l.recSaving : _l.adminSaveAssign),
           ),
         ),
       ),

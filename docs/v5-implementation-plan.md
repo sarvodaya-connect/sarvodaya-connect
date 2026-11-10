@@ -87,7 +87,7 @@ Status: **match** = already matches V5; **rework** = exists but differs from V5 
 | D03 Map view | `/map` (API `/national/map`) | — | match (PR 5) | 5 |
 | D03b District view | `/districts` (API `/national/districts`) | — | match (PR 5) | 5 |
 | D04 Societies list | `/societies` (API `/society-directory`) | — | match (PR 5); "Needs follow-up" tab To Confirm | 5 |
-| D07 Programmes | `/activities` (API `/national/programmes`) | — | match (PR 5) | 5 |
+| D07 Programmes | `/activities` (API `/national/programmes`; DM, DDM and SPC `/programmes`, issue #117) | — | match (PR 5) | 5 |
 | D08 Membership | `/membership` (API `/national/membership`) | `national/national_screens.dart` (M61) | match (PR 5); categories To Confirm | 5 |
 | D13 Requests and tasks | `/requests` (API `/information-requests`, `/hq-tasks`) | — | match (PR 5); reminders and personal tasks To Confirm | 5 |
 | D15 Reports | `/reports`, `/reports/[type]` (print), `/reports/[type]/download` (CSV) | — | match (PR 5); scheduled reports To Confirm | 5 |

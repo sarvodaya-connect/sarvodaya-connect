@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../screens/notifications_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -69,11 +70,12 @@ class _NotificationsButtonState extends State<NotificationsButton> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final unread = DemoScope.of(context).unreadNotificationCount;
     return Semantics(
-      value: unread == 0 ? null : '$unread unread',
+      value: unread == 0 ? null : l.moreUnread(unread),
       child: MastheadButton(
-        tooltip: 'Notifications',
+        tooltip: l.moreNotifications,
         icon: Badge(
           isLabelVisible: unread > 0,
           label: Text('$unread'),

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
 import '../data/demo_data.dart';
+import '../l10n/l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
-import '../validation/validators.dart';
 import '../widgets/state_views.dart';
 
 /// V5 M03 / M03e - sign-in with the username and password HQ created, through
@@ -42,33 +42,22 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!ok) {
         // Keep the username; clear only the password.
         _password.clear();
-        setState(
-          () => _error = 'The username or password is not correct. Check them and try again.',
-        );
+        setState(() => _error = context.l10n.signInErrorIncorrect);
       }
     } on AuthLockedException {
       if (!mounted) return;
       _password.clear();
-      setState(
-        () => _error = 'Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.',
-      );
+      setState(() => _error = context.l10n.signInErrorLocked);
     } on AuthAccountNotReadyException {
       if (!mounted) return;
       _password.clear();
-      setState(
-        () => _error = 'This account cannot sign in yet. Ask HQ to check it.',
-      );
+      setState(() => _error = context.l10n.signInErrorNotReady);
     } on OfflineException {
       if (!mounted) return;
-      setState(
-        () => _error = 'You need internet to sign in. Connect and try again.',
-      );
+      setState(() => _error = context.l10n.signInErrorOffline);
     } on AuthServiceException {
       if (!mounted) return;
-      setState(
-        () => _error =
-            'Authentication is temporarily unavailable. Please try again.',
-      );
+      setState(() => _error = context.l10n.signInErrorUnavailable);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -95,6 +84,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -118,32 +108,39 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Sign In',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  Text(
+                    l10n.signInTitle,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Use the username and password for your Sarvodaya Connect account.',
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                  Text(
+                    l10n.signInSubtitle,
+                    style: const TextStyle(
+                      color: AppColors.inkSoft,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel('Username'),
+                  _FieldLabel(l10n.signInUsername),
                   TextFormField(
                     controller: _username,
                     decoration: _field(
-                      hint: 'Username',
+                      hint: l10n.signInUsername,
                       suffix: const Icon(Icons.person_outline, size: 20),
                     ),
                     autocorrect: false,
                     enableSuggestions: false,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.username],
-                    validator: (value) =>
-                        Validators.required(value, 'username'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? l10n.signInEnterUsername
+                        : null,
                   ),
                   const SizedBox(height: 14),
-                  const _FieldLabel('Password'),
+                  _FieldLabel(l10n.signInPassword),
                   TextFormField(
                     controller: _password,
                     obscureText: _obscure,
@@ -151,9 +148,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     autofillHints: const [AutofillHints.password],
                     onFieldSubmitted: (_) => _submit(),
                     decoration: _field(
-                      hint: 'Password',
+                      hint: l10n.signInPassword,
                       suffix: IconButton(
-                        tooltip: _obscure ? 'Show password' : 'Hide password',
+                        tooltip: _obscure
+                            ? l10n.signInShowPassword
+                            : l10n.signInHidePassword,
                         icon: Icon(
                           _obscure
                               ? Icons.visibility_outlined
@@ -163,8 +162,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
-                    validator: (value) =>
-                        Validators.required(value, 'password'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? l10n.signInEnterPassword
+                        : null,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
@@ -174,22 +174,25 @@ class _SignInScreenState extends State<SignInScreen> {
                   FilledButton(
                     onPressed: _busy ? null : _submit,
                     child: _busy
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
-                              semanticsLabel: 'Signing in',
+                              semanticsLabel: l10n.signInSigningIn,
                             ),
                           )
-                        : const Text('Sign in'),
+                        : Text(l10n.signInButton),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    'Forgot your password? Ask HQ to set a new one.',
+                  Text(
+                    l10n.signInForgot,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.inkSoft, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.inkSoft,
+                      fontSize: 12,
+                    ),
                   ),
                   if (DemoStore.demoMode) ...[
                     const SizedBox(height: 24),

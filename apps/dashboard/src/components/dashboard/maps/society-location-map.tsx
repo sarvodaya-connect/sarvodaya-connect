@@ -5,6 +5,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { useEffect, useRef } from "react";
 
+import { useI18n } from "@/i18n/provider";
 import { roundCoordinate } from "@/lib/mapbox";
 
 import { MapStatus } from "./map-status";
@@ -41,10 +42,15 @@ export function SocietyLocationMap({
   position: Position | null;
   token: string;
 }) {
+  const { t } = useI18n();
   const live = useRef<{ mapbox: Mapbox; map: MapboxMap; marker: Marker | null } | null>(null);
   const pick = useRef(onPick);
   pick.current = onPick;
-  const label = onPick ? `Map pin for ${name || "the new society"}. Drag it, or click the map, to set the location` : `${name} map location`;
+  const label = onPick
+    ? name
+      ? t("sr.mapPinNew", { name })
+      : t("sr.mapPinNewSociety")
+    : t("sr.mapLocationOf", { name });
 
   function placePin(next: Position | null) {
     const current = live.current;

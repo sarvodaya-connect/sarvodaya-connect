@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { HomeSocietyList, HomeSummary } from "@sarvodaya-connect/api-contracts";
 
+import { en } from "@/i18n/messages/en";
+import { si } from "@/i18n/messages/si";
+import { ta } from "@/i18n/messages/ta";
+import { createTranslator } from "@/i18n/translate";
 import { getViewer } from "@/lib/access";
 import { parseSocietyFilters } from "@/lib/home-format";
 import { canOpen, noAccessPathFor } from "@/lib/role-routes";
@@ -323,5 +327,22 @@ describe("role pages and filters", () => {
     expect(
       parseSocietyFilters({ q: ["  Kosgama ", "x"], grade: "Z", needsUpdate: "maybe", gradeRequest: "PENDING", spcId: "../admin", page: "0", other: "x" }),
     ).toEqual({ q: "Kosgama", gradeRequest: "PENDING" });
+  });
+});
+
+describe.each([
+  ["si", si, "සුභ උදෑසනක්", "පවරා ඇති සමිති"],
+  ["ta", ta, "காலை வணக்கம்", "ஒதுக்கப்பட்ட"],
+] as const)("the role home in %s", (locale, messages, greet, assigned) => {
+  const t = createTranslator(messages, locale);
+
+  it("shows its own text in that language and leaves stored names alone", () => {
+    render(<RoleHome home={home()} now={now} t={t} viewer={getViewer("PROGRAMME_COORDINATOR")} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(greet);
+    expect(document.body).toHaveTextContent(assigned);
+    expect(document.body).toHaveTextContent("Pahala Kosgama SSS");
+    for (const english of [en["home.morning"], en["home.needsAttention"], en["home.incidents"], en["home.requestsHq"]]) {
+      expect(document.body).not.toHaveTextContent(english);
+    }
   });
 });

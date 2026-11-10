@@ -1,6 +1,7 @@
 import '../auth/api_auth_service.dart';
 import '../auth/auth_service.dart';
 import '../society_record/society_record_api.dart' show SocietyRecordException;
+import '../l10n/l10n_format.dart' show ClientFailure;
 
 export '../society_record/society_record_api.dart' show SocietyRecordException;
 
@@ -162,10 +163,12 @@ class HttpSocietyAdminApi implements SocietyAdminApi {
       throw const SocietyRecordException(
         'The server did not answer. Check your connection and try again.',
         offline: true,
+        failure: ClientFailure.offline,
       );
     } on AuthServiceException {
       throw const SocietyRecordException(
         'Something went wrong on the server. Try again.',
+        failure: ClientFailure.server,
       );
     }
   }

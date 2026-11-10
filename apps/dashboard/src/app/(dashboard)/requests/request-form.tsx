@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { primaryButtonClass } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
+import { useI18n } from "@/i18n/provider";
 
 import { type RequestFormState, sendInformationRequest } from "./actions";
 
@@ -21,27 +22,28 @@ export function RequestForm({
   fyLabel: string;
   minDate: string;
 }) {
+  const { t } = useI18n();
   const [state, action, pending] = useActionState<RequestFormState, FormData>(sendInformationRequest, { status: "idle" });
   return (
     <form action={action} className="space-y-3">
       <div>
-        <label className="text-[12px] font-semibold text-ink" htmlFor="request-to">Send to <span className="text-[#a8312a]">*</span></label>
+        <label className="text-[12px] font-semibold text-ink" htmlFor="request-to">{t("rq.sendTo")} <span className="text-[#a8312a]">*</span></label>
         <select className={fieldClass} defaultValue="ALL_ACTIVE" id="request-to" name="sendTo" required>
-          <option value="ALL_ACTIVE">All active societies ({activeSocieties.toLocaleString("en-GB")})</option>
-          <option value="FIGURES_NOT_ADDED">Societies without {fyLabel} yearly figures</option>
-          <option value="AUDIT_PAST_DUE">Societies without the {fyLabel} audit report</option>
-          {districts.map((district) => <option key={district.id} value={`DISTRICT:${district.id}`}>{/district$/i.test(district.nameEn) ? district.nameEn : `${district.nameEn} District`}</option>)}
+          <option value="ALL_ACTIVE">{t("rq.allActive", { count: activeSocieties.toLocaleString("en-GB") })}</option>
+          <option value="FIGURES_NOT_ADDED">{t("rq.noFigures", { year: fyLabel })}</option>
+          <option value="AUDIT_PAST_DUE">{t("rq.noAudit", { year: fyLabel })}</option>
+          {districts.map((district) => <option key={district.id} value={`DISTRICT:${district.id}`}>{/district$/i.test(district.nameEn) ? district.nameEn : t("rq.districtName", { name: district.nameEn })}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-[12px] font-semibold text-ink" htmlFor="request-title">What do you need <span className="text-[#a8312a]">*</span></label>
-        <input className={fieldClass} id="request-title" maxLength={200} minLength={3} name="title" placeholder="e.g. Signed AGM minutes 2026" required />
+        <label className="text-[12px] font-semibold text-ink" htmlFor="request-title">{t("rq.whatNeed")} <span className="text-[#a8312a]">*</span></label>
+        <input className={fieldClass} id="request-title" maxLength={200} minLength={3} name="title" placeholder={t("rq.needPlaceholder")} required />
       </div>
       <div>
-        <label className="text-[12px] font-semibold text-ink" htmlFor="request-due">Deadline <span className="text-[#a8312a]">*</span></label>
+        <label className="text-[12px] font-semibold text-ink" htmlFor="request-due">{t("rq.deadline")} <span className="text-[#a8312a]">*</span></label>
         <input className={fieldClass} id="request-due" min={minDate} name="dueOn" required type="date" />
       </div>
-      <p className="text-[11px] text-muted">The Society Officer (or the SPC, where there is none) is told in the app and marks the society as responded.</p>
+      <p className="text-[11px] text-muted">{t("rq.help")}</p>
       {state.status !== "idle" && (
         <p className={`rounded-lg px-3 py-2 text-[12px] ${state.status === "sent" ? "bg-success-bg text-success-text" : "bg-danger-bg text-danger-text"}`} role={state.status === "sent" ? "status" : "alert"}>
           {state.message}
@@ -49,7 +51,7 @@ export function RequestForm({
       )}
       <button className={`${primaryButtonClass} w-full justify-center`} disabled={pending} type="submit">
         <Icon className="size-4" name="mail" />
-        {pending ? "Sending…" : "Send request"}
+        {pending ? t("rq.sending") : t("rq.send")}
       </button>
     </form>
   );

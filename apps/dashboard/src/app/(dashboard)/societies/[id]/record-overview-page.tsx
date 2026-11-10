@@ -1,6 +1,7 @@
 import { AssignStaffPanel, AssignStaffUnavailable } from "@/components/dashboard/society-record/assign-staff-panel";
 import { EditSocietyPanel } from "@/components/dashboard/society-record/edit-society-panel";
 import { RecordOverview } from "@/components/dashboard/society-record/record-overview";
+import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { isTransientPlatformError } from "@/lib/platform-api";
 import { getSocietyRecord, getStaffOptions, getWorkPlan } from "@/lib/society-record-api";
@@ -9,7 +10,7 @@ import { assignStaff, updateSocietyRecord } from "./record-actions";
 
 /** D05 / D05m overview, with the D05e edit panel (`?panel=edit`) and the D05a staff panel (`?panel=assign`, HQ). */
 export async function RecordOverviewPage({ id, panel, saved }: { id: string; panel?: string; saved?: boolean }) {
-  const viewer = await getDesktopViewer();
+  const [viewer, t] = await Promise.all([getDesktopViewer(), getT()]);
   const isHq = viewer.role === "HQ_ADMIN";
   const [record, plan, staffOptions] = await Promise.all([
     getSocietyRecord(id),
@@ -26,10 +27,10 @@ export async function RecordOverviewPage({ id, panel, saved }: { id: string; pan
     <>
       {saved && (
         <p className="mt-4 rounded-card border border-[#c6e2cd] bg-success-bg px-4 py-2.5 text-[12px] font-semibold text-success-text" role="status">
-          Changes saved. They are in the society history with your name and the time.
+          {t("sr.saved")}
         </p>
       )}
-      <RecordOverview canAssign={isHq} record={record} workPlan={plan} />
+      <RecordOverview canAssign={isHq} record={record} t={t} workPlan={plan} />
       {panel === "edit" && record.permissions.canEdit && (
         <EditSocietyPanel action={updateSocietyRecord.bind(null, id)} hqName={viewer.displayName} record={record} />
       )}

@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../models/user.dart';
 import '../society_record/society_record_models.dart'
-    show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
+    show
+        documentTypeLabels,
+        registrarDocumentTypes,
+        sarvodayaSectors,
+        sdgAsset,
+        sdgTitle;
 import '../sarvoai/sarvoai_screen.dart';
 import '../society_admin/assign_staff_screen.dart';
 import '../society_admin/create_society_screen.dart';
@@ -26,9 +33,10 @@ String count(int value) {
   return buffer.toString();
 }
 
-/// "LKR 312.4 m" for a million or more, "LKR 412,500" below.
-String lkr(num? value) {
-  if (value == null) return 'Not added';
+/// "LKR 312.4 m" for a million or more, "LKR 412,500" below. Pass
+/// [notAdded] in the chosen language where a screen is translated.
+String lkr(num? value, {String notAdded = 'Not added'}) {
+  if (value == null) return notAdded;
   if (value.abs() >= 1000000) {
     final millions = (value / 100000).round() / 10;
     final whole = millions.truncate();
@@ -56,13 +64,24 @@ class _Loader<T> extends StatefulWidget {
     super.key,
     required this.load,
     required this.builder,
-    this.loadingLabel = 'Loading national figures',
+    this.loadingLabel,
+    this.errorTitle,
+    this.hqOnly = true,
   });
 
   final Future<T> Function(NationalApi api) load;
+
+  /// Defaults to the national error title.
+  final String? errorTitle;
+
+  /// Whether a refusal says "HQ only"; screens for other roles (issue #117)
+  /// show the shared no-access state instead.
+  final bool hqOnly;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
-  final String loadingLabel;
+
+  /// Defaults to "Loading national figures" in the chosen language.
+  final String? loadingLabel;
 
   @override
   State<_Loader<T>> createState() => _LoaderState<T>();
@@ -77,25 +96,33 @@ class _LoaderState<T> extends State<_Loader<T>> {
     _future ??= widget.load(DemoScope.of(context).national);
   }
 
-  void _reload() =>
-      setState(() => _future = widget.load(DemoScope.of(context).national));
+  // A block body: setState refuses a callback that returns the Future.
+  void _reload() => setState(() {
+    _future = widget.load(DemoScope.of(context).national);
+  });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<T>(
     future: _future,
     builder: (context, snapshot) {
+      final l = context.l10n;
       if (snapshot.connectionState != ConnectionState.done) {
-        return LoadingSkeleton(label: widget.loadingLabel);
+        return LoadingSkeleton(label: widget.loadingLabel ?? l.nationalLoading);
       }
       final error = snapshot.error;
+      if (error is SocietyRecordException &&
+          error.status == 403 &&
+          !widget.hqOnly) {
+        return const NoAccessView();
+      }
       if (error is SocietyRecordException && error.status == 403) {
         final user = DemoScope.of(context).user;
         return NoAccessView(
-          title: 'This Page Is for HQ Only',
-          message:
-              'You are signed in as ${user?.displayName ?? 'another role'}. '
-              'Your own societies and figures are on your home page.',
-          backLabel: 'Go to my home',
+          title: l.nationalHqOnlyTitle,
+          message: user == null
+              ? l.nationalHqOnlyMessageAnother
+              : l.nationalHqOnlyMessage(user.displayName),
+          backLabel: l.nationalGoHome,
           onBack: Navigator.of(context).canPop()
               ? () => Navigator.of(context).pop()
               : null,
@@ -107,13 +134,15 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'We Couldn’t Load the National Figures',
+          title: widget.errorTitle ?? l.nationalErrorTitle,
           message: error is SocietyRecordException
-              ? error.message
-              : 'Check the connection and try again.',
+              ? (error.failure == null
+                    ? error.message
+                    : l.failure(error.failure!))
+              : l.nationalErrorCheck,
           tone: StateTone.error,
           isAlert: true,
-          primaryLabel: 'Try again',
+          primaryLabel: l.commonTryAgain,
           onPrimary: _reload,
         );
       }
@@ -160,9 +189,10 @@ class _Page extends StatelessWidget {
 
 /// Shown only in demonstration mode, so sample figures are never taken as real.
 class SampleLabel extends StatelessWidget {
-  const SampleLabel({super.key, this.text = 'Demonstration data · FY 2025/26'});
+  const SampleLabel({super.key, this.text});
 
-  final String text;
+  /// Defaults to "Demonstration data · FY 2025/26" in the chosen language.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +208,7 @@ class SampleLabel extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE8D28A)),
         ),
         child: Text(
-          text,
+          text ?? context.l10n.nationalDemoData('FY 2025/26'),
           style: const TextStyle(
             fontSize: 11,
             color: AppColors.warning,
@@ -342,7 +372,9 @@ class GradeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: grade == null ? 'No grade' : 'Grade $grade',
+    label: grade == null
+        ? context.l10n.gradeNone
+        : context.l10n.gradeOf(grade!),
     child: ExcludeSemantics(
       child: Container(
         width: size,
@@ -427,27 +459,25 @@ class _Pill extends StatelessWidget {
   );
 }
 
-/// " · Exco 3 of 25" or " · Exco: no Treasurer" for an incomplete Exco
-/// (the API's completion), nothing once it is complete.
-String _excoNote(int? filled, bool? complete, List<String> missingOffices) =>
-    complete != false || filled == null
-    ? ''
+/// "Exco 3 of 25" or "Exco: no Treasurer" for an incomplete Exco (the API's
+/// completion), null once it is complete.
+String? _excoNote(
+  AppLocalizations l,
+  int? filled,
+  bool? complete,
+  List<String> missingOffices,
+) => complete != false || filled == null
+    ? null
     : filled == 0
-    ? ' · Exco not entered'
+    ? l.dirExcoNone
     : filled < 25
-    ? ' · Exco $filled of 25'
+    ? l.dirExcoSeats(filled)
     : missingOffices.isNotEmpty
-    ? ' · Exco: no ${missingOffices.join(', ')}'
-    : ' · Exco needs checking';
+    ? l.dirExcoOffices(l.offices(missingOffices))
+    : l.dirExcoCheck;
 
 void _push(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
-
-String _greeting(DateTime now) => now.hour < 12
-    ? 'Good morning'
-    : now.hour < 17
-    ? 'Good afternoon'
-    : 'Good evening';
 
 /// V5 M05h National Dashboard: HQ's home (Overview tab).
 class NationalDashboardScreen extends StatelessWidget {
@@ -470,7 +500,6 @@ class NationalDashboardScreen extends StatelessWidget {
             ),
             Expanded(
               child: _Loader<NationalOverview>(
-                loadingLabel: 'Loading national figures',
                 load: (api) => api.fetchOverview(),
                 builder: (context, overview, _) => _Overview(overview),
               ),
@@ -489,14 +518,19 @@ class _NationalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user;
     final name = user?.displayName.split(' ').first;
     final role = user == null
         ? null
         : user.primaryRole == UserRole.hqAdmin
-        ? 'HQ · National'
+        ? l.roleHqNational
         : user.primaryRole.label;
+    // "Ask SarvoAI" with "AI" in orange, wherever the translation puts it.
+    const brand = 'SarvoAI';
+    final ask = l.moreAsk(brand);
+    final at = ask.indexOf(brand);
     return ColoredBox(
       color: AppColors.surface,
       child: SafeArea(
@@ -520,7 +554,7 @@ class _NationalHeader extends StatelessWidget {
                       // The phone has no search across all records (D18 is on
                       // the dashboard), so this says what it searches.
                       MastheadButton(
-                        tooltip: 'Search societies',
+                        tooltip: l.nationalSearchSocieties,
                         icon: const Icon(
                           Icons.search,
                           size: 19,
@@ -538,9 +572,9 @@ class _NationalHeader extends StatelessWidget {
                   const SizedBox(height: 10),
                   Semantics(
                     header: true,
-                    child: const Text(
-                      'National Dashboard',
-                      style: TextStyle(
+                    child: Text(
+                      l.nationalTitle,
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
@@ -550,12 +584,7 @@ class _NationalHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    [
-                      name == null
-                          ? _greeting(store.now)
-                          : '${_greeting(store.now)}, $name',
-                      ?role,
-                    ].join(' · '),
+                    [l.greeting(store.now, name), ?role].join(' · '),
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.muted,
@@ -587,26 +616,29 @@ class _NationalHeader extends StatelessWidget {
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text.rich(
-                                    const TextSpan(
+                                    TextSpan(
                                       children: [
-                                        TextSpan(text: 'Ask Sarvo'),
                                         TextSpan(
+                                          text: ask.substring(0, at + 5),
+                                        ),
+                                        const TextSpan(
                                           text: 'AI',
                                           style: TextStyle(
                                             color: Color(0xFFF0A040),
                                           ),
                                         ),
+                                        TextSpan(text: ask.substring(at + 7)),
                                       ],
                                     ),
-                                    semanticsLabel: 'Ask SarvoAI',
+                                    semanticsLabel: ask,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  const Text(
-                                    'HQ only',
-                                    style: TextStyle(
+                                  Text(
+                                    l.nationalHqOnly,
+                                    style: const TextStyle(
                                       color: Colors.white70,
                                       fontSize: 12,
                                     ),
@@ -636,15 +668,19 @@ class _Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final audit = overview.auditReport;
     final links = <(String, Widget)>[
-      ('Districts', const DistrictsScreen(standalone: true)),
-      ('Map', const SocietyMapScreen()),
-      ('Membership', const NationalMembershipScreen()),
-      ('Audit & AGM', const AuditAgmScreen()),
-      ('Profit & Expenses', const ProfitExpensesScreen()),
-      ('Activities', const NationalActivitiesScreen()),
+      (l.navDistricts, const DistrictsScreen(standalone: true)),
+      (l.nationalLinkMap, const SocietyMapScreen()),
+      (l.nationalLinkMembership, const NationalMembershipScreen()),
+      (l.nationalLinkAudit, const AuditAgmScreen()),
+      (l.nationalLinkProfit, const ProfitExpensesScreen()),
+      (l.nationalLinkActivities, const NationalActivitiesScreen()),
     ];
+    final sampleSocieties = DemoStore.demoMode
+        ? l.nationalSampleSocieties(overview.societiesWithBoth)
+        : l.nationalSocieties(overview.societiesWithBoth);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
@@ -663,14 +699,14 @@ class _Overview extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        SampleLabel(text: 'Demonstration data · ${overview.year.label}'),
+        SampleLabel(text: l.nationalDemoData(overview.year.label)),
         _Card(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '1 · Societies Status',
-                link: 'Districts',
+                l.nationalSectionStatus,
+                link: l.navDistricts,
                 onLink: () =>
                     _push(context, const DistrictsScreen(standalone: true)),
               ),
@@ -679,8 +715,8 @@ class _Overview extends StatelessWidget {
                 children: [
                   Flexible(
                     child: _Headline(
-                      'Registered',
-                      count(overview.registered),
+                      l.nationalRegistered,
+                      l.number(overview.registered),
                       AppColors.ink,
                     ),
                   ),
@@ -694,8 +730,8 @@ class _Overview extends StatelessWidget {
                   ),
                   Flexible(
                     child: _Headline(
-                      'Active',
-                      count(overview.active),
+                      l.nationalActive,
+                      l.number(overview.active),
                       AppColors.leaf,
                     ),
                   ),
@@ -705,7 +741,10 @@ class _Overview extends StatelessWidget {
               GradeLine(overview.grades),
               const SizedBox(height: 4),
               Text(
-                '${count(overview.notUpdatedIn90Days)} not updated in 90+ days · ${overview.gradeRequestsWaiting} grade requests waiting',
+                l.nationalStatusNote(
+                  overview.notUpdatedIn90Days,
+                  overview.gradeRequestsWaiting,
+                ),
                 style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
               ),
             ],
@@ -714,18 +753,21 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 8),
         _Pair(
           _Figure(
-            '2 · Members',
-            count(overview.members),
-            'Female ${sharePercent(overview.female, overview.members)}% · male ${sharePercent(overview.male, overview.members)}%',
+            l.nationalSectionMembers,
+            l.number(overview.members),
+            l.nationalFemaleMaleShare(
+              sharePercent(overview.female, overview.members),
+              sharePercent(overview.male, overview.members),
+            ),
             colour: _female,
             background: const Color(0xFFF6EFF9),
             border: const Color(0xFFE4D3EC),
             onTap: () => _push(context, const NationalMembershipScreen()),
           ),
           _Figure(
-            '3–4 · Audit Reports',
+            l.nationalSectionAudit,
             '${sharePercent(audit.submitted, overview.active)}%',
-            '${count(audit.submitted)} of ${count(overview.active)} uploaded',
+            l.nationalUploadedOf(audit.submitted, overview.active),
             colour: AppColors.leaf,
             background: const Color(0xFFEEF6EF),
             border: const Color(0xFFCFE3D3),
@@ -735,16 +777,16 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 8),
         _Pair(
           _Figure(
-            '5 · Profit for the Year',
-            lkr(overview.totalProfit),
-            '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
+            l.nationalSectionProfit,
+            lkr(overview.totalProfit, notAdded: l.nationalNotAdded),
+            sampleSocieties,
             colour: AppColors.leaf,
             onTap: () => _push(context, const ProfitExpensesScreen()),
           ),
           _Figure(
-            '5 · Expenses for the Year',
-            lkr(overview.totalExpenses),
-            '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
+            l.nationalSectionExpenses,
+            lkr(overview.totalExpenses, notAdded: l.nationalNotAdded),
+            sampleSocieties,
             colour: const Color(0xFF9A4F12),
             background: const Color(0xFFFDF3EA),
             border: const Color(0xFFF0D9C4),
@@ -757,34 +799,33 @@ class _Overview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '6 · Activities Completed',
-                link: 'Activities',
+                l.nationalSectionActivities,
+                link: l.nationalLinkActivities,
                 onLink: () => _push(context, const NationalActivitiesScreen()),
               ),
               Text.rich(
                 TextSpan(
-                  children: [
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  children: styledSpans(
+                    l.nationalCompletedOf(
+                      styledSlot,
+                      overview.planned,
+                      sharePercent(overview.completed, overview.planned),
+                    ),
                     TextSpan(
-                      text: count(overview.completed),
+                      text: l.number(overview.completed),
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
                       ),
                     ),
-                    TextSpan(
-                      text:
-                          ' of ${count(overview.planned)} planned completed — ${sharePercent(overview.completed, overview.planned)}%',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Top UN SDGs by Completed Activities · ${overview.year.label}',
+                l.nationalTopSdgs(overview.year.label),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -792,9 +833,9 @@ class _Overview extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               if (overview.topSdgs.isEmpty)
-                const Text(
-                  'No completed activity with a UN SDG yet.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                Text(
+                  l.nationalNoSdgYet,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 )
               else
                 Row(
@@ -852,8 +893,12 @@ class _SdgTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
-    label:
-        'Number $rank, SDG ${row.sdg}: ${sdgTitle(row.sdg)}, ${count(row.completed)} completed',
+    label: context.l10n.nationalSdgTile(
+      rank,
+      row.sdg,
+      sdgTitle(row.sdg),
+      row.completed,
+    ),
     child: ExcludeSemantics(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,7 +912,7 @@ class _SdgTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            count(row.completed),
+            context.l10n.number(row.completed),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           Text(
@@ -895,8 +940,9 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final body = _Loader<List<DistrictFigures>>(
-      loadingLabel: 'Loading districts',
+      loadingLabel: l.nationalDistrictsLoading,
       load: (api) => api.fetchDistricts(),
       builder: (context, districts, _) {
         final shown = districts
@@ -908,21 +954,21 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Find a district',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l.nationalDistrictsFind,
               ),
               onChanged: (value) => setState(() => _search = value.trim()),
             ),
             const SizedBox(height: 10),
             const SampleLabel(),
             if (shown.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
                 child: StateMessage(
                   icon: Icons.search,
-                  title: 'No Districts Match',
-                  message: 'Try another name.',
+                  title: l.nationalDistrictsNoMatch,
+                  message: l.nationalDistrictsTryAnother,
                 ),
               ),
             for (final district in shown) ...[
@@ -951,7 +997,7 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
                           ),
                         ),
                         _Pill(
-                          'Audit ${district.auditPercent}%',
+                          l.nationalDistrictAudit(district.auditPercent),
                           colour: district.auditPercent >= 85
                               ? AppColors.leaf
                               : district.auditPercent >= 70
@@ -967,7 +1013,12 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${(district.province ?? '').replaceAll(' Province', '')} · ${count(district.active)} active · ${count(district.members)} members · ${district.recordsCompletePercent}% complete',
+                      l.nationalDistrictLine(
+                        (district.province ?? '').replaceAll(' Province', ''),
+                        district.active,
+                        district.members,
+                        district.recordsCompletePercent,
+                      ),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.inkBody,
@@ -990,18 +1041,21 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  'Districts',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  l.navDistricts,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 child: Text(
-                  'Alphabetical, never ranked',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  l.nationalDistrictsSubtitle,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
               Expanded(child: body),
@@ -1011,8 +1065,8 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
       );
     }
     return _Page(
-      title: 'Districts',
-      subtitle: 'Alphabetical, never ranked',
+      title: l.navDistricts,
+      subtitle: l.nationalDistrictsSubtitle,
       body: body,
     );
   }
@@ -1049,9 +1103,10 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final list = _Loader<DirectoryPage>(
       key: ValueKey(_version),
-      loadingLabel: 'Loading societies',
+      loadingLabel: l.dirLoading,
       load: (api) => api.fetchDirectory(_query),
       builder: (context, page, _) => ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -1059,11 +1114,11 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
           if (page.rows.isEmpty)
             StateMessage(
               icon: Icons.search,
-              title: 'No Societies Match',
+              title: l.homeNoMatchTitle,
               message: _query.filtered
-                  ? 'Try fewer filters.'
-                  : 'No society is in your view yet.',
-              primaryLabel: _query.filtered ? 'Clear all filters' : null,
+                  ? l.homeNoMatchFiltered
+                  : l.homeNoMatchEmpty,
+              primaryLabel: _query.filtered ? l.homeClearAllFilters : null,
               onPrimary: () => _set(const DirectoryQuery()),
             )
           else ...[
@@ -1071,7 +1126,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${count(page.total)} active societies',
+                    l.dirActiveCount(page.total),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.muted,
@@ -1102,20 +1157,37 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
                           fontSize: 14,
                         ),
                       ),
-                      subtitle: Text(
-                        '${row.societyCode}${row.members == null ? '' : ' · ${count(row.members!)} members'} · ${row.figuresAdded ? 'updated ${formatDate(row.updatedAt)}' : 'figures not added'}${_excoNote(row.excoSeatsFilled, row.excoComplete, row.excoMissingOffices)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      subtitle: Text(() {
+                        final state = row.figuresAdded
+                            ? l.dirUpdated(l.date(row.updatedAt))
+                            : l.dirFiguresNotAdded;
+                        final exco = _excoNote(
+                          l,
+                          row.excoSeatsFilled,
+                          row.excoComplete,
+                          row.excoMissingOffices,
+                        );
+                        return [
+                          row.members == null
+                              ? '${row.societyCode} · $state'
+                              : l.dirRowMembers(
+                                  row.societyCode,
+                                  row.members!,
+                                  state,
+                                ),
+                          ?exco,
+                        ].join(' · ');
+                      }(), style: const TextStyle(fontSize: 12)),
                       trailing: row.requestedGrade != null
                           ? _Pill('${row.grade ?? '–'} → ${row.requestedGrade}')
                           : row.notUpdatedIn90Days
-                          ? const _Pill(
-                              '90+ days',
+                          ? _Pill(
+                              l.dir90Days,
                               colour: AppColors.danger,
                               background: AppColors.dangerSoft,
                             )
                           : !row.figuresAdded
-                          ? const _Pill('Not added')
+                          ? _Pill(l.dirNotAdded)
                           : const Icon(Icons.chevron_right),
                       onTap: () => _push(
                         context,
@@ -1137,9 +1209,9 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         children: [
           TextField(
             autofocus: widget.autofocusSearch,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Name or S number',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: l.dirSearchHint,
             ),
             textInputAction: TextInputAction.search,
             onSubmitted: (value) => _set(_query.copyWith(search: value.trim())),
@@ -1151,25 +1223,38 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
             children: [
               if (_query.districtId != null)
                 InputChip(
-                  label: Text('District: ${_query.districtName ?? 'chosen'}'),
+                  label: Text(
+                    _query.districtName == null
+                        ? l.dirDistrictChosen
+                        : l.dirDistrictChip(_query.districtName!),
+                  ),
                   selected: true,
                   deleteIconColor: Colors.white,
                   onDeleted: () => _set(_query.copyWith(district: () => null)),
-                  deleteButtonTooltipMessage: 'Remove the district filter',
+                  deleteButtonTooltipMessage: l.dirRemoveDistrict,
                 ),
               PopupMenuButton<String?>(
-                tooltip: 'Class',
+                tooltip: l.dirClass,
                 onSelected: (grade) =>
                     _set(_query.copyWith(grade: () => grade)),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: null, child: Text('All classes')),
+                  PopupMenuItem(value: null, child: Text(l.dirAllClasses)),
                   for (final grade in ['A', 'B', 'C'])
-                    PopupMenuItem(value: grade, child: Text('Class $grade')),
+                    PopupMenuItem(
+                      value: grade,
+                      child: Text(l.dirClassOf(grade)),
+                    ),
                 ],
-                child: Chip(label: Text('Class: ${_query.grade ?? 'All'}')),
+                child: Chip(
+                  label: Text(
+                    _query.grade == null
+                        ? l.dirClassAll
+                        : l.dirClassChip(_query.grade!),
+                  ),
+                ),
               ),
               FilterChip(
-                label: const Text('90+ Days'),
+                label: Text(l.dir90DaysChip),
                 selected: _query.notUpdated,
                 onSelected: (value) => _set(_query.copyWith(notUpdated: value)),
               ),
@@ -1185,8 +1270,8 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
       ],
     );
     final subtitle = _query.districtName == null
-        ? 'Active societies'
-        : 'Filtered to ${_query.districtName}';
+        ? l.dirActive
+        : l.dirFiltered(_query.districtName!);
     if (widget.asTab) {
       return Scaffold(
         // V5 D05n on the phone: HQ creates a society, then assigns its staff.
@@ -1200,17 +1285,20 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
             if (mounted) setState(() => _version++);
           },
           icon: const Icon(Icons.add),
-          label: const Text('Create society'),
+          label: Text(l.dirCreate),
         ),
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  'Societies',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  l.listTitle,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Padding(
@@ -1226,7 +1314,7 @@ class _NationalSocietiesScreenState extends State<NationalSocietiesScreen> {
         ),
       );
     }
-    return _Page(title: 'Societies', subtitle: subtitle, body: body);
+    return _Page(title: l.listTitle, subtitle: subtitle, body: body);
   }
 }
 
@@ -1237,214 +1325,238 @@ class SocietySummaryScreen extends StatelessWidget {
   final String societyId;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Society Summary',
-    subtitle: 'Counts and yearly totals',
-    body: _Loader<SocietyAtAGlance>(
-      loadingLabel: 'Loading the society',
-      load: (api) => api.fetchSociety(societyId),
-      builder: (context, society, _) {
-        final uploaded = society.uploaded.values.where((value) => value).length;
-        final completeTone = society.recordsCompletePercent >= 90;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            _Card(
-              child: Row(
-                children: [
-                  GradeBadge(society.grade, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          society.name,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          '${society.societyCode} · ${society.district} · ${society.hasSocietyOfficer ? 'updated ${formatDate(society.updatedAt)}' : 'no Society Officer'}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Pair(
-              _Figure(
-                'Members',
-                society.members == null
-                    ? 'Not entered'
-                    : count(society.members!),
-                society.membershipYear == null
-                    ? 'No counts yet'
-                    : '${society.membershipYear}',
-              ),
-              _Figure(
-                'Records Complete',
-                '${society.recordsCompletePercent}%',
-                society.missingFields == 0
-                    ? 'Every field entered'
-                    : '${society.missingFields} fields missing',
-                colour: completeTone ? AppColors.leaf : AppColors.warning,
-                background: completeTone
-                    ? const Color(0xFFEEF6EF)
-                    : AppColors.warningSoft,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Pair(
-              _Figure(
-                'Profit for the Year',
-                lkr(society.profit),
-                society.profit == null
-                    ? 'Waiting for the society'
-                    : society.year.label,
-                colour: AppColors.leaf,
-              ),
-              _Figure(
-                'Expenses for the Year',
-                lkr(society.expenses),
-                society.expenses == null
-                    ? 'Waiting for the society'
-                    : society.year.label,
-                colour: const Color(0xFF9A4F12),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Eyebrow(
-                    'Registrar Documents · $uploaded of ${registrarDocumentTypes.length}',
-                  ),
-                  for (final type in registrarDocumentTypes)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    String docLabel(String type) => switch (type) {
+      'AUDIT_REPORT' => l.summDocAudit,
+      'AGM_MINUTES' => l.summDocAgm,
+      'OFFICE_BEARER_LIST' => l.summDocOfficeBearers,
+      'MEMBERS_LIST' => l.summDocMembers,
+      _ => documentTypeLabels[type] ?? type,
+    };
+    return _Page(
+      title: l.summTitle,
+      subtitle: l.summSubtitle,
+      body: _Loader<SocietyAtAGlance>(
+        loadingLabel: l.summLoading,
+        load: (api) => api.fetchSociety(societyId),
+        builder: (context, society, _) {
+          final uploaded = society.uploaded.values
+              .where((value) => value)
+              .length;
+          final completeTone = society.recordsCompletePercent >= 90;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _Card(
+                child: Row(
+                  children: [
+                    GradeBadge(society.grade, size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              documentTypeLabels[type] ?? type,
-                              style: const TextStyle(fontSize: 13),
+                          Text(
+                            society.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          society.uploaded[type] == true
-                              ? const _Pill(
-                                  'Uploaded',
-                                  colour: AppColors.leaf,
-                                  background: AppColors.mint,
-                                )
-                              : type == 'AUDIT_REPORT' && society.auditPastDue
-                              ? const _Pill(
-                                  'Past due',
-                                  colour: AppColors.danger,
-                                  background: AppColors.dangerSoft,
-                                )
-                              : const _Pill('Missing'),
+                          Text(
+                            society.hasSocietyOfficer
+                                ? l.summLine(
+                                    society.societyCode,
+                                    society.district,
+                                    l.date(society.updatedAt),
+                                  )
+                                : l.summLineNoOfficer(
+                                    society.societyCode,
+                                    society.district,
+                                  ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
-            if (!society.hasSocietyOfficer) ...[
-              const SizedBox(height: 8),
-              NoticeBanner(
-                icon: Icons.warning_amber_outlined,
-                title: '${society.name} Has No Society Officer',
-                message: society.spcName == null
-                    ? 'Its SPC adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.'
-                    : 'Its SPC, ${society.spcName}, adds the yearly figures and the audit report. Assign a Society Officer to enter the Exco.',
-              ),
-            ],
-            if (society.excoComplete == false) ...[
-              const SizedBox(height: 8),
-              NoticeBanner(
-                icon: Icons.groups_outlined,
-                tone: NoticeTone.warning,
-                title: society.excoSeatsFilled == 0
-                    ? 'Exco not entered yet'
-                    : (society.excoSeatsFilled ?? 0) < 25
-                    ? 'Exco incomplete · ${society.excoSeatsFilled} of 25'
-                    : society.excoMissingOffices.isNotEmpty
-                    ? 'Exco incomplete · no ${society.excoMissingOffices.join(', ')} chosen'
-                    : 'Exco incomplete · needs checking',
-                message: 'The Society Officer enters the Exco and can save it as they go. HQ can also add members from the society record.',
-              ),
-            ],
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (society.gradeRequest != null) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Grade change ${society.gradeRequest}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        const _Pill('Waiting for HQ'),
-                      ],
-                    ),
-                    const Divider(height: 18),
                   ],
-                  Text(
-                    'Activities this year: ${society.approved} of ${society.planned} approved',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  if (society.latestActivity != null)
-                    Text(
-                      'Latest: ${society.latestActivity}${society.latestSdgs.isEmpty ? '' : ' · SDG ${society.latestSdgs.join(', ')}'}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () =>
-                  _push(context, SocietyRecordScreen(societyId: society.id)),
-              child: const Text('Open society record'),
-            ),
-            const SizedBox(height: 8),
-            // V5 D05a on the phone. The server allows it to HQ only.
-            OutlinedButton.icon(
-              onPressed: () => _push(
-                context,
-                AssignStaffScreen(
-                  societyId: society.id,
-                  societyName: society.name,
                 ),
               ),
-              icon: const Icon(Icons.manage_accounts_outlined, size: 18),
-              label: Text(
-                society.hasSocietyOfficer
-                    ? 'Change assigned staff'
-                    : 'Assign staff',
+              const SizedBox(height: 8),
+              _Pair(
+                _Figure(
+                  l.recMembers,
+                  society.members == null
+                      ? l.summNotEntered
+                      : l.number(society.members!),
+                  society.membershipYear == null
+                      ? l.summNoCounts
+                      : '${society.membershipYear}',
+                ),
+                _Figure(
+                  l.summComplete,
+                  '${society.recordsCompletePercent}%',
+                  society.missingFields == 0
+                      ? l.summEveryField
+                      : l.summFieldsMissing(society.missingFields),
+                  colour: completeTone ? AppColors.leaf : AppColors.warning,
+                  background: completeTone
+                      ? const Color(0xFFEEF6EF)
+                      : AppColors.warningSoft,
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
+              const SizedBox(height: 8),
+              _Pair(
+                _Figure(
+                  l.summProfit,
+                  lkr(society.profit, notAdded: l.nationalNotAdded),
+                  society.profit == null ? l.summWaiting : society.year.label,
+                  colour: AppColors.leaf,
+                ),
+                _Figure(
+                  l.summExpenses,
+                  lkr(society.expenses, notAdded: l.nationalNotAdded),
+                  society.expenses == null ? l.summWaiting : society.year.label,
+                  colour: const Color(0xFF9A4F12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Eyebrow(
+                      l.summRegistrar(uploaded, registrarDocumentTypes.length),
+                    ),
+                    for (final type in registrarDocumentTypes)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                docLabel(type),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            society.uploaded[type] == true
+                                ? _Pill(
+                                    l.summUploaded,
+                                    colour: AppColors.leaf,
+                                    background: AppColors.mint,
+                                  )
+                                : type == 'AUDIT_REPORT' && society.auditPastDue
+                                ? _Pill(
+                                    l.summPastDue,
+                                    colour: AppColors.danger,
+                                    background: AppColors.dangerSoft,
+                                  )
+                                : _Pill(l.summMissing),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!society.hasSocietyOfficer) ...[
+                const SizedBox(height: 8),
+                NoticeBanner(
+                  icon: Icons.warning_amber_outlined,
+                  title: l.summNoOfficerTitle(society.name),
+                  message: society.spcName == null
+                      ? l.summNoOfficerBody
+                      : l.summNoOfficerBodyNamed(society.spcName!),
+                ),
+              ],
+              if (society.excoComplete == false) ...[
+                const SizedBox(height: 8),
+                NoticeBanner(
+                  icon: Icons.groups_outlined,
+                  tone: NoticeTone.warning,
+                  title: society.excoSeatsFilled == 0
+                      ? l.summExcoNone
+                      : (society.excoSeatsFilled ?? 0) < 25
+                      ? l.summExcoSeats(society.excoSeatsFilled ?? 0)
+                      : society.excoMissingOffices.isNotEmpty
+                      ? l.summExcoOffices(l.offices(society.excoMissingOffices))
+                      : l.summExcoCheck,
+                  message: l.summExcoBody,
+                ),
+              ],
+              const SizedBox(height: 8),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (society.gradeRequest != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l.summGradeChange('${society.gradeRequest}'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          _Pill(l.gradeReqWaitingHq),
+                        ],
+                      ),
+                      const Divider(height: 18),
+                    ],
+                    Text(
+                      l.summActivities(society.approved, society.planned),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    if (society.latestActivity != null)
+                      Text(
+                        society.latestSdgs.isEmpty
+                            ? l.summLatest(society.latestActivity!)
+                            : l.summLatestSdgs(
+                                society.latestActivity!,
+                                society.latestSdgs.join(', '),
+                              ),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () =>
+                    _push(context, SocietyRecordScreen(societyId: society.id)),
+                child: Text(l.summOpenRecord),
+              ),
+              const SizedBox(height: 8),
+              // V5 D05a on the phone. The server allows it to HQ only.
+              OutlinedButton.icon(
+                onPressed: () => _push(
+                  context,
+                  AssignStaffScreen(
+                    societyId: society.id,
+                    societyName: society.name,
+                  ),
+                ),
+                icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                label: Text(
+                  society.hasSocietyOfficer
+                      ? l.summChangeStaff
+                      : l.summAssignStaff,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// The island outline in latitude and longitude, simplified by hand.
@@ -1542,117 +1654,119 @@ class _SocietyMapScreenState extends State<SocietyMapScreen> {
   MapPoint? _selected;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Map',
-    subtitle: 'Active societies by class',
-    body: _Loader<SocietyMapData>(
-      loadingLabel: 'Loading the map',
-      load: (api) => api.fetchMap(),
-      builder: (context, map, _) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                for (final (grade, value) in [
-                  ('A', map.counts.a),
-                  ('B', map.counts.b),
-                  ('C', map.counts.c),
-                  ('NOT_ACTIVE', map.notActive),
-                ])
-                  Chip(
-                    avatar: CircleAvatar(
-                      backgroundColor: _gradeColours[grade],
-                      radius: 5,
-                    ),
-                    label: Text(
-                      grade == 'NOT_ACTIVE'
-                          ? 'Not active ${count(value)}'
-                          : '$grade ${count(value)}',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: SampleLabel(text: 'Demonstration data · sample positions'),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final height = constraints.maxHeight;
-                final width = (height * 2.5 / 4.1).clamp(
-                  0.0,
-                  constraints.maxWidth,
-                );
-                final size = Size(width, width * 4.1 / 2.5);
-                return Center(
-                  child: Semantics(
-                    label:
-                        '${map.points.length} societies on the map. Use the Societies list for a screen-reader friendly view.',
-                    child: GestureDetector(
-                      onTapUp: (details) {
-                        MapPoint? nearest;
-                        var best = 24.0 * 24.0;
-                        for (final point in map.points) {
-                          final distance =
-                              (_project(point.lat, point.lng, size) -
-                                      details.localPosition)
-                                  .distanceSquared;
-                          if (distance < best) {
-                            best = distance;
-                            nearest = point;
-                          }
-                        }
-                        setState(() => _selected = nearest);
-                      },
-                      child: CustomPaint(
-                        size: size,
-                        painter: _MapPainter(map.points, _selected?.id),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (_selected != null)
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMapTitle,
+      subtitle: l.nationalMapSubtitle,
+      body: _Loader<SocietyMapData>(
+        loadingLabel: l.nationalMapLoading,
+        load: (api) => api.fetchMap(),
+        builder: (context, map, _) => Column(
+          children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: _Card(
-                onTap: _selected!.id.startsWith('sample-')
-                    ? null
-                    : () => _push(
-                        context,
-                        SocietySummaryScreen(societyId: _selected!.id),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final (grade, value) in [
+                    ('A', map.counts.a),
+                    ('B', map.counts.b),
+                    ('C', map.counts.c),
+                    ('NOT_ACTIVE', map.notActive),
+                  ])
+                    Chip(
+                      avatar: CircleAvatar(
+                        backgroundColor: _gradeColours[grade],
+                        radius: 5,
                       ),
-                child: Row(
-                  children: [
-                    GradeBadge(
-                      ['A', 'B', 'C'].contains(_selected!.societyClass)
-                          ? _selected!.societyClass
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _selected!.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      label: Text(
+                        grade == 'NOT_ACTIVE'
+                            ? l.nationalMapNotActive(value)
+                            : '$grade ${l.number(value)}',
                       ),
                     ),
-                    if (!_selected!.id.startsWith('sample-'))
-                      const Icon(Icons.chevron_right),
-                  ],
-                ),
+                ],
               ),
             ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SampleLabel(text: l.nationalDemoPositions),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final height = constraints.maxHeight;
+                  final width = (height * 2.5 / 4.1).clamp(
+                    0.0,
+                    constraints.maxWidth,
+                  );
+                  final size = Size(width, width * 4.1 / 2.5);
+                  return Center(
+                    child: Semantics(
+                      label: l.nationalMapSemantics(map.points.length),
+                      child: GestureDetector(
+                        onTapUp: (details) {
+                          MapPoint? nearest;
+                          var best = 24.0 * 24.0;
+                          for (final point in map.points) {
+                            final distance =
+                                (_project(point.lat, point.lng, size) -
+                                        details.localPosition)
+                                    .distanceSquared;
+                            if (distance < best) {
+                              best = distance;
+                              nearest = point;
+                            }
+                          }
+                          setState(() => _selected = nearest);
+                        },
+                        child: CustomPaint(
+                          size: size,
+                          painter: _MapPainter(map.points, _selected?.id),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (_selected != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: _Card(
+                  onTap: _selected!.id.startsWith('sample-')
+                      ? null
+                      : () => _push(
+                          context,
+                          SocietySummaryScreen(societyId: _selected!.id),
+                        ),
+                  child: Row(
+                    children: [
+                      GradeBadge(
+                        ['A', 'B', 'C'].contains(_selected!.societyClass)
+                            ? _selected!.societyClass
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selected!.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (!_selected!.id.startsWith('sample-'))
+                        const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// V5 M61 Membership: counts only, no personal data.
@@ -1660,106 +1774,124 @@ class NationalMembershipScreen extends StatelessWidget {
   const NationalMembershipScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Membership',
-    subtitle: 'Counts only — no personal data',
-    body: _Loader<NationalOverview>(
-      load: (api) => api.fetchOverview(),
-      builder: (context, overview, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          SampleLabel(
-            text: 'Demonstration data · ${overview.membershipYear ?? ''}',
-          ),
-          _Pair(
-            _Figure(
-              'Total Members',
-              count(overview.members),
-              '${count(overview.societiesReported)} societies reported',
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMembershipTitle,
+      subtitle: l.nationalMembershipSubtitle,
+      body: _Loader<NationalOverview>(
+        load: (api) => api.fetchOverview(),
+        builder: (context, overview, _) => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            SampleLabel(
+              text: overview.membershipYear == null
+                  ? l.nationalDemoDataPlain
+                  : l.nationalDemoData('${overview.membershipYear}'),
             ),
-            _Figure(
-              'Female · Male',
-              '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
-              '${count(overview.female)} · ${count(overview.male)}',
-              colour: _female,
-              background: const Color(0xFFF6EFF9),
-              border: const Color(0xFFE4D3EC),
+            _Pair(
+              _Figure(
+                l.nationalTotalMembers,
+                l.number(overview.members),
+                l.nationalSocietiesReported(overview.societiesReported),
+              ),
+              _Figure(
+                l.nationalFemaleMale,
+                '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
+                '${l.number(overview.female)} · ${l.number(overview.male)}',
+                colour: _female,
+                background: const Color(0xFFF6EFF9),
+                border: const Color(0xFFE4D3EC),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _Eyebrow('By Category · Female / Male'),
-                for (final row in overview.categories)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                membershipCategoryLabels[row.category] ??
-                                    row.category,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              count(row.total),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text.rich(
-                          TextSpan(
-                            style: const TextStyle(fontSize: 12),
+            const SizedBox(height: 8),
+            _Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Eyebrow(l.nationalByCategory),
+                  for (final row in overview.categories)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              TextSpan(
-                                text: '${sharePercent(row.female, row.total)}%',
-                                style: const TextStyle(
-                                  color: _female,
-                                  fontWeight: FontWeight.w700,
+                              Expanded(
+                                child: Text(
+                                  _categoryLabel(l, row.category),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                              const TextSpan(text: ' female · '),
-                              TextSpan(
-                                text: '${sharePercent(row.male, row.total)}%',
+                              Text(
+                                l.number(row.total),
                                 style: const TextStyle(
-                                  color: _male,
                                   fontWeight: FontWeight.w700,
                                 ),
-                              ),
-                              TextSpan(
-                                text:
-                                    ' male · ${count(row.female)} female · ${count(row.male)} male',
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          Text.rich(
+                            TextSpan(
+                              style: const TextStyle(fontSize: 12),
+                              children: styledSpans2(
+                                l.nationalCategoryShare(
+                                  styledSlot,
+                                  styledSlot2,
+                                  row.female,
+                                  row.male,
+                                ),
+                                TextSpan(
+                                  text:
+                                      '${sharePercent(row.female, row.total)}%',
+                                  style: const TextStyle(
+                                    color: _female,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${sharePercent(row.male, row.total)}%',
+                                  style: const TextStyle(
+                                    color: _male,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const NoticeBanner(
-            icon: Icons.info_outline,
-            title: 'Counts Only',
-            message: 'Members’ names are kept in the signed members list, which only DMs and HQ can open.',
-          ),
-        ],
+            const SizedBox(height: 8),
+            NoticeBanner(
+              icon: Icons.info_outline,
+              title: l.nationalCountsOnlyTitle,
+              message: l.nationalCountsOnlyMessage,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
+
+/// A membership category's label in the chosen language; the API's value
+/// stays as sent.
+String _categoryLabel(AppLocalizations l, String category) =>
+    switch (category) {
+      'CHILDREN' => l.membershipChildren,
+      'YOUTH' => l.membershipYouth,
+      'MOTHERS' => l.membershipMothers,
+      'ORDINARY' => l.membershipOrdinary,
+      'ELDERS_COUNCIL' => l.membershipElders,
+      _ => membershipCategoryLabels[category] ?? category,
+    };
 
 /// V5 M62a Audit & AGM: the audit report and the other Registrar documents.
 class AuditAgmScreen extends StatelessWidget {
@@ -1949,9 +2081,89 @@ class ProfitExpensesScreen extends StatelessWidget {
   );
 }
 
-/// V5 M63 Activities: done vs planned, SPC-approved only.
+/// The latest financial year that has ended (April to March), as the server
+/// chooses by default, and the four before it.
+List<int> selectableProgrammeYears(DateTime now) {
+  final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+  return [for (var i = 0; i < 5; i++) latest - i];
+}
+
+String _fyLabel(int year) =>
+    'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}';
+
+/// A stored sector in the reader's language; one the app does not know
+/// stays as stored.
+String programmeSectorLabel(AppLocalizations l, String sector) =>
+    switch (sarvodayaSectors.indexOf(sector)) {
+      0 => l.progSector1,
+      1 => l.progSector2,
+      2 => l.progSector3,
+      3 => l.progSector4,
+      4 => l.progSector5,
+      5 => l.progSector6,
+      6 => l.progSector7,
+      7 => l.progSector8,
+      8 => l.progSector9,
+      9 => l.progSector10,
+      _ => sector,
+    };
+
+/// A UN SDG's title in the reader's language.
+String programmeSdgLabel(AppLocalizations l, int sdg) => switch (sdg) {
+  1 => l.progSdg1,
+  2 => l.progSdg2,
+  3 => l.progSdg3,
+  4 => l.progSdg4,
+  5 => l.progSdg5,
+  6 => l.progSdg6,
+  7 => l.progSdg7,
+  8 => l.progSdg8,
+  9 => l.progSdg9,
+  10 => l.progSdg10,
+  11 => l.progSdg11,
+  12 => l.progSdg12,
+  13 => l.progSdg13,
+  14 => l.progSdg14,
+  15 => l.progSdg15,
+  16 => l.progSdg16,
+  17 => l.progSdg17,
+  _ => sdgTitle(sdg),
+};
+
+String _dimensionLabel(AppLocalizations l, String dimension) =>
+    switch (dimension) {
+      'SOCIAL' => l.progDimSocial,
+      'ECONOMIC' => l.progDimEconomic,
+      'GOVERNANCE' => l.progDimGovernance,
+      _ => dimension,
+    };
+
+/// Who the figures cover, for a DM, DDM or SPC.
+String programmeScopeLine(AppLocalizations l, ProgrammeScope scope) {
+  final district = scope.districts.join(', ');
+  return switch (scope.kind) {
+    ProgrammeScopeKind.district => l.progScopeDistrict(
+      district,
+      scope.societies,
+    ),
+    ProgrammeScopeKind.assignedAndDistrict
+        when scope.temporaryAccessEndsAt != null =>
+      l.progScopeTemporary(
+        district,
+        l.number(scope.societies),
+        l.accessEndsAt(scope.temporaryAccessEndsAt!),
+      ),
+    _ => l.progScopeAssigned(scope.societies),
+  };
+}
+
+/// V5 M64 Programmes & Activities: done vs planned, SPC-approved only.
+/// HQ sees the nation; with [scoped] a DM, DDM or SPC sees the same screen
+/// over the societies the server lets them count (issue #117).
 class NationalActivitiesScreen extends StatefulWidget {
-  const NationalActivitiesScreen({super.key});
+  const NationalActivitiesScreen({super.key, this.scoped = false});
+
+  final bool scoped;
 
   @override
   State<NationalActivitiesScreen> createState() =>
@@ -1960,182 +2172,263 @@ class NationalActivitiesScreen extends StatefulWidget {
 
 class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
   bool _bySector = true;
+  int? _year;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Activities',
-    subtitle: 'Done vs planned · SPC-approved only',
-    body: _Loader<NationalProgrammes>(
-      load: (api) => api.fetchProgrammes(),
-      builder: (context, programmes, _) {
-        final ranked = programmes.sdgs
-            .where((row) => row.completed > 0)
-            .toList();
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(text: 'Demonstration data · ${programmes.year.label}'),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.progTitle,
+      subtitle: l.progSubtitle,
+      body: _Loader<NationalProgrammes>(
+        // A new year is a new request.
+        key: ValueKey(_year),
+        loadingLabel: l.progLoading,
+        errorTitle: l.progErrorTitle,
+        hqOnly: !widget.scoped,
+        load: (api) => widget.scoped
+            ? api.fetchScopedProgrammes(year: _year)
+            : api.fetchProgrammes(year: _year),
+        builder: (context, programmes, _) =>
+            _programmes(context, l, programmes),
+      ),
+    );
+  }
+
+  Widget _programmes(
+    BuildContext context,
+    AppLocalizations l,
+    NationalProgrammes programmes,
+  ) {
+    final ranked = programmes.sdgs.where((row) => row.completed > 0).toList();
+    final scope = programmes.scope;
+    final years = selectableProgrammeYears(DemoScope.of(context).now);
+    final summary = l.progSummary(
+      styledSlot,
+      l.number(programmes.planned),
+      l.number(sharePercent(programmes.completed, programmes.planned)),
+    );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.progDemo(programmes.year.label)),
+        Semantics(
+          label: l.progFinancialYear,
+          container: true,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final year in years)
+                ChoiceChip(
+                  label: Text(_fyLabel(year)),
+                  selected: year == programmes.year.startYear,
+                  onSelected: (_) => setState(() => _year = year),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (scope != null) ...[
+          _Card(
+            child: Text.rich(
+              TextSpan(
                 children: [
-                  Text.rich(
+                  TextSpan(
+                    text: '${l.progCountedOver} ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.leaf,
+                    ),
+                  ),
+                  TextSpan(text: programmeScopeLine(l, scope)),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (scope.societies == 0)
+            StateMessage(
+              icon: Icons.groups_outlined,
+              title: l.progNoSocietiesTitle,
+              message: l.progNoSocietiesBody,
+            )
+          else if (programmes.planned == 0)
+            Semantics(
+              liveRegion: true,
+              child: _Card(
+                colour: AppColors.stateGrey,
+                child: Text(
+                  l.progZeroYear(programmes.year.label),
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: styledSpans(
+                    summary,
                     TextSpan(
+                      text: l.number(programmes.completed),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: true, label: Text(l.progTenSectors)),
+                  ButtonSegment(value: false, label: Text(l.progDimensions)),
+                ],
+                selected: {_bySector},
+                onSelectionChanged: (value) =>
+                    setState(() => _bySector = value.first),
+              ),
+              const SizedBox(height: 6),
+              if (_bySector)
+                for (final (index, sector) in sarvodayaSectors.indexed)
+                  _sectorRow(l, index, sector, programmes.sectors[sector])
+              else
+                for (final row in programmes.byDimension)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
                       children: [
-                        TextSpan(
-                          text: count(programmes.completed),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Expanded(
+                          child: Text(_dimensionLabel(l, row.dimension)),
                         ),
-                        TextSpan(
-                          text:
-                              ' of ${count(programmes.planned)} planned completed — ${sharePercent(programmes.completed, programmes.planned)}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
+                        Text(
+                          '${l.number(row.completed)} / ${l.number(row.planned)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('10 Sectors')),
-                      ButtonSegment(value: false, label: Text('Dimensions')),
-                    ],
-                    selected: {_bySector},
-                    onSelectionChanged: (value) =>
-                        setState(() => _bySector = value.first),
-                  ),
-                  const SizedBox(height: 6),
-                  if (_bySector)
-                    for (final (
-                          index,
-                          MapEntry(key: sector, value: (done, planned)),
-                        )
-                        in programmes.sectors.entries.indexed)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 11,
-                              backgroundColor: AppColors.leaf,
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(sector)),
-                            Text(
-                              '${count(done)} / ${count(planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                  else
-                    for (final row in programmes.byDimension)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${row.dimension[0]}${row.dimension.substring(1).toLowerCase()}',
-                              ),
-                            ),
-                            Text(
-                              '${count(row.completed)} / ${count(row.planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Eyebrow(l.progSdgEyebrow),
+              Text(
+                l.progSdgNote(programmes.year.label),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _Eyebrow('UN SDGs · Ranked by Completed Activities'),
-                  Text(
-                    '${programmes.year.label} · equal counts listed by SDG number',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+              if (ranked.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(l.progNoSdg(programmes.year.label)),
+                ),
+              for (final (index, row) in ranked.indexed)
+                Semantics(
+                  container: true,
+                  label: l.progSdgSemantics(
+                    l.number(index + 1),
+                    '${row.sdg}',
+                    programmeSdgLabel(l, row.sdg),
+                    l.number(row.completed),
                   ),
-                  if (ranked.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('No completed activity with a UN SDG yet.'),
-                    ),
-                  for (final (index, row) in ranked.indexed)
-                    Semantics(
-                      container: true,
-                      label:
-                          'Number ${index + 1}, SDG ${row.sdg}: ${sdgTitle(row.sdg)}, ${count(row.completed)} completed',
-                      child: ExcludeSemantics(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: Text(
-                                  '#${index + 1}',
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Image.asset(
-                                  sdgAsset(row.sdg),
-                                  width: 48,
-                                  height: 48,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'SDG ${row.sdg}\n${sdgTitle(row.sdg)}',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              Text(
-                                count(row.completed),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                  child: ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              '#${index + 1}',
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
                           ),
-                        ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.asset(
+                              sdgAsset(row.sdg),
+                              width: 48,
+                              height: 48,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'SDG ${row.sdg}\n${programmeSdgLabel(l, row.sdg)}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            l.number(row.completed),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectorRow(
+    AppLocalizations l,
+    int index,
+    String sector,
+    (int, int, int)? figures,
+  ) {
+    final (done, planned, societies) = figures ?? (0, 0, 0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 11,
+            backgroundColor: AppColors.leaf,
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(fontSize: 11, color: Colors.white),
             ),
-          ],
-        );
-      },
-    ),
-  );
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(programmeSectorLabel(l, sector)),
+                Text(
+                  l.progSectorSocieties(societies),
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${l.number(done)} / ${l.number(planned)}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
 }

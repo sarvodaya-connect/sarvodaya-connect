@@ -8,6 +8,9 @@ import type { SocietyMap, SocietyAtAGlance } from "@sarvodaya-connect/api-contra
 import { loadSocietySummary } from "@/app/(dashboard)/map/actions";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Pill } from "@/components/dashboard/ui/pill";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/messages/en";
+import { localeTag } from "@/i18n/translate";
 
 import { IslandOutline, MAP_HEIGHT, MAP_WIDTH, project } from "./sri-lanka";
 
@@ -19,28 +22,29 @@ const CLASS_COLOURS: Record<SocietyMap["points"][number]["class"], string> = {
   NOT_ACTIVE: "#a3a8a2",
 };
 
-const LEGEND = [
-  { key: "A", label: "A · Strong" },
-  { key: "B", label: "B · Developing" },
-  { key: "C", label: "C · Needs Strengthening" },
-  { key: "UNGRADED", label: "Active, Not Graded" },
-  { key: "NOT_ACTIVE", label: "Not Active" },
-] as const;
+const LEGEND: { key: keyof typeof CLASS_COLOURS; label: MessageKey }[] = [
+  { key: "A", label: "grade.A" },
+  { key: "B", label: "grade.B" },
+  { key: "C", label: "grade.C" },
+  { key: "UNGRADED", label: "map.activeUngraded" },
+  { key: "NOT_ACTIVE", label: "map.notActive" },
+];
 
 function Selected({ summary }: { summary: SocietyAtAGlance }) {
+  const { locale, t } = useI18n();
   const rows: [string, string][] = [
-    ["Society ID", summary.societyCode],
-    ["District", summary.district],
-    ["Last updated", new Date(summary.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" })],
-    ["Records complete", `${summary.recordsCompletePercent}%`],
-    ["Members", summary.members === null ? "Not entered" : summary.members.toLocaleString("en-GB")],
+    [t("map.societyId"), summary.societyCode],
+    [t("mb.district"), summary.district],
+    [t("map.lastUpdated"), new Date(summary.updatedAt).toLocaleDateString(localeTag(locale), { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" })],
+    [t("d.recordsComplete"), `${summary.recordsCompletePercent}%`],
+    [t("nav.membersShort"), summary.members === null ? t("map.notEntered") : summary.members.toLocaleString("en-GB")],
   ];
   return (
     <>
       <h2 className="mt-1 text-[17px] font-bold text-ink" id="selected-society">{summary.name}</h2>
       <p className="mt-1 flex flex-wrap gap-1.5">
-        <Pill tone={summary.status === "ACTIVE" ? "on-time" : "inactive"}>{summary.status === "ACTIVE" ? "Active" : "Not active"}</Pill>
-        {summary.grade && <Pill tone="fast-target">Class {summary.grade}</Pill>}
+        <Pill tone={summary.status === "ACTIVE" ? "on-time" : "inactive"}>{summary.status === "ACTIVE" ? t("home.active") : t("map.notActiveLower")}</Pill>
+        {summary.grade && <Pill tone="fast-target">{t("map.classOf", { grade: summary.grade })}</Pill>}
       </p>
       <dl className="mt-3 divide-y divide-line-soft text-[12px]">
         {rows.map(([label, value]) => (
@@ -51,7 +55,7 @@ function Selected({ summary }: { summary: SocietyAtAGlance }) {
         ))}
       </dl>
       <div className="mt-3 grid gap-2">
-        <Link className={primaryButtonClass} href={`/societies/${summary.id}`}>Open society record</Link>
+        <Link className={primaryButtonClass} href={`/societies/${summary.id}`}>{t("map.openRecord")}</Link>
       </div>
     </>
   );
@@ -59,6 +63,7 @@ function Selected({ summary }: { summary: SocietyAtAGlance }) {
 
 /** V5 D03: dots by class; choosing one shows that society's summary. */
 export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["counts"]; demo: boolean; points: SocietyMap["points"] }) {
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [summary, setSummary] = useState<SocietyAtAGlance | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,19 +82,19 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
   }
 
   const totals = [
-    { key: "A", label: "A · Strong", value: counts.A },
-    { key: "B", label: "B · Developing", value: counts.B },
-    { key: "C", label: "C · Needs Strengthening", value: counts.C },
-    { key: "UNGRADED", label: "Active, Not Graded", value: counts.ungraded },
-    { key: "NOT_ACTIVE", label: "Registered, Not Active", value: counts.notActive },
+    { key: "A", label: t("grade.A"), value: counts.A },
+    { key: "B", label: t("grade.B"), value: counts.B },
+    { key: "C", label: t("grade.C"), value: counts.C },
+    { key: "UNGRADED", label: t("map.activeUngraded"), value: counts.ungraded },
+    { key: "NOT_ACTIVE", label: t("map.registeredNotActive"), value: counts.notActive },
   ] as const;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section aria-label="Map of Societies" className="rounded-card border border-line bg-surface p-4">
+      <section aria-label={t("map.ofSocieties")} className="rounded-card border border-line bg-surface p-4">
         <div className="relative">
           <svg aria-labelledby="society-map-title" className="mx-auto h-auto max-h-[640px] w-full" role="img" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
-            <title id="society-map-title">{`${points.length.toLocaleString("en-GB")} societies with a recorded position`}</title>
+            <title id="society-map-title">{t("map.withPosition", { count: points.length.toLocaleString("en-GB") })}</title>
             <IslandOutline />
             {points.map((point) => {
               const { x, y } = project(point.latitude, point.longitude);
@@ -118,43 +123,43 @@ export function SocietyMapView({ counts, demo, points }: { counts: SocietyMap["c
               );
             })}
           </svg>
-          <ul aria-label="Society Class" className="absolute right-0 top-0 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[11px]">
+          <ul aria-label={t("map.societyClass")} className="absolute right-0 top-0 rounded-lg border border-line bg-surface/95 px-3 py-2 text-[11px]">
             {LEGEND.map((item) => (
               <li className="flex items-center gap-2" key={item.key}>
                 <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: CLASS_COLOURS[item.key] }} />
-                {item.label}
+                {t(item.label)}
               </li>
             ))}
           </ul>
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
           <span>
-            Dots are placed at each society’s recorded position. {counts.withoutLocation.toLocaleString("en-GB")} societies have no position yet.
+            {t("map.dotsNote", { count: counts.withoutLocation.toLocaleString("en-GB") })}
           </span>
-          {demo && <Pill tone="preview">Demonstration data</Pill>}
+          {demo && <Pill tone="preview">{t("n.demoData")}</Pill>}
         </div>
       </section>
       <div className="flex flex-col gap-4">
         <section aria-labelledby="selected-society" aria-live="polite" className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Selected Society</p>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("map.selected")}</p>
           {pending ? (
-            <p className="mt-3 text-[12px] text-muted" role="status">Loading the society…</p>
+            <p className="mt-3 text-[12px] text-muted" role="status">{t("map.loadingSociety")}</p>
           ) : error ? (
             <p className="mt-3 text-[12px] text-[#a8312a]" role="alert">{error}</p>
           ) : summary ? (
             <Selected summary={summary} />
           ) : (
-            <p className="mt-3 text-[12px] text-muted" id="selected-society">Choose a dot on the map to see that society’s summary.</p>
+            <p className="mt-3 text-[12px] text-muted" id="selected-society">{t("map.chooseDot")}</p>
           )}
           {summary && (
             <Link className={`${secondaryButtonClass} mt-2 w-full justify-center`} href={`/societies?districtId=${summary.districtId}`}>
-              Societies in {summary.district}
+              {t("map.societiesIn", { district: summary.district })}
             </Link>
           )}
         </section>
         <section aria-labelledby="on-the-map" className="rounded-card border border-line bg-surface p-4">
-          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">On the Map</p>
-          <h2 className="text-[15px] font-bold text-ink" id="on-the-map">{(counts.A + counts.B + counts.C + counts.ungraded).toLocaleString("en-GB")} Active Societies</h2>
+          <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("map.onMap")}</p>
+          <h2 className="text-[15px] font-bold text-ink" id="on-the-map">{t("map.activeCount", { count: (counts.A + counts.B + counts.C + counts.ungraded).toLocaleString("en-GB") })}</h2>
           <ul className="mt-2 divide-y divide-line-soft text-[12px]">
             {totals.map((row) => (
               <li className="flex items-center justify-between py-2" key={row.key}>

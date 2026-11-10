@@ -1,6 +1,10 @@
+"use client";
+
 import { TableSkeleton } from "@/components/dashboard/data-states";
+import { useI18n } from "@/i18n/provider";
 
 export default function DashboardLoading() {
+  const { t } = useI18n();
   return (
     <>
       <div aria-hidden="true">
@@ -8,7 +12,7 @@ export default function DashboardLoading() {
         <div className="mt-3 h-4 w-full max-w-md rounded-full bg-[#e9ede6] motion-safe:animate-pulse" />
       </div>
       <div className="mt-6">
-        <TableSkeleton label="Loading dashboard data" />
+        <TableSkeleton label={t("err.loadingData")} />
       </div>
     </>
   );

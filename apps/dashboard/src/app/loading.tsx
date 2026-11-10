@@ -1,6 +1,10 @@
+"use client";
+
 import { Brand } from "@/components/dashboard/brand";
+import { useI18n } from "@/i18n/provider";
 
 export default function Loading() {
+  const { t } = useI18n();
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#f4f5ef] px-6">
       <Brand />
@@ -9,7 +13,7 @@ export default function Loading() {
           aria-hidden="true"
           className="size-5 rounded-full border-2 border-[#cfe0d1] border-t-[#26744b] motion-safe:animate-spin"
         />
-        <p className="text-sm font-medium text-[#3e4b43]">Loading Sarvodaya Connect…</p>
+        <p className="text-sm font-medium text-[#3e4b43]">{t("err.loadingApp")}</p>
       </div>
     </main>
   );

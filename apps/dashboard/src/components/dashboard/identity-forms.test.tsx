@@ -2,6 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LOCALES } from "@/i18n/config";
+import { ta } from "@/i18n/messages/ta";
+import { I18nProvider } from "@/i18n/provider";
 import { SIGN_IN_FAILED } from "@/lib/sign-in-messages";
 
 import { ChangeRoleDialog, CreateAccountDrawer, DisableAccountDialog, SetPasswordDialog, SignInForm } from "./identity-forms";
@@ -14,6 +17,8 @@ const actions = vi.hoisted(() => ({
   updateAccount: vi.fn(async () => ({})),
 }));
 vi.mock("@/app/identity-actions", () => actions);
+vi.mock("@/app/locale-actions", () => ({ setLocale: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => "/", useSearchParams: () => new URLSearchParams() }));
 
 const options = {
   districts: [{ id: "d1", nameEn: "Kurunegala", code: "KG" }],
@@ -50,9 +55,12 @@ describe("V5 D01 sign-in", () => {
   it("shows the D01e error in the chosen language", async () => {
     const user = userEvent.setup();
     actions.login.mockResolvedValueOnce({ error: SIGN_IN_FAILED } as never);
-    render(<SignInForm />);
+    render(
+      <I18nProvider available={LOCALES} locale="ta" messages={ta}>
+        <SignInForm />
+      </I18nProvider>,
+    );
 
-    await user.click(screen.getByRole("button", { name: "தமிழ்" }));
     await user.type(screen.getByLabelText(/பயனர்பெயர்/), "someone");
     await user.type(screen.getByLabelText(/^கடவுச்சொல்/, { selector: "input" }), "wrong-pass-1");
     await user.click(screen.getByRole("button", { name: "உள்நுழைக" }));

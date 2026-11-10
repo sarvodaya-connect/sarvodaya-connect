@@ -198,7 +198,7 @@ The template grants only:
 
 ### Dashboard on Amplify
 
-`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL`, `PLATFORM_DEMO_MODE`, `AUTH_PROVIDER` and the `COGNITO_*` values into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server (or middleware) otherwise. The only value exposed to the browser is the optional Mapbox public token (`NEXT_PUBLIC_MAPBOX_TOKEN`, see Maps), and there is no client secret. `npm run build` succeeds with only `API_BASE_URL` and `PLATFORM_DEMO_MODE` set. Sign-in then fails closed until the Cognito values are added.
+`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL`, `PLATFORM_DEMO_MODE`, `AUTH_PROVIDER`, the `COGNITO_*` values and `SHOW_UNREVIEWED_TRANSLATIONS` (TEST review only, see `docs/localization.md`) into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server (or middleware) otherwise. The only value exposed to the browser is the optional Mapbox public token (`NEXT_PUBLIC_MAPBOX_TOKEN`, see Maps), and there is no client secret. `npm run build` succeeds with only `API_BASE_URL` and `PLATFORM_DEMO_MODE` set. Sign-in then fails closed until the Cognito values are added.
 
 ### SarvoAI on Bedrock
 
