@@ -8,6 +8,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
 import 'incident_api.dart';
+import 'incident_ids.dart';
 import 'incident_format.dart';
 
 /// Tells the person the figures are fictional sample data (demo mode only).
@@ -2346,6 +2347,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   final Set<String> _districts = {};
   final _description = TextEditingController();
   late DateTime _startedAt = DemoScope.read(context).now;
+  // One id per form: a double tap or a retry returns the same incident.
+  String _clientMutationId = newClientMutationId();
   bool _opening = false;
   String? _error;
 
@@ -2408,9 +2411,13 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         districtIds: _districts.toList(),
         description: _description.text,
         startedAt: _startedAt,
+        clientMutationId: _clientMutationId,
       );
       if (mounted) Navigator.of(context).pop(id);
     } on IncidentException catch (error) {
+      // Offline: the incident may have been opened, so keep the id for the retry.
+      // The server answered with a refusal: nothing was opened, so use a fresh id.
+      if (!error.offline) _clientMutationId = newClientMutationId();
       if (mounted) setState(() => _error = error.message);
     } finally {
       if (mounted) setState(() => _opening = false);
