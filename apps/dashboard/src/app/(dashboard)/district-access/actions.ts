@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { platformApi } from "@/lib/platform-api";
 
@@ -16,19 +17,20 @@ function sriLankaTime(value: string): Date {
 /** V5 DM05: give a DDM in the district view-only access for a set time. The API checks every rule again. */
 export async function giveDistrictAccess(_state: AccessFormState, form: FormData): Promise<AccessFormState> {
   const viewer = await getDesktopViewer();
-  if (viewer.role !== "DISTRICT_MANAGER") return { error: "Only the District Manager can give temporary access." };
+  const t = await getT();
+  if (viewer.role !== "DISTRICT_MANAGER") return { error: t("da.errOnlyDm") };
   const districtId = Array.isArray(viewer.districtIds) ? viewer.districtIds[0] : undefined;
   const deputyId = String(form.get("deputyId") ?? "");
   const startsAt = String(form.get("startsAt") ?? "");
   const expiresAt = String(form.get("expiresAt") ?? "");
   const reason = String(form.get("reason") ?? "").trim().slice(0, 1000);
-  if (!districtId) return { error: "Your account has no district. Ask HQ to check it." };
-  if (!deputyId) return { error: "Choose the DDM." };
-  if (!startsAt || !expiresAt) return { error: "Choose when access starts and ends." };
+  if (!districtId) return { error: t("da.errNoDistrict") };
+  if (!deputyId) return { error: t("da.errChooseDdm") };
+  if (!startsAt || !expiresAt) return { error: t("da.errChooseTime") };
   const start = sriLankaTime(startsAt);
   const end = sriLankaTime(expiresAt);
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return { error: "Choose when access starts and ends." };
-  if (end <= start) return { error: "The end time must be after the start time." };
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return { error: t("da.errChooseTime") };
+  if (end <= start) return { error: t("da.errEndAfter") };
   let id: string;
   try {
     const grant: { id: string } = await platformApi("/identity/district-access", {
@@ -37,7 +39,7 @@ export async function giveDistrictAccess(_state: AccessFormState, form: FormData
     });
     id = grant.id;
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not give access. Try again." };
+    return { error: error instanceof Error ? error.message : t("da.errCouldNot") };
   }
   revalidatePath("/district-access");
   revalidatePath("/dashboard");

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getT } from "@/i18n/server";
+
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { platformApi } from "@/lib/platform-api";
 
@@ -22,8 +24,8 @@ export async function sendInformationRequest(_previous: RequestFormState, formDa
       }),
     });
     revalidatePath("/requests");
-    return { status: "sent", message: `Sent to ${created.societies} ${created.societies === 1 ? "society" : "societies"}.` };
+    return { status: "sent", message: (await getT()).plural("rq.sentCount", created.societies) };
   } catch (error) {
-    return { status: "error", message: error instanceof Error ? error.message : "The request could not be sent" };
+    return { status: "error", message: error instanceof Error ? error.message : (await getT())("rq.errNotSent") };
   }
 }

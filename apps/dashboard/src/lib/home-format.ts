@@ -1,5 +1,8 @@
 import type { HomeSummary } from "@sarvodaya-connect/api-contracts";
 
+import { ENGLISH } from "@/i18n/english";
+import { localeTag, type Translator } from "@/i18n/translate";
+
 /** "My societies" filters as they appear in the page URL (V5 SP02, DD03, DM02). */
 export type SocietyFilters = {
   q?: string;
@@ -18,57 +21,57 @@ export type SocietyFilters = {
 /** Dates on the role homes are shown in Sri Lanka time. */
 const TIME_ZONE = "Asia/Colombo";
 
-export function greeting(now = new Date()) {
+export function greeting(now = new Date(), t: Translator = ENGLISH) {
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: TIME_ZONE }).format(now));
-  return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return t(hour < 12 ? "home.morning" : hour < 17 ? "home.afternoon" : "home.evening");
 }
 
 /** "Monday 26 Oct 2026" */
-export function longDate(now = new Date()) {
-  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: TIME_ZONE })
+export function longDate(now = new Date(), t: Translator = ENGLISH) {
+  return new Intl.DateTimeFormat(localeTag(t.locale), { weekday: "long", day: "numeric", month: "short", year: "numeric", timeZone: TIME_ZONE })
     .format(now)
     .replace(",", "");
 }
 
 /** "Today", "Yesterday" or "02 Oct" for the Updated column (V5 SP02). */
-export function updatedLabel(value: string, now = new Date()) {
+export function updatedLabel(value: string, now = new Date(), t: Translator = ENGLISH) {
   const day = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(date);
   const then = new Date(value);
-  if (day(then) === day(now)) return "Today";
-  if (day(then) === day(new Date(now.getTime() - 86_400_000))) return "Yesterday";
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: TIME_ZONE }).format(then);
+  if (day(then) === day(now)) return t("home.today");
+  if (day(then) === day(new Date(now.getTime() - 86_400_000))) return t("home.yesterday");
+  return new Intl.DateTimeFormat(localeTag(t.locale), { day: "2-digit", month: "short", timeZone: TIME_ZONE }).format(then);
 }
 
-/** "Fri 31 Oct, 6:00 p.m." for a temporary access end time. */
-export function endsLabel(value: string) {
-  const date = new Date(value);
-  const day = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: TIME_ZONE }).format(date);
-  const time = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TIME_ZONE })
+const clockTime = (date: Date, t: Translator) =>
+  new Intl.DateTimeFormat(localeTag(t.locale), { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TIME_ZONE })
     .format(date)
     .replace("am", "a.m.")
     .replace("pm", "p.m.");
-  return `${day.replace(",", "")}, ${time}`;
+
+/** "Fri 31 Oct, 6:00 p.m." for a temporary access end time. */
+export function endsLabel(value: string, t: Translator = ENGLISH) {
+  const date = new Date(value);
+  const day = new Intl.DateTimeFormat(localeTag(t.locale), { weekday: "short", day: "numeric", month: "short", timeZone: TIME_ZONE }).format(date);
+  return `${day.replace(",", "")}, ${clockTime(date, t)}`;
 }
 
 /** "2 days" since a grade request was sent. */
-export function waitedLabel(value: string, now = new Date()) {
+export function waitedLabel(value: string, now = new Date(), t: Translator = ENGLISH) {
   const days = Math.max(0, Math.floor((now.getTime() - new Date(value).getTime()) / 86_400_000));
-  return days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"}`;
+  return days === 0 ? t("home.whenToday") : t.plural("home.days", days);
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-
 /** The access banner sentence for each role (V5 SP01, DD01, DM01). */
-export function accessSentence(home: HomeSummary): { strong: string; rest: string } {
+export function accessSentence(home: HomeSummary, t: Translator = ENGLISH): { strong: string; rest: string } {
   if (home.role === "DISTRICT_MANAGER") {
     return {
-      strong: `all ${home.societies.total} ${home.district?.name ?? "district"} societies`,
-      rest: " · view only. You cannot edit society information or request, approve or change grades.",
+      strong: t("home.accessAll", { count: home.societies.total, district: home.district?.name ?? t("home.districtWord") }),
+      rest: t("home.accessDmRest"),
     };
   }
   return {
-    strong: `${plural(home.societies.total, "assigned society", "assigned societies")}`,
-    rest: " · view and edit. Grade changes are decided by HQ.",
+    strong: t.plural("home.assigned", home.societies.total),
+    rest: t("home.accessEditRest"),
   };
 }
 
@@ -85,6 +88,9 @@ export const SHORT_ROLE: Record<string, string> = {
   PROGRAMME_COORDINATOR: "SPC",
   SOCIETY_OFFICER: "Society Officer",
 };
+
+/** A short role name in the chosen language; the acronyms stay as they are. */
+export const shortRole = (role: string, t: Translator = ENGLISH) => (role === "SOCIETY_OFFICER" ? t("home.societyOfficer") : (SHORT_ROLE[role] ?? role));
 
 const KEYS = ["q", "grade", "dsDivision", "needsUpdate", "gradeRequest", "spcId", "ddmId", "page", "scope", "assignedToMe"] as const;
 
@@ -109,28 +115,24 @@ export function parseSocietyFilters(params: Record<string, string | string[] | u
 }
 
 /** "4 days left", "3 days 8 hours left", "5 hours left" (time left as text, never a bar). */
-export function timeLeft(until: string, now = new Date()) {
+export function timeLeft(until: string, now = new Date(), t: Translator = ENGLISH) {
   const ms = new Date(until).getTime() - now.getTime();
-  if (ms <= 0) return "Ended";
+  if (ms <= 0) return t("home.ended");
   const hours = Math.floor(ms / 3_600_000);
   const days = Math.floor(hours / 24);
   const rest = hours % 24;
   // V5 DD02 "4 days left"; M32 "3 days 8 hours left".
-  if (days >= 4) return `${days} days left`;
-  if (days >= 1) return `${days} ${days === 1 ? "day" : "days"}${rest ? ` ${rest} ${rest === 1 ? "hour" : "hours"}` : ""} left`;
-  if (hours >= 1) return `${hours} ${hours === 1 ? "hour" : "hours"} left`;
-  return "Less than an hour left";
+  if (days >= 4 || (days >= 1 && !rest)) return t.plural("home.daysLeft", days);
+  if (days >= 1) return t("home.daysHoursLeft", { days: t.plural("home.days", days), hours: t.plural("home.hours", rest) });
+  if (hours >= 1) return t.plural("home.hoursLeft", hours);
+  return t("home.underAnHour");
 }
 
 /** "27 Oct, 8:00 a.m." */
-export function shortDateTime(value: string) {
+export function shortDateTime(value: string, t: Translator = ENGLISH) {
   const date = new Date(value);
-  const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: TIME_ZONE }).format(date);
-  const time = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TIME_ZONE })
-    .format(date)
-    .replace("am", "a.m.")
-    .replace("pm", "p.m.");
-  return `${day}, ${time}`;
+  const day = new Intl.DateTimeFormat(localeTag(t.locale), { day: "numeric", month: "short", timeZone: TIME_ZONE }).format(date);
+  return `${day}, ${clockTime(date, t)}`;
 }
 
 /** "27 Oct → 31 Oct 2026" */

@@ -118,6 +118,7 @@ export function ErrorState({
   description = "The connection to the server dropped. Nothing you entered was lost.",
   onRetry,
   reference,
+  referenceLabel = "Reference",
   retryLabel = "Try again",
   secondaryAction,
   title = "We Couldn’t Load This Page",
@@ -125,6 +126,7 @@ export function ErrorState({
   description?: string;
   onRetry: () => void;
   reference?: string;
+  referenceLabel?: string;
   retryLabel?: string;
   secondaryAction?: ReactNode;
   title?: string;
@@ -148,7 +150,7 @@ export function ErrorState({
       <p>{description}</p>
       {reference && (
         <p className="mt-1 text-xs text-muted">
-          Reference: <code className="font-mono">{reference}</code>
+          {referenceLabel}: <code className="font-mono">{reference}</code>
         </p>
       )}
     </StateLayout>

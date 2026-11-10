@@ -12,7 +12,7 @@ vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary, loadNation
 import { NationalOverviewView } from "./national-overview";
 import { ReportTableView } from "./report-table";
 import { SocietyMapView } from "./society-map";
-import { lkrShort } from "./parts";
+import { lkrShort } from "./format";
 
 const overview: NationalOverview = {
   financialYear: { startYear: 2025, label: "FY 2025/26", startsOn: "2025-04-01", endsOn: "2026-03-31" },

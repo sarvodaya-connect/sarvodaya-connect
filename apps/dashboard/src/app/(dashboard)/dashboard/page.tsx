@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 
 import { OpenIncidentPanel } from "@/components/dashboard/emergencies/open-incident-panel";
 import { NationalOverviewView } from "@/components/dashboard/national/national-overview";
-import { first } from "@/components/dashboard/national/parts";
+import { first } from "@/components/dashboard/national/format";
 import { RoleHome } from "@/components/dashboard/role-home/role-home";
+import { getT } from "@/i18n/server";
 import { selectableStartYears } from "@/lib/activity-format";
 import { getDesktopViewer } from "@/lib/current-viewer";
 import { getHome } from "@/lib/home-api";
@@ -28,7 +29,7 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
   // IR02 "Report an incident" opens over the home as `?report=incident`.
   return (
     <>
-      <RoleHome home={await getHome()} viewer={viewer} />
+      <RoleHome home={await getHome()} t={await getT()} viewer={viewer} />
       {params.report === "incident" && <OpenIncidentPanel closeHref="/dashboard" viewer={viewer} />}
     </>
   );

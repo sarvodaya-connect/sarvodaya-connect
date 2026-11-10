@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect } from "react";
 
 import { ErrorState, secondaryButtonClass } from "@/components/dashboard/data-states";
+import { useI18n } from "@/i18n/provider";
 
 export default function DashboardError({
   error,
@@ -13,6 +14,7 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
 
   useEffect(() => {
@@ -33,15 +35,17 @@ export default function DashboardError({
   return (
     <section className="rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
       <ErrorState
-        description="The dashboard could not load this information. Your data has not been changed. Please try again, or return to the society registry."
+        description={t("err.dashboard")}
         onRetry={reset}
         reference={error.digest}
+        referenceLabel={t("err.reference")}
+        retryLabel={t("n.tryAgain")}
         secondaryAction={
           <Link className={secondaryButtonClass} href="/societies" onClick={backToSocieties}>
-            Back to societies
+            {t("err.back")}
           </Link>
         }
-        title="We Couldn't Load This Page"
+        title={t("err.title")}
       />
     </section>
   );

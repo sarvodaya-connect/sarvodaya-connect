@@ -1,19 +1,22 @@
 import Link from "next/link";
 
-import { MEMBERSHIP_LABELS } from "@/components/dashboard/national/membership-labels";
-import { Breadcrumb, PageTitle, SampleBadge, Stat, count, share } from "@/components/dashboard/national/parts";
+import { Breadcrumb, PageTitle, SampleBadge, Stat } from "@/components/dashboard/national/parts";
+import { count, share } from "@/components/dashboard/national/format";
 import { DataTable, Tbody, Td, Th, Thead, Tr } from "@/components/dashboard/ui/data-table";
+import { getT } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/messages/en";
+import type { Translator } from "@/i18n/translate";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { getNationalMembership } from "@/lib/national-api";
 import { isDemoMode } from "@/lib/platform-api";
 
 /** "57% female · 43% male" as text: V5 shows no bars as data displays. */
-function Split({ female, male }: { female: number; male: number }) {
+function Split({ female, male, t }: { female: number; male: number; t: Translator }) {
   const total = female + male;
-  if (total === 0) return <span className="text-muted">No members entered</span>;
+  if (total === 0) return <span className="text-muted">{t("mb.noMembers")}</span>;
   return (
     <span className="text-[11px]">
-      <strong className="text-[#7a3f96]">{share(female, total)}%</strong> female · <strong className="text-[#2f5590]">{share(male, total)}%</strong> male
+      {t.rich("mb.split", { female: <strong className="text-[#7a3f96]">{share(female, total)}%</strong>, male: <strong className="text-[#2f5590]">{share(male, total)}%</strong> })}
     </span>
   );
 }
@@ -21,37 +24,38 @@ function Split({ female, male }: { female: number; male: number }) {
 /** V5 D08 Membership (HQ only): counts only, no personal data. */
 export default async function MembershipPage() {
   await getCurrentViewer();
+  const t = await getT();
   const membership = await getNationalMembership();
   const year = membership.year;
 
   return (
     <>
-      <Breadcrumb current="Membership" />
+      <Breadcrumb current={t("nav.membership")} />
       <PageTitle
-        actions={<SampleBadge demo={isDemoMode()} label={`Demonstration data${year ? ` · ${year}` : ""}`} />}
-        description={`Counts only — no personal data${year ? ` · latest counts, ${year}` : ""}`}
-        title="Membership"
+        actions={<SampleBadge demo={isDemoMode()} label={year ? t("n.demoYear", { year }) : t("n.demoData")} />}
+        description={year ? t("mb.countsYear", { year }) : t("mb.counts")}
+        title={t("nav.membership")}
       />
       <ul className="mt-4 grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <li><Stat label={`In ${count(membership.activeSocieties)} active societies`} value={count(membership.total)} /></li>
-        <li><Stat label={`Female · ${share(membership.female, membership.total)}% of members`} tone="female" value={count(membership.female)} /></li>
-        <li><Stat label={`Male · ${share(membership.male, membership.total)}% of members`} tone="male" value={count(membership.male)} /></li>
-        <li><Stat label={`Societies reported · of ${count(membership.activeSocieties)}${year ? ` · ${year}` : ""}`} value={count(membership.societiesReported)} /></li>
+        <li><Stat label={t("mb.inActive", { count: count(membership.activeSocieties) })} value={count(membership.total)} /></li>
+        <li><Stat label={t("n.femaleShare", { label: t("n.female"), percent: share(membership.female, membership.total) })} tone="female" value={count(membership.female)} /></li>
+        <li><Stat label={t("n.femaleShare", { label: t("n.male"), percent: share(membership.male, membership.total) })} tone="male" value={count(membership.male)} /></li>
+        <li><Stat label={year ? t("mb.reportedYear", { count: count(membership.activeSocieties), year }) : t("mb.reported", { count: count(membership.activeSocieties) })} value={count(membership.societiesReported)} /></li>
       </ul>
 
       <section aria-labelledby="category-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Breakdown</p>
-        <h2 className="text-[15px] font-bold text-ink" id="category-heading">Membership by Category</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("mb.breakdown")}</p>
+        <h2 className="text-[15px] font-bold text-ink" id="category-heading">{t("mb.byCategory")}</h2>
         <div className="mt-3">
           <DataTable>
             <Thead>
-              <tr>{["Category", "Female / male", "Female", "Male", "Total"].map((heading) => <Th key={heading} scope="col">{heading}</Th>)}</tr>
+              <tr>{[t("n.category"), t("mb.femaleMale"), t("n.female"), t("n.male"), t("n.total")].map((heading) => <Th key={heading} scope="col">{heading}</Th>)}</tr>
             </Thead>
             <Tbody>
               {membership.categories.map((row) => (
                 <Tr key={row.category}>
-                  <Td className="font-semibold text-ink">{MEMBERSHIP_LABELS[row.category] ?? row.category}</Td>
-                  <Td><Split female={row.female} male={row.male} /></Td>
+                  <Td className="font-semibold text-ink">{t(`member.${row.category}` as MessageKey)}</Td>
+                  <Td><Split female={row.female} male={row.male} t={t} /></Td>
                   <Td className="text-[#7a3f96]">{count(row.female)}</Td>
                   <Td className="text-[#2f5590]">{count(row.male)}</Td>
                   <Td className="font-semibold text-ink">{count(row.total)}</Td>
@@ -63,12 +67,12 @@ export default async function MembershipPage() {
       </section>
 
       <section aria-labelledby="district-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">By District</p>
-        <h2 className="text-[15px] font-bold text-ink" id="district-heading">Members in Each District</h2>
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("mb.byDistrict")}</p>
+        <h2 className="text-[15px] font-bold text-ink" id="district-heading">{t("mb.inEachDistrict")}</h2>
         <div className="mt-3">
           <DataTable>
             <Thead>
-              <tr>{["District", "Active societies", "Members", "Female", "Male", "Female / male"].map((heading) => <Th key={heading} scope="col">{heading}</Th>)}</tr>
+              <tr>{[t("mb.district"), t("d.activeSocieties"), t("nav.membersShort"), t("n.female"), t("n.male"), t("mb.femaleMale")].map((heading) => <Th key={heading} scope="col">{heading}</Th>)}</tr>
             </Thead>
             <Tbody>
               {membership.districts.map((row) => (
@@ -80,13 +84,13 @@ export default async function MembershipPage() {
                   <Td className="font-semibold text-ink">{count(row.total)}</Td>
                   <Td className="text-[#7a3f96]">{count(row.female)}</Td>
                   <Td className="text-[#2f5590]">{count(row.male)}</Td>
-                  <Td><Split female={row.female} male={row.male} /></Td>
+                  <Td><Split female={row.female} male={row.male} t={t} /></Td>
                 </Tr>
               ))}
             </Tbody>
           </DataTable>
         </div>
-        <p className="mt-2 text-[11px] text-muted">{membership.districts.length} districts · alphabetical. Members’ names are kept only in the signed members list, which only DMs and HQ can open.</p>
+        <p className="mt-2 text-[11px] text-muted">{t("mb.footer", { count: membership.districts.length })}</p>
       </section>
     </>
   );
