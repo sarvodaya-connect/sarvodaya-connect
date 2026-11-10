@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../models/user.dart';
 import '../society_record/society_record_models.dart'
     show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
@@ -26,9 +28,10 @@ String count(int value) {
   return buffer.toString();
 }
 
-/// "LKR 312.4 m" for a million or more, "LKR 412,500" below.
-String lkr(num? value) {
-  if (value == null) return 'Not added';
+/// "LKR 312.4 m" for a million or more, "LKR 412,500" below. Pass
+/// [notAdded] in the chosen language where a screen is translated.
+String lkr(num? value, {String notAdded = 'Not added'}) {
+  if (value == null) return notAdded;
   if (value.abs() >= 1000000) {
     final millions = (value / 100000).round() / 10;
     final whole = millions.truncate();
@@ -56,13 +59,15 @@ class _Loader<T> extends StatefulWidget {
     super.key,
     required this.load,
     required this.builder,
-    this.loadingLabel = 'Loading national figures',
+    this.loadingLabel,
   });
 
   final Future<T> Function(NationalApi api) load;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
-  final String loadingLabel;
+
+  /// Defaults to "Loading national figures" in the chosen language.
+  final String? loadingLabel;
 
   @override
   State<_Loader<T>> createState() => _LoaderState<T>();
@@ -84,18 +89,19 @@ class _LoaderState<T> extends State<_Loader<T>> {
   Widget build(BuildContext context) => FutureBuilder<T>(
     future: _future,
     builder: (context, snapshot) {
+      final l = context.l10n;
       if (snapshot.connectionState != ConnectionState.done) {
-        return LoadingSkeleton(label: widget.loadingLabel);
+        return LoadingSkeleton(label: widget.loadingLabel ?? l.nationalLoading);
       }
       final error = snapshot.error;
       if (error is SocietyRecordException && error.status == 403) {
         final user = DemoScope.of(context).user;
         return NoAccessView(
-          title: 'This Page Is for HQ Only',
-          message:
-              'You are signed in as ${user?.displayName ?? 'another role'}. '
-              'Your own societies and figures are on your home page.',
-          backLabel: 'Go to my home',
+          title: l.nationalHqOnlyTitle,
+          message: user == null
+              ? l.nationalHqOnlyMessageAnother
+              : l.nationalHqOnlyMessage(user.displayName),
+          backLabel: l.nationalGoHome,
           onBack: Navigator.of(context).canPop()
               ? () => Navigator.of(context).pop()
               : null,
@@ -107,13 +113,15 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: 'We Couldn’t Load the National Figures',
+          title: l.nationalErrorTitle,
           message: error is SocietyRecordException
-              ? error.message
-              : 'Check the connection and try again.',
+              ? (error.failure == null
+                    ? error.message
+                    : l.failure(error.failure!))
+              : l.nationalErrorCheck,
           tone: StateTone.error,
           isAlert: true,
-          primaryLabel: 'Try again',
+          primaryLabel: l.commonTryAgain,
           onPrimary: _reload,
         );
       }
@@ -160,9 +168,10 @@ class _Page extends StatelessWidget {
 
 /// Shown only in demonstration mode, so sample figures are never taken as real.
 class SampleLabel extends StatelessWidget {
-  const SampleLabel({super.key, this.text = 'Demonstration data · FY 2025/26'});
+  const SampleLabel({super.key, this.text});
 
-  final String text;
+  /// Defaults to "Demonstration data · FY 2025/26" in the chosen language.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +187,7 @@ class SampleLabel extends StatelessWidget {
           border: Border.all(color: const Color(0xFFE8D28A)),
         ),
         child: Text(
-          text,
+          text ?? context.l10n.nationalDemoData('FY 2025/26'),
           style: const TextStyle(
             fontSize: 11,
             color: AppColors.warning,
@@ -342,7 +351,9 @@ class GradeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    label: grade == null ? 'No grade' : 'Grade $grade',
+    label: grade == null
+        ? context.l10n.gradeNone
+        : context.l10n.gradeOf(grade!),
     child: ExcludeSemantics(
       child: Container(
         width: size,
@@ -443,12 +454,6 @@ String _excoNote(int? filled, bool? complete, List<String> missingOffices) =>
 void _push(BuildContext context, Widget screen) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 
-String _greeting(DateTime now) => now.hour < 12
-    ? 'Good morning'
-    : now.hour < 17
-    ? 'Good afternoon'
-    : 'Good evening';
-
 /// V5 M05h National Dashboard: HQ's home (Overview tab).
 class NationalDashboardScreen extends StatelessWidget {
   const NationalDashboardScreen({super.key});
@@ -470,7 +475,6 @@ class NationalDashboardScreen extends StatelessWidget {
             ),
             Expanded(
               child: _Loader<NationalOverview>(
-                loadingLabel: 'Loading national figures',
                 load: (api) => api.fetchOverview(),
                 builder: (context, overview, _) => _Overview(overview),
               ),
@@ -489,14 +493,19 @@ class _NationalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final user = store.user;
     final name = user?.displayName.split(' ').first;
     final role = user == null
         ? null
         : user.primaryRole == UserRole.hqAdmin
-        ? 'HQ · National'
+        ? l.roleHqNational
         : user.primaryRole.label;
+    // "Ask SarvoAI" with "AI" in orange, wherever the translation puts it.
+    const brand = 'SarvoAI';
+    final ask = l.moreAsk(brand);
+    final at = ask.indexOf(brand);
     return ColoredBox(
       color: AppColors.surface,
       child: SafeArea(
@@ -520,7 +529,7 @@ class _NationalHeader extends StatelessWidget {
                       // The phone has no search across all records (D18 is on
                       // the dashboard), so this says what it searches.
                       MastheadButton(
-                        tooltip: 'Search societies',
+                        tooltip: l.nationalSearchSocieties,
                         icon: const Icon(
                           Icons.search,
                           size: 19,
@@ -538,9 +547,9 @@ class _NationalHeader extends StatelessWidget {
                   const SizedBox(height: 10),
                   Semantics(
                     header: true,
-                    child: const Text(
-                      'National Dashboard',
-                      style: TextStyle(
+                    child: Text(
+                      l.nationalTitle,
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
@@ -550,12 +559,7 @@ class _NationalHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    [
-                      name == null
-                          ? _greeting(store.now)
-                          : '${_greeting(store.now)}, $name',
-                      ?role,
-                    ].join(' · '),
+                    [l.greeting(store.now, name), ?role].join(' · '),
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.muted,
@@ -587,26 +591,29 @@ class _NationalHeader extends StatelessWidget {
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text.rich(
-                                    const TextSpan(
+                                    TextSpan(
                                       children: [
-                                        TextSpan(text: 'Ask Sarvo'),
                                         TextSpan(
+                                          text: ask.substring(0, at + 5),
+                                        ),
+                                        const TextSpan(
                                           text: 'AI',
                                           style: TextStyle(
                                             color: Color(0xFFF0A040),
                                           ),
                                         ),
+                                        TextSpan(text: ask.substring(at + 7)),
                                       ],
                                     ),
-                                    semanticsLabel: 'Ask SarvoAI',
+                                    semanticsLabel: ask,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  const Text(
-                                    'HQ only',
-                                    style: TextStyle(
+                                  Text(
+                                    l.nationalHqOnly,
+                                    style: const TextStyle(
                                       color: Colors.white70,
                                       fontSize: 12,
                                     ),
@@ -636,15 +643,19 @@ class _Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final audit = overview.auditReport;
     final links = <(String, Widget)>[
-      ('Districts', const DistrictsScreen(standalone: true)),
-      ('Map', const SocietyMapScreen()),
-      ('Membership', const NationalMembershipScreen()),
-      ('Audit & AGM', const AuditAgmScreen()),
-      ('Profit & Expenses', const ProfitExpensesScreen()),
-      ('Activities', const NationalActivitiesScreen()),
+      (l.navDistricts, const DistrictsScreen(standalone: true)),
+      (l.nationalLinkMap, const SocietyMapScreen()),
+      (l.nationalLinkMembership, const NationalMembershipScreen()),
+      (l.nationalLinkAudit, const AuditAgmScreen()),
+      (l.nationalLinkProfit, const ProfitExpensesScreen()),
+      (l.nationalLinkActivities, const NationalActivitiesScreen()),
     ];
+    final sampleSocieties = DemoStore.demoMode
+        ? l.nationalSampleSocieties(overview.societiesWithBoth)
+        : l.nationalSocieties(overview.societiesWithBoth);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
@@ -663,14 +674,14 @@ class _Overview extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        SampleLabel(text: 'Demonstration data · ${overview.year.label}'),
+        SampleLabel(text: l.nationalDemoData(overview.year.label)),
         _Card(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '1 · Societies Status',
-                link: 'Districts',
+                l.nationalSectionStatus,
+                link: l.navDistricts,
                 onLink: () =>
                     _push(context, const DistrictsScreen(standalone: true)),
               ),
@@ -679,8 +690,8 @@ class _Overview extends StatelessWidget {
                 children: [
                   Flexible(
                     child: _Headline(
-                      'Registered',
-                      count(overview.registered),
+                      l.nationalRegistered,
+                      l.number(overview.registered),
                       AppColors.ink,
                     ),
                   ),
@@ -694,8 +705,8 @@ class _Overview extends StatelessWidget {
                   ),
                   Flexible(
                     child: _Headline(
-                      'Active',
-                      count(overview.active),
+                      l.nationalActive,
+                      l.number(overview.active),
                       AppColors.leaf,
                     ),
                   ),
@@ -705,7 +716,10 @@ class _Overview extends StatelessWidget {
               GradeLine(overview.grades),
               const SizedBox(height: 4),
               Text(
-                '${count(overview.notUpdatedIn90Days)} not updated in 90+ days · ${overview.gradeRequestsWaiting} grade requests waiting',
+                l.nationalStatusNote(
+                  overview.notUpdatedIn90Days,
+                  overview.gradeRequestsWaiting,
+                ),
                 style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
               ),
             ],
@@ -714,18 +728,21 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 8),
         _Pair(
           _Figure(
-            '2 · Members',
-            count(overview.members),
-            'Female ${sharePercent(overview.female, overview.members)}% · male ${sharePercent(overview.male, overview.members)}%',
+            l.nationalSectionMembers,
+            l.number(overview.members),
+            l.nationalFemaleMaleShare(
+              sharePercent(overview.female, overview.members),
+              sharePercent(overview.male, overview.members),
+            ),
             colour: _female,
             background: const Color(0xFFF6EFF9),
             border: const Color(0xFFE4D3EC),
             onTap: () => _push(context, const NationalMembershipScreen()),
           ),
           _Figure(
-            '3–4 · Audit Reports',
+            l.nationalSectionAudit,
             '${sharePercent(audit.submitted, overview.active)}%',
-            '${count(audit.submitted)} of ${count(overview.active)} uploaded',
+            l.nationalUploadedOf(audit.submitted, overview.active),
             colour: AppColors.leaf,
             background: const Color(0xFFEEF6EF),
             border: const Color(0xFFCFE3D3),
@@ -735,16 +752,16 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 8),
         _Pair(
           _Figure(
-            '5 · Profit for the Year',
-            lkr(overview.totalProfit),
-            '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
+            l.nationalSectionProfit,
+            lkr(overview.totalProfit, notAdded: l.nationalNotAdded),
+            sampleSocieties,
             colour: AppColors.leaf,
             onTap: () => _push(context, const ProfitExpensesScreen()),
           ),
           _Figure(
-            '5 · Expenses for the Year',
-            lkr(overview.totalExpenses),
-            '${DemoStore.demoMode ? 'Sample · ' : ''}${count(overview.societiesWithBoth)} societies',
+            l.nationalSectionExpenses,
+            lkr(overview.totalExpenses, notAdded: l.nationalNotAdded),
+            sampleSocieties,
             colour: const Color(0xFF9A4F12),
             background: const Color(0xFFFDF3EA),
             border: const Color(0xFFF0D9C4),
@@ -757,34 +774,33 @@ class _Overview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Eyebrow(
-                '6 · Activities Completed',
-                link: 'Activities',
+                l.nationalSectionActivities,
+                link: l.nationalLinkActivities,
                 onLink: () => _push(context, const NationalActivitiesScreen()),
               ),
               Text.rich(
                 TextSpan(
-                  children: [
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  children: styledSpans(
+                    l.nationalCompletedOf(
+                      styledSlot,
+                      overview.planned,
+                      sharePercent(overview.completed, overview.planned),
+                    ),
                     TextSpan(
-                      text: count(overview.completed),
+                      text: l.number(overview.completed),
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
                       ),
                     ),
-                    TextSpan(
-                      text:
-                          ' of ${count(overview.planned)} planned completed — ${sharePercent(overview.completed, overview.planned)}%',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Top UN SDGs by Completed Activities · ${overview.year.label}',
+                l.nationalTopSdgs(overview.year.label),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -792,9 +808,9 @@ class _Overview extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               if (overview.topSdgs.isEmpty)
-                const Text(
-                  'No completed activity with a UN SDG yet.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                Text(
+                  l.nationalNoSdgYet,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 )
               else
                 Row(
@@ -852,8 +868,12 @@ class _SdgTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
-    label:
-        'Number $rank, SDG ${row.sdg}: ${sdgTitle(row.sdg)}, ${count(row.completed)} completed',
+    label: context.l10n.nationalSdgTile(
+      rank,
+      row.sdg,
+      sdgTitle(row.sdg),
+      row.completed,
+    ),
     child: ExcludeSemantics(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,7 +887,7 @@ class _SdgTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            count(row.completed),
+            context.l10n.number(row.completed),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           Text(
@@ -895,8 +915,9 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final body = _Loader<List<DistrictFigures>>(
-      loadingLabel: 'Loading districts',
+      loadingLabel: l.nationalDistrictsLoading,
       load: (api) => api.fetchDistricts(),
       builder: (context, districts, _) {
         final shown = districts
@@ -908,21 +929,21 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Find a district',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l.nationalDistrictsFind,
               ),
               onChanged: (value) => setState(() => _search = value.trim()),
             ),
             const SizedBox(height: 10),
             const SampleLabel(),
             if (shown.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
                 child: StateMessage(
                   icon: Icons.search,
-                  title: 'No Districts Match',
-                  message: 'Try another name.',
+                  title: l.nationalDistrictsNoMatch,
+                  message: l.nationalDistrictsTryAnother,
                 ),
               ),
             for (final district in shown) ...[
@@ -951,7 +972,7 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
                           ),
                         ),
                         _Pill(
-                          'Audit ${district.auditPercent}%',
+                          l.nationalDistrictAudit(district.auditPercent),
                           colour: district.auditPercent >= 85
                               ? AppColors.leaf
                               : district.auditPercent >= 70
@@ -967,7 +988,12 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${(district.province ?? '').replaceAll(' Province', '')} · ${count(district.active)} active · ${count(district.members)} members · ${district.recordsCompletePercent}% complete',
+                      l.nationalDistrictLine(
+                        (district.province ?? '').replaceAll(' Province', ''),
+                        district.active,
+                        district.members,
+                        district.recordsCompletePercent,
+                      ),
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.inkBody,
@@ -990,18 +1016,21 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  'Districts',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  l.navDistricts,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 child: Text(
-                  'Alphabetical, never ranked',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  l.nationalDistrictsSubtitle,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
               Expanded(child: body),
@@ -1011,8 +1040,8 @@ class _DistrictsScreenState extends State<DistrictsScreen> {
       );
     }
     return _Page(
-      title: 'Districts',
-      subtitle: 'Alphabetical, never ranked',
+      title: l.navDistricts,
+      subtitle: l.nationalDistrictsSubtitle,
       body: body,
     );
   }
@@ -1542,117 +1571,119 @@ class _SocietyMapScreenState extends State<SocietyMapScreen> {
   MapPoint? _selected;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Map',
-    subtitle: 'Active societies by class',
-    body: _Loader<SocietyMapData>(
-      loadingLabel: 'Loading the map',
-      load: (api) => api.fetchMap(),
-      builder: (context, map, _) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                for (final (grade, value) in [
-                  ('A', map.counts.a),
-                  ('B', map.counts.b),
-                  ('C', map.counts.c),
-                  ('NOT_ACTIVE', map.notActive),
-                ])
-                  Chip(
-                    avatar: CircleAvatar(
-                      backgroundColor: _gradeColours[grade],
-                      radius: 5,
-                    ),
-                    label: Text(
-                      grade == 'NOT_ACTIVE'
-                          ? 'Not active ${count(value)}'
-                          : '$grade ${count(value)}',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: SampleLabel(text: 'Demonstration data · sample positions'),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final height = constraints.maxHeight;
-                final width = (height * 2.5 / 4.1).clamp(
-                  0.0,
-                  constraints.maxWidth,
-                );
-                final size = Size(width, width * 4.1 / 2.5);
-                return Center(
-                  child: Semantics(
-                    label:
-                        '${map.points.length} societies on the map. Use the Societies list for a screen-reader friendly view.',
-                    child: GestureDetector(
-                      onTapUp: (details) {
-                        MapPoint? nearest;
-                        var best = 24.0 * 24.0;
-                        for (final point in map.points) {
-                          final distance =
-                              (_project(point.lat, point.lng, size) -
-                                      details.localPosition)
-                                  .distanceSquared;
-                          if (distance < best) {
-                            best = distance;
-                            nearest = point;
-                          }
-                        }
-                        setState(() => _selected = nearest);
-                      },
-                      child: CustomPaint(
-                        size: size,
-                        painter: _MapPainter(map.points, _selected?.id),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (_selected != null)
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMapTitle,
+      subtitle: l.nationalMapSubtitle,
+      body: _Loader<SocietyMapData>(
+        loadingLabel: l.nationalMapLoading,
+        load: (api) => api.fetchMap(),
+        builder: (context, map, _) => Column(
+          children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: _Card(
-                onTap: _selected!.id.startsWith('sample-')
-                    ? null
-                    : () => _push(
-                        context,
-                        SocietySummaryScreen(societyId: _selected!.id),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final (grade, value) in [
+                    ('A', map.counts.a),
+                    ('B', map.counts.b),
+                    ('C', map.counts.c),
+                    ('NOT_ACTIVE', map.notActive),
+                  ])
+                    Chip(
+                      avatar: CircleAvatar(
+                        backgroundColor: _gradeColours[grade],
+                        radius: 5,
                       ),
-                child: Row(
-                  children: [
-                    GradeBadge(
-                      ['A', 'B', 'C'].contains(_selected!.societyClass)
-                          ? _selected!.societyClass
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _selected!.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      label: Text(
+                        grade == 'NOT_ACTIVE'
+                            ? l.nationalMapNotActive(value)
+                            : '$grade ${l.number(value)}',
                       ),
                     ),
-                    if (!_selected!.id.startsWith('sample-'))
-                      const Icon(Icons.chevron_right),
-                  ],
-                ),
+                ],
               ),
             ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SampleLabel(text: l.nationalDemoPositions),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final height = constraints.maxHeight;
+                  final width = (height * 2.5 / 4.1).clamp(
+                    0.0,
+                    constraints.maxWidth,
+                  );
+                  final size = Size(width, width * 4.1 / 2.5);
+                  return Center(
+                    child: Semantics(
+                      label: l.nationalMapSemantics(map.points.length),
+                      child: GestureDetector(
+                        onTapUp: (details) {
+                          MapPoint? nearest;
+                          var best = 24.0 * 24.0;
+                          for (final point in map.points) {
+                            final distance =
+                                (_project(point.lat, point.lng, size) -
+                                        details.localPosition)
+                                    .distanceSquared;
+                            if (distance < best) {
+                              best = distance;
+                              nearest = point;
+                            }
+                          }
+                          setState(() => _selected = nearest);
+                        },
+                        child: CustomPaint(
+                          size: size,
+                          painter: _MapPainter(map.points, _selected?.id),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (_selected != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: _Card(
+                  onTap: _selected!.id.startsWith('sample-')
+                      ? null
+                      : () => _push(
+                          context,
+                          SocietySummaryScreen(societyId: _selected!.id),
+                        ),
+                  child: Row(
+                    children: [
+                      GradeBadge(
+                        ['A', 'B', 'C'].contains(_selected!.societyClass)
+                            ? _selected!.societyClass
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selected!.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (!_selected!.id.startsWith('sample-'))
+                        const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// V5 M61 Membership: counts only, no personal data.
@@ -1660,106 +1691,124 @@ class NationalMembershipScreen extends StatelessWidget {
   const NationalMembershipScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Membership',
-    subtitle: 'Counts only — no personal data',
-    body: _Loader<NationalOverview>(
-      load: (api) => api.fetchOverview(),
-      builder: (context, overview, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          SampleLabel(
-            text: 'Demonstration data · ${overview.membershipYear ?? ''}',
-          ),
-          _Pair(
-            _Figure(
-              'Total Members',
-              count(overview.members),
-              '${count(overview.societiesReported)} societies reported',
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMembershipTitle,
+      subtitle: l.nationalMembershipSubtitle,
+      body: _Loader<NationalOverview>(
+        load: (api) => api.fetchOverview(),
+        builder: (context, overview, _) => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            SampleLabel(
+              text: overview.membershipYear == null
+                  ? l.nationalDemoDataPlain
+                  : l.nationalDemoData('${overview.membershipYear}'),
             ),
-            _Figure(
-              'Female · Male',
-              '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
-              '${count(overview.female)} · ${count(overview.male)}',
-              colour: _female,
-              background: const Color(0xFFF6EFF9),
-              border: const Color(0xFFE4D3EC),
+            _Pair(
+              _Figure(
+                l.nationalTotalMembers,
+                l.number(overview.members),
+                l.nationalSocietiesReported(overview.societiesReported),
+              ),
+              _Figure(
+                l.nationalFemaleMale,
+                '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
+                '${l.number(overview.female)} · ${l.number(overview.male)}',
+                colour: _female,
+                background: const Color(0xFFF6EFF9),
+                border: const Color(0xFFE4D3EC),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _Eyebrow('By Category · Female / Male'),
-                for (final row in overview.categories)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                membershipCategoryLabels[row.category] ??
-                                    row.category,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              count(row.total),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text.rich(
-                          TextSpan(
-                            style: const TextStyle(fontSize: 12),
+            const SizedBox(height: 8),
+            _Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Eyebrow(l.nationalByCategory),
+                  for (final row in overview.categories)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              TextSpan(
-                                text: '${sharePercent(row.female, row.total)}%',
-                                style: const TextStyle(
-                                  color: _female,
-                                  fontWeight: FontWeight.w700,
+                              Expanded(
+                                child: Text(
+                                  _categoryLabel(l, row.category),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                              const TextSpan(text: ' female · '),
-                              TextSpan(
-                                text: '${sharePercent(row.male, row.total)}%',
+                              Text(
+                                l.number(row.total),
                                 style: const TextStyle(
-                                  color: _male,
                                   fontWeight: FontWeight.w700,
                                 ),
-                              ),
-                              TextSpan(
-                                text:
-                                    ' male · ${count(row.female)} female · ${count(row.male)} male',
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          Text.rich(
+                            TextSpan(
+                              style: const TextStyle(fontSize: 12),
+                              children: styledSpans2(
+                                l.nationalCategoryShare(
+                                  styledSlot,
+                                  styledSlot2,
+                                  row.female,
+                                  row.male,
+                                ),
+                                TextSpan(
+                                  text:
+                                      '${sharePercent(row.female, row.total)}%',
+                                  style: const TextStyle(
+                                    color: _female,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${sharePercent(row.male, row.total)}%',
+                                  style: const TextStyle(
+                                    color: _male,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const NoticeBanner(
-            icon: Icons.info_outline,
-            title: 'Counts Only',
-            message: 'Members’ names are kept in the signed members list, which only DMs and HQ can open.',
-          ),
-        ],
+            const SizedBox(height: 8),
+            NoticeBanner(
+              icon: Icons.info_outline,
+              title: l.nationalCountsOnlyTitle,
+              message: l.nationalCountsOnlyMessage,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
+
+/// A membership category's label in the chosen language; the API's value
+/// stays as sent.
+String _categoryLabel(AppLocalizations l, String category) =>
+    switch (category) {
+      'CHILDREN' => l.membershipChildren,
+      'YOUTH' => l.membershipYouth,
+      'MOTHERS' => l.membershipMothers,
+      'ORDINARY' => l.membershipOrdinary,
+      'ELDERS_COUNCIL' => l.membershipElders,
+      _ => membershipCategoryLabels[category] ?? category,
+    };
 
 /// V5 M62a Audit & AGM: the audit report and the other Registrar documents.
 class AuditAgmScreen extends StatelessWidget {

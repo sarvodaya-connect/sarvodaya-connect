@@ -1,4 +1,5 @@
 import '../auth/api_auth_service.dart';
+import '../l10n/l10n_format.dart' show ClientFailure;
 
 /// V5 PR 7: temporary district access on the phone (M30–M32). Mirrors
 /// packages/api-contracts/src/district-access.ts.
@@ -105,8 +106,12 @@ class AccessList {
 }
 
 class DistrictAccessException implements Exception {
-  const DistrictAccessException(this.message);
+  const DistrictAccessException(this.message, {this.failure});
   final String message;
+
+  /// Set when the app, not the server, wrote [message], so a screen can show
+  /// it in the chosen language instead.
+  final ClientFailure? failure;
 }
 
 /// What the DM's access screens need. The API checks every rule itself.
@@ -140,6 +145,7 @@ class HttpDistrictAccessApi implements DistrictAccessApi {
     } catch (_) {
       throw const DistrictAccessException(
         "Couldn't reach Sarvodaya Connect. Check your connection and try again.",
+        failure: ClientFailure.unreachable,
       );
     }
   }
