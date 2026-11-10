@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/app_language.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -13,7 +14,7 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class _LanguageScreenState extends State<LanguageScreen> {
-  AppLanguage _selection = AppLanguage.english;
+  late AppLanguage _selection = DemoScope.read(context).selectedLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
           children: [
             Text(
-              'Choose Your Language',
+              context.l10n.languageChooseTitle,
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontSize: 22),
             ),
@@ -37,7 +38,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
               style: TextStyle(color: AppColors.inkSoft, fontSize: 13),
             ),
             const SizedBox(height: 20),
-            ...AppLanguage.values.map(
+            ...DemoScope.of(context).languages.map(
               (language) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _LanguageOption(
@@ -48,9 +49,9 @@ class _LanguageScreenState extends State<LanguageScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'You can change this any time in More › Language.',
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            Text(
+              context.l10n.languageChangeLater,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
             ),
           ],
         ),
@@ -67,7 +68,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
             child: FilledButton(
               onPressed: () =>
                   DemoScope.read(context).chooseLanguage(_selection),
-              child: const Text('Continue'),
+              child: Text(context.l10n.languageContinue),
             ),
           ),
         ),

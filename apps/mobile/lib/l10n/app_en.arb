@@ -1,0 +1,82 @@
+{
+  "@@locale": "en",
+  "navHome": "Home",
+  "navSociety": "Society",
+  "navIncident": "Incident",
+  "navExco": "Exco",
+  "navWorkPlan": "Work Plan",
+  "navMore": "More",
+  "navOverview": "Overview",
+  "navDistricts": "Districts",
+  "navSocieties": "Societies",
+  "navAlerts": "Alerts",
+  "navAccess": "Access",
+  "languageChooseTitle": "Choose Your Language",
+  "languageChangeLater": "You can change this any time in More › Language.",
+  "languageContinue": "Continue",
+  "languageChooseSheet": "Choose Language",
+  "signInTitle": "Sign In",
+  "signInSubtitle": "Use the username and password for your Sarvodaya Connect account.",
+  "signInUsername": "Username",
+  "signInPassword": "Password",
+  "signInShowPassword": "Show password",
+  "signInHidePassword": "Hide password",
+  "signInButton": "Sign in",
+  "signInSigningIn": "Signing in",
+  "signInForgot": "Forgot your password? Ask HQ to set a new one.",
+  "signInEnterUsername": "Enter the username.",
+  "signInEnterPassword": "Enter the password.",
+  "signInErrorIncorrect": "The username or password is not correct. Check them and try again.",
+  "signInErrorLocked": "Too many attempts. Try again in 15 minutes, or ask HQ to set a new password.",
+  "signInErrorNotReady": "This account cannot sign in yet. Ask HQ to check it.",
+  "signInErrorOffline": "You need internet to sign in. Connect and try again.",
+  "signInErrorUnavailable": "Authentication is temporarily unavailable. Please try again.",
+  "moreTitle": "More",
+  "moreAsk": "Ask {brand}",
+  "@moreAsk": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "moreAskSemantic": "Ask SarvoAI",
+  "moreAskSubtitle": "Questions about societies and yearly figures · HQ only",
+  "moreLanguage": "Language",
+  "moreNotifications": "Notifications",
+  "moreDisasterResponse": "Disaster Response",
+  "moreHelp": "Help and HQ Contact",
+  "moreNeedHelp": "Need Help?",
+  "moreHelpBody": "Contact your District Centre if your account, society assignment or submitted information is incorrect.",
+  "moreClose": "Close",
+  "moreSignOut": "Sign Out",
+  "moreSignOutSubtitle": "Back to the sign-in screen",
+  "scopeOfficerSociety": "Society Officer · {society}",
+  "@scopeOfficerSociety": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "scopeSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@scopeSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleSpc": "Society Program Coordinator (SPC)",
+  "roleDdm": "Deputy District Manager (DDM)",
+  "roleDmViewOnly": "District Manager (DM) · view only",
+  "roleHqNational": "HQ · National",
+  "moreUnread": "{count} unread",
+  "@moreUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

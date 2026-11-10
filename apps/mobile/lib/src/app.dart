@@ -12,6 +12,7 @@ import 'screens/more_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/society_officer_home_screen.dart';
 import 'screens/splash_screen.dart';
+import 'l10n/l10n.dart';
 import 'models/app_language.dart';
 import 'state/demo_store.dart';
 import 'auth/api_auth_service.dart';
@@ -36,12 +37,18 @@ class _SarvodayaConnectAppState extends State<SarvodayaConnectApp> {
   Widget build(BuildContext context) {
     return DemoScope(
       store: _store,
-      child: MaterialApp(
-        title: 'Sarvodaya Connect',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        builder: (context, child) => _PhoneWidth(child: child!),
-        home: const _Root(),
+      child: ListenableBuilder(
+        listenable: _store,
+        builder: (context, _) => MaterialApp(
+          title: 'Sarvodaya Connect',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          locale: _store.selectedLanguage.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          builder: (context, child) => _PhoneWidth(child: child!),
+          home: const _Root(),
+        ),
       ),
     );
   }
@@ -150,8 +157,8 @@ class HomeShell extends StatelessWidget {
         ? user.societyIds.single
         : null;
     final configuration = _configuration(
+      context.l10n,
       role,
-      store.selectedLanguage,
       store.selectedTab,
       officerSocietyId,
     );
@@ -174,8 +181,8 @@ class HomeShell extends StatelessWidget {
   }
 
   static _ShellConfiguration _configuration(
+    AppLocalizations l10n,
     UserRole role,
-    AppLanguage language,
     int selectedTab,
     String? officerSocietyId,
   ) => switch (role) {
@@ -200,32 +207,32 @@ class HomeShell extends StatelessWidget {
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
-            label: _officerLabel(language, 'Home'),
-            tooltip: _officerLabel(language, 'Home'),
+            label: l10n.navHome,
+            tooltip: l10n.navHome,
           ),
           NavigationDestination(
             icon: const Icon(Icons.apartment_outlined),
             selectedIcon: const Icon(Icons.apartment),
-            label: _officerLabel(language, 'Society'),
-            tooltip: _officerLabel(language, 'Society'),
+            label: l10n.navSociety,
+            tooltip: l10n.navSociety,
           ),
-          const _IncidentDestination(),
-          const NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Exco',
-            tooltip: 'Exco',
+          _incidentDestination(l10n),
+          NavigationDestination(
+            icon: const Icon(Icons.people_outline),
+            selectedIcon: const Icon(Icons.people),
+            label: l10n.navExco,
+            tooltip: l10n.navExco,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today),
-            label: 'Work Plan',
-            tooltip: 'Work Plan',
+          NavigationDestination(
+            icon: const Icon(Icons.calendar_today_outlined),
+            selectedIcon: const Icon(Icons.calendar_today),
+            label: l10n.navWorkPlan,
+            tooltip: l10n.navWorkPlan,
           ),
           NavigationDestination(
             icon: const Icon(Icons.menu),
-            label: _officerLabel(language, 'More'),
-            tooltip: _officerLabel(language, 'More'),
+            label: l10n.navMore,
+            tooltip: l10n.navMore,
           ),
         ],
       ),
@@ -241,13 +248,13 @@ class HomeShell extends StatelessWidget {
         NavigationDestination(
           icon: const Icon(Icons.home_outlined),
           selectedIcon: const Icon(Icons.home),
-          label: _officerLabel(language, 'Home'),
+          label: l10n.navHome,
         ),
-        const _IncidentDestination(),
+        _incidentDestination(l10n),
         NavigationDestination(
           icon: const Icon(Icons.menu),
           selectedIcon: const Icon(Icons.menu_open),
-          label: _officerLabel(language, 'More'),
+          label: l10n.navMore,
         ),
       ],
     ),
@@ -260,53 +267,53 @@ class HomeShell extends StatelessWidget {
         const NotificationsScreen(),
         const MoreScreen(),
       ],
-      destinations: const [
+      destinations: [
         NavigationDestination(
-          icon: Icon(Icons.grid_view_outlined),
-          selectedIcon: Icon(Icons.grid_view),
-          label: 'Overview',
-          tooltip: 'Overview',
+          icon: const Icon(Icons.grid_view_outlined),
+          selectedIcon: const Icon(Icons.grid_view),
+          label: l10n.navOverview,
+          tooltip: l10n.navOverview,
         ),
         NavigationDestination(
-          icon: Icon(Icons.bar_chart_outlined),
-          selectedIcon: Icon(Icons.bar_chart),
-          label: 'Districts',
-          tooltip: 'Districts',
+          icon: const Icon(Icons.bar_chart_outlined),
+          selectedIcon: const Icon(Icons.bar_chart),
+          label: l10n.navDistricts,
+          tooltip: l10n.navDistricts,
         ),
         NavigationDestination(
-          icon: Icon(Icons.list_alt_outlined),
-          selectedIcon: Icon(Icons.list_alt),
-          label: 'Societies',
-          tooltip: 'Societies',
+          icon: const Icon(Icons.list_alt_outlined),
+          selectedIcon: const Icon(Icons.list_alt),
+          label: l10n.navSocieties,
+          tooltip: l10n.navSocieties,
         ),
         NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications),
-          label: 'Alerts',
-          tooltip: 'Alerts',
+          icon: const Icon(Icons.notifications_outlined),
+          selectedIcon: const Icon(Icons.notifications),
+          label: l10n.navAlerts,
+          tooltip: l10n.navAlerts,
         ),
-        _MoreDestination(),
+        _moreDestination(l10n),
       ],
     ),
     // V5 Nav: SPC and DDM have Home, Alerts and More; incidents open from
     // the home (M40) and More.
     UserRole.programmeCoordinator ||
-    UserRole.deputyDistrictManager => const _ShellConfiguration(
-      pages: [RoleHomeScreen(), NotificationsScreen(), MoreScreen()],
+    UserRole.deputyDistrictManager => _ShellConfiguration(
+      pages: const [RoleHomeScreen(), NotificationsScreen(), MoreScreen()],
       destinations: [
-        _HomeDestination(),
+        _homeDestination(l10n),
         NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications),
-          label: 'Alerts',
-          tooltip: 'Alerts',
+          icon: const Icon(Icons.notifications_outlined),
+          selectedIcon: const Icon(Icons.notifications),
+          label: l10n.navAlerts,
+          tooltip: l10n.navAlerts,
         ),
-        _MoreDestination(),
+        _moreDestination(l10n),
       ],
     ),
     // V5 Nav (DM): Home, Societies, Access, Alerts and More.
-    UserRole.districtManager => const _ShellConfiguration(
-      pages: [
+    UserRole.districtManager => _ShellConfiguration(
+      pages: const [
         RoleHomeScreen(),
         DistrictSocietiesScreen(),
         DistrictAccessScreen(),
@@ -314,39 +321,29 @@ class HomeShell extends StatelessWidget {
         MoreScreen(),
       ],
       destinations: [
-        _HomeDestination(),
+        _homeDestination(l10n),
         NavigationDestination(
-          icon: Icon(Icons.list_alt_outlined),
-          selectedIcon: Icon(Icons.list_alt),
-          label: 'Societies',
-          tooltip: 'Societies',
+          icon: const Icon(Icons.list_alt_outlined),
+          selectedIcon: const Icon(Icons.list_alt),
+          label: l10n.navSocieties,
+          tooltip: l10n.navSocieties,
         ),
         NavigationDestination(
-          icon: Icon(Icons.key_outlined),
-          selectedIcon: Icon(Icons.key),
-          label: 'Access',
-          tooltip: 'Access',
+          icon: const Icon(Icons.key_outlined),
+          selectedIcon: const Icon(Icons.key),
+          label: l10n.navAccess,
+          tooltip: l10n.navAccess,
         ),
         NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications),
-          label: 'Alerts',
-          tooltip: 'Alerts',
+          icon: const Icon(Icons.notifications_outlined),
+          selectedIcon: const Icon(Icons.notifications),
+          label: l10n.navAlerts,
+          tooltip: l10n.navAlerts,
         ),
-        _MoreDestination(),
+        _moreDestination(l10n),
       ],
     ),
   };
-
-  static String _officerLabel(AppLanguage language, String english) {
-    if (language != AppLanguage.tamil) return english;
-    return switch (english) {
-      'Home' => 'முகப்பு',
-      'Society' => 'சங்கம்',
-      'More' => 'மேலும்',
-      _ => english,
-    };
-  }
 }
 
 class _ShellConfiguration {
@@ -357,15 +354,13 @@ class _ShellConfiguration {
 }
 
 /// V5 Nav: the red "Incident" button for disaster response (M40–M49).
-class _IncidentDestination extends NavigationDestination {
-  const _IncidentDestination()
-    : super(
-        icon: const _IncidentIcon(),
-        selectedIcon: const _IncidentIcon(),
-        label: 'Incident',
-        tooltip: 'Incident',
-      );
-}
+NavigationDestination _incidentDestination(AppLocalizations l10n) =>
+    NavigationDestination(
+      icon: const _IncidentIcon(),
+      selectedIcon: const _IncidentIcon(),
+      label: l10n.navIncident,
+      tooltip: l10n.navIncident,
+    );
 
 class _IncidentIcon extends StatelessWidget {
   const _IncidentIcon();
@@ -386,20 +381,16 @@ class _IncidentIcon extends StatelessWidget {
   );
 }
 
-class _HomeDestination extends NavigationDestination {
-  const _HomeDestination()
-    : super(
-        icon: const Icon(Icons.home_outlined),
-        selectedIcon: const Icon(Icons.home),
-        label: 'Home',
-      );
-}
+NavigationDestination _homeDestination(AppLocalizations l10n) =>
+    NavigationDestination(
+      icon: const Icon(Icons.home_outlined),
+      selectedIcon: const Icon(Icons.home),
+      label: l10n.navHome,
+    );
 
-class _MoreDestination extends NavigationDestination {
-  const _MoreDestination()
-    : super(
-        icon: const Icon(Icons.menu),
-        selectedIcon: const Icon(Icons.menu_open),
-        label: 'More',
-      );
-}
+NavigationDestination _moreDestination(AppLocalizations l10n) =>
+    NavigationDestination(
+      icon: const Icon(Icons.menu),
+      selectedIcon: const Icon(Icons.menu_open),
+      label: l10n.navMore,
+    );

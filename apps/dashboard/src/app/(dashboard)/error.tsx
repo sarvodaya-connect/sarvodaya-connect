@@ -9,11 +9,9 @@ import { ErrorState, secondaryButtonClass } from "@/components/dashboard/data-st
 export default function DashboardError({
   error,
   reset,
-  retry,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
-  retry: () => void;
 }) {
   const router = useRouter();
 
@@ -36,7 +34,7 @@ export default function DashboardError({
     <section className="rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
       <ErrorState
         description="The dashboard could not load this information. Your data has not been changed. Please try again, or return to the society registry."
-        onRetry={retry}
+        onRetry={reset}
         reference={error.digest}
         secondaryAction={
           <Link className={secondaryButtonClass} href="/societies" onClick={backToSocieties}>
