@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
+import type { Principal } from '../auth/principal.js';
 import { ACTIVITY_DIMENSION_VALUES } from '../activities/activities.dto.js';
 import { auditReportDueDate } from '../documents/registrar-documents.service.js';
 import { RegistrarDocumentsRepository } from '../documents/registrar-documents.repository.js';
@@ -11,12 +12,38 @@ import {
 } from '../societies/financial-year.js';
 import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
 import { MEMBERSHIP_CATEGORY_VALUES } from '../societies/societies.service.js';
-import { auditPastDue, pageMeta, percent, period } from './national-rules.js';
-import { NationalRepository } from './national.repository.js';
+import {
+  activityCompleted,
+  auditPastDue,
+  pageMeta,
+  percent,
+  period,
+} from './national-rules.js';
+import {
+  NationalRepository,
+  type SocietyScope,
+} from './national.repository.js';
+import { delegationEndsAt, programmeScopeFor } from './programme-scope.js';
 
 const TOP_SDGS = 6;
 const RECENT_ACTIVITIES = 6;
 const OPEN_INCIDENTS = 3;
+
+/**
+ * Issue #131: Programmes also offers the financial year in progress, so an
+ * activity approved this year is counted somewhere as soon as it is approved.
+ * Its planned total includes every approved activity in the year; completed
+ * counts those whose month has ended. The default stays the latest year that
+ * has ended, like every other national page.
+ */
+export function chosenProgrammeYear(
+  year: number | undefined,
+  now = new Date(),
+) {
+  if (year !== undefined && year === latestCompletedFinancialYear(now) + 1)
+    return year;
+  return chosenYear(year, now);
+}
 
 /** The financial year asked for, or the latest one that has ended. */
 export function chosenYear(year: number | undefined, now = new Date()) {
@@ -285,10 +312,55 @@ export class NationalService {
   }
 
   async programmes(year: number | undefined, now = new Date()) {
-    const startYear = chosenYear(year, now);
+    return this.programmeFigures(chosenProgrammeYear(year, now), now);
+  }
+
+  /**
+   * Issue #117: D07 / M64 for a DM, DDM or SPC, counted only over the
+   * societies they may see. The scope is part of every query, so nothing
+   * outside it is read.
+   */
+  async scopedProgrammes(
+    principal: Principal,
+    year: number | undefined,
+    now = new Date(),
+  ) {
+    const startYear = chosenProgrammeYear(year, now);
+    const { kind, ...within } = programmeScopeFor(principal, now);
+    const [figures, summary] = await Promise.all([
+      this.programmeFigures(startYear, now, within),
+      this.repository.scopeSummary(within),
+    ]);
+    return {
+      ...figures,
+      scope: {
+        kind,
+        societies: summary.societies,
+        districts: summary.districts.map((district) => ({
+          id: district.id,
+          name: district.nameEn,
+        })),
+        temporaryAccessEndsAt: delegationEndsAt(
+          principal,
+          within.districtIds,
+          now,
+        ),
+      },
+    };
+  }
+
+  private async programmeFigures(
+    startYear: number,
+    now: Date,
+    within?: SocietyScope,
+  ) {
     const [activities, recent] = await Promise.all([
-      this.repository.activities(startYear, now),
-      this.repository.recentApprovedActivities(RECENT_ACTIVITIES),
+      this.repository.activities(startYear, now, within),
+      this.repository.recentApprovedActivities(
+        startYear,
+        RECENT_ACTIVITIES,
+        within,
+      ),
     ]);
     const planned = activities.sectors.reduce(
       (sum, row) => sum + row.planned,
@@ -299,7 +371,10 @@ export class NationalService {
       0,
     );
     return {
-      financialYear: period(startYear),
+      financialYear: {
+        ...period(startYear),
+        inProgress: startYear > latestCompletedFinancialYear(now),
+      },
       planned,
       completed: done,
       sectors: activities.sectors
@@ -322,6 +397,8 @@ export class NationalService {
         approvedBy: activity.reviewedByName,
         datesLabel: activity.datesLabel,
         year: activity.year,
+        month: activity.month,
+        completed: activityCompleted(activity, now),
         femaleParticipants: activity.femaleParticipants ?? 0,
         maleParticipants: activity.maleParticipants ?? 0,
         householdsBenefited: activity.householdsBenefited ?? 0,

@@ -58,7 +58,7 @@ export function AuditsView({
 
   return (
     <>
-      <Breadcrumb current={t("au.title")} home={breadcrumb} />
+      <Breadcrumb current={t("au.title")} home={breadcrumb.label} />
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-bold text-ink">{t("au.title")}</h1>
