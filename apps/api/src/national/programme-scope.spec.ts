@@ -227,4 +227,53 @@ describe('Issue #117 scoped programme figures', () => {
       undefined,
     );
   });
+
+  it('offers the year in progress and says which recent rows count as completed (issue #131)', async () => {
+    const repo = repository();
+    const row = (id: string, year: number, month: number) => ({
+      id,
+      name: `Fictional ${id}`,
+      sector: 'Community education',
+      dimension: 'SOCIAL',
+      society: { id: SUNRISE, nameEn: 'Fictional Sunrise' },
+      reviewedAt: now,
+      reviewedByName: 'Fictional SPC',
+      datesLabel: null,
+      year,
+      month,
+      femaleParticipants: null,
+      maleParticipants: null,
+      householdsBenefited: null,
+      createdByName: null,
+      sdgs: [{ sdg: 1 }, { sdg: 17 }],
+    });
+    repo.recentApprovedActivities.mockResolvedValue([
+      row('october', 2026, 10),
+      row('november', 2026, 11),
+    ]);
+    const result = await service(repo).programmes(2026, now);
+    expect(repo.activities).toHaveBeenCalledWith(2026, now, undefined);
+    expect(result.financialYear).toMatchObject({
+      startYear: 2026,
+      inProgress: true,
+    });
+    expect(result.recent.map((r) => [r.id, r.completed, r.month])).toEqual([
+      ['october', true, 10],
+      ['november', false, 11],
+    ]);
+    expect(result.recent[0].sdgs).toEqual([1, 17]);
+
+    const ended = await service(repository()).scopedProgrammes(
+      dmNorth,
+      undefined,
+      now,
+    );
+    expect(ended.financialYear).toMatchObject({
+      startYear: 2025,
+      inProgress: false,
+    });
+    await expect(
+      service(repository()).scopedProgrammes(dmNorth, 2027, now),
+    ).rejects.toThrow('Choose one of the last five financial years');
+  });
 });

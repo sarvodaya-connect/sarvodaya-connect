@@ -67,6 +67,19 @@ export function completed(now = new Date()) {
   return Prisma.sql`(a.year * 12 + a.month) < ${monthIndex(now)}`;
 }
 
+/**
+ * The same rule as `completed`, for one activity: its month has ended in Sri
+ * Lanka time. Issue #131: recent rows say whether they count as completed, so
+ * an approved activity whose month is still running is not read as missing
+ * from the totals.
+ */
+export function activityCompleted(
+  activity: { year: number; month: number },
+  now = new Date(),
+) {
+  return activity.year * 12 + activity.month < monthIndex(now);
+}
+
 export function percent(part: number, whole: number) {
   return whole === 0 ? 0 : Math.round((part / whole) * 100);
 }

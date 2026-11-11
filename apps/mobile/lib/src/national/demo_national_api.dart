@@ -286,12 +286,16 @@ class DemoNationalApi implements NationalApi {
     );
   });
 
-  static FinancialYearLabel _fy(int? year) => year == null
-      ? _year
-      : FinancialYearLabel(
-          year,
-          'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}',
-        );
+  static FinancialYearLabel _fy(int? year) {
+    if (year == null) return _year;
+    final now = DateTime.now();
+    final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+    return FinancialYearLabel(
+      year,
+      'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}',
+      inProgress: year > latest,
+    );
+  }
 
   // sector, completed, planned, societies with activities (national).
   static const _sectorFigures = [

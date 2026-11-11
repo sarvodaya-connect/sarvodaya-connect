@@ -12,7 +12,13 @@ import {
 } from '../societies/financial-year.js';
 import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
 import { MEMBERSHIP_CATEGORY_VALUES } from '../societies/societies.service.js';
-import { auditPastDue, pageMeta, percent, period } from './national-rules.js';
+import {
+  activityCompleted,
+  auditPastDue,
+  pageMeta,
+  percent,
+  period,
+} from './national-rules.js';
 import {
   NationalRepository,
   type SocietyScope,
@@ -22,6 +28,22 @@ import { delegationEndsAt, programmeScopeFor } from './programme-scope.js';
 const TOP_SDGS = 6;
 const RECENT_ACTIVITIES = 6;
 const OPEN_INCIDENTS = 3;
+
+/**
+ * Issue #131: Programmes also offers the financial year in progress, so an
+ * activity approved this year is counted somewhere as soon as it is approved.
+ * Its planned total includes every approved activity in the year; completed
+ * counts those whose month has ended. The default stays the latest year that
+ * has ended, like every other national page.
+ */
+export function chosenProgrammeYear(
+  year: number | undefined,
+  now = new Date(),
+) {
+  if (year !== undefined && year === latestCompletedFinancialYear(now) + 1)
+    return year;
+  return chosenYear(year, now);
+}
 
 /** The financial year asked for, or the latest one that has ended. */
 export function chosenYear(year: number | undefined, now = new Date()) {
@@ -290,7 +312,7 @@ export class NationalService {
   }
 
   async programmes(year: number | undefined, now = new Date()) {
-    return this.programmeFigures(chosenYear(year, now), now);
+    return this.programmeFigures(chosenProgrammeYear(year, now), now);
   }
 
   /**
@@ -303,7 +325,7 @@ export class NationalService {
     year: number | undefined,
     now = new Date(),
   ) {
-    const startYear = chosenYear(year, now);
+    const startYear = chosenProgrammeYear(year, now);
     const { kind, ...within } = programmeScopeFor(principal, now);
     const [figures, summary] = await Promise.all([
       this.programmeFigures(startYear, now, within),
@@ -349,7 +371,10 @@ export class NationalService {
       0,
     );
     return {
-      financialYear: period(startYear),
+      financialYear: {
+        ...period(startYear),
+        inProgress: startYear > latestCompletedFinancialYear(now),
+      },
       planned,
       completed: done,
       sectors: activities.sectors
@@ -372,6 +397,8 @@ export class NationalService {
         approvedBy: activity.reviewedByName,
         datesLabel: activity.datesLabel,
         year: activity.year,
+        month: activity.month,
+        completed: activityCompleted(activity, now),
         femaleParticipants: activity.femaleParticipants ?? 0,
         maleParticipants: activity.maleParticipants ?? 0,
         householdsBenefited: activity.householdsBenefited ?? 0,

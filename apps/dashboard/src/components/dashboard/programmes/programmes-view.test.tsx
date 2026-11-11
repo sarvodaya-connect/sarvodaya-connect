@@ -159,3 +159,39 @@ describe("Programmes navigation for each role (issue #117)", () => {
     expect(navigationFor(getViewer("system-admin")).main.map((item) => item.href)).not.toContain("/activities");
   });
 });
+
+describe("approved activities whose month has not ended (issue #131)", () => {
+  const inProgress: NationalProgrammes = {
+    ...national,
+    financialYear: { startYear: 2026, label: "FY 2026/27", startsOn: "2026-04-01", endsOn: "2027-03-31", inProgress: true },
+    planned: 1,
+    completed: 0,
+    sdgs: [1, 17, ...[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]].map((sdg) => ({ sdg, completed: 0 })),
+    recent: [{ ...national.recent[0]!, id: "a2", name: "Shramadana Service", year: 2026, month: 11, completed: false, sdgs: [1, 17] }],
+  };
+
+  it("offers the year in progress and explains its completed counts", () => {
+    show(inProgress, "HQ_ADMIN");
+    expect(screen.getByRole("note")).toHaveTextContent("FY 2026/27 is still in progress.");
+    const years = within(screen.getByRole("navigation", { name: "Financial Year" })).getAllByRole("link");
+    expect(years[0]).toHaveTextContent(/FY 20\d\d\/\d\d/);
+    expect(years).toHaveLength(6);
+  });
+
+  it("labels the recent row and its detail instead of implying the totals left it out", () => {
+    show(inProgress, "HQ_ADMIN");
+    expect(screen.getAllByText("Not completed yet · Nov 2026")).toHaveLength(2);
+  });
+
+  it("shows no label for a completed row or on a year that has ended", () => {
+    show({ ...national, recent: [{ ...national.recent[0]!, month: 9, completed: true }] }, "HQ_ADMIN");
+    expect(screen.queryByText(/Not completed yet/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it.each(["si", "ta"] as const)("is translated in %s", (locale) => {
+    show(inProgress, "HQ_ADMIN", locale);
+    expect(document.body).not.toHaveTextContent("Not completed yet");
+    expect(document.body).not.toHaveTextContent("is still in progress");
+  });
+});
