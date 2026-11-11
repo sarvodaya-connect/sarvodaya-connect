@@ -2106,6 +2106,14 @@
   "progSdg15": "Life on Land",
   "progSdg16": "Peace, Justice and Strong Institutions",
   "progSdg17": "Partnerships for the Goals",
+  "progInProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "@progInProgress": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "roleMembershipTileSubtitle": "Members by category in your societies · counts only",
   "roleMembershipScopeDm": "All societies in {district} · counts only",
   "@roleMembershipScopeDm": {

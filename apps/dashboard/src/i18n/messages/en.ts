@@ -1140,6 +1140,9 @@ export const en = {
   "sdg.15": "Life on Land",
   "sdg.16": "Peace, Justice and Strong Institutions",
   "sdg.17": "Partnerships for the Goals",
+  "prog.inProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "prog.notCompletedYet": "Not completed yet · {when}",
+  "prog.notCompletedHelp": "Approved, and counted as planned. It counts as completed once its month has ended.",
   // Issue #118: scoped Membership for DM, DDM and SPC.
   "mb.scopeDm": "Counts only — no personal data · all societies in {district}",
   "mb.scopeMine.one": "Counts only — no personal data · your {count} assigned society",
