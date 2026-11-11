@@ -71,3 +71,10 @@ export class HomeSocietyQueryDto {
   @IsBoolean()
   assignedToMe?: boolean;
 }
+
+/** Issue #118: a DDM chooses their own societies or the temporary district view. */
+export class HomeMembershipQueryDto {
+  @IsOptional()
+  @IsIn(['MINE', 'DISTRICT'])
+  scope?: 'MINE' | 'DISTRICT';
+}

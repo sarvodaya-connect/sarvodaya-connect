@@ -28,6 +28,10 @@ class _Refusing implements HomeApi {
   @override
   Future<HomeSocietyList> fetchSocieties(HomeSocietyQuery query) async =>
       throw const HomeException('Forbidden', status: 403);
+
+  @override
+  Future<ScopedMembership> fetchMembership({bool district = false}) async =>
+      throw const HomeException('Forbidden', status: 403);
 }
 
 class _Offline implements HomeApi {
@@ -39,6 +43,10 @@ class _Offline implements HomeApi {
 
   @override
   Future<HomeSocietyList> fetchSocieties(HomeSocietyQuery query) =>
+      fetchHome().then((_) => throw StateError('unreachable'));
+
+  @override
+  Future<ScopedMembership> fetchMembership({bool district = false}) =>
       fetchHome().then((_) => throw StateError('unreachable'));
 }
 

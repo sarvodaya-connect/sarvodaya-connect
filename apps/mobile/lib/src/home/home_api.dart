@@ -284,11 +284,97 @@ class HomeException implements Exception {
   String toString() => message;
 }
 
+/// Issue #118: the HQ Membership figures for the user's own societies, from
+/// `GET /home/membership`. Counts only, never member records.
+class ScopedMembership {
+  const ScopedMembership({
+    required this.scope,
+    required this.year,
+    required this.activeSocieties,
+    required this.societiesReported,
+    required this.female,
+    required this.male,
+    required this.categories,
+    required this.districts,
+    required this.profileSocieties,
+    required this.profileMembers,
+    required this.profileWithoutBreakdown,
+    required this.districtViewAvailable,
+    this.districtViewEnds,
+  });
+
+  factory ScopedMembership.fromJson(Json json) {
+    final profile = (json['profile'] as Json?) ?? const {};
+    final view = json['districtView'] as Json?;
+    return ScopedMembership(
+      scope: json['scope'] as String? ?? 'MINE',
+      year: (json['year'] as num?)?.toInt(),
+      activeSocieties: _int(json['activeSocieties']),
+      societiesReported: _int(json['societiesReported']),
+      female: _int(json['female']),
+      male: _int(json['male']),
+      categories: [
+        for (final row in (json['categories'] as List? ?? []).cast<Json>())
+          (
+            category: row['category'] as String,
+            female: _int(row['female']),
+            male: _int(row['male']),
+          ),
+      ],
+      districts: [
+        for (final row in (json['districts'] as List? ?? []).cast<Json>())
+          (
+            id: row['id'] as String,
+            name: row['name'] as String,
+            active: _int(row['active']),
+            female: _int(row['female']),
+            male: _int(row['male']),
+          ),
+      ],
+      profileSocieties: _int(profile['societies']),
+      profileMembers: _int(profile['members']),
+      profileWithoutBreakdown: _int(profile['withoutBreakdown']),
+      districtViewAvailable: view?['available'] == true,
+      districtViewEnds: view?['expiresAt'] == null
+          ? null
+          : DateTime.parse(view!['expiresAt'] as String),
+    );
+  }
+
+  /// "DISTRICT_MANAGER", "MINE" or "DISTRICT" (a DDM's temporary view).
+  final String scope;
+
+  /// The latest year with category counts, or null when none are entered.
+  final int? year;
+  final int activeSocieties;
+  final int societiesReported;
+  final int female;
+  final int male;
+  final List<({String category, int female, int male})> categories;
+
+  /// Only districts that hold societies in scope.
+  final List<({String id, String name, int active, int female, int male})>
+  districts;
+
+  /// Profile member counts: no female/male split, so kept apart.
+  final int profileSocieties;
+  final int profileMembers;
+  final int profileWithoutBreakdown;
+  final bool districtViewAvailable;
+  final DateTime? districtViewEnds;
+
+  int get total => female + male;
+}
+
 /// The SPC, DDM and DM phone homes read the same API as their desktop homes
 /// (V5 PR 6): the server works out every figure from the user's own scope.
 abstract interface class HomeApi {
   Future<RoleHome> fetchHome();
   Future<HomeSocietyList> fetchSocieties(HomeSocietyQuery query);
+
+  /// Issue #118: Membership for the user's own societies; a DDM may ask for
+  /// their temporary district view with [district].
+  Future<ScopedMembership> fetchMembership({bool district = false});
 }
 
 class HttpHomeApi implements HomeApi {
@@ -334,6 +420,14 @@ class HttpHomeApi implements HomeApi {
       await _get('/home/societies?${Uri(queryParameters: params).query}'),
     );
   }
+
+  @override
+  Future<ScopedMembership> fetchMembership({bool district = false}) async =>
+      ScopedMembership.fromJson(
+        await _get(
+          district ? '/home/membership?scope=DISTRICT' : '/home/membership',
+        ),
+      );
 }
 
 /// Demonstration mode only: fictional homes shaped like the V5 prototype.
@@ -555,6 +649,80 @@ class DemoHomeApi implements HomeApi {
       district: role == UserRole.deputyDistrictManager ? 106 : null,
       dsDivisions: const ['Kuliyapitiya East', 'Narammala', 'Nikaweratiya'],
       spcs: const [('spc-1', 'S. Karunaratne'), ('spc-2', 'M. Herath')],
+    );
+  });
+
+  @override
+  Future<ScopedMembership> fetchMembership({
+    bool district = false,
+  }) => _wait(() {
+    final role = _role;
+    final now = clock();
+    final grant = user()?.delegatedDistrictAccess
+        .where((g) => g.activeAt(now))
+        .firstOrNull;
+    if (district && (role != UserRole.deputyDistrictManager || grant == null)) {
+      throw const HomeException(
+        'Your temporary district-wide view has ended',
+        status: 403,
+      );
+    }
+    final wide = role == UserRole.districtManager || district;
+    // Fictional counts. Some societies have only a profile member count,
+    // so the profile total differs from the breakdown on purpose.
+    final scale = wide ? 9 : 1;
+    final categories = [
+      (category: 'CHILDREN', female: 41 * scale, male: 38 * scale),
+      (category: 'YOUTH', female: 64 * scale, male: 52 * scale),
+      (category: 'MOTHERS', female: 88 * scale, male: 0),
+      (category: 'ORDINARY', female: 120 * scale, male: 97 * scale),
+      (category: 'ELDERS_COUNCIL', female: 9 * scale, male: 11 * scale),
+    ];
+    final active = empty()
+        ? 0
+        : switch (role) {
+            UserRole.districtManager => 106,
+            UserRole.deputyDistrictManager => district ? 106 : 18,
+            _ => 12,
+          };
+    return ScopedMembership(
+      scope: role == UserRole.districtManager
+          ? 'DISTRICT_MANAGER'
+          : district
+          ? 'DISTRICT'
+          : 'MINE',
+      year: active == 0 ? null : 2026,
+      activeSocieties: active,
+      societiesReported: active == 0 ? 0 : (active * 3) ~/ 4,
+      female: active == 0
+          ? 0
+          : categories.fold(0, (sum, row) => sum + row.female),
+      male: active == 0 ? 0 : categories.fold(0, (sum, row) => sum + row.male),
+      categories: active == 0
+          ? [
+              for (final row in categories)
+                (category: row.category, female: 0, male: 0),
+            ]
+          : categories,
+      districts: active == 0
+          ? const []
+          : [
+              (
+                id: 'district-kurunegala',
+                name: 'Kurunegala',
+                active: active,
+                female: categories.fold(0, (sum, row) => sum + row.female),
+                male: categories.fold(0, (sum, row) => sum + row.male),
+              ),
+            ],
+      profileSocieties: active,
+      profileMembers: active * 170,
+      profileWithoutBreakdown: active - (active * 3) ~/ 4,
+      districtViewAvailable:
+          role == UserRole.deputyDistrictManager && grant != null,
+      districtViewEnds: role == UserRole.deputyDistrictManager
+          ? grant?.expiresAt
+          : null,
     );
   });
 }

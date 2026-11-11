@@ -5,7 +5,7 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { Principal } from '../auth/principal.js';
 import { RequireRoles } from '../auth/require-roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
-import { HomeSocietyQueryDto } from './home.dto.js';
+import { HomeMembershipQueryDto, HomeSocietyQueryDto } from './home.dto.js';
 import { HomeService } from './home.service.js';
 
 /** V5 PR 6: the desktop home for SPCs (SP01), DDMs (DD01) and DMs (DM01). */
@@ -36,5 +36,19 @@ export class HomeController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.service.societies(principal, query);
+  }
+
+  /** Issue #118: the D08 Membership figures for the user's own societies. */
+  @Get('membership')
+  @RequireRoles(
+    'PROGRAMME_COORDINATOR',
+    'DEPUTY_DISTRICT_MANAGER',
+    'DISTRICT_MANAGER',
+  )
+  membership(
+    @Query() query: HomeMembershipQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.service.membership(principal, query.scope);
   }
 }

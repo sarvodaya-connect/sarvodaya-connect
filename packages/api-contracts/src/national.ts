@@ -168,7 +168,8 @@ export interface NationalMembership {
 
 /** D07 / M63: done vs planned by sector, dimension and UN SDG. */
 export interface NationalProgrammes {
-  financialYear: FinancialYearPeriod;
+  /** `inProgress` (issue #131): the year has not ended, so completed counts only months that have. */
+  financialYear: FinancialYearPeriod & { inProgress?: boolean };
   planned: number;
   completed: number;
   sectors: { sector: string; planned: number; completed: number; societies: number }[];
@@ -185,6 +186,9 @@ export interface NationalProgrammes {
     approvedBy: string | null;
     datesLabel: string | null;
     year: number;
+    /** Issue #131: the activity's month, and whether it has ended (so it counts as completed). */
+    month?: number;
+    completed?: boolean;
     femaleParticipants: number;
     maleParticipants: number;
     householdsBenefited: number;

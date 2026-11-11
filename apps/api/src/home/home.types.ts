@@ -158,3 +158,30 @@ export interface HomeSocietyList {
     ddms: { id: string; name: string }[];
   };
 }
+
+/** Mirrors ScopedMembership in packages/api-contracts/src/home.ts (issue #118). */
+export interface ScopedMembership {
+  scope: 'DISTRICT_MANAGER' | 'MINE' | 'DISTRICT';
+  year: number | null;
+  activeSocieties: number;
+  societiesReported: number;
+  female: number;
+  male: number;
+  total: number;
+  categories: {
+    category: string;
+    female: number;
+    male: number;
+    total: number;
+  }[];
+  districts: {
+    id: string;
+    name: string;
+    active: number;
+    female: number;
+    male: number;
+    total: number;
+  }[];
+  profile: { societies: number; members: number; withoutBreakdown: number };
+  districtView: { available: boolean; expiresAt: string | null } | null;
+}

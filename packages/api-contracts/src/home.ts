@@ -153,3 +153,38 @@ export interface HomeSocietyList {
     ddms: { id: string; name: string }[];
   };
 }
+
+/**
+ * Issue #118: the HQ Membership figures (D08) for a DM, DDM or SPC, worked
+ * out only from the societies they may see. Counts only, never member records.
+ */
+export interface ScopedMembership {
+  /** "DISTRICT_MANAGER": the DM's district. "MINE": assigned societies. "DISTRICT": a DDM's temporary district view. */
+  scope: "DISTRICT_MANAGER" | "MINE" | "DISTRICT";
+  /** The latest year with category counts from these societies, or null when none are entered. */
+  year: number | null;
+  /** Active societies in scope: the denominator for "reported". */
+  activeSocieties: number;
+  /** Active societies with category counts above zero for `year`. */
+  societiesReported: number;
+  female: number;
+  male: number;
+  total: number;
+  categories: { category: string; female: number; male: number; total: number }[];
+  /** Only districts that hold societies in scope. `active` counts in-scope active societies. */
+  districts: { id: string; name: string; active: number; female: number; male: number; total: number }[];
+  /**
+   * The single member count on each society profile. It has no female/male or
+   * category split, so it is never added to the breakdown above.
+   */
+  profile: {
+    /** Active societies in scope with a profile member count. */
+    societies: number;
+    /** Their profile member counts added together. */
+    members: number;
+    /** Of those, societies without category counts for `year`. */
+    withoutBreakdown: number;
+  };
+  /** DDM only: whether a temporary district view is valid right now. */
+  districtView: { available: boolean; expiresAt: string | null } | null;
+}

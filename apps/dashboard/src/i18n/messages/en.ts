@@ -1140,6 +1140,27 @@ export const en = {
   "sdg.15": "Life on Land",
   "sdg.16": "Peace, Justice and Strong Institutions",
   "sdg.17": "Partnerships for the Goals",
+  "prog.inProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "prog.notCompletedYet": "Not completed yet · {when}",
+  "prog.notCompletedHelp": "Approved, and counted as planned. It counts as completed once its month has ended.",
+  // Issue #118: scoped Membership for DM, DDM and SPC.
+  "mb.scopeDm": "Counts only — no personal data · all societies in {district}",
+  "mb.scopeMine.one": "Counts only — no personal data · your {count} assigned society",
+  "mb.scopeMine.other": "Counts only — no personal data · your {count} assigned societies",
+  "mb.scopeDistrict": "Counts only — no personal data · all {district} societies, view only until {date}",
+  "mb.latestYear": "latest counts, {year}",
+  "mb.tabMine": "My Societies",
+  "mb.tabDistrict": "District · view only",
+  "mb.noSocietiesTitle": "No Active Societies",
+  "mb.noSocieties": "There are no active societies in your scope yet, so there are no membership counts to show.",
+  "mb.noneYetTitle": "No Membership Counts Yet",
+  "mb.noneYet": "None of these societies has entered membership counts by category. The zeros below mean not reported, not zero members.",
+  "mb.profileTitle": "Society Profile Member Counts",
+  "mb.profileBody": "Society profiles record {members} members across {societies} active societies. A profile count has no female/male or category split, so it is not added to the figures here.",
+  "mb.profileMissing.one": "{count} of these societies has no category counts for {year}.",
+  "mb.profileMissing.other": "{count} of these societies have no category counts for {year}.",
+  "mb.profileMissingNoYear.one": "{count} of these societies has not entered category counts yet.",
+  "mb.profileMissingNoYear.other": "{count} of these societies have not entered category counts yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;
