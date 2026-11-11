@@ -1140,6 +1140,9 @@ export const en = {
   "sdg.15": "Life on Land",
   "sdg.16": "Peace, Justice and Strong Institutions",
   "sdg.17": "Partnerships for the Goals",
+  "prog.inProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "prog.notCompletedYet": "Not completed yet · {when}",
+  "prog.notCompletedHelp": "Approved, and counted as planned. It counts as completed once its month has ended.",
 } as const;
 
 export type MessageKey = keyof typeof en;
