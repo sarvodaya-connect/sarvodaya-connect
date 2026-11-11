@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
+import type { Principal } from '../auth/principal.js';
 import { ACTIVITY_DIMENSION_VALUES } from '../activities/activities.dto.js';
 import { auditReportDueDate } from '../documents/registrar-documents.service.js';
 import { RegistrarDocumentsRepository } from '../documents/registrar-documents.repository.js';
@@ -12,7 +13,11 @@ import {
 import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
 import { MEMBERSHIP_CATEGORY_VALUES } from '../societies/societies.service.js';
 import { auditPastDue, pageMeta, percent, period } from './national-rules.js';
-import { NationalRepository } from './national.repository.js';
+import {
+  NationalRepository,
+  type SocietyScope,
+} from './national.repository.js';
+import { delegationEndsAt, programmeScopeFor } from './programme-scope.js';
 
 const TOP_SDGS = 6;
 const RECENT_ACTIVITIES = 6;
@@ -285,10 +290,55 @@ export class NationalService {
   }
 
   async programmes(year: number | undefined, now = new Date()) {
+    return this.programmeFigures(chosenYear(year, now), now);
+  }
+
+  /**
+   * Issue #117: D07 / M64 for a DM, DDM or SPC, counted only over the
+   * societies they may see. The scope is part of every query, so nothing
+   * outside it is read.
+   */
+  async scopedProgrammes(
+    principal: Principal,
+    year: number | undefined,
+    now = new Date(),
+  ) {
     const startYear = chosenYear(year, now);
+    const { kind, ...within } = programmeScopeFor(principal, now);
+    const [figures, summary] = await Promise.all([
+      this.programmeFigures(startYear, now, within),
+      this.repository.scopeSummary(within),
+    ]);
+    return {
+      ...figures,
+      scope: {
+        kind,
+        societies: summary.societies,
+        districts: summary.districts.map((district) => ({
+          id: district.id,
+          name: district.nameEn,
+        })),
+        temporaryAccessEndsAt: delegationEndsAt(
+          principal,
+          within.districtIds,
+          now,
+        ),
+      },
+    };
+  }
+
+  private async programmeFigures(
+    startYear: number,
+    now: Date,
+    within?: SocietyScope,
+  ) {
     const [activities, recent] = await Promise.all([
-      this.repository.activities(startYear, now),
-      this.repository.recentApprovedActivities(RECENT_ACTIVITIES),
+      this.repository.activities(startYear, now, within),
+      this.repository.recentApprovedActivities(
+        startYear,
+        RECENT_ACTIVITIES,
+        within,
+      ),
     ]);
     const planned = activities.sectors.reduce(
       (sum, row) => sum + row.planned,

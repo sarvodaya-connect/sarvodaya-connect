@@ -42,6 +42,29 @@ import {
 } from './requests.service.js';
 import { SearchQueryDto, SearchService } from './search.service.js';
 
+/**
+ * Issue #117: D07 / M64 Programmes & Activities for a DM, DDM or SPC, over
+ * the societies they may see. HQ keeps `GET national/programmes`.
+ */
+@Controller()
+@UseGuards(AuthenticationGuard, RolesGuard)
+@RequireRoles(
+  'DISTRICT_MANAGER',
+  'DEPUTY_DISTRICT_MANAGER',
+  'PROGRAMME_COORDINATOR',
+)
+export class ScopedProgrammesController {
+  constructor(private readonly national: NationalService) {}
+
+  @Get('programmes')
+  programmes(
+    @Query() query: YearQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.national.scopedProgrammes(principal, query.year);
+  }
+}
+
 /** V5 D02 and its drill-downs, D13 and D15: HQ only. */
 @Controller()
 @UseGuards(AuthenticationGuard, RolesGuard)

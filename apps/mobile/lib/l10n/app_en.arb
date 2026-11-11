@@ -1955,6 +1955,157 @@
       }
     }
   },
+  "progTitle": "Programmes & Activities",
+  "progSubtitle": "Done vs planned · SPC-approved only",
+  "progDemo": "Demonstration data · {year}",
+  "@progDemo": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSummary": "{completed} of {planned} planned completed — {percent}%",
+  "@progSummary": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "planned": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "progTenSectors": "10 Sectors",
+  "progDimensions": "Dimensions",
+  "progSectorSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@progSectorSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progSdgEyebrow": "UN SDGs · Ranked by Completed Activities",
+  "progSdgNote": "{year} · equal counts listed by SDG number · an activity can have several SDGs",
+  "@progSdgNote": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSdg": "No completed activity with a UN SDG yet for {year}.",
+  "@progNoSdg": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSdgSemantics": "Number {rank}, SDG {sdg}: {title}, {count} completed",
+  "@progSdgSemantics": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "sdg": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "progFinancialYear": "Financial year",
+  "progCountedOver": "Counted over",
+  "progScopeDistrict": "{district} · {count, plural, =1{1 society} other{{count} societies}}",
+  "@progScopeDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeAssigned": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@progScopeAssigned": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeTemporary": "Your assigned societies and {district} · {count} in all · temporary access until {time}",
+  "@progScopeTemporary": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSocietiesTitle": "No Societies Assigned Yet",
+  "progNoSocietiesBody": "When societies are assigned to you, their programme figures appear here. Every count below is zero until then.",
+  "progZeroYear": "No SPC-approved activities in {year} for these societies yet. The zeros below are real counts, not missing data.",
+  "@progZeroYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progErrorTitle": "Programme Figures Are Unavailable",
+  "progLoading": "Loading programme figures",
+  "progHomeLink": "Programmes & Activities",
+  "progHomeLinkDistrict": "Done vs planned and UN SDGs in your district",
+  "progHomeLinkAssigned": "Done vs planned and UN SDGs for your societies",
+  "progDimSocial": "Social",
+  "progDimEconomic": "Economic",
+  "progDimGovernance": "Governance",
+  "progSector1": "Community education",
+  "progSector2": "Child wellbeing",
+  "progSector3": "Culture",
+  "progSector4": "Economy",
+  "progSector5": "Governance",
+  "progSector6": "Health and nutrition",
+  "progSector7": "Housing and infrastructure",
+  "progSector8": "Spiritual development",
+  "progSector9": "Agriculture",
+  "progSector10": "Environment",
+  "progSdg1": "No Poverty",
+  "progSdg2": "Zero Hunger",
+  "progSdg3": "Good Health and Well-Being",
+  "progSdg4": "Quality Education",
+  "progSdg5": "Gender Equality",
+  "progSdg6": "Clean Water and Sanitation",
+  "progSdg7": "Affordable and Clean Energy",
+  "progSdg8": "Decent Work and Economic Growth",
+  "progSdg9": "Industry, Innovation and Infrastructure",
+  "progSdg10": "Reduced Inequalities",
+  "progSdg11": "Sustainable Cities and Communities",
+  "progSdg12": "Responsible Consumption and Production",
+  "progSdg13": "Climate Action",
+  "progSdg14": "Life Below Water",
+  "progSdg15": "Life on Land",
+  "progSdg16": "Peace, Justice and Strong Institutions",
+  "progSdg17": "Partnerships for the Goals",
   "roleMembershipTileSubtitle": "Members by category in your societies · counts only",
   "roleMembershipScopeDm": "All societies in {district} · counts only",
   "@roleMembershipScopeDm": {

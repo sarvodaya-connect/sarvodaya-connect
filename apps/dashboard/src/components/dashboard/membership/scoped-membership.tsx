@@ -34,7 +34,7 @@ export function ScopedMembershipView({ demo, membership, t, viewer }: { demo: bo
 
   return (
     <>
-      <Breadcrumb current={t("nav.membership")} home={{ href: "/dashboard", label: viewer.role === "DISTRICT_MANAGER" ? t("nav.districtOverview") : t("nav.home") }} />
+      <Breadcrumb current={t("nav.membership")} home={viewer.role === "DISTRICT_MANAGER" ? t("nav.districtOverview") : t("nav.home")} />
       <PageTitle
         actions={<SampleBadge demo={demo} label={year ? t("n.demoYear", { year }) : t("n.demoData")} />}
         description={year ? `${scopeLine} · ${t("mb.latestYear", { year })}` : scopeLine}

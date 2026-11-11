@@ -9,11 +9,12 @@ import { sdgIconPath, sdgName } from "@/lib/sdg";
 
 import { count, GRADE_STYLE } from "./format";
 
-export function Breadcrumb({ current, home }: { current: string; home?: { href: string; label: string } }) {
+/** `home` names the first link; HQ's National Overview when left out. */
+export function Breadcrumb({ current, home }: { current: string; home?: string }) {
   const { t } = useI18n();
   return (
     <nav aria-label={t("n.breadcrumb")} className="text-[11px] text-ink-soft">
-      <Link className="text-[#2d5c88] underline underline-offset-2" href={home?.href ?? "/dashboard"}>{home?.label ?? t("nav.nationalOverview")}</Link>
+      <Link className="text-[#2d5c88] underline underline-offset-2" href="/dashboard">{home ?? t("nav.nationalOverview")}</Link>
       <span aria-hidden> › </span>
       <span aria-current="page">{current}</span>
     </nav>
