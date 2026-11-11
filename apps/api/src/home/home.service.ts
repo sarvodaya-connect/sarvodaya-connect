@@ -5,6 +5,7 @@ import type {
   HomeRole,
   HomeSocietyList,
   HomeSummary,
+  ScopedMembership,
 } from './home.types.js';
 
 import { readableDistrictIds, type Principal } from '../auth/principal.js';
@@ -22,11 +23,53 @@ import {
   type HomeInput,
   type SocietyListQuery,
 } from './home.compose.js';
+import { composeMembership } from './membership.compose.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Changes shown in "Latest in my societies". NIC views are never listed. */
 const RECENT_LIMIT = 4;
 const HIDDEN_ACTIONS = ['MEMBER_NIC_REVEALED', 'MEMBER_NIC_UPDATED'];
+
+/**
+ * Issue #118: which societies a Membership view may count. The DM gets their
+ * own district; the SPC and DDM get only the societies assigned to them. A
+ * DDM gets the district only with `DISTRICT`, and only while a temporary grant
+ * is valid now. The principal is loaded on every request without revoked
+ * grants, and `readableDistrictIds` checks the start and end times again.
+ */
+export function membershipScope(
+  role: HomeRole,
+  principal: Principal,
+  requested: 'MINE' | 'DISTRICT' | undefined,
+  now = new Date(),
+):
+  | {
+      scope: ScopedMembership['scope'];
+      where: { districtId: { in: string[] } } | { id: { in: string[] } };
+    }
+  | { refused: string } {
+  if (requested === 'DISTRICT' && role !== 'DEPUTY_DISTRICT_MANAGER')
+    return { refused: 'Only a DDM with temporary access has a district view' };
+  if (role === 'DISTRICT_MANAGER')
+    return {
+      scope: 'DISTRICT_MANAGER',
+      where: {
+        districtId: { in: principal.districtIds.filter((id) => UUID.test(id)) },
+      },
+    };
+  if (requested === 'DISTRICT') {
+    const delegated = readableDistrictIds(principal, now).filter((id) =>
+      UUID.test(id),
+    );
+    if (!delegated.length)
+      return { refused: 'Your temporary district-wide view has ended' };
+    return { scope: 'DISTRICT', where: { districtId: { in: delegated } } };
+  }
+  return {
+    scope: 'MINE',
+    where: { id: { in: principal.societyIds.filter((id) => UUID.test(id)) } },
+  };
+}
 
 export function homeRoleOf(principal: Principal): HomeRole | null {
   if (principal.roles.includes('DISTRICT_MANAGER')) return 'DISTRICT_MANAGER';
@@ -104,6 +147,75 @@ export class HomeService {
         'The home is for SPCs, DDMs and District Managers',
       );
     return executeDatabaseOperation(() => this.load(role, principal, now));
+  }
+
+  /** Issue #118: D08 Membership limited to the user's own scope. */
+  async membership(
+    principal: Principal,
+    requested: 'MINE' | 'DISTRICT' | undefined,
+    now = new Date(),
+  ): Promise<ScopedMembership> {
+    const role = homeRoleOf(principal);
+    if (!role)
+      throw new ForbiddenException(
+        'Membership here is for SPCs, DDMs and District Managers',
+      );
+    const resolved = membershipScope(role, principal, requested, now);
+    if ('refused' in resolved) throw new ForbiddenException(resolved.refused);
+    const grant =
+      role === 'DEPUTY_DISTRICT_MANAGER'
+        ? (principal.delegatedDistrictAccess ?? []).find(
+            (g) =>
+              readableDistrictIds(
+                { ...principal, delegatedDistrictAccess: [g] },
+                now,
+              ).length,
+          )
+        : undefined;
+    return executeDatabaseOperation(async () => {
+      const db = this.prisma;
+      const societies = await db.society.findMany({
+        where: resolved.where,
+        select: {
+          id: true,
+          status: true,
+          memberCount: true,
+          district: { select: { id: true, nameEn: true } },
+        },
+      });
+      const activeIds = societies
+        .filter((s) => s.status === 'ACTIVE')
+        .map((s) => s.id);
+      const latest = activeIds.length
+        ? await db.societyMembershipCount.aggregate({
+            where: { societyId: { in: activeIds } },
+            _max: { year: true },
+          })
+        : null;
+      const year = latest?._max.year ?? null;
+      const counts =
+        year === null
+          ? []
+          : await db.societyMembershipCount.findMany({
+              where: { societyId: { in: activeIds }, year },
+              select: {
+                societyId: true,
+                category: true,
+                female: true,
+                male: true,
+              },
+            });
+      return composeMembership({
+        scope: resolved.scope,
+        societies,
+        year,
+        counts,
+        districtView:
+          role === 'DEPUTY_DISTRICT_MANAGER'
+            ? { available: Boolean(grant), expiresAt: grant?.expiresAt ?? null }
+            : null,
+      });
+    });
   }
 
   /** SP02 / DD03 / DM02: the same scope as the home, filtered and paged. */

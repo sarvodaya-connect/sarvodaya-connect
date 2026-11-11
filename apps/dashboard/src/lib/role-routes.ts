@@ -11,6 +11,8 @@ const FIELD_PATHS = [
   /^\/$/,
   /^\/dashboard$/,
   /^\/my-societies$/,
+  // Issue #118: Membership for the user's own scope; the API limits the figures.
+  /^\/membership$/,
   new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
   /^\/activities-to-approve(\/.*)?$/,
   // Issue #117: Programmes & Activities over the user's own scope (the API limits it).
