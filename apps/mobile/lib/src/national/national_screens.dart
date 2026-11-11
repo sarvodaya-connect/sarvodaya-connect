@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
@@ -496,7 +498,10 @@ class NationalDashboardScreen extends StatelessWidget {
               constraints: BoxConstraints(
                 maxHeight: constraints.maxHeight * 0.6,
               ),
-              child: const SingleChildScrollView(child: _NationalHeader()),
+              child: const MotionEntrance(
+                id: 'hq.header',
+                child: SingleChildScrollView(child: _NationalHeader()),
+              ),
             ),
             Expanded(
               child: _Loader<NationalOverview>(
@@ -683,7 +688,7 @@ class _Overview extends StatelessWidget {
         : l.nationalSocieties(overview.societiesWithBoth);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [
+      children: motionBlocks('hq.overview', [
         SizedBox(
           height: 48,
           child: ListView.separated(
@@ -850,7 +855,7 @@ class _Overview extends StatelessWidget {
             ],
           ),
         ),
-      ],
+      ]),
     );
   }
 }
