@@ -2451,5 +2451,44 @@
       }
     }
   },
-  "memberCategoryNote": "Entered separately for each year, by category. Never added to the profile members above."
+  "memberCategoryNote": "Entered separately for each year, by category. Never added to the profile members above.",
+  "recTabMembersExco": "Members & Exco",
+  "@recTabMembersExco": {
+    "description": "Society record tab (issue #143): society membership plus the 25 Exco seats."
+  },
+  "memTitle": "Members",
+  "memUnder18": "Under 18s",
+  "@memUnder18": {
+    "description": "Members younger than 18. Not the Youth (15–25) category."
+  },
+  "memNotEntered": "Not entered",
+  "memSplitMissing": "Female, male and under 18 figures have not been entered yet.",
+  "memUnder18Missing": "The under 18 figure has not been entered yet.",
+  "memUnder18Part": "Under 18s are counted in the total, not added to it.",
+  "memEditLabel": "Edit members",
+  "memLastUpdated": "Last updated {when}",
+  "@memLastUpdated": {
+    "description": "Below the Members card. {when} is a date and time such as 12 Nov 2026, 9:58 p.m.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "memLastUpdatedNever": "Last updated: not recorded yet",
+  "memExcoSection": "Exco · 25 Seats",
+  "memEditTitle": "Edit Members",
+  "memEditIntro": "The society's members, not the 25 Exco seats. The total is worked out from the female and male members.",
+  "memUnder18Help": "Members younger than 18. They are already counted as female or male, so they are a part of the total, not added to it.",
+  "memUnder18TooMany": "Under 18s cannot be more than the total members ({total}).",
+  "@memUnder18TooMany": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memUnder18Required": "Enter the under 18s, or 0 if there are none.",
+  "memSaved": "Members saved. The change is in the society history."
 }

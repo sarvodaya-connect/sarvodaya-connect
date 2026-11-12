@@ -17,12 +17,13 @@ import 'edit_society_screen.dart';
 import 'grade_change_request_screen.dart';
 import 'grade_requests_screen.dart';
 import 'exco_screens.dart';
+import 'membership_widgets.dart';
 import 'record_widgets.dart';
 import 'society_record_api.dart';
 import 'society_record_models.dart';
 
 /// M06 society detail (with M06v view only and M06fx summary not added).
-/// Tabs: Overview, Exco, Work plan, Documents and History.
+/// Tabs: Overview, Members & Exco, Work plan, Documents and History.
 class SocietyRecordScreen extends StatefulWidget {
   const SocietyRecordScreen({
     super.key,
@@ -36,7 +37,8 @@ class SocietyRecordScreen extends StatefulWidget {
   /// False when the record is the Society Officer's home tab.
   final bool showBack;
 
-  /// Tab shown first: 0 Overview, 1 Exco, 2 Work plan, 3 Documents, 4 History.
+  /// Tab shown first: 0 Overview, 1 Members & Exco, 2 Work plan, 3 Documents,
+  /// 4 History.
   final int initialTab;
 
   @override
@@ -155,7 +157,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                       dividerHeight: 0,
                       tabs: [
                         Tab(height: 38, text: l.recTabOverview),
-                        Tab(height: 38, text: l.navExco),
+                        Tab(height: 38, text: l.recTabMembersExco),
                         Tab(height: 38, text: l.recTabWorkPlan),
                         Tab(height: 38, text: l.recTabDocuments),
                         Tab(height: 38, text: l.recTabHistory),
@@ -564,23 +566,30 @@ class _OfficeBearersCard extends StatelessWidget {
     final complete = status.complete;
     return RecordCard(
       title: l.recOfficeBearers,
+      // The link wraps under large text in Sinhala and Tamil rather than
+      // pushing past the card's edge.
       trailing: record.exco.isEmpty
           ? null
-          : InkWell(
-              onTap: () => DefaultTabController.of(context).animateTo(1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l.recAllMembers(record.exco.length),
-                    style: RecordStyle.link,
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: AppColors.leaf,
-                  ),
-                ],
+          : Flexible(
+              child: InkWell(
+                onTap: () => DefaultTabController.of(context).animateTo(1),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        l.recAllMembers(record.exco.length),
+                        style: RecordStyle.link,
+                        textAlign: TextAlign.end,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: AppColors.leaf,
+                    ),
+                  ],
+                ),
               ),
             ),
       children: [
@@ -822,11 +831,32 @@ class _ExcoTabState extends State<_ExcoTab> {
     final members = [...record.exco]
       ..sort((a, b) => a.seatNumber.compareTo(b.seatNumber));
     final canEdit = record.permissions.canEdit;
+    // Issue #143: the society's members come first, then the 25 Exco seats.
+    final membership = [
+      MembershipCard(
+        record: record,
+        onEdit: canEdit
+            ? () => widget.open(EditMembershipScreen(record: record))
+            : null,
+      ),
+      const SizedBox(height: 18),
+      Semantics(
+        header: true,
+        child: Text(l.memExcoSection, style: RecordStyle.sectionLabel),
+      ),
+      const SizedBox(height: 8),
+    ];
     if (members.isEmpty && !canEdit) {
-      return StateMessage(
-        icon: Icons.groups_outlined,
-        title: l.excoNoneTitle,
-        message: l.excoNoneBody,
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+        children: [
+          ...membership,
+          StateMessage(
+            icon: Icons.groups_outlined,
+            title: l.excoNoneTitle,
+            message: l.excoNoneBody,
+          ),
+        ],
       );
     }
     final emptySeats = emptyExcoSeats(members);
@@ -946,6 +976,7 @@ class _ExcoTabState extends State<_ExcoTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       children: [
+        ...membership,
         Row(
           children: [
             Expanded(

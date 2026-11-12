@@ -117,7 +117,7 @@ describe('SocietiesService profile, council and membership', () => {
       { latitude: 7.3, longitude: 80.6 },
       officer,
       // SC-65: a readable entry for the change history.
-      { summary: 'Map location changed' },
+      { summary: 'Map location changed', membershipChanged: false },
     );
   });
 

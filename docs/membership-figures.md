@@ -31,6 +31,16 @@ Once the split is entered it cannot be removed again from the form; it can only 
 
 Older phone apps still send `memberCount` alone. The API accepts that only while the society has no split (or when it equals the split already saved, as when an old form is saved unchanged). If the split exists and an old app sends a different total, the save is refused with "This society records female and male members. Update those instead", so an old app can never make the total disagree with female and male. Older apps ignore the new response fields.
 
+## Under 18s and Last updated (issue #143)
+
+The phone's society record has a **Members & Exco** tab (it was **Exco**). It starts with a **Members** card (total, female, male and under 18s) and its own **Edit** for people who may edit the society. Below the card is the membership **Last updated** time, then the unchanged 25 Exco seats under "Exco · 25 Seats". The card is the society's members, not the Exco seat count.
+
+- **Under 18s are a part of the total.** `societies.under_18_members` counts members younger than 18, who are already counted as female or male. It is never added to the total: female 25, male 17 and under 18s 10 is a total of 42. It is not the Youth (15–25) category, and nothing is copied between them.
+- **Rules.** `PATCH /societies/:id/profile` takes `under18Members`, a whole number from 0 to female + male. It needs the female/male split, sent with it or already saved, so an older total-only record cannot get under 18s alone. A save that would lower female + male below the saved under 18s is refused until the under 18s are changed too. The check `societies_under_18_check` enforces the same in the database.
+- **Last updated is membership only.** `societies.membership_updated_at` moves only when a save changes the total, female, male or under 18s. Other profile edits, Exco edits and retried saves with the same figures leave it alone. Creating a society sets it. The record returns it as `membershipUpdatedAt`; the phone shows it in Sri Lanka time.
+- **Existing societies.** The migration `20261112100000_society_under_18_members` adds both columns with no values. Nothing is guessed: the card says "Not entered" for each missing figure and "Last updated: not recorded yet" until the first membership save. Once entered, under 18s can be changed (0 is a figure) but not cleared.
+- **One data flow.** The card's Edit and Edit Society Information save through the same endpoint and the same `memberCount`, so the Membership views (above) count the same saved total once. Under 18s are not yet shown on the dashboard or in the Membership views.
+
 ## Why the profile and category numbers can differ
 
 Category counts are entered separately for each year by category. A society can have profile members but no category counts, or the reverse. The Membership views therefore:

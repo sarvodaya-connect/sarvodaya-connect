@@ -179,6 +179,17 @@ export interface SocietyRecord extends SocietyDetails {
    */
   femaleMembers: number | null;
   maleMembers: number | null;
+  /**
+   * Issue #143: members younger than 18, a part of memberCount (never added
+   * to it). Null until entered; only entered with the female/male split.
+   */
+  under18Members: number | null;
+  /**
+   * Issue #143: when the total, female, male or under 18s last changed, as an
+   * ISO time. Other profile and Exco edits do not move it. Null until the
+   * first saved change.
+   */
+  membershipUpdatedAt: string | null;
   landline: string | null;
   businessDescription: string | null;
   grade: SocietyGrade | null;
@@ -207,6 +218,11 @@ export interface SocietyRecordUpdate {
    */
   femaleMembers?: number;
   maleMembers?: number;
+  /**
+   * Issue #143: 0 to the female + male total. Needs the split, sent with it or
+   * already saved.
+   */
+  under18Members?: number;
   /**
    * Sent by apps from before issue #141. Accepted alone only while the society
    * has no female/male split; otherwise it must equal female + male.

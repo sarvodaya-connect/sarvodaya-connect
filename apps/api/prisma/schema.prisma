@@ -83,6 +83,14 @@ model Society {
   // check enforces it). Older records keep a total with no split.
   femaleMembers        Int?                        @map("female_members")
   maleMembers          Int?                        @map("male_members")
+  // Issue #143: members younger than 18, a part of the total (never added to
+  // it). Only entered with the female/male split; a database check keeps it
+  // between 0 and member_count.
+  under18Members       Int?                        @map("under_18_members")
+  // Issue #143: when a membership figure (total, female, male or under 18s)
+  // last changed. Other profile or Exco edits leave it alone. Null until the
+  // first saved change.
+  membershipUpdatedAt  DateTime?                   @map("membership_updated_at") @db.Timestamptz(3)
   landline             String?                     @db.VarChar(30)
   // Information only: the app keeps no sales, stock or business accounts.
   businessDescription  String?                     @map("business_description") @db.VarChar(1000)
