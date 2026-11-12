@@ -2,10 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 import '../district_access/access_format.dart';
 import '../society_record/society_record_models.dart' show PickedDocument;
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/count_field.dart';
 import '../widgets/state_views.dart';
 import 'incident_api.dart';
 import 'incident_ids.dart';
@@ -1014,7 +1017,8 @@ class _LinkTile extends StatelessWidget {
   );
 }
 
-/// − 6 + : whole numbers only, never below zero.
+/// − 6 + : whole numbers only, never below zero. Issue #132: the number can
+/// also be typed straight in; [onChanged] gets null while it is not a valid count.
 class _Stepper extends StatelessWidget {
   const _Stepper({
     required this.label,
@@ -1025,70 +1029,55 @@ class _Stepper extends StatelessWidget {
   final String label;
   final String? detail;
   final int value;
-  final ValueChanged<int> onChanged;
+  final ValueChanged<int?> onChanged;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.5,
-                ),
-              ),
-              if (detail != null)
+          child: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  detail!,
+                  label,
                   style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.muted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
                   ),
                 ),
-            ],
+                if (detail != null)
+                  Text(
+                    detail!,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.line),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Fewer: $label',
-                visualDensity: VisualDensity.compact,
-                onPressed: value == 0 ? null : () => onChanged(value - 1),
-                icon: const Icon(Icons.remove, size: 18),
-              ),
-              SizedBox(
-                width: 44,
-                child: Text(
-                  '$value',
-                  textAlign: TextAlign.center,
-                  semanticsLabel: '$label: $value',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton(
-                tooltip: 'More: $label',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => onChanged(min(1000000, value + 1)),
-                icon: const Icon(Icons.add, size: 18),
-              ),
-            ],
-          ),
+        CountField(
+          label: label,
+          value: value,
+          onChanged: onChanged,
+          max: maxAssessmentCount,
+          compact: true,
+          decreaseTooltip: 'Fewer: $label',
+          increaseTooltip: 'More: $label',
         ),
       ],
     ),
   );
 }
+
+/// The API's limit for each assessment count (emergency.dto.ts MAX_COUNT).
+const maxAssessmentCount = 1000000;
 
 class _Choice extends StatelessWidget {
   const _Choice({
@@ -1180,6 +1169,34 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
   int _step = 0;
   bool _sending = false;
   String? _error;
+
+  /// Issue #132: counts whose box does not hold a valid number right now.
+  final _invalidCounts = <String>{};
+
+  void _count(String key, int? value, void Function(int) apply) {
+    setState(() {
+      if (value == null) {
+        _invalidCounts.add(key);
+      } else {
+        _invalidCounts.remove(key);
+        apply(value);
+      }
+    });
+  }
+
+  void _move(int delta) {
+    if (delta > 0 && _invalidCounts.isNotEmpty) {
+      setState(() => _error = context.l10n.countFixBeforeNext);
+      return;
+    }
+    setState(() {
+      // Going back keeps the last valid number; the box shows it again.
+      _invalidCounts.clear();
+      _error = null;
+      _step += delta;
+    });
+  }
+
   List<AssessmentUpdate>? _sent;
   String _status = '';
 
@@ -1268,17 +1285,17 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
       1 => _Stepper(
         label: 'Families affected',
         value: a.families,
-        onChanged: (v) => set(() => a.families = v),
+        onChanged: (v) => _count('families', v, (n) => a.families = n),
       ),
       2 => _Stepper(
         label: 'People affected',
         value: a.people,
-        onChanged: (v) => set(() => a.people = v),
+        onChanged: (v) => _count('people', v, (n) => a.people = n),
       ),
       3 => _Stepper(
         label: 'Injured',
         value: a.injured,
-        onChanged: (v) => set(() => a.injured = v),
+        onChanged: (v) => _count('injured', v, (n) => a.injured = n),
       ),
       4 => _Card(
         padding: 6,
@@ -1290,7 +1307,8 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
                 label: 'Fully damaged',
                 detail: 'Cannot be lived in',
                 value: a.housesFully,
-                onChanged: (v) => set(() => a.housesFully = v),
+                onChanged: (v) =>
+                    _count('housesFully', v, (n) => a.housesFully = n),
               ),
             ),
             const Divider(height: 1),
@@ -1300,7 +1318,8 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
                 label: 'Partly damaged',
                 detail: 'Can be lived in after repair',
                 value: a.housesPartly,
-                onChanged: (v) => set(() => a.housesPartly = v),
+                onChanged: (v) =>
+                    _count('housesPartly', v, (n) => a.housesPartly = n),
               ),
             ),
           ],
@@ -1309,7 +1328,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
       5 => _Stepper(
         label: 'In safety centres',
         value: a.displaced,
-        onChanged: (v) => set(() => a.displaced = v),
+        onChanged: (v) => _count('displaced', v, (n) => a.displaced = n),
       ),
       6 => Column(
         children: [
@@ -1481,7 +1500,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
               ? null
               : _step == 0
               ? () => Navigator.of(context).maybePop()
-              : () => setState(() => _step--),
+              : () => _move(-1),
           child: Text(_step == 0 ? 'Cancel' : 'Back'),
         ),
         primary: FilledButton(
@@ -1489,7 +1508,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
               ? null
               : reviewing
               ? _send
-              : () => setState(() => _step++),
+              : () => _move(1),
           child: Text(
             reviewing
                 ? (_sending ? 'Sending…' : 'Send assessment')

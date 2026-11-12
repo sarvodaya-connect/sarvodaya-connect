@@ -26,7 +26,18 @@ export function auditReportDueDate(startYear: number) {
   return `${startYear + 1}-09-30`;
 }
 
-function yearOf(startYear: number) {
+/** The financial year asked for, or the latest completed one; refuses others. */
+export function registrarYear(value: number | undefined) {
+  const startYear = value ?? latestCompletedFinancialYear();
+  if (!isSelectableFinancialYear(startYear)) {
+    throw new BadRequestException(
+      'Choose one of the last completed financial years',
+    );
+  }
+  return startYear;
+}
+
+export function yearOf(startYear: number) {
   const { label } = financialYear(startYear);
   return { startYear, label };
 }
@@ -37,13 +48,7 @@ export class RegistrarDocumentsService {
   constructor(private readonly repository: RegistrarDocumentsRepository) {}
 
   private year(value: number | undefined) {
-    const startYear = value ?? latestCompletedFinancialYear();
-    if (!isSelectableFinancialYear(startYear)) {
-      throw new BadRequestException(
-        'Choose one of the last completed financial years',
-      );
-    }
-    return startYear;
+    return registrarYear(value);
   }
 
   /** M13 / D05: the society's four documents for the year. */

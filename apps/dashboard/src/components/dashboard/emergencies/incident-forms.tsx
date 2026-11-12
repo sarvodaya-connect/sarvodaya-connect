@@ -16,6 +16,8 @@ import type {
 
 import type { IncidentFormState } from "@/app/(dashboard)/emergencies/actions";
 import { INCIDENT_TYPE_LABELS, INCIDENT_TYPES, NEED_LABELS, NEEDS, ROAD_ACCESS, ROAD_LABELS, STATE_LABELS } from "@/lib/emergency-format";
+import { useI18n } from "@/i18n/provider";
+import { parseCount } from "@/lib/count";
 import { submitWithoutReset } from "@/lib/use-form-submit";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
@@ -222,26 +224,73 @@ export function OpenIncidentForm({
   );
 }
 
-/** − 6 + : whole numbers only, never below zero. */
-function Stepper({ label, detail, value, onChange }: { label: string; detail?: string; value: number; onChange: (value: number) => void }) {
+/** The API's limit for each assessment count (emergency.dto.ts MAX_COUNT). */
+const MAX_COUNT = 1_000_000;
+
+/**
+ * − 6 + : whole numbers only, never below zero. Issue #132: the number can be
+ * typed straight in. What was typed stays as typed; when it is not a valid
+ * count the box says so and `onValidity(false)` lets the wizard hold Next.
+ */
+function Stepper({
+  label,
+  detail,
+  value,
+  onChange,
+  onValidity,
+}: {
+  label: string;
+  detail?: string;
+  value: number;
+  onChange: (value: number) => void;
+  onValidity?: (valid: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const [text, setText] = useState(String(value));
+  const invalid = parseCount(text, MAX_COUNT) === null;
+  // A change from a button (or the parent) shows in the box.
+  if (!invalid && parseCount(text, MAX_COUNT) !== value) setText(String(value));
+  const typed = (raw: string) => {
+    setText(raw);
+    const parsed = parseCount(raw, MAX_COUNT);
+    if (parsed !== null) onChange(parsed);
+    onValidity?.(parsed !== null);
+  };
+  const step = (delta: number) => {
+    const next = value + delta;
+    if (next < 0 || next > MAX_COUNT) return;
+    setText(String(next));
+    onChange(next);
+    onValidity?.(true);
+  };
+  const errorId = `${label.replace(/\W+/g, "-").toLowerCase()}-error`;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5">
-      <span>
-        <strong className="block text-[12.5px] text-ink">{label}</strong>
-        {detail && <span className="text-[11px] text-ink-soft">{detail}</span>}
-      </span>
-      <span className="flex items-center rounded-input border border-line">
-        <button aria-label={`Fewer: ${label}`} className="grid size-9 place-items-center text-[16px] text-ink" onClick={() => onChange(Math.max(0, value - 1))} type="button">−</button>
-        <input
-          aria-label={label}
-          className="w-16 border-x border-line py-1.5 text-center text-[13px] font-semibold text-ink outline-none"
-          inputMode="numeric"
-          min={0}
-          onChange={(event) => onChange(Math.max(0, Math.min(1_000_000, Number(event.target.value.replace(/\D/g, "")) || 0)))}
-          value={value}
-        />
-        <button aria-label={`More: ${label}`} className="grid size-9 place-items-center text-[16px] text-ink" onClick={() => onChange(Math.min(1_000_000, value + 1))} type="button">+</button>
-      </span>
+    <div className="rounded-lg border border-line px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <span>
+          <strong className="block text-[12.5px] text-ink">{label}</strong>
+          {detail && <span className="text-[11px] text-ink-soft">{detail}</span>}
+        </span>
+        <span className={`flex items-center rounded-input border ${invalid ? "border-danger-text" : "border-line"}`}>
+          <button aria-label={`Fewer: ${label}`} className="grid size-9 place-items-center text-[16px] text-ink disabled:text-muted" disabled={invalid || value <= 0} onClick={() => step(-1)} type="button">−</button>
+          <input
+            aria-describedby={invalid ? errorId : undefined}
+            aria-invalid={invalid}
+            aria-label={label}
+            className="w-20 border-x border-line py-1.5 text-center text-[13px] font-semibold text-ink outline-none"
+            inputMode="numeric"
+            onChange={(event) => typed(event.target.value)}
+            onFocus={(event) => event.target.select()}
+            value={text}
+          />
+          <button aria-label={`More: ${label}`} className="grid size-9 place-items-center text-[16px] text-ink disabled:text-muted" disabled={invalid || value >= MAX_COUNT} onClick={() => step(1)} type="button">+</button>
+        </span>
+      </div>
+      {invalid && (
+        <p className="mt-1 text-right text-[11px] font-semibold text-danger-text" id={errorId} role="alert">
+          {t("count.invalid", { max: MAX_COUNT.toLocaleString("en-GB") })}
+        </p>
+      )}
     </div>
   );
 }
@@ -311,6 +360,11 @@ export function AssessmentWizard({
   const [clientMutationId] = useState(() => crypto.randomUUID());
   const fileInput = useRef<HTMLInputElement>(null);
   const set = <K extends keyof Answers>(key: K, value: Answers[K]) => setAnswers((current) => ({ ...current, [key]: value }));
+  // Issue #132: counts whose box does not hold a valid number right now.
+  const [invalidCounts, setInvalidCounts] = useState<string[]>([]);
+  const markCount = (key: string, ok: boolean) =>
+    setInvalidCounts((current) => (ok ? current.filter((k) => k !== key) : current.includes(key) ? current : [...current, key]));
+  const { t } = useI18n();
   const society = societies.find((s) => s.id === societyId);
 
   const questions = useMemo(
@@ -329,20 +383,20 @@ export function AssessmentWizard({
           </div>
         ),
       },
-      { title: "How Many Families Are Affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families affected" onChange={(v) => set("families", v)} value={answers.families} /> },
-      { title: "How Many People Are Affected?", help: "Everyone in the affected families.", body: <Stepper label="People affected" onChange={(v) => set("people", v)} value={answers.people} /> },
-      { title: "How Many People Are Injured?", help: "Numbers only. Never names.", body: <Stepper label="Injured" onChange={(v) => set("injured", v)} value={answers.injured} /> },
+      { title: "How Many Families Are Affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families affected" onChange={(v) => set("families", v)} onValidity={(ok) => markCount("families", ok)} value={answers.families} /> },
+      { title: "How Many People Are Affected?", help: "Everyone in the affected families.", body: <Stepper label="People affected" onChange={(v) => set("people", v)} onValidity={(ok) => markCount("people", ok)} value={answers.people} /> },
+      { title: "How Many People Are Injured?", help: "Numbers only. Never names.", body: <Stepper label="Injured" onChange={(v) => set("injured", v)} onValidity={(ok) => markCount("injured", ok)} value={answers.injured} /> },
       {
         title: "How Many Houses Were Damaged?",
         help: "Count houses in the society's village only. Give your best estimate.",
         body: (
           <div className="grid gap-2">
-            <Stepper detail="Cannot be lived in" label="Fully damaged" onChange={(v) => set("housesFully", v)} value={answers.housesFully} />
-            <Stepper detail="Can be lived in after repair" label="Partly damaged" onChange={(v) => set("housesPartly", v)} value={answers.housesPartly} />
+            <Stepper detail="Cannot be lived in" label="Fully damaged" onChange={(v) => set("housesFully", v)} onValidity={(ok) => markCount("housesFully", ok)} value={answers.housesFully} />
+            <Stepper detail="Can be lived in after repair" label="Partly damaged" onChange={(v) => set("housesPartly", v)} onValidity={(ok) => markCount("housesPartly", ok)} value={answers.housesPartly} />
           </div>
         ),
       },
-      { title: "How Many People Are in Safety Centres?", help: "People who had to leave their homes.", body: <Stepper label="In safety centres" onChange={(v) => set("displaced", v)} value={answers.displaced} /> },
+      { title: "How Many People Are in Safety Centres?", help: "People who had to leave their homes.", body: <Stepper label="In safety centres" onChange={(v) => set("displaced", v)} onValidity={(ok) => markCount("displaced", ok)} value={answers.displaced} /> },
       {
         title: "Can Vehicles Reach the Village?",
         help: "Road access now.",
@@ -522,12 +576,36 @@ export function AssessmentWizard({
         {step === 0 ? (
           <Link className={secondaryButtonClass} href={closeHref}>Cancel</Link>
         ) : (
-          <button className={secondaryButtonClass} disabled={!!status} onClick={() => setStep(step - 1)} type="button">Back</button>
+          <button
+            className={secondaryButtonClass}
+            disabled={!!status}
+            onClick={() => {
+              // Going back keeps the last valid numbers.
+              setInvalidCounts([]);
+              setError(undefined);
+              setStep(step - 1);
+            }}
+            type="button"
+          >
+            Back
+          </button>
         )}
         {reviewing ? (
           <button className={primaryButtonClass} disabled={!!status} onClick={sendNow} type="button">Send assessment</button>
         ) : (
-          <button className={primaryButtonClass} disabled={!societyId} onClick={() => setStep(step + 1)} type="button">
+          <button
+            className={primaryButtonClass}
+            disabled={!societyId}
+            onClick={() => {
+              if (invalidCounts.length) {
+                setError(t("count.fixBeforeNext"));
+                return;
+              }
+              setError(undefined);
+              setStep(step + 1);
+            }}
+            type="button"
+          >
             {step === questions.length - 1 ? "Check answers" : "Next question"}
           </button>
         )}

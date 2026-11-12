@@ -8,471 +8,358 @@
 
 <p align="center">A digital platform for managing village societies and their records, developed for Sarvodaya by the STAMPx university project team.</p>
 
-## Table of Contents
+## Contents
 
-1. [Overview](#1-overview)
-2. [System architecture](#2-system-architecture)
-3. [Core modules, personas and user roles](#3-core-modules-personas-and-user-roles)
-4. [Repository map](#4-repository-map)
-5. [Technology stack](#5-technology-stack)
-6. [Database design](#6-database-design)
-7. [API and notification flows](#7-api-and-notification-flows)
-8. [Requirements and local setup](#8-requirements-and-local-setup)
-9. [Testing strategy](#9-testing-strategy)
-10. [Demo access and data](#10-demo-access-and-data)
-11. [Deployment status](#11-deployment-status)
-12. [Security and privacy](#12-security-and-privacy)
-13. [Role-based permissions](#13-role-based-permissions)
-14. [Team and contributing](#14-team-and-contributing)
+1. [Overview and status](#1-overview-and-status)
+2. [Architecture](#2-architecture)
+3. [Roles and modules](#3-roles-and-modules)
+4. [Repository and technology](#4-repository-and-technology)
+5. [Database and ERD](#5-database-and-erd)
+6. [Authentication, API and files](#6-authentication-api-and-files)
+7. [Local development](#7-local-development)
+8. [Checks and CI](#8-checks-and-ci)
+9. [Deployment and mobile releases](#9-deployment-and-mobile-releases)
+10. [Security and contributing](#10-security-and-contributing)
 
----
+## 1. Overview and status
 
-The repository contains three applications:
+Sarvodaya Connect gives authorised Sarvodaya staff a shared place to maintain village society records, report activities and emergencies, submit documents and follow up across society, district and national levels.
 
-- **Mobile app** — Flutter app for society officers and regional staff.
-- **Dashboard** — Next.js web app for national, district and platform administration.
-- **API** — NestJS service backed by PostgreSQL for society registry, membership, documents and notifications.
+**Status updated: 11 November 2026.** The project is in TEST with fictional data. The owner has deployed the application to AWS Singapore and published the first Android internal-testing release. This is not a production-readiness claim. The deployment status below records owner-confirmed operation; this documentation update does not inspect the live AWS account.
 
-## 1. Overview
-
-### The need
-
-Sarvodaya Connect is intended to give village societies and authorised Sarvodaya staff a shared digital place to maintain society records, submit documents and follow review work across society, district and national levels. The expected value is less uncertainty about records and submissions, clearer follow-up, and more consistent information for planning. These outcomes need to be validated with Sarvodaya users; no unsupported impact statistics are claimed here.
-
-### Current status
-
-The project is under active development. The API has a local PostgreSQL setup, Prisma schema and fictional seed data. Most mobile and dashboard views still use demonstration data; emergency-response workflows are connected to the API and PostgreSQL on mobile (M22–M25) and dashboard (D14a/D14/D14c/D14d). Demo sign-in and role switching are for development only. Production identity, cloud deployment and production data are not configured in this repository.
-
-Documents use local storage during development by default. The API also contains an Amazon S3 storage adapter for a future configured environment. Do not use real Sarvodaya data or credentials in the local demo.
-
-## 2. System architecture
-
-### Current development setup
-
-The local development stack has a Flutter mobile client, a Next.js dashboard, a NestJS REST API and PostgreSQL. The clients are still being connected feature by feature; most views continue to use fictional demonstration data.
-
-```mermaid
-flowchart LR
-    subgraph Clients[User channels]
-        Mobile[Flutter mobile app]
-        Dashboard[Next.js 15 administration dashboard]
-    end
-
-    subgraph Local[Local development services]
-        API[NestJS REST API]
-        DB[(PostgreSQL via Prisma)]
-        Files[Local document storage]
-    end
-
-    Mobile -. "API-backed workflows as connected" .-> API
-    Dashboard -. "API-backed workflows as connected" .-> API
-    API --> DB
-    API --> Files
-```
-
-### Proposed cloud architecture — AWS Singapore
-
-This is the approved testing-phase direction in the [hosting proposal](Sarvodaya-Connect-Hosting-Proposal.pdf). It is not deployed. The estimate is about USD 35 per month, with a recommended USD 60 monthly budget and alerts. It is sized for approximately 300 monthly users; actual charges depend on usage. This is a testing setup, not a claim that production is ready.
-
-```mermaid
-flowchart TB
-    subgraph Users[1. Users and client applications]
-        Society[Society members] --> Mobile[Flutter mobile app<br/>iOS and Android]
-        Staff[Sarvodaya staff] --> Browser[Web browser<br/>Next.js administration dashboard]
-    end
-
-    subgraph Entry[2. Website hosting and sign-in]
-        Cloudflare[Cloudflare Pages<br/>Public landing page]
-        Amplify[AWS Amplify Hosting<br/>HQ dashboard, Next.js 15]
-        Cognito[Amazon Cognito<br/>Staff sign-in and identity]
-    end
-    Public[Public visitors] --> Cloudflare
-    Mobile -->|Sign-in| Cognito
-    Browser -->|Sign-in| Cognito
-    Mobile -->|HTTPS| APIEntry
-    Browser -->|Dashboard HTTPS| Amplify
-
-    subgraph AWS[3. Sarvodaya AWS account — Singapore, ap-southeast-1]
-        APIEntry[Amazon API Gateway<br/>Protected API entry point]
-        API[AWS Lambda<br/>NestJS application services<br/>run when requested]
-        Queue[Amazon SQS<br/>Background work and retries]
-        DB[(Amazon RDS for PostgreSQL<br/>Private database, automated backups)]
-        S3[(Amazon S3<br/>Private society documents)]
-
-        subgraph Network[Private network and outbound access]
-            VPC[AWS VPC and IAM<br/>Private database networking and permissions]
-            NAT[EC2 NAT instance<br/>Required outbound connections]
-        end
-
-        subgraph Ops[4. Security, monitoring and spending controls]
-            Parameters[AWS Systems Manager Parameter Store<br/>Application configuration and secrets]
-            CloudWatch[Amazon CloudWatch<br/>Logs, metrics and alarms]
-            CloudTrail[AWS CloudTrail<br/>AWS account activity]
-            Budgets[AWS Budgets<br/>USD 40 and USD 60 alerts]
-        end
-
-        APIEntry --> API
-        API --> DB
-        API --> S3
-        API --> Queue
-        Queue --> API
-        API --> Parameters
-        API --> CloudWatch
-        API -. runs within .-> VPC
-        DB -. kept private in .-> VPC
-        VPC --> NAT
-        CloudTrail --> CloudWatch
-    end
-
-    Browser -->|HTTPS API requests| APIEntry
-    Cognito -. provides identity tokens to .-> APIEntry
-    API -->|Short-lived authorised upload/download links| Mobile
-    API -->|Short-lived authorised upload/download links| Browser
-    Mobile -->|Upload/download with signed link| S3
-    Browser -->|Upload/download with signed link| S3
-    MapTiler[MapTiler<br/>External map tiles]
-    FCM[Firebase Cloud Messaging<br/>Mobile push notifications]
-    Mobile -. map tiles .-> MapTiler
-    API -. sends push notifications .-> FCM
-
-```
-
-The testing environment uses fictional data. API requests enter through API Gateway and are processed by Lambda; records are stored in a private RDS PostgreSQL database, while files are kept in a private S3 bucket. Cognito handles staff identity, and role and society permissions are enforced by the API. The VPC and NAT instance provide private database networking and required outbound access. Parameter Store holds application configuration and secrets; CloudWatch, CloudTrail and AWS Budgets support monitoring and cost alerts. MapTiler and Firebase Cloud Messaging are external services. Before real staff data or production use, the team must complete security, privacy, backup and recovery reviews.
-
-## 3. Core modules, personas and user roles
-
-| Role | Access |
+| Area | Current position |
 | --- | --- |
-| Society Officer | View and edit one HQ-assigned society. |
-| SPC | View and edit assigned societies. |
-| DDM | View and edit assigned societies; optional temporary read-only view of the rest of the district. |
-| DM | View the whole district and grant/revoke temporary DDM district view. |
-| HQ | View/edit nationally, manage accounts and assignments. |
+| Public website | [sarvodayaconnect.com](https://sarvodayaconnect.com), hosted on Cloudflare Pages |
+| Staff dashboard | [dashboard.sarvodayaconnect.com](https://dashboard.sarvodayaconnect.com), hosted on AWS Amplify; HQ, DM, DDM and SPC access |
+| Mobile | Flutter for Android and iOS; all five business roles. Android 0.1.0 (build 1) is available to selected Google Play internal testers; iPhone simulator builds have run. TestFlight distribution is not confirmed. |
+| API and records | NestJS on Lambda behind API Gateway; private Amazon RDS PostgreSQL; local PostgreSQL also supported |
+| Identity and files | Cognito sign-in with server-side role/scope checks; private S3 documents through temporary signed links |
+| Languages | Shared English/Sinhala/Tamil localization, delivered in phases under [#108](https://github.com/sarvodaya-connect/sarvodaya-connect/issues/108). Sinhala/Tamil remain review drafts; converted screens and build flags are documented in [Localization](docs/localization.md). |
+| SarvoAI | Existing HQ-only API integration with approved read-only tools and a spending ledger. Bedrock invocation was denied at the last owner test despite reported model availability; AWS investigation remains unresolved in the recorded status. |
+| Proposed AI work | LangGraph, AgentCore Runtime and document RAG are a design, not deployed features. |
+| Offline use | Do not assume general offline support. Restoration is tracked in [#125](https://github.com/sarvodaya-connect/sarvodaya-connect/issues/125), [#126](https://github.com/sarvodaya-connect/sarvodaya-connect/issues/126) and [#127](https://github.com/sarvodaya-connect/sarvodaya-connect/issues/127). Verify each workflow against merged code. |
 
-All five roles use the phone app; the desktop dashboard is HQ-only. The current local identity/account/access implementation and AWS handoff are described in the [V4 foundation guide](docs/platform-v4-foundation.md). Feature modules owned by the other sprint tasks continue to be integrated separately.
+`main` contains merged source. An open PR, a passing build or a diagram does not establish that its changes are deployed. Database migrations, Lambda updates, Amplify builds and mobile releases have separate lifecycles.
 
----
+## 2. Architecture
 
-## 4. Repository map
+### Current TEST environment — AWS Singapore
+
+[![Current TEST architecture: clients, Cognito, Amplify, API Gateway, private Lambda and RDS, S3 and outbound NAT](docs/assets/architecture/current-test.png)](docs/assets/architecture/current-test.png)
+
+*Select the diagram to view it at full size. Current TEST deployment as reported by the project owner; Bedrock's blocked-access note refers to the last test, not a live availability check.*
+
+- Flutter and the dashboard use Cognito for sign-in. API Gateway routes HTTPS requests to NestJS on Lambda; the API validates tokens and loads current permissions from PostgreSQL.
+- Lambda uses private-subnet connectivity to RDS. The **EC2 NAT instance** supplies outbound access for public endpoints; it is not a NAT Gateway. Lambda-to-RDS traffic stays inside the VPC.
+- S3 is private. The API authorises file access and provides temporary upload/download links; file bytes need not pass through Lambda.
+- Cloudflare hosts the public website and its dashboard link. It is not shown as a required proxy in the application API path.
+- Mapbox provides maps where a public token is configured; fallback/drawn maps are used where supported without one.
+- IAM, Parameter Store, CloudWatch, CloudFormation and AWS Budgets support access, configuration and operations. Budget alerts notify; they do not impose a spending cap.
+
+The recorded TEST SarvoAI application limit is USD 3/month; the manually configured AWS budget is USD 70 with USD 50/70 alerts. These differ from local configuration defaults and historical estimates. Running RDS, the NAT instance, public IPv4, storage and other usage can incur charges while nobody is using the app. Check Billing for actual costs.
+
+### SarvoAI — proposed core architecture
+
+[![Proposed SarvoAI architecture with LangGraph in AgentCore Runtime, Bedrock Claude, live API tools and document RAG](docs/assets/architecture/sarvoai-proposed.png)](docs/assets/architecture/sarvoai-proposed.png)
+
+*Design roadmap only: dashed components are proposed. This figure does not claim AgentCore, LangGraph, OCR, an embedding pipeline or OpenSearch are deployed.*
+
+| Component | Intended responsibility |
+| --- | --- |
+| Existing NestJS API | Check current HQ permissions, enforce spending limits, validate the response and return it to the user |
+| LangGraph inside AgentCore Runtime | Coordinate tool selection, evidence retrieval and answer generation |
+| Approved read-only API tools | Fetch current society records and calculate structured figures using trusted code |
+| Private S3 and document preparation | Keep approved originals; extract text/OCR when required; split into passages with document/version/page metadata |
+| Document RAG | Retrieve permission-filtered passages and source references before answering document questions |
+| Bedrock | Provide the selected Claude model and a compatible embedding model; actual use depends on account access and approved pricing |
+| OpenSearch Serverless | Proposed passage/embedding index, subject to cost and deployment review |
+
+The retrieval tool receives a query embedding from Bedrock and uses it to query the index. Each model or embedding call requires its own spending reservation and usage reconciliation. Evidence must be permission-filtered before it reaches the model; source references do not guarantee the answer is correct. The API remains the authority for access and data validation. See [figure notes](docs/assets/architecture/README.md) and [the existing SarvoAI integration guide](docs/sarvoai-aws-setup.md).
+
+For local development, Docker PostgreSQL and local file storage replace RDS/S3; the same API and client code can use a local authentication adapter. Local setup does not require provisioning this AWS architecture.
+
+## 3. Roles and modules
+
+| Role | Data scope and responsibilities | Channels |
+| --- | --- | --- |
+| Society Officer (SO) | View/edit one assigned society, its records and permitted submissions | Mobile |
+| Society Programme Coordinator (SPC) | View/edit assigned societies; review activity submissions | Mobile and dashboard |
+| Deputy District Manager (DDM) | View/edit assigned societies; temporary district-wide access is read-only and must be currently valid | Mobile and dashboard |
+| District Manager (DM) | View the district, review permitted records and manage temporary DDM district access | Mobile and dashboard |
+| HQ | National views, account/assignment management, grades and HQ-only functions | Mobile and dashboard |
+
+Modules include society registry and Exco records, aggregate membership, annual summaries and Registrar documents, work plans and activities with SDGs, grade requests, disaster incidents and assessments, response coordination, information requests, notifications and audit history. Feature and document permissions are enforced separately: access to a society or summary does not grant access to every attached document. Signed members lists remain restricted to DM/HQ.
+
+The dashboard is **not HQ-only**. Some national pages and SarvoAI are HQ-only; regional roles receive scoped pages. Additional Membership/Audits views and other enhancements remain separate PR work until merged; do not infer their availability from the role table. See [V5 coverage](docs/v5-coverage.md), [implementation notes](docs/v5-implementation-plan.md) and the API policies for the exact supported journeys. Older V3/V4 guides are historical context and can describe superseded screens.
+
+## 4. Repository and technology
 
 ```text
 apps/
-  api/          NestJS API and Prisma database schema
-  dashboard/    Next.js administration dashboard
-  mobile/       Flutter iOS and Android app
+  api/             NestJS API, Prisma schema/migrations and Lambda packaging
+  dashboard/       Next.js staff dashboard
+  landing/         Next.js public website
+  mobile/          Flutter Android/iOS app
 packages/
-  api-contracts/ Shared TypeScript API contracts
+  api-contracts/   Shared TypeScript contracts
 infrastructure/
-  docker/       Local PostgreSQL using Docker Compose
-docs/           Project design and technical documentation
+  aws/             API SAM template and Bedrock policy
+    test/          TEST foundation, bootstrap and recovery/runbook material
+  docker/          Local PostgreSQL and smoke-test services
+.github/workflows/ PR/main checks and AWS readiness artifacts
+docs/              Design, configuration and operational documentation
 ```
 
-Each application has a detailed guide: [API](apps/api/README.md), [dashboard](apps/dashboard/README.md), [mobile](apps/mobile/README.md), and [local PostgreSQL](infrastructure/docker/README.md).
-
-## 5. Technology stack
-
-| Technology | Purpose |
+| Technology | Use |
 | --- | --- |
-| Flutter and Dart | iOS and Android mobile app |
-| Next.js 15, React and TypeScript | HQ administration dashboard (planned for AWS Amplify Hosting) |
-| NestJS and TypeScript | REST API and application services |
-| PostgreSQL and Prisma ORM | Relational database and schema/migrations |
-| Docker Compose | Local PostgreSQL development environment |
-| GitHub Actions | Pull-request checks for mobile, API, dashboard and shared contracts |
+| Flutter / Dart | Android and iOS; CI currently pins Flutter 3.47.6 |
+| Next.js / React / TypeScript | Dashboard (Next.js 15) and public landing site (Next.js 16); exact versions in their package manifests |
+| NestJS / Node.js 24 | REST API and Lambda entry point |
+| PostgreSQL / Prisma | Records, permissions, metadata, migrations and AI spending records; TEST uses PostgreSQL 17 |
+| AWS | Cognito, API Gateway, Lambda, RDS, S3 and the operational/network services shown above |
+| Cloudflare / Mapbox | Public website/DNS and map presentation |
+| GitHub Actions | Automated checks and build/readiness artifacts; no Google Play release workflow is committed as of this update |
 
-## 6. Database design
+Application guides: [API](apps/api/README.md), [dashboard](apps/dashboard/README.md), [mobile](apps/mobile/README.md), [landing site](apps/landing/README.md). Use current source/configuration when an older guide differs from a later merged implementation.
 
-The API uses PostgreSQL with Prisma. This ERD documents the models currently defined in [`apps/api/prisma/schema.prisma`](apps/api/prisma/schema.prisma); it is a view of the implemented schema, not a separate or proposed database. Society statuses, document types and some access rules remain provisional and must be confirmed with Sarvodaya.
+## 5. Database and ERD
+
+The source of truth is [`apps/api/prisma/schema.prisma`](apps/api/prisma/schema.prisma), with reviewed migrations under [`prisma/migrations`](apps/api/prisma/migrations). It currently defines **27 models**. The overview below shows declared relations and identifying columns; the [detailed schema reference](docs/database-design.md) includes all scalar fields, composite constraints and indexes, grouped by domain.
+
+This is the **repository schema**, not proof that every migration is applied to the running RDS database. UUID arrays and identifier snapshots are not drawn as foreign keys unless Prisma declares a relation.
 
 ```mermaid
 erDiagram
-    DISTRICT {
+    DISTRICTS {
         uuid id PK
-        varchar code UK
-        varchar name_en UK
-        timestamptz created_at
-        timestamptz updated_at
     }
-
-    SOCIETY {
-        uuid id PK
-        varchar society_code UK
-        varchar name_en
-        varchar name_local
-        uuid district_id FK
-        varchar ds_division
-        varchar gn_division
-        varchar village
-        varchar address_line
-        float latitude
-        float longitude
-        date established_on
-        enum status
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    SOCIETY_CONTACT {
-        uuid id PK
-        uuid society_id FK
-        varchar label
-        varchar full_name
-        varchar position
-        varchar phone
-        varchar email
-        boolean is_primary
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    SOCIETY_COUNCIL_MEMBER {
-        uuid id PK
-        uuid society_id FK
-        int seat_number
-        varchar full_name
-        varchar position
-        enum seat_type
-        varchar phone
-        varchar email
-        int age
-        date appointed_on
-        date ended_on
-        boolean is_active
-        boolean is_primary_contact
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    SOCIETY_MEMBERSHIP_COUNT {
-        uuid id PK
-        uuid society_id FK
-        int year
-        enum category
-        int female
-        int male
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    EMERGENCY_INCIDENT {
+    SOCIETIES {
         uuid id PK
         uuid district_id FK
-        enum type
-        enum severity
-        enum status
-        varchar title
-        varchar location
-        timestamptz activated_at
-        varchar created_by_id
     }
-
-    EMERGENCY_ASSESSMENT {
+    SOCIETY_CONTACTS {
+        uuid id PK
+        uuid society_id FK
+    }
+    SOCIETY_COUNCIL_MEMBERS {
+        uuid id PK
+        uuid society_id FK
+    }
+    SOCIETY_MEMBERSHIP_COUNTS {
+        uuid id PK
+        uuid society_id FK
+    }
+    SOCIETY_DOCUMENTS {
+        uuid id PK
+        uuid society_id FK
+    }
+    ANNUAL_FINANCIAL_SUMMARIES {
+        uuid id PK
+        uuid society_id FK
+    }
+    GRADE_CHANGE_REQUESTS {
+        uuid id PK
+        uuid society_id FK
+    }
+    WORK_PLAN_ACTIVITIES {
+        uuid id PK
+        uuid society_id FK
+    }
+    WORK_PLAN_ACTIVITY_SDGS {
+        uuid activity_id FK
+    }
+    NOTIFICATIONS {
+        uuid id PK
+        uuid society_id FK "nullable"
+        uuid document_id FK "nullable"
+    }
+    EMERGENCY_INCIDENTS {
+        uuid id PK
+        uuid district_id FK
+        uuid reporting_society_id FK "nullable"
+    }
+    EMERGENCY_ASSESSMENTS {
         uuid id PK
         uuid incident_id FK
         uuid society_id FK
-        uuid client_mutation_id
-        int revision
-        enum status
-        int people_affected
-        int households_affected
-        int displaced_people
-        varchar urgent_needs
-        varchar created_by_id
     }
-
-    EMERGENCY_RESPONSE_ACTION {
+    EMERGENCY_RESPONSE_ACTIONS {
+        uuid id PK
+        uuid incident_id FK
+        uuid society_id FK "nullable"
+    }
+    EMERGENCY_ACTION_HELPERS {
+        uuid id PK
+        uuid action_id FK
+        uuid helper_society_id FK
+    }
+    EMERGENCY_EVIDENCE {
         uuid id PK
         uuid incident_id FK
         uuid society_id FK
-        uuid client_mutation_id
-        varchar title
-        enum status
-        timestamptz due_at
-        varchar created_by_id
+        uuid assessment_id FK "nullable"
+        uuid helper_id FK "nullable"
     }
-
-    EMERGENCY_SITUATION_REPORT {
+    EMERGENCY_SITUATION_REPORTS {
         uuid id PK
         uuid incident_id FK
-        uuid society_id FK
-        uuid client_mutation_id
-        int revision
-        enum status
-        varchar summary
-        varchar needs
-        varchar created_by_id
+        uuid society_id FK "nullable"
     }
-
-    SOCIETY_DOCUMENT {
+    PLATFORM_ACCOUNTS {
         uuid id PK
-        uuid society_id FK
-        enum document_type
-        varchar title
-        varchar file_name
-        varchar content_type
-        int size_bytes
-        varchar storage_key UK
-        enum status
-        enum access_level
-        int version
-        varchar uploaded_by_id
-        varchar uploaded_by_name
-        timestamptz uploaded_at
-        timestamptz created_at
-        timestamptz updated_at
+        uuid district_id FK "nullable"
     }
-
-    NOTIFICATION {
+    ACCOUNT_INVITATIONS {
         uuid id PK
-        varchar recipient_user_id
-        enum category
-        varchar title
-        varchar body
-        varchar link_path
-        uuid society_id FK
-        uuid document_id FK
-        timestamptz read_at
-        timestamptz created_at
+        uuid account_id FK
     }
-
-    DISTRICT ||--o{ SOCIETY : contains
-    DISTRICT ||--o{ EMERGENCY_INCIDENT : covers
-    EMERGENCY_INCIDENT ||--o{ EMERGENCY_ASSESSMENT : collects
-    SOCIETY ||--o{ EMERGENCY_ASSESSMENT : submits
-    EMERGENCY_INCIDENT ||--o{ EMERGENCY_RESPONSE_ACTION : coordinates
-    SOCIETY o|--o{ EMERGENCY_RESPONSE_ACTION : scopes
-    EMERGENCY_INCIDENT ||--o{ EMERGENCY_SITUATION_REPORT : receives
-    SOCIETY o|--o{ EMERGENCY_SITUATION_REPORT : submits
-    SOCIETY ||--o{ SOCIETY_CONTACT : has
-    SOCIETY ||--o{ SOCIETY_COUNCIL_MEMBER : has
-    SOCIETY ||--o{ SOCIETY_MEMBERSHIP_COUNT : records
-    SOCIETY ||--o{ SOCIETY_DOCUMENT : stores_metadata_for
-    SOCIETY o|--o{ NOTIFICATION : relates_to
-    SOCIETY_DOCUMENT o|--o{ NOTIFICATION : relates_to
+    ACCOUNT_SESSIONS {
+        uuid id PK
+        uuid account_id FK
+    }
+    DISTRICT_ACCESS_GRANTS {
+        uuid id PK
+    }
+    PLATFORM_AUDIT_EVENTS {
+        uuid id PK
+    }
+    INFORMATION_REQUESTS {
+        uuid id PK
+        uuid district_id FK "nullable"
+    }
+    INFORMATION_REQUEST_SOCIETIES {
+        uuid request_id FK
+        uuid society_id FK
+    }
+    ASSISTANT_MONTHLY_SPEND {
+        varchar month PK
+    }
+    ASSISTANT_SPEND_RESERVATIONS {
+        uuid id PK
+        varchar month FK
+    }
+    ASSISTANT_SPEND_HOLDS {
+        uuid reservation_id PK,FK
+    }
+    DISTRICTS ||--o{ SOCIETIES : district
+    SOCIETIES ||--o{ SOCIETY_CONTACTS : society
+    SOCIETIES ||--o{ SOCIETY_COUNCIL_MEMBERS : society
+    SOCIETIES ||--o{ SOCIETY_MEMBERSHIP_COUNTS : society
+    SOCIETIES ||--o{ SOCIETY_DOCUMENTS : society
+    SOCIETIES ||--o{ ANNUAL_FINANCIAL_SUMMARIES : society
+    SOCIETIES ||--o{ GRADE_CHANGE_REQUESTS : society
+    SOCIETIES ||--o{ WORK_PLAN_ACTIVITIES : society
+    WORK_PLAN_ACTIVITIES ||--o{ WORK_PLAN_ACTIVITY_SDGS : activity
+    SOCIETIES o|--o{ NOTIFICATIONS : society
+    SOCIETY_DOCUMENTS o|--o{ NOTIFICATIONS : document
+    DISTRICTS ||--o{ EMERGENCY_INCIDENTS : district
+    SOCIETIES o|--o{ EMERGENCY_INCIDENTS : reportingSociety
+    EMERGENCY_INCIDENTS ||--o{ EMERGENCY_ASSESSMENTS : incident
+    SOCIETIES ||--o{ EMERGENCY_ASSESSMENTS : society
+    EMERGENCY_INCIDENTS ||--o{ EMERGENCY_RESPONSE_ACTIONS : incident
+    SOCIETIES o|--o{ EMERGENCY_RESPONSE_ACTIONS : society
+    EMERGENCY_RESPONSE_ACTIONS ||--o{ EMERGENCY_ACTION_HELPERS : action
+    SOCIETIES ||--o{ EMERGENCY_ACTION_HELPERS : helperSociety
+    EMERGENCY_INCIDENTS ||--o{ EMERGENCY_EVIDENCE : incident
+    SOCIETIES ||--o{ EMERGENCY_EVIDENCE : society
+    EMERGENCY_ASSESSMENTS o|--o{ EMERGENCY_EVIDENCE : assessment
+    EMERGENCY_ACTION_HELPERS o|--o{ EMERGENCY_EVIDENCE : helper
+    EMERGENCY_INCIDENTS ||--o{ EMERGENCY_SITUATION_REPORTS : incident
+    SOCIETIES o|--o{ EMERGENCY_SITUATION_REPORTS : society
+    DISTRICTS o|--o{ PLATFORM_ACCOUNTS : district
+    PLATFORM_ACCOUNTS ||--o{ ACCOUNT_INVITATIONS : account
+    PLATFORM_ACCOUNTS ||--o{ ACCOUNT_SESSIONS : account
+    DISTRICTS o|--o{ INFORMATION_REQUESTS : district
+    INFORMATION_REQUESTS ||--o{ INFORMATION_REQUEST_SOCIETIES : request
+    SOCIETIES ||--o{ INFORMATION_REQUEST_SOCIETIES : society
+    ASSISTANT_MONTHLY_SPEND ||--o{ ASSISTANT_SPEND_RESERVATIONS : monthlySpend
+    ASSISTANT_SPEND_RESERVATIONS ||--o| ASSISTANT_SPEND_HOLDS : reservation
 ```
 
 ### Data-model notes
 
-- A district contains societies. Society contacts, council members, annual membership counts and document metadata belong to a society.
-- Membership is stored as annual counts by category and gender; individual membership records are not currently modeled.
-- Uploaded document files are stored outside PostgreSQL (local storage in development); the database stores metadata and a storage key.
-- User identities are provided by the authentication layer. `recipient_user_id`, `uploaded_by_id` and `uploaded_by_name` are identifiers/snapshots, not foreign keys to a local users table.
-- The schema currently does not define consent records or a general-purpose audit log. Those requirements need to be agreed before real personal data is used in production.
+- Society records have contacts, Exco members (including encrypted NIC fields), membership counts, annual financial summaries, grade requests and work-plan activities. Activity-to-SDG records use a composite key.
+- Membership tables store counts by year/category/gender, not a register of every individual member. Exco members are individual records.
+- `platform_accounts` stores roles, assignments and the Cognito subject link. Local-development password/session tables coexist with Cognito support; deployed Cognito credentials are managed by Cognito.
+- `district_access_grants` and `platform_audit_events` exist. Some district, actor and target IDs are application-level references rather than declared database relations.
+- Emergency records include incidents, assessments, response actions, helping societies, evidence metadata and numbered situation reports.
+- Notifications and information requests have their own records; originals/files remain outside PostgreSQL. S3/local storage keys live in metadata.
+- SarvoAI has monthly spending, reservation and hold models. This is an application spending ledger, not a replacement for AWS billing.
+- Consent/retention policy decisions are not represented by a dedicated consent model and still need organisational agreement before production.
 
-### Key constraints and indexes
+## 6. Authentication, API and files
 
-| Table | Constraint / index | Purpose |
-| --- | --- | --- |
-| `districts` | Unique `code`, unique `name_en` | Prevent duplicate district identifiers and names |
-| `societies` | Unique `society_code`; indexes on `district_id`, `status` and `name_en` | Identify societies and support district/status/name queries |
-| `society_council_members` | Unique (`society_id`, `seat_number`); index on (`society_id`, `is_active`) | Prevent duplicate seats and query current council members |
-| `society_membership_counts` | Unique (`society_id`, `year`, `category`); index on (`year`, `society_id`) | One annual count per society/category and reporting by year |
-| `society_documents` | Unique `storage_key`; unique (`society_id`, `document_type`, `title`, `version`); indexes on (`society_id`, `document_type`) and `status` | Locate stored files and retrieve/filter document records |
-| `notifications` | Indexes on (`recipient_user_id`, `created_at`) and (`recipient_user_id`, `read_at`) | Load a recipient's notification feed and unread items |
-| Emergency assessment, action and situation report tables | Unique creator/client-mutation IDs and incident/status/time indexes | Support retry-safe mobile sync and scoped emergency workflows |
-
-These constraints and indexes are defined by Prisma and its migrations. Update this diagram when the schema changes; do not treat it as a substitute for migrations or the Prisma schema.
-
-## 7. API and notification flows
-
-### API request lifecycle
-
-The same versioned NestJS API is intended to serve both clients. Authenticated routes use development-only demo identities today; the production identity provider is not connected.
+The versioned API serves both clients at `/api/v1`. Deployed TEST uses `AUTH_PROVIDER=cognito`: clients send Cognito tokens, and the API verifies them and reads current account status, roles, assignments and temporary grants from the database. UI visibility is not the authorisation boundary. Local development can use `AUTH_PROVIDER=local`; see [Cognito and local identity setup](docs/cognito-setup.md).
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant Client as Flutter app or Next.js dashboard
-    participant API as NestJS API /api/v1
-    participant Guard as Access checks
-    participant Service as Feature service
-    participant Prisma
+    participant Client as Flutter or dashboard
+    participant Cognito
+    participant API as API Gateway / NestJS Lambda
     participant DB as PostgreSQL
-
-    User->>Client: View or update an authorised record
-    Client->>API: API request (HTTPS in deployed environments)
-    API->>Guard: Authenticate and check role and data scope
-    alt Unauthenticated or outside permitted scope
-        Guard-->>Client: 401 or 403 response
+    User->>Client: Sign in
+    Client->>Cognito: Authenticate
+    Cognito-->>Client: Tokens
+    Client->>API: Request with token
+    API->>API: Verify token
+    API->>DB: Load current account and scope
+    alt Refused
+        API-->>Client: 401 / 403 / scoped 404
     else Authorised
-        Guard-->>API: Authenticated principal
-        API->>Service: Validate and process request
-        Service->>Prisma: Read or write scoped data
-        Prisma->>DB: SQL query
-        DB-->>Prisma: Result
-        Prisma-->>Service: Database result
-        Service-->>API: Response data
-        API-->>Client: JSON response
+        API->>DB: Read or write scoped records
+        DB-->>API: Result
+        API-->>Client: Response
     end
 ```
 
-Representative API areas include health checks, districts, society profiles, council and membership data, documents, and notifications. See the [API guide](apps/api/README.md) for current endpoints, request examples, and provisional access rules.
+| Area | Representative routes (under `/api/v1`) |
+| --- | --- |
+| Health | `GET /health` |
+| Society records | `GET /societies`, `GET /societies/:id`, record-specific routes under `/societies/:id` |
+| Staff identity | `/identity/*`; HQ account management, assignments and scoped access |
+| National/scoped programmes | `GET /national/programmes` (HQ), `GET /programmes` (DM/DDM/SPC) |
+| Documents | `GET/POST /documents`, `GET /documents/:id/download`, `POST /documents/:id/complete` |
+| Notifications | `GET /notifications`, `POST /notifications/:id/read`, `POST /notifications/read-all` |
+| Emergency response | `GET/POST /emergencies/incidents`, `POST /emergencies/incidents/:id/assessments`, `POST /emergencies/incidents/:id/close` |
+| HQ response coordination | Incident actions, reminders and situation reports under `/emergencies/*` |
+| SarvoAI | `POST /assistant/questions` (HQ only) |
 
-Emergency response uses `GET /api/v1/emergencies/incidents`, `GET /api/v1/emergencies/incidents/:id`, `POST /api/v1/emergencies/incidents`, `POST /api/v1/emergencies/assessments/sync`, `POST /api/v1/emergencies/actions`, `POST /api/v1/emergencies/situation-reports/sync`, and incident/action status `PATCH` routes. Offline assessment retries retain a stable `clientMutationId`; revision conflicts return `409` and leave the queued assessment on the device. The mobile queue persists fictional demo assessments across app restarts. Do not enter real incident or personal information in this local demo; encrypting queued device data and connecting Cognito are production prerequisites.
+Controllers and shared contracts define exact inputs, role guards and response formats; this table is not a complete API specification. V5 disaster routes supersede the older `/assessments/sync` and `/situation-reports/sync` flow previously described here. Stable mutation IDs support retry-safe operations where implemented; that does not establish durable offline support on the phone.
 
-| Area | Representative routes | Purpose |
-| --- | --- | --- |
-| Health | `GET /api/v1/health` | Check API availability |
-| Registry | `GET /api/v1/districts`, `GET /api/v1/societies`, `GET /api/v1/societies/:id` | Read district and society records |
-| Society records | `PATCH/PUT /api/v1/societies/:id/profile`, `PUT .../:id/council`, `PUT .../:id/membership` | Update permitted society details and snapshots |
-| Documents | `GET/POST /api/v1/documents`, `GET .../:id/download` | List, submit and access authorised document records |
-| Notifications | `GET /api/v1/notifications`, `POST .../:id/read`, `POST .../read-all` | Load and update the signed-in user's notifications |
+The API stores recipient-scoped **in-app notifications** and read state. FCM/APNs push delivery and SQS background processing are not shown as deployed services. For documents/evidence, clients request an authorised signed link, upload to private storage, then confirm completion with the API before the file is treated as uploaded.
 
-### Notification flow
+## 7. Local development
 
-```mermaid
-flowchart LR
-    Workflow[Workflow update or reminder] --> API[NestJS notification API]
-    API --> Record[(PostgreSQL notification record)]
-    Record --> Read[Authorised client loads its feed]
-    Read --> User[Mobile app or dashboard]
-    User -->|Mark read| API
-    API -->|Set read_at| Record
-```
+### Requirements
 
-The API persists recipient-scoped notifications and read state. Dashboard screens also have demonstration notifications; push delivery and complete production notification preferences are not configured yet.
-
----
-
-## 8. Requirements and local setup
-
-- Node.js **24** and npm (the repository pins Node with `.nvmrc`; NVM users can run `nvm use` from the repository root)
-- Flutter stable SDK
-- Docker Desktop with Docker Compose for local PostgreSQL and API-backed development
-- Android Studio and Android SDK for Android emulator testing
-- Xcode for iOS simulator/device builds (macOS only)
-
-### Quick start
-
-#### 1. Get the project
+- Node.js **24**, npm and optionally NVM (`.nvmrc` pins Node).
+- Flutter **3.47.6** to match current CI, plus Android SDK or Xcode for the chosen target.
+- Docker with Compose for a local PostgreSQL/API setup. Docker is not needed merely to use the deployed TEST app/dashboard.
 
 ```bash
 git clone https://github.com/sarvodaya-connect/sarvodaya-connect.git
 cd sarvodaya-connect
 nvm use
-```
-
-#### 2. Start the local database and API
-
-Create the root environment file and set its `DATABASE_URL` to match the local PostgreSQL credentials below:
-
-```bash
 cp .env.example .env
 ```
 
-The development defaults are:
+### API and local PostgreSQL
 
-```text
+In the root `.env`, set `DATABASE_URL` to match your local Docker credentials. The Docker example uses:
+
+```dotenv
+NODE_ENV=development
+AUTH_PROVIDER=local
 DATABASE_URL=postgresql://sarvodaya_dev:change_me_dev_only@localhost:5432/sarvodaya_connect
 ```
 
-Start PostgreSQL, then install the API dependencies, apply migrations, seed fictional records and start the API:
+Replace placeholder signing secrets and configure a private `NIC_ENCRYPTION_KEY` if exercising NIC storage/reveal. Do not commit the resulting files. Local seed data is fictional.
 
 ```bash
 cd infrastructure/docker
 cp .env.example .env
 docker compose up -d
-docker compose ps
 
 cd ../../apps/api
 npm ci
@@ -481,123 +368,93 @@ npm run prisma:seed
 npm run start:dev
 ```
 
-The API listens on `http://localhost:3001`. Check its health endpoint from another terminal:
+`npm ci` generates the Prisma client through `postinstall`. Check `http://localhost:3001/api/v1/health`. For a fresh database requiring a real local HQ account, use `npm run identity:bootstrap` with the private `BOOTSTRAP_HQ_*` environment settings described in [the identity guide](docs/cognito-setup.md); never reuse TEST/production credentials in local seed scripts.
 
-```bash
-curl http://localhost:3001/api/v1/health
-```
+### Staff dashboard
 
-#### 3. Run the dashboard
-
-Open a separate terminal at the repository root (`sarvodaya-connect`), then run:
+From a second terminal at the repository root:
 
 ```bash
 cd apps/dashboard
 npm ci
-npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The dashboard currently uses fictional demonstration data for its screens; setting `NEXT_PUBLIC_API_BASE_URL` does not mean every view is connected to live API data.
+Create the ignored `apps/dashboard/.env.local`:
 
-#### 4. Run the mobile app
+```dotenv
+API_BASE_URL=http://localhost:3001/api/v1
+AUTH_PROVIDER=local
+PLATFORM_DEMO_MODE=false
+```
 
-Open another terminal at the repository root, then run:
+Run `npm run dev` and open `http://localhost:3000`. **`API_BASE_URL` is the server-side dashboard setting**; the root example's `NEXT_PUBLIC_API_BASE_URL` does not replace it. For the explicit fictional dashboard preview, use `PLATFORM_DEMO_MODE=true` in development; production does not enable that adapter.
+
+### Mobile
+
+From another terminal at the repository root:
 
 ```bash
 cd apps/mobile
 flutter pub get
 flutter devices
-flutter run -d DEVICE_ID
 ```
 
-Replace `DEVICE_ID` with an identifier listed by `flutter devices`. The mobile demonstration currently uses fictional data and local app state.
+Run the default debug demonstration with `flutter run -d DEVICE_ID`. For the local API/local accounts, use:
 
-## 9. Testing strategy
+```bash
+flutter run -d DEVICE_ID \
+  --dart-define=SC_DEMO_MODE=false \
+  --dart-define=AUTH_PROVIDER=local \
+  --dart-define=API_BASE_URL=http://localhost:3001/api/v1
+```
 
-The pull-request workflows run checks for the shared API contracts, NestJS API, Next.js dashboard and Flutter mobile app. API CI uses a temporary PostgreSQL service to apply migrations and run database tests; it does not use a shared or production database.
+`localhost` works for an iOS simulator on the Mac hosting the API. Android emulators generally use `10.0.2.2`; physical devices need a reachable host address or a configured development tunnel. For HTTPS TEST/Cognito builds use the values and instructions in [mobile releases](docs/mobile-release.md) and [Cognito setup](docs/cognito-setup.md). Never put AWS keys or a Cognito client secret into the app.
 
-| Area | Checks |
+Sinhala/Tamil drafts are offered in debug builds. Review-only deployed dashboard builds use `SHOW_UNREVIEWED_TRANSLATIONS=true`; review-only mobile releases use `--dart-define=SC_SHOW_UNREVIEWED_TRANSLATIONS=true`. Production/release builds otherwise offer reviewed languages only. See [localization status and review](docs/localization.md).
+
+The [landing site guide](apps/landing/README.md) covers its separate development server and dashboard-link configuration.
+
+## 8. Checks and CI
+
+Run checks from the relevant app/package directory:
+
+| Directory | Commands |
 | --- | --- |
-| Shared API contracts | Type check, unit tests, build and production dependency audit |
-| NestJS API | Lint, unit tests, HTTP end-to-end tests, Prisma validation, migration consistency, database tests, build and dependency audit |
-| Next.js dashboard | Lint, component tests, production build and dependency audit |
-| Flutter mobile app | Static analysis and Flutter tests |
+| `apps/api` | `npm ci`, `npm run lint`, `npm test`, `npm run test:e2e`, `npm run test:db`, `npm run build` |
+| `apps/dashboard` | `npm ci`, `npm run lint`, `npm test`, `npm run build` |
+| `apps/mobile` | `flutter pub get`, `flutter analyze`, `flutter test` |
+| `packages/api-contracts` | `npm ci`, `npm run check`, `npm test`, `npm run build` |
 
-Run checks from the relevant application directory:
+API database tests require a **disposable local/test PostgreSQL database** with migrations applied. Do not aim them at shared RDS or production. The `.github/workflows` files are authoritative for triggers, pinned tool versions and exact checks. They cover Node applications/contracts, Flutter, and AWS template/packaged-Lambda readiness. Path filters and PR target branches determine which checks run; a successful Cloudflare preview alone does not validate the API/mobile changes.
 
-API (`apps/api`):
+Automated checks do not establish real device behaviour, live IAM/network correctness, recovery readiness or store approval. Record actual manual checks separately. No application tests were run as part of this documentation-only refresh.
 
-```bash
-npm run lint
-npm test
-npm run test:e2e
-npm run build
-```
+## 9. Deployment and mobile releases
 
-Dashboard (`apps/dashboard`):
+| Component | Delivery |
+| --- | --- |
+| Public site | Cloudflare Pages build, with a link to the staff dashboard |
+| Staff dashboard | Amplify build from GitHub; runtime configuration must be exported during the build as documented in `amplify.yml` |
+| API | Reviewed Lambda/SAM package and AWS deployment; source merge alone is not proof of deployment |
+| Database | Reviewed Prisma migrations applied separately to the intended database, with backup/recovery planning |
+| Android | Signed app bundle (`.aab`), Google Play App Signing and internal testing; first owner-confirmed release was 0.1.0/build 1 on 10 November 2026 |
+| iOS | Simulator testing works; physical-device signing/TestFlight needs the appropriate Apple team, certificates and release setup |
+| GitHub → Play | Planned manual release workflow using scoped Google Play permissions and OIDC; no committed publishing workflow as of this update |
 
-```bash
-npm run lint
-npm test
-npm run build
-```
+The Android package is `org.sarvodayaconnect.sarvodaya_connect_mobile`; the iOS bundle ID is `org.sarvodayaconnect.sarvodayaConnectMobile`. Keep upload keys, keystore passwords, Apple credentials and local `key.properties` out of Git. Back up release signing material under Sarvodaya's ownership. Increase build numbers for subsequent store uploads.
 
-Mobile (`apps/mobile`):
+Operational references: [AWS configuration](docs/aws-configuration.md), [TEST environment plan](docs/aws-test-environment.md), [infrastructure runbook](infrastructure/aws/test/README.md), [recovery history](infrastructure/aws/test/RECOVERY.md), [Cognito setup](docs/cognito-setup.md), [mobile release guide](docs/mobile-release.md). These include dated provisioning/recovery notes; a historical failed attempt is not a current live stack status report. Check the actual account before executing infrastructure or recovery commands.
 
-```bash
-flutter analyze
-flutter test
-```
+## 10. Security and contributing
 
-Shared API contracts (`packages/api-contracts`):
+- Use fictional data in development and TEST. Production use requires Sarvodaya's review of privacy, retention/deletion, backup/recovery and operational access.
+- Cognito credentials authenticate users; current roles and scope stay in the application database. Account disablement, changed permissions and expired/revoked district grants must be enforced server-side.
+- Local-development passwords are hashed. Deployed Cognito passwords are managed by Cognito; HQ can set replacements but cannot retrieve existing passwords.
+- NICs are encrypted and masked in ordinary responses; reveal requires scoped permission and an audit event. Preserve the encryption key separately when planning restores.
+- Scope document access independently of record visibility. Keep buckets private and use short-lived authorised links.
+- Never commit credentials, personal data, `.env` files, signing keys or generated secrets. Do not include them in screenshots, logs or GitHub issues.
+- RDS storage and backups still incur charges when the DB is stopped. Stopping a database is temporary and does not shut down the rest of AWS.
 
-```bash
-npm run check
-npm test
-npm run build
-```
+Developed by **Group CS-10 / STAMPx** for Sarvodaya. Work is tracked through GitHub issues/PRs and Jira where applicable. Branch from current `main`, reference the issue, run the relevant checks, describe migrations/configuration and request review before merging. Keep large tasks in focused PRs; use `Refs #issue` for partial work rather than closing an unfinished issue.
 
-Run each set from its application/package directory. GitHub Actions runs the relevant checks for pull requests.
-
-## 10. Demo access and data
-
-The mobile app provides a fictional demo account and a role preview for all five V4 business roles. API endpoints that require a user accept the development-only `X-Demo-User` header. For example:
-
-```bash
-curl -H "X-Demo-User: demo-dm-north" http://localhost:3001/api/v1/documents
-```
-
-These demo identities are not production authentication. Cognito integration and production authorization must be completed before any real users or data are used. See the [API guide](apps/api/README.md) for available demo identities and API setup details.
-
-## 11. Deployment status
-
-The API, dashboard and mobile app are currently used for local development and demonstration. No AWS testing environment is configured by this repository. The diagram above records the testing-phase direction from the hosting proposal; AWS resources, deployment, production data and credentials are not configured here. Complete the AWS setup, security review, backups, monitoring and cost checks before testing with staff. See [infrastructure/docker](infrastructure/docker/README.md) for the local PostgreSQL environment.
-
-Staff sign-in uses Amazon Cognito in deployed environments (`AUTH_PROVIDER=cognito`) and the API's own development passwords locally (`AUTH_PROVIDER=local`, the default outside production). Pool settings, HQ account management and the local flow are in [docs/cognito-setup.md](docs/cognito-setup.md).
-
-## 12. Security and privacy
-
-- Never commit `.env` files, passwords, access tokens, AWS credentials, private keys or real client data.
-- Use only fictional data in local development and demonstrations.
-- Do not deploy the demo authentication or demo identities to production.
-- Production infrastructure and security controls require review and configuration by Sarvodaya IT before launch.
-
-Additional production decisions still needed include a confirmed privacy notice and consent approach, data retention and deletion rules, audit logging for sensitive/admin actions, and review of any external data sharing. The current project does not model consent records or a general-purpose audit log. Do not use real member or society personal information in local demos.
-
-## 13. Role-based permissions
-
-The API authenticates society list/detail reads and applies the five-role society/district scopes above. Out-of-scope detail requests return 404. SPCs and DDMs can update assigned societies; a DDM's temporary whole-district access adds read permission only. Expiry and revocation are enforced from server-side account/grant records on every authenticated request.
-
-HQ creates accounts, usernames and permanent passwords, then securely hands the credentials to the assigned staff member. HQ can set a replacement password for an account when responsibility changes; changing it signs out existing sessions. Passwords are stored only as salted hashes, so HQ can replace a password but cannot read the one already stored. A society's NICs are encrypted, masked in ordinary responses, and revealed only after a scoped permission check with an audit entry. Society record mutations, account administration and district-access changes are logged.
-
-Local identity is a development/test adapter. Cognito and production deployment are the next AWS integration step; development demo headers and local credentials fail closed in production. See the [V4 foundation guide](docs/platform-v4-foundation.md) for the full API contract, screen ownership, configuration and validation instructions.
-
----
-
-## 14. Team and contributing
-
-Sarvodaya Connect is developed by **Group CS-10** as a STAMPx university project for Sarvodaya. Work is tracked in Jira. Create a feature branch for the assigned work item, run the checks for the affected app, and open a pull request for review before merging. See [CONTRIBUTING.md](CONTRIBUTING.md) for the team workflow.
-
-## V4 platform foundation
-
-See [V4 platform foundation](docs/platform-v4-foundation.md) for the five-role access rules, HQ-created accounts and passwords, screen ownership, test setup and AWS integration handoff. The current dashboard is HQ-only; all five business roles use the mobile app.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [V5 coverage](docs/v5-coverage.md), and [localization guidance](docs/localization.md). The [V4 foundation guide](docs/platform-v4-foundation.md) remains available as historical design context.

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
@@ -94,17 +96,42 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
     final store = DemoScope.of(context);
     final user = store.user!;
     final record = _record;
-    final firstName = user.displayName.split(' ').first;
     return Scaffold(
-      body: Column(
-        children: [
-          _OfficerHeader(
-            title: l.greeting(DateTime.now(), firstName),
-            subtitle: [l.recRoleSocietyOfficer, ?record?.nameEn].join(' · '),
-          ),
-          if (record != null) _AccessStrip(record: record),
-          Expanded(child: _body(record)),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          children: [
+            // Match HQ: keep the header readable and scrollable even in
+            // landscape or at large text sizes without hiding the body.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    MotionEntrance(
+                      id: 'officer.header',
+                      child: HomeMasthead(
+                        title: l.greeting(store.now, user.displayName),
+                        subtitle: [
+                          l.recRoleSocietyOfficer,
+                          ?record?.nameEn,
+                        ].join(' · '),
+                      ),
+                    ),
+                    if (record != null)
+                      MotionEntrance(
+                        id: 'officer.access',
+                        order: 1,
+                        child: _AccessStrip(record: record),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(child: _body(record)),
+          ],
+        ),
       ),
     );
   }
@@ -150,71 +177,86 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
             ),
           // V5 M40: the live incident and what HQ has arranged for this society.
           IncidentHomeSection(societyId: widget.societyId),
-          _SocietySummaryCard(
-            record: record,
-            plan: plan,
-            syncedAt: _syncedAt,
-            onRequest: () => store.selectTab(OfficerTabs.society),
+          MotionEntrance(
+            id: 'officer.summary',
+            order: 2,
+            child: _SocietySummaryCard(
+              record: record,
+              plan: plan,
+              syncedAt: _syncedAt,
+              onRequest: () => store.selectTab(OfficerTabs.society),
+            ),
           ),
           const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 8),
             child: Text(l.officerUpdate, style: _HomeStyle.section),
           ),
-          _TileGrid(
-            tiles: [
-              _UpdateTile(
-                icon: Icons.apartment_outlined,
-                title: l.officerInfo,
-                subtitle: l.officerInfoSub,
-                onTap: () => store.selectTab(OfficerTabs.society),
-              ),
-              _UpdateTile(
-                icon: Icons.people_outline,
-                title: l.officerExco,
-                subtitle: exco == _excoSeats
-                    ? l.officerExcoComplete(exco)
-                    : exco == 0
-                    ? l.officerExcoNone
-                    : l.officerExcoOf(exco),
-                onTap: () => store.selectTab(OfficerTabs.exco),
-              ),
-              _UpdateTile(
-                icon: Icons.calendar_today_outlined,
-                title: l.officerPlan,
-                subtitle: plan == null
-                    ? l.officerPlanSub
-                    : l.officerPlanLine('${plan.year}', plan.activities.length),
-                onTap: () => store.selectTab(OfficerTabs.workPlan),
-              ),
-              _UpdateTile(
-                icon: Icons.history,
-                title: l.officerHistory,
-                subtitle: record.lastChangeAt == null
-                    ? l.recNoChanges
-                    : l.officerLastChange(
-                        l.recordWhen(record.lastChangeAt!, DateTime.now()),
-                      ),
-                onTap: () => _openRecordTab(4),
-              ),
-            ],
+          MotionEntrance(
+            id: 'officer.tiles',
+            order: 3,
+            child: _TileGrid(
+              tiles: [
+                _UpdateTile(
+                  icon: Icons.apartment_outlined,
+                  title: l.officerInfo,
+                  subtitle: l.officerInfoSub,
+                  onTap: () => store.selectTab(OfficerTabs.society),
+                ),
+                _UpdateTile(
+                  icon: Icons.people_outline,
+                  title: l.officerExco,
+                  subtitle: exco == _excoSeats
+                      ? l.officerExcoComplete(exco)
+                      : exco == 0
+                      ? l.officerExcoNone
+                      : l.officerExcoOf(exco),
+                  onTap: () => store.selectTab(OfficerTabs.exco),
+                ),
+                _UpdateTile(
+                  icon: Icons.calendar_today_outlined,
+                  title: l.officerPlan,
+                  subtitle: plan == null
+                      ? l.officerPlanSub
+                      : l.officerPlanLine(
+                          '${plan.year}',
+                          plan.activities.length,
+                        ),
+                  onTap: () => store.selectTab(OfficerTabs.workPlan),
+                ),
+                _UpdateTile(
+                  icon: Icons.history,
+                  title: l.officerHistory,
+                  subtitle: record.lastChangeAt == null
+                      ? l.recNoChanges
+                      : l.officerLastChange(
+                          l.recordWhen(record.lastChangeAt!, DateTime.now()),
+                        ),
+                  onTap: () => _openRecordTab(4),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
-          _LinkCard(
-            title: l.officerSummaryAudit(summary.financialYear.label),
-            subtitle: [
-              summary.totalProfit != null && summary.totalExpenses != null
-                  ? l.officerFiguresAdded
-                  : l.officerFiguresMissing,
-              summary.auditReport != null
-                  ? l.officerAuditUploaded
-                  : l.officerAuditMissing,
-            ].join(' · '),
-            attention:
-                summary.totalProfit == null ||
-                summary.totalExpenses == null ||
-                summary.auditReport == null,
-            onTap: () => store.selectTab(OfficerTabs.society),
+          MotionEntrance(
+            id: 'officer.audit',
+            order: 4,
+            child: _LinkCard(
+              title: l.officerSummaryAudit(summary.financialYear.label),
+              subtitle: [
+                summary.totalProfit != null && summary.totalExpenses != null
+                    ? l.officerFiguresAdded
+                    : l.officerFiguresMissing,
+                summary.auditReport != null
+                    ? l.officerAuditUploaded
+                    : l.officerAuditMissing,
+              ].join(' · '),
+              attention:
+                  summary.totalProfit == null ||
+                  summary.totalExpenses == null ||
+                  summary.auditReport == null,
+              onTap: () => store.selectTab(OfficerTabs.society),
+            ),
           ),
         ],
       ),
@@ -252,64 +294,6 @@ abstract final class _HomeStyle {
     fontSize: 11,
     color: AppColors.muted,
     height: 1.35,
-  );
-}
-
-/// M05 masthead: small logo and bell, greeting, and hills on the right.
-class _OfficerHeader extends StatelessWidget {
-  const _OfficerHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.surface,
-    child: SafeArea(
-      bottom: false,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: ExcludeSemantics(
-              child: CustomPaint(painter: HillsPainter()),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 12, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [MastheadLogo(), Spacer(), NotificationsButton()],
-                ),
-                const SizedBox(height: 10),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
   );
 }
 
@@ -621,28 +605,30 @@ class _UpdateTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       side: const BorderSide(color: AppColors.line),
     ),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.mint,
-                borderRadius: BorderRadius.circular(8),
+    child: MotionPress(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.mint,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 17, color: AppColors.leaf),
               ),
-              child: Icon(icon, size: 17, color: AppColors.leaf),
-            ),
-            const SizedBox(height: 10),
-            Text(title, style: _HomeStyle.tileTitle),
-            const SizedBox(height: 4),
-            Text(subtitle, style: _HomeStyle.tileSubtitle),
-          ],
+              const SizedBox(height: 10),
+              Text(title, style: _HomeStyle.tileTitle),
+              const SizedBox(height: 4),
+              Text(subtitle, style: _HomeStyle.tileSubtitle),
+            ],
+          ),
         ),
       ),
     ),

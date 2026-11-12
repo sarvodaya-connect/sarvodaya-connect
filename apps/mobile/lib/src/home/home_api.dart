@@ -284,11 +284,182 @@ class HomeException implements Exception {
   String toString() => message;
 }
 
+/// Issue #118: the HQ Membership figures for the user's own societies, from
+/// `GET /home/membership`. Counts only, never member records.
+class ScopedMembership {
+  const ScopedMembership({
+    required this.scope,
+    required this.year,
+    required this.activeSocieties,
+    required this.societiesReported,
+    required this.female,
+    required this.male,
+    required this.categories,
+    required this.districts,
+    required this.profileSocieties,
+    required this.profileMembers,
+    required this.profileWithoutBreakdown,
+    required this.districtViewAvailable,
+    this.districtViewEnds,
+  });
+
+  factory ScopedMembership.fromJson(Json json) {
+    final profile = (json['profile'] as Json?) ?? const {};
+    final view = json['districtView'] as Json?;
+    return ScopedMembership(
+      scope: json['scope'] as String? ?? 'MINE',
+      year: (json['year'] as num?)?.toInt(),
+      activeSocieties: _int(json['activeSocieties']),
+      societiesReported: _int(json['societiesReported']),
+      female: _int(json['female']),
+      male: _int(json['male']),
+      categories: [
+        for (final row in (json['categories'] as List? ?? []).cast<Json>())
+          (
+            category: row['category'] as String,
+            female: _int(row['female']),
+            male: _int(row['male']),
+          ),
+      ],
+      districts: [
+        for (final row in (json['districts'] as List? ?? []).cast<Json>())
+          (
+            id: row['id'] as String,
+            name: row['name'] as String,
+            active: _int(row['active']),
+            female: _int(row['female']),
+            male: _int(row['male']),
+          ),
+      ],
+      profileSocieties: _int(profile['societies']),
+      profileMembers: _int(profile['members']),
+      profileWithoutBreakdown: _int(profile['withoutBreakdown']),
+      districtViewAvailable: view?['available'] == true,
+      districtViewEnds: view?['expiresAt'] == null
+          ? null
+          : DateTime.parse(view!['expiresAt'] as String),
+    );
+  }
+
+  /// "DISTRICT_MANAGER", "MINE" or "DISTRICT" (a DDM's temporary view).
+  final String scope;
+
+  /// The latest year with category counts, or null when none are entered.
+  final int? year;
+  final int activeSocieties;
+  final int societiesReported;
+  final int female;
+  final int male;
+  final List<({String category, int female, int male})> categories;
+
+  /// Only districts that hold societies in scope.
+  final List<({String id, String name, int active, int female, int male})>
+  districts;
+
+  /// Profile member counts: no female/male split, so kept apart.
+  final int profileSocieties;
+  final int profileMembers;
+  final int profileWithoutBreakdown;
+  final bool districtViewAvailable;
+  final DateTime? districtViewEnds;
+
+  int get total => female + male;
+}
+
+/// Issue #119: HQ's Audits & AGM figures for the user's own societies and one
+/// financial year, from `GET /home/audits`.
+class ScopedAudits {
+  const ScopedAudits({
+    required this.scope,
+    required this.startYear,
+    required this.yearLabel,
+    required this.activeSocieties,
+    required this.byType,
+    required this.allFour,
+    required this.dueOn,
+    required this.pastDue,
+    required this.followUp,
+    required this.followUpTotal,
+    required this.page,
+    required this.totalPages,
+    required this.districtViewAvailable,
+  });
+
+  factory ScopedAudits.fromJson(Json json) {
+    final year = json['financialYear'] as Json;
+    final follow = json['followUp'] as Json;
+    final meta = follow['meta'] as Json;
+    final view = json['districtView'] as Json?;
+    return ScopedAudits(
+      scope: json['scope'] as String? ?? 'MINE',
+      startYear: _int(year['startYear']),
+      yearLabel: year['label'] as String,
+      activeSocieties: _int(json['activeSocieties']),
+      byType: [
+        for (final row in (json['byType'] as List).cast<Json>())
+          (
+            documentType: row['documentType'] as String,
+            submitted: _int(row['submitted']),
+            missing: _int(row['missing']),
+          ),
+      ],
+      allFour: _int(json['allFour']),
+      dueOn: DateTime.parse(json['auditReportDueOn'] as String),
+      pastDue: follow['pastDue'] == true,
+      followUp: [
+        for (final row in (follow['data'] as List).cast<Json>())
+          (
+            id: row['id'] as String,
+            name: row['name'] as String,
+            code: row['societyCode'] as String,
+            district: row['district'] as String,
+          ),
+      ],
+      followUpTotal: _int(meta['totalItems']),
+      page: _int(meta['page']),
+      totalPages: _int(meta['totalPages']),
+      districtViewAvailable: view?['available'] == true,
+    );
+  }
+
+  final String scope;
+  final int startYear;
+  final String yearLabel;
+
+  /// Active societies in scope: the denominator for every figure.
+  final int activeSocieties;
+  final List<({String documentType, int submitted, int missing})> byType;
+  final int allFour;
+  final DateTime dueOn;
+  final bool pastDue;
+
+  /// In-scope active societies without the audit report, one page.
+  final List<({String id, String name, String code, String district})> followUp;
+  final int followUpTotal;
+  final int page;
+  final int totalPages;
+  final bool districtViewAvailable;
+
+  ({String documentType, int submitted, int missing}) get audit =>
+      byType.firstWhere((row) => row.documentType == 'AUDIT_REPORT');
+}
+
 /// The SPC, DDM and DM phone homes read the same API as their desktop homes
 /// (V5 PR 6): the server works out every figure from the user's own scope.
 abstract interface class HomeApi {
   Future<RoleHome> fetchHome();
   Future<HomeSocietyList> fetchSocieties(HomeSocietyQuery query);
+
+  /// Issue #118: Membership for the user's own societies; a DDM may ask for
+  /// their temporary district view with [district].
+  Future<ScopedMembership> fetchMembership({bool district = false});
+
+  /// Issue #119: Audits & AGM for the user's own societies and [year].
+  Future<ScopedAudits> fetchAudits({
+    int? year,
+    bool district = false,
+    int page = 1,
+  });
 }
 
 class HttpHomeApi implements HomeApi {
@@ -334,6 +505,30 @@ class HttpHomeApi implements HomeApi {
       await _get('/home/societies?${Uri(queryParameters: params).query}'),
     );
   }
+
+  @override
+  Future<ScopedAudits> fetchAudits({
+    int? year,
+    bool district = false,
+    int page = 1,
+  }) async {
+    final params = {
+      'page': '$page',
+      if (year != null) 'year': '$year',
+      if (district) 'scope': 'DISTRICT',
+    };
+    return ScopedAudits.fromJson(
+      await _get('/home/audits?${Uri(queryParameters: params).query}'),
+    );
+  }
+
+  @override
+  Future<ScopedMembership> fetchMembership({bool district = false}) async =>
+      ScopedMembership.fromJson(
+        await _get(
+          district ? '/home/membership?scope=DISTRICT' : '/home/membership',
+        ),
+      );
 }
 
 /// Demonstration mode only: fictional homes shaped like the V5 prototype.
@@ -555,6 +750,149 @@ class DemoHomeApi implements HomeApi {
       district: role == UserRole.deputyDistrictManager ? 106 : null,
       dsDivisions: const ['Kuliyapitiya East', 'Narammala', 'Nikaweratiya'],
       spcs: const [('spc-1', 'S. Karunaratne'), ('spc-2', 'M. Herath')],
+    );
+  });
+
+  @override
+  Future<ScopedMembership> fetchMembership({
+    bool district = false,
+  }) => _wait(() {
+    final role = _role;
+    final now = clock();
+    final grant = user()?.delegatedDistrictAccess
+        .where((g) => g.activeAt(now))
+        .firstOrNull;
+    if (district && (role != UserRole.deputyDistrictManager || grant == null)) {
+      throw const HomeException(
+        'Your temporary district-wide view has ended',
+        status: 403,
+      );
+    }
+    final wide = role == UserRole.districtManager || district;
+    // Fictional counts. Some societies have only a profile member count,
+    // so the profile total differs from the breakdown on purpose.
+    final scale = wide ? 9 : 1;
+    final categories = [
+      (category: 'CHILDREN', female: 41 * scale, male: 38 * scale),
+      (category: 'YOUTH', female: 64 * scale, male: 52 * scale),
+      (category: 'MOTHERS', female: 88 * scale, male: 0),
+      (category: 'ORDINARY', female: 120 * scale, male: 97 * scale),
+      (category: 'ELDERS_COUNCIL', female: 9 * scale, male: 11 * scale),
+    ];
+    final active = empty()
+        ? 0
+        : switch (role) {
+            UserRole.districtManager => 106,
+            UserRole.deputyDistrictManager => district ? 106 : 18,
+            _ => 12,
+          };
+    return ScopedMembership(
+      scope: role == UserRole.districtManager
+          ? 'DISTRICT_MANAGER'
+          : district
+          ? 'DISTRICT'
+          : 'MINE',
+      year: active == 0 ? null : 2026,
+      activeSocieties: active,
+      societiesReported: active == 0 ? 0 : (active * 3) ~/ 4,
+      female: active == 0
+          ? 0
+          : categories.fold(0, (sum, row) => sum + row.female),
+      male: active == 0 ? 0 : categories.fold(0, (sum, row) => sum + row.male),
+      categories: active == 0
+          ? [
+              for (final row in categories)
+                (category: row.category, female: 0, male: 0),
+            ]
+          : categories,
+      districts: active == 0
+          ? const []
+          : [
+              (
+                id: 'district-kurunegala',
+                name: 'Kurunegala',
+                active: active,
+                female: categories.fold(0, (sum, row) => sum + row.female),
+                male: categories.fold(0, (sum, row) => sum + row.male),
+              ),
+            ],
+      profileSocieties: active,
+      profileMembers: active * 170,
+      profileWithoutBreakdown: active - (active * 3) ~/ 4,
+      districtViewAvailable:
+          role == UserRole.deputyDistrictManager && grant != null,
+      districtViewEnds: role == UserRole.deputyDistrictManager
+          ? grant?.expiresAt
+          : null,
+    );
+  });
+
+  @override
+  Future<ScopedAudits> fetchAudits({
+    int? year,
+    bool district = false,
+    int page = 1,
+  }) => _wait(() {
+    final role = _role;
+    final now = clock();
+    final grant = user()?.delegatedDistrictAccess
+        .where((g) => g.activeAt(now))
+        .firstOrNull;
+    if (district && (role != UserRole.deputyDistrictManager || grant == null)) {
+      throw const HomeException(
+        'Your temporary district-wide view has ended',
+        status: 403,
+      );
+    }
+    final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+    final startYear = year ?? latest;
+    final active = empty()
+        ? 0
+        : switch (role) {
+            UserRole.districtManager => 106,
+            UserRole.deputyDistrictManager => district ? 106 : 18,
+            _ => 12,
+          };
+    // Fictional: about three in four societies have each document.
+    int share(int percent) => (active * percent) ~/ 100;
+    final audit = share(78);
+    final missing = [
+      for (final row
+          in _societies
+              .where(
+                (row) => district || role == UserRole.districtManager || row.$8,
+              )
+              .take(active - audit))
+        (id: row.$1, name: row.$2, code: row.$3, district: 'Kurunegala'),
+    ];
+    final dueOn = DateTime(startYear + 1, 9, 30);
+    return ScopedAudits(
+      scope: role == UserRole.districtManager
+          ? 'DISTRICT_MANAGER'
+          : district
+          ? 'DISTRICT'
+          : 'MINE',
+      startYear: startYear,
+      yearLabel: 'FY $startYear/${(startYear + 1) % 100}',
+      activeSocieties: active,
+      byType: [
+        for (final (type, done) in [
+          ('AUDIT_REPORT', audit),
+          ('AGM_MINUTES', share(84)),
+          ('OFFICE_BEARER_LIST', share(91)),
+          ('MEMBERS_LIST', share(66)),
+        ])
+          (documentType: type, submitted: done, missing: active - done),
+      ],
+      allFour: share(61),
+      dueOn: dueOn,
+      pastDue: now.isAfter(dueOn.add(const Duration(days: 1))),
+      followUp: missing,
+      followUpTotal: active - audit,
+      page: page,
+      totalPages: active - audit == 0 ? 0 : ((active - audit) / 20).ceil(),
+      districtViewAvailable:
+          role == UserRole.deputyDistrictManager && grant != null,
     );
   });
 }
