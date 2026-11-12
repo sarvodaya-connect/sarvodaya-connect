@@ -114,9 +114,9 @@ export function canSeeSociety(viewer: DemoViewer, record: ScopedRecord): boolean
   }
 }
 
-/** D11 Audits & compliance: HQ and District Managers only. */
+/** D11 Audits & AGM: HQ nationally, and DMs, DDMs and SPCs for their own societies (issue #119). */
 export function canViewCompliance(viewer: DemoViewer): boolean {
-  return REVIEWER_ROLES.includes(viewer.role);
+  return viewer.role !== "SYSTEM_ADMIN";
 }
 
 /** D12 Documents library: everyone except the System Administrator. */

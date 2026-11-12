@@ -2106,6 +2106,245 @@
   "progSdg15": "Life on Land",
   "progSdg16": "Peace, Justice and Strong Institutions",
   "progSdg17": "Partnerships for the Goals",
+  "progInProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "@progInProgress": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipTileSubtitle": "Members by category in your societies · counts only",
+  "roleMembershipScopeDm": "All societies in {district} · counts only",
+  "@roleMembershipScopeDm": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipScopeMine": "{count, plural, =1{Your 1 assigned society · counts only} other{Your {count} assigned societies · counts only}}",
+  "@roleMembershipScopeMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipScopeDistrict": "All {district} societies · view only",
+  "@roleMembershipScopeDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipMine": "My societies",
+  "roleMembershipDistrict": "District · view only",
+  "roleMembershipReported": "Societies Reported",
+  "roleMembershipReportedValue": "{reported} of {active}",
+  "@roleMembershipReportedValue": {
+    "placeholders": {
+      "reported": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipLatest": "Latest counts, {year}",
+  "@roleMembershipLatest": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipNoYear": "No counts entered yet",
+  "roleMembershipNoneTitle": "No Membership Counts Yet",
+  "roleMembershipNoneMessage": "None of these societies has entered membership counts by category. Zeros here mean not reported, not zero members.",
+  "roleMembershipEmptyTitle": "No Active Societies",
+  "roleMembershipEmptyMessage": "There are no active societies in your scope yet, so there are no membership counts to show.",
+  "roleMembershipProfileTitle": "Society Profile Member Counts",
+  "roleMembershipProfileMessage": "Society profiles record {members} members across {societies} active societies. A profile count has no female/male or category split, so it is not added to the figures here.",
+  "@roleMembershipProfileMessage": {
+    "placeholders": {
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "societies": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipProfileMissing": "{count, plural, =1{1 of these societies has no category counts for {year}.} other{{count} of these societies have no category counts for {year}.}}",
+  "@roleMembershipProfileMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipProfileMissingNoYear": "{count, plural, =1{1 of these societies has not entered category counts yet.} other{{count} of these societies have not entered category counts yet.}}",
+  "@roleMembershipProfileMissingNoYear": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipByDistrict": "Members in Each District",
+  "roleMembershipDistrictLine": "{active} active societies · {members} members",
+  "@roleMembershipDistrictLine": {
+    "placeholders": {
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipLoading": "Loading membership",
+  "roleAuditsTitle": "Audits & AGM",
+  "roleAuditsSubtitle": "Audit report and the other Registrar documents",
+  "roleAuditsTileSubtitle": "Audit reports and Registrar documents in your societies",
+  "roleAuditsLoading": "Loading audits",
+  "roleAuditsScopeDm": "All societies in your district",
+  "roleAuditsScopeMine": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@roleAuditsScopeMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsScopeDistrict": "All district societies · view only",
+  "roleAuditsUploadedLine": "{uploaded} of {active} active societies have uploaded an audit report for {year}.",
+  "@roleAuditsUploadedLine": {
+    "placeholders": {
+      "uploaded": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsUploaded": "Uploaded",
+  "roleAuditsPastDue": "Past due date",
+  "roleAuditsNotYet": "Not uploaded yet",
+  "roleAuditsDue": "Due {date}",
+  "@roleAuditsDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDueNotPassed": "Due date {date} not passed",
+  "@roleAuditsDueNotPassed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocuments": "4 Registrar Documents · {year}",
+  "@roleAuditsDocuments": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocumentLine": "{submitted} of {active} · {missing} not submitted",
+  "@roleAuditsDocumentLine": {
+    "placeholders": {
+      "submitted": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "missing": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsAllFour": "{count} of {active} active societies have all four · {percent}%",
+  "@roleAuditsAllFour": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "roleAuditsMembersNote": "The signed members list opens only for DMs and HQ.",
+  "roleAuditsFollowUp": "Needs Follow-Up",
+  "roleAuditsFollowPast": "Audit report past the due date",
+  "roleAuditsFollowNotYet": "Audit report not uploaded yet",
+  "roleAuditsNothingTitle": "Nothing to Follow Up",
+  "roleAuditsNothing": "Every active society has uploaded its {year} audit report.",
+  "@roleAuditsNothing": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsShowing": "Showing {shown} of {total}",
+  "@roleAuditsShowing": {
+    "placeholders": {
+      "shown": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsMore": "Show more",
+  "roleAuditsMoreError": "More societies could not be loaded",
+  "roleAuditsMoreErrorCheck": "The societies above are still shown. Check your connection and try again.",
+  "roleAuditsEmptyTitle": "No Active Societies",
+  "roleAuditsEmptyMessage": "There are no active societies in your scope yet, so there are no Registrar documents to follow up.",
+  "roleAuditsDocAudit": "Audit Report",
+  "roleAuditsDocAgm": "AGM Minutes",
+  "roleAuditsDocOfficers": "Office-Bearer List",
+  "roleAuditsDocMembers": "Members List",
   "countFewer": "Fewer: {label}",
   "@countFewer": {
     "placeholders": {

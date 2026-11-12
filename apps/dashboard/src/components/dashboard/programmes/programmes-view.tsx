@@ -10,7 +10,7 @@ import { DataTable, Tbody, Td, Th, Thead, Tr } from "@/components/dashboard/ui/d
 import type { MessageKey } from "@/i18n/messages/en";
 import { formatDate, formatNumber, type Translator } from "@/i18n/translate";
 import type { DashboardRole } from "@/lib/access";
-import { selectableStartYears } from "@/lib/activity-format";
+import { selectableProgrammeYears } from "@/lib/activity-format";
 import { sdgIconPath } from "@/lib/sdg";
 import { SARVODAYA_SECTORS } from "@/lib/v5-constants";
 
@@ -29,6 +29,20 @@ function approvedWhen(value: string, t: Translator, now = new Date()) {
   const options = { day: "numeric", month: "short", timeZone: "Asia/Colombo" } as const;
   const day = formatDate(t.locale, date, options);
   return day === formatDate(t.locale, now, options) && date.getFullYear() === now.getFullYear() ? t("prog.today") : day;
+}
+
+/**
+ * Issue #131: an approved activity whose month has not ended yet. It is in the
+ * planned totals but not the completed ones, so the page says so rather than
+ * looking as if the figures leave it out.
+ */
+function NotCompletedYet({ month, t, year }: { month?: number; t: Translator; year: number }) {
+  const when = month ? formatDate(t.locale, new Date(Date.UTC(year, month - 1, 15)), { month: "short", year: "numeric", timeZone: "UTC" }) : String(year);
+  return (
+    <span className="mt-1 block w-fit rounded-full bg-warn-bg px-2 py-0.5 text-[10.5px] font-semibold text-warn-text" title={t("prog.notCompletedHelp")}>
+      {t("prog.notCompletedYet", { when })}
+    </span>
+  );
 }
 
 /** Who the figures cover: the line under the title for a DM, DDM or SPC. */
@@ -77,13 +91,18 @@ export function ProgrammesView({ programmes, role, t, demo, activityId }: Props)
       <PageTitle
         actions={
           <>
-            <YearLinks current={financialYear.startYear} href={(value) => `/activities?year=${value}`} years={selectableStartYears()} />
+            <YearLinks current={financialYear.startYear} href={(value) => `/activities?year=${value}`} years={selectableProgrammeYears()} />
             <SampleBadge demo={demo} label={t("prog.demoBadge", { year: financialYear.label })} />
           </>
         }
         description={t("prog.summary", { completed: n(programmes.completed), planned: n(programmes.planned), year: financialYear.label })}
         title={title}
       />
+      {financialYear.inProgress && (
+        <p className="mt-2 rounded-lg border border-[#e8d28a] bg-warn-bg px-3 py-2 text-[12px] text-warn-text" role="note">
+          {t("prog.inProgress", { year: financialYear.label })}
+        </p>
+      )}
       {scope && (
         <p className="mt-2 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-[11px] text-ink-soft" data-testid="programme-scope">
           <span className="font-semibold text-brand-forest">{t("prog.scopeLabel")}</span>
@@ -162,7 +181,10 @@ export function ProgrammesView({ programmes, role, t, demo, activityId }: Props)
                       </Td>
                       <Td className="text-ink-soft">{row.sector ? sectorLabel(row.sector, t) : "—"}</Td>
                       <Td className="text-ink-soft">{row.society.name}</Td>
-                      <Td className="text-ink-soft">{approvedWhen(row.approvedAt, t)}</Td>
+                      <Td className="text-ink-soft">
+                        {approvedWhen(row.approvedAt, t)}
+                        {row.completed === false && <NotCompletedYet month={row.month} t={t} year={row.year} />}
+                      </Td>
                       <Td><SdgChips sdgs={row.sdgs} t={t} /></Td>
                     </Tr>
                   ))}
@@ -199,6 +221,7 @@ export function ProgrammesView({ programmes, role, t, demo, activityId }: Props)
               </ul>
               <p className="mt-2 text-[11px] text-ink">{selected.sector ? sectorLabel(selected.sector, t) : t("prog.noSector")} · {t(`dimension.${selected.dimension}`)}</p>
               <div className="mt-2"><SdgChips sdgs={selected.sdgs} t={t} /></div>
+              {selected.completed === false && <NotCompletedYet month={selected.month} t={t} year={selected.year} />}
               <p className="mt-2 text-[11px] text-muted">
                 {selected.createdBy ? `${t("prog.createdBy", { name: selected.createdBy })} ` : ""}
                 {t("prog.approvedBy", {

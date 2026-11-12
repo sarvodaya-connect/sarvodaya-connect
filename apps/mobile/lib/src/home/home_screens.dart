@@ -6,7 +6,7 @@ import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../models/user.dart';
 import '../national/national_screens.dart'
-    show GradeBadge, NationalActivitiesScreen;
+    show GradeBadge, NationalActivitiesScreen, RoleAuditsScreen, RoleMembershipScreen;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
@@ -168,9 +168,11 @@ class _LoaderState<T> extends State<_Loader<T>> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '${widget.label}…',
-                  style: const TextStyle(color: AppColors.muted),
+                Expanded(
+                  child: Text(
+                    '${widget.label}…',
+                    style: const TextStyle(color: AppColors.muted),
+                  ),
                 ),
               ],
             ),
@@ -313,51 +315,53 @@ class _SocietyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final Widget? pill = showScope
+        ? (society.yours
+              ? _Pill(
+                  l.homeYoursEdit,
+                  colour: AppColors.leaf,
+                  background: AppColors.mint,
+                )
+              : _Pill(
+                  l.homeViewOnly,
+                  colour: AppColors.inkSoft,
+                  background: AppColors.stateGrey,
+                ))
+        : society.pending != null
+        ? _Pill(l.homeGradeRequest)
+        : society.stale
+        ? _Pill(
+            l.homeStale,
+            colour: AppColors.danger,
+            background: AppColors.dangerSoft,
+          )
+        : null;
     return ListTile(
       leading: GradeBadge(society.grade),
       title: Text(
         society.name,
         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
       ),
-      subtitle: Text(
-        society.members == null
-            ? l.homeSocietyLineNoMembers(
-                society.code,
-                l.date(society.updatedAt),
-              )
-            : l.homeSocietyLine(
-                society.code,
-                society.members!,
-                l.date(society.updatedAt),
-              ),
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (showScope)
-            society.yours
-                ? _Pill(
-                    l.homeYoursEdit,
-                    colour: AppColors.leaf,
-                    background: AppColors.mint,
+          Text(
+            society.members == null
+                ? l.homeSocietyLineNoMembers(
+                    society.code,
+                    l.date(society.updatedAt),
                   )
-                : _Pill(
-                    l.homeViewOnly,
-                    colour: AppColors.inkSoft,
-                    background: AppColors.stateGrey,
-                  )
-          else if (society.pending != null)
-            _Pill(l.homeGradeRequest)
-          else if (society.stale)
-            _Pill(
-              l.homeStale,
-              colour: AppColors.danger,
-              background: AppColors.dangerSoft,
-            ),
-          const Icon(Icons.chevron_right),
+                : l.homeSocietyLine(
+                    society.code,
+                    society.members!,
+                    l.date(society.updatedAt),
+                  ),
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (pill != null) ...[const SizedBox(height: 4), pill],
         ],
       ),
+      trailing: const Icon(Icons.chevron_right),
       onTap: () => _open(context, SocietyRecordScreen(societyId: society.id)),
     );
   }
@@ -381,8 +385,14 @@ class _SocietyList extends StatefulWidget {
   State<_SocietyList> createState() => _SocietyListState();
 }
 
-class _SocietyListState extends State<_SocietyList> {
+class _SocietyListState extends State<_SocietyList>
+    with AutomaticKeepAliveClientMixin<_SocietyList> {
   late HomeSocietyQuery _query = HomeSocietyQuery(district: widget.district);
+
+  /// The page jumps when a search reloads the list. Keep the search and
+  /// filters when the list scrolls out of view.
+  @override
+  bool get wantKeepAlive => true;
   int _version = 0;
   HomeSocietyList? _last;
 
@@ -412,6 +422,7 @@ class _SocietyListState extends State<_SocietyList> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,6 +724,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
+          const SizedBox(height: 12),
           _Card(
             title: l.homeDistrictOverview,
             child: Column(
@@ -832,17 +847,20 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
                           fontSize: 14,
                         ),
                       ),
-                      subtitle: Text(
-                        item.reason,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (item.pending != null) _Pill(l.homeGradeRequest),
-                          const Icon(Icons.chevron_right),
+                          Text(
+                            item.reason,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (item.pending != null) ...[
+                            const SizedBox(height: 4),
+                            _Pill(l.homeGradeRequest),
+                          ],
                         ],
                       ),
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () => _open(
                         context,
                         SocietyRecordScreen(societyId: item.societyId),
@@ -864,6 +882,9 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           const SizedBox(height: 12),
           const IncidentHomeSection(),
           const _ProgrammesLink(district: false),
+          const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: [
@@ -900,6 +921,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
+          const SizedBox(height: 12),
           _TileRow([
             _Tile(l.homeTileAssigned, l.number(home.total)),
             _Tile(
@@ -926,6 +951,10 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           banner,
           const SizedBox(height: 12),
           const IncidentHomeSection(),
+          const _MembershipLink(),
+          const SizedBox(height: 8),
+          const _AuditsLink(),
+          const SizedBox(height: 12),
           if (home.activitiesWaiting > 0) ...[
             Material(
               color: AppColors.warningSoft,
@@ -1080,6 +1109,60 @@ class DistrictSocietiesScreen extends StatelessWidget {
             const _SocietyList(showScope: false),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Issue #118: Membership for the user's own societies.
+class _MembershipLink extends StatelessWidget {
+  const _MembershipLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.groups_outlined, color: AppColors.leaf),
+        title: Text(
+          l.nationalMembershipTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(l.roleMembershipTileSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, const RoleMembershipScreen()),
+      ),
+    );
+  }
+}
+
+/// Issue #119: Audits & AGM for the user's own societies.
+class _AuditsLink extends StatelessWidget {
+  const _AuditsLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.fact_check_outlined, color: AppColors.leaf),
+        title: Text(
+          l.roleAuditsTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(l.roleAuditsTileSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _open(context, const RoleAuditsScreen()),
       ),
     );
   }

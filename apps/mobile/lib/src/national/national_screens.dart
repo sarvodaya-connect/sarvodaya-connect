@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../home/home_api.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
@@ -1805,75 +1806,793 @@ class NationalMembershipScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Eyebrow(l.nationalByCategory),
-                  for (final row in overview.categories)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _categoryLabel(l, row.category),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                l.number(row.total),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text.rich(
-                            TextSpan(
-                              style: const TextStyle(fontSize: 12),
-                              children: styledSpans2(
-                                l.nationalCategoryShare(
-                                  styledSlot,
-                                  styledSlot2,
-                                  row.female,
-                                  row.male,
-                                ),
-                                TextSpan(
-                                  text:
-                                      '${sharePercent(row.female, row.total)}%',
-                                  style: const TextStyle(
-                                    color: _female,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: '${sharePercent(row.male, row.total)}%',
-                                  style: const TextStyle(
-                                    color: _male,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _CategoryCard([
+              for (final row in overview.categories)
+                (category: row.category, female: row.female, male: row.male),
+            ]),
             const SizedBox(height: 8),
             NoticeBanner(
               icon: Icons.info_outline,
               title: l.nationalCountsOnlyTitle,
               message: l.nationalCountsOnlyMessage,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "By Category · Female / Male", shared by HQ (M61) and the scoped view (#118).
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard(this.categories);
+
+  final List<({String category, int female, int male})> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Eyebrow(l.nationalByCategory),
+          for (final row in categories)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _categoryLabel(l, row.category),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Text(
+                        l.number(row.female + row.male),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      style: const TextStyle(fontSize: 12),
+                      children: styledSpans2(
+                        l.nationalCategoryShare(
+                          styledSlot,
+                          styledSlot2,
+                          row.female,
+                          row.male,
+                        ),
+                        TextSpan(
+                          text:
+                              '${sharePercent(row.female, row.female + row.male)}%',
+                          style: const TextStyle(
+                            color: _female,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        TextSpan(
+                          text:
+                              '${sharePercent(row.male, row.female + row.male)}%',
+                          style: const TextStyle(
+                            color: _male,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Issue #118: Membership for a DM, DDM or SPC, from `GET /home/membership`.
+/// The same cards as HQ, for the user's own societies only.
+class RoleMembershipScreen extends StatefulWidget {
+  const RoleMembershipScreen({super.key});
+
+  @override
+  State<RoleMembershipScreen> createState() => _RoleMembershipScreenState();
+}
+
+class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
+  bool _district = false;
+  Future<ScopedMembership>? _future;
+
+  Future<ScopedMembership> _load() async {
+    final home = DemoScope.of(context).home;
+    try {
+      return await home.fetchMembership(district: _district);
+    } on HomeException catch (error) {
+      // The temporary district view ended: show the user's own societies.
+      if (_district && error.status == 403) {
+        _district = false;
+        return home.fetchMembership();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMembershipTitle,
+      subtitle: l.nationalMembershipSubtitle,
+      body: FutureBuilder<ScopedMembership>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return LoadingSkeleton(label: l.roleMembershipLoading);
+          }
+          final error = snapshot.error;
+          if (error is HomeException && error.status == 403) {
+            return const NoAccessView();
+          }
+          if (error != null) {
+            return StateMessage(
+              icon: Icons.error_outline,
+              title: l.nationalErrorTitle,
+              message: error is HomeException
+                  ? (error.failure == null
+                        ? error.message
+                        : l.failure(error.failure!))
+                  : l.nationalErrorCheck,
+              tone: StateTone.error,
+              isAlert: true,
+              primaryLabel: l.commonTryAgain,
+              onPrimary: _reload,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: _body(context, snapshot.data!),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, ScopedMembership m) {
+    final l = context.l10n;
+    final district = m.districts.firstOrNull?.name ?? '';
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(
+          text: m.year == null
+              ? l.nationalDemoDataPlain
+              : l.nationalDemoData('${m.year}'),
+        ),
+        Text(switch (m.scope) {
+          'DISTRICT_MANAGER' => l.roleMembershipScopeDm(district),
+          'DISTRICT' => l.roleMembershipScopeDistrict(district),
+          _ => l.roleMembershipScopeMine(m.activeSocieties),
+        }, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        if (m.districtViewAvailable) ...[
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text(l.roleMembershipMine)),
+              ButtonSegment(value: true, label: Text(l.roleMembershipDistrict)),
+            ],
+            selected: {_district},
+            onSelectionChanged: (value) {
+              _district = value.first;
+              _reload();
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (m.activeSocieties == 0)
+          StateMessage(
+            icon: Icons.groups_outlined,
+            title: l.roleMembershipEmptyTitle,
+            message: l.roleMembershipEmptyMessage,
+          )
+        else ...[
+          if (m.year == null) ...[
+            NoticeBanner(
+              icon: Icons.info_outline,
+              title: l.roleMembershipNoneTitle,
+              message: l.roleMembershipNoneMessage,
+              tone: NoticeTone.warning,
+            ),
+            const SizedBox(height: 8),
+          ],
+          _Pair(
+            _Figure(
+              l.nationalTotalMembers,
+              l.number(m.total),
+              m.year == null
+                  ? l.roleMembershipNoYear
+                  : l.roleMembershipLatest('${m.year}'),
+            ),
+            _Figure(
+              l.roleMembershipReported,
+              l.roleMembershipReportedValue(
+                m.societiesReported,
+                m.activeSocieties,
+              ),
+              m.year == null
+                  ? l.roleMembershipNoYear
+                  : l.roleMembershipLatest('${m.year}'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Figure(
+            l.nationalFemaleMale,
+            '${sharePercent(m.female, m.total)}% · ${sharePercent(m.male, m.total)}%',
+            '${l.number(m.female)} · ${l.number(m.male)}',
+            colour: _female,
+            background: const Color(0xFFF6EFF9),
+            border: const Color(0xFFE4D3EC),
+          ),
+          if (m.profileSocieties > 0) ...[
+            const SizedBox(height: 8),
+            NoticeBanner(
+              icon: Icons.badge_outlined,
+              title: l.roleMembershipProfileTitle,
+              message: [
+                l.roleMembershipProfileMessage(
+                  m.profileMembers,
+                  m.profileSocieties,
+                ),
+                if (m.profileWithoutBreakdown > 0)
+                  m.year == null
+                      ? l.roleMembershipProfileMissingNoYear(
+                          m.profileWithoutBreakdown,
+                        )
+                      : l.roleMembershipProfileMissing(
+                          m.profileWithoutBreakdown,
+                          '${m.year}',
+                        ),
+              ].join(' '),
+            ),
+          ],
+          const SizedBox(height: 8),
+          _CategoryCard([
+            for (final row in m.categories)
+              (category: row.category, female: row.female, male: row.male),
+          ]),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleMembershipByDistrict),
+                for (final row in m.districts)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          l.roleMembershipDistrictLine(
+                            row.active,
+                            row.female + row.male,
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (row.female + row.male > 0)
+                          Text(
+                            l.nationalFemaleMaleShare(
+                              sharePercent(row.female, row.female + row.male),
+                              sharePercent(row.male, row.female + row.male),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        NoticeBanner(
+          icon: Icons.info_outline,
+          title: l.nationalCountsOnlyTitle,
+          message: l.nationalCountsOnlyMessage,
+        ),
+      ],
+    );
+  }
+}
+
+/// Issue #119: Audits & AGM for a DM, DDM or SPC, from `GET /home/audits`.
+/// The same figures and colours as HQ, for the user's own societies only.
+/// Opening a society goes to its documents, where each file keeps its own
+/// access rules: the signed members list stays closed to SPCs and DDMs.
+class RoleAuditsScreen extends StatefulWidget {
+  const RoleAuditsScreen({super.key});
+
+  @override
+  State<RoleAuditsScreen> createState() => _RoleAuditsScreenState();
+}
+
+class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
+  bool _district = false;
+  int? _year;
+  Future<ScopedAudits>? _future;
+  // Further pages of the follow-up list, added by "Show more".
+  final _more = <({String id, String name, String code, String district})>[];
+  int _page = 1;
+  bool _loadingMore = false;
+  // Why the last "Show more" failed; the rows already shown stay.
+  Object? _moreError;
+  // The year and scope of the figures on screen. "Show more" asks for the
+  // next page of exactly these, never of a choice made since.
+  ({int year, bool district})? _shown;
+  // Bumped by every reload and on leaving the screen, so a response to an
+  // older request (a page, or a whole load) never changes what is shown.
+  int _generation = 0;
+
+  Future<ScopedAudits> _load() async {
+    final generation = ++_generation;
+    final home = DemoScope.of(context).home;
+    _more.clear();
+    _page = 1;
+    _loadingMore = false;
+    _moreError = null;
+    _shown = null;
+    var district = _district;
+    ScopedAudits audits;
+    try {
+      audits = await home.fetchAudits(year: _year, district: district);
+    } on HomeException catch (error) {
+      // The temporary district view ended: show the user's own societies.
+      if (!district || error.status != 403) rethrow;
+      district = false;
+      if (generation == _generation) _district = false;
+      audits = await home.fetchAudits(year: _year);
+    }
+    if (generation == _generation) {
+      _shown = (year: audits.startYear, district: district);
+    }
+    return audits;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Future<void> _loadMore() async {
+    final shown = _shown;
+    if (shown == null || _loadingMore) return;
+    final generation = _generation;
+    final home = DemoScope.of(context).home;
+    bool current() => mounted && generation == _generation;
+    setState(() {
+      _loadingMore = true;
+      _moreError = null;
+    });
+    try {
+      final next = await home.fetchAudits(
+        year: shown.year,
+        district: shown.district,
+        page: _page + 1,
+      );
+      if (!current()) return;
+      setState(() {
+        _page = next.page;
+        _more.addAll(next.followUp);
+        _loadingMore = false;
+      });
+    } on HomeException catch (error) {
+      if (!current()) return;
+      if (shown.district && error.status == 403) {
+        // The temporary district view ended between pages. As on the first
+        // load, go back to the user's own societies; no district rows stay.
+        _district = false;
+        _reload();
+        return;
+      }
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!current()) return;
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.roleAuditsTitle,
+      subtitle: l.roleAuditsSubtitle,
+      body: FutureBuilder<ScopedAudits>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return LoadingSkeleton(label: l.roleAuditsLoading);
+          }
+          final error = snapshot.error;
+          if (error is HomeException && error.status == 403) {
+            return const NoAccessView();
+          }
+          if (error != null) {
+            return StateMessage(
+              icon: Icons.error_outline,
+              title: l.nationalErrorTitle,
+              message: error is HomeException
+                  ? (error.failure == null
+                        ? error.message
+                        : l.failure(error.failure!))
+                  : l.nationalErrorCheck,
+              tone: StateTone.error,
+              isAlert: true,
+              primaryLabel: l.commonTryAgain,
+              onPrimary: _reload,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: _body(context, snapshot.data!),
+          );
+        },
+      ),
+    );
+  }
+
+  String _docLabel(AppLocalizations l, String type) => switch (type) {
+    'AUDIT_REPORT' => l.roleAuditsDocAudit,
+    'AGM_MINUTES' => l.roleAuditsDocAgm,
+    'OFFICE_BEARER_LIST' => l.roleAuditsDocOfficers,
+    _ => l.roleAuditsDocMembers,
+  };
+
+  Widget _body(BuildContext context, ScopedAudits a) {
+    final l = context.l10n;
+    final now = DemoScope.of(context).now;
+    final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+    final due = l.date(a.dueOn);
+    final audit = a.audit;
+    final rows = [...a.followUp, ..._more];
+    final status = a.pastDue ? l.roleAuditsPastDue : l.roleAuditsNotYet;
+    final statusColour = a.pastDue ? AppColors.danger : AppColors.warning;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.nationalDemoData(a.yearLabel)),
+        Text(switch (a.scope) {
+          'DISTRICT_MANAGER' => l.roleAuditsScopeDm,
+          'DISTRICT' => l.roleAuditsScopeDistrict,
+          _ => l.roleAuditsScopeMine(a.activeSocieties),
+        }, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < 5; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(
+                      'FY ${latest - i}/${'${(latest - i + 1) % 100}'.padLeft(2, '0')}',
+                    ),
+                    selected: a.startYear == latest - i,
+                    onSelected: (_) {
+                      _year = latest - i;
+                      _reload();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (a.districtViewAvailable) ...[
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text(l.roleMembershipMine)),
+              ButtonSegment(value: true, label: Text(l.roleMembershipDistrict)),
+            ],
+            selected: {_district},
+            onSelectionChanged: (value) {
+              _district = value.first;
+              _reload();
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (a.activeSocieties == 0)
+          StateMessage(
+            icon: Icons.fact_check_outlined,
+            title: l.roleAuditsEmptyTitle,
+            message: l.roleAuditsEmptyMessage,
+          )
+        else ...[
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${sharePercent(audit.submitted, a.activeSocieties)}%',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.leaf,
+                  ),
+                ),
+                Text(
+                  l.roleAuditsUploadedLine(
+                    audit.submitted,
+                    a.activeSocieties,
+                    a.yearLabel,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                _Pair(
+                  _Figure(
+                    l.roleAuditsUploaded,
+                    l.number(audit.submitted),
+                    a.yearLabel,
+                    colour: AppColors.leaf,
+                  ),
+                  _Figure(
+                    status,
+                    l.number(audit.missing),
+                    a.pastDue
+                        ? l.roleAuditsDue(due)
+                        : l.roleAuditsDueNotPassed(due),
+                    colour: statusColour,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsDocuments(a.yearLabel)),
+                for (final (index, row) in a.byType.indexed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${index + 1} · ${_docLabel(l, row.documentType)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${sharePercent(row.submitted, a.activeSocieties)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          l.roleAuditsDocumentLine(
+                            row.submitted,
+                            a.activeSocieties,
+                            row.missing,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  l.roleAuditsAllFour(
+                    a.allFour,
+                    a.activeSocieties,
+                    sharePercent(a.allFour, a.activeSocieties),
+                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l.roleAuditsMembersNote,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsFollowUp),
+                Text(
+                  a.pastDue ? l.roleAuditsFollowPast : l.roleAuditsFollowNotYet,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (rows.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: StateMessage(
+                      icon: Icons.task_alt,
+                      title: l.roleAuditsNothingTitle,
+                      message: l.roleAuditsNothing(a.yearLabel),
+                    ),
+                  )
+                else ...[
+                  for (final row in rows)
+                    InkWell(
+                      // The Documents tab; each file keeps its own access rules.
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SocietyRecordScreen(
+                            societyId: row.id,
+                            initialTab: 3,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    row.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${row.code} · ${row.district} · $due',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // On its own line, so a longer translation never squeezes the name.
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColour.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusColour,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Text(
+                    l.roleAuditsShowing(rows.length, a.followUpTotal),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  if (_moreError != null)
+                    _MoreError(error: _moreError!, onRetry: _loadMore)
+                  else if (_page < a.totalPages)
+                    TextButton(
+                      onPressed: _loadingMore ? null : _loadMore,
+                      child: Text(l.roleAuditsMore),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Show more" failed: says so in the chosen language, under the rows that
+/// are still shown, with a way to ask for the same page again.
+class _MoreError extends StatelessWidget {
+  const _MoreError({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final error = this.error;
+    final reason = error is HomeException && error.failure != null
+        ? l.failure(error.failure!)
+        : l.roleAuditsMoreErrorCheck;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.roleAuditsMoreError,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.danger,
+              ),
+            ),
+            Text(reason, style: const TextStyle(fontSize: 12)),
+            TextButton(onPressed: onRetry, child: Text(l.commonTryAgain)),
           ],
         ),
       ),
@@ -2081,11 +2800,12 @@ class ProfitExpensesScreen extends StatelessWidget {
   );
 }
 
-/// The latest financial year that has ended (April to March), as the server
-/// chooses by default, and the four before it.
+/// The financial year in progress (issue #131), then the latest one that has
+/// ended (April to March), as the server chooses by default, and the four
+/// before it.
 List<int> selectableProgrammeYears(DateTime now) {
   final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
-  return [for (var i = 0; i < 5; i++) latest - i];
+  return [latest + 1, for (var i = 0; i < 5; i++) latest - i];
 }
 
 String _fyLabel(int year) =>
@@ -2229,6 +2949,17 @@ class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
           ),
         ),
         const SizedBox(height: 8),
+        if (programmes.year.inProgress) ...[
+          _Card(
+            colour: AppColors.warningSoft,
+            border: const Color(0xFFE8D28A),
+            child: Text(
+              l.progInProgress(programmes.year.label),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (scope != null) ...[
           _Card(
             child: Text.rich(
