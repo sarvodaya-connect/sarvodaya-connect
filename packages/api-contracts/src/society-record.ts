@@ -170,7 +170,15 @@ export interface ExcoStatus {
 }
 
 export interface SocietyRecord extends SocietyDetails {
+  /** Total members. When the female and male counts are entered it is always their sum. */
   memberCount: number | null;
+  /**
+   * Issue #141: female and male members. Both null means the split has not
+   * been entered yet (an older record may still have a total); 0 is an
+   * entered count.
+   */
+  femaleMembers: number | null;
+  maleMembers: number | null;
   landline: string | null;
   businessDescription: string | null;
   grade: SocietyGrade | null;
@@ -193,6 +201,16 @@ export interface SocietyRecord extends SocietyDetails {
 export interface SocietyRecordUpdate {
   nameEn?: string;
   nameLocal?: string;
+  /**
+   * Issue #141: send both together, each 0 to 1,000,000 (and 1,000,000 in
+   * all). The API works out the total from them.
+   */
+  femaleMembers?: number;
+  maleMembers?: number;
+  /**
+   * Sent by apps from before issue #141. Accepted alone only while the society
+   * has no female/male split; otherwise it must equal female + male.
+   */
   memberCount?: number;
   /** Empty string removes the landline. */
   landline?: string;

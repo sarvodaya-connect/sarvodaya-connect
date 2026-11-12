@@ -222,9 +222,16 @@ class _OverviewTab extends StatelessWidget {
     final viewOnly = !permissions.canEdit;
     final summary = record.annualSummary;
     final now = DemoScope.of(context).now;
+    // Issue #141: the split with the total, or the total with a note.
     final members = record.memberCount == null
         ? l.recNotRecorded
-        : l.number(record.memberCount!);
+        : record.hasMemberSplit
+        ? l.recMembersSplit(
+            record.memberCount!,
+            record.femaleMembers!,
+            record.maleMembers!,
+          )
+        : l.recMembersNoSplit(record.memberCount!);
     final spc = record.staffWithRole(UserRole.programmeCoordinator);
     final officer = record.staffWithRole(UserRole.societyOfficer);
     final address = [

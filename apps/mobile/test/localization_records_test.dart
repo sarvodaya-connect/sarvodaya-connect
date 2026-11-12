@@ -137,15 +137,17 @@ void main() {
         );
         await _tap(tester, find.widgetWithText(OutlinedButton, l.recEdit));
         expect(find.text(l.editTitle), findsOneWidget);
-        await tester.enterText(find.widgetWithText(TextField, '412'), '418');
-        await tester.enterText(find.byType(TextField).at(3), '037 22');
+        // An older record: only a total, kept until the split is entered.
+        expect(find.text(l.editMembersOldTotal(412)), findsOneWidget);
+        await tester.enterText(find.byType(TextField).at(1), '25');
+        await tester.enterText(find.byType(TextField).at(4), '037 22');
         await tester.pumpAndSettle();
-        expect(find.text(l.editWas('412')), findsOneWidget);
+        expect(find.text(l.editMembersBoth), findsOneWidget);
         expect(find.text(l.editLandlineFormat), findsOneWidget);
         expect(find.text('● ${l.recUnsaved}'), findsOneWidget);
         await _tap(tester, find.byTooltip(l.commonClose));
         expect(find.text(l.editLeaveTitle), findsOneWidget);
-        expect(find.textContaining(l.editFieldMembers), findsWidgets);
+        expect(find.textContaining(l.editFieldFemale), findsWidgets);
         _noEnglish(tester, [
           'Leave Without Saving',
           'You changed',
@@ -154,7 +156,7 @@ void main() {
         ]);
         await _tap(tester, find.text(l.editDiscard));
         // The stored value is unchanged.
-        expect(find.text('412'), findsWidgets);
+        expect(find.text(l.recMembersNoSplit(412)), findsWidgets);
       });
 
       testWidgets('M07, M07v and M07x: the Exco and replacing a member', (

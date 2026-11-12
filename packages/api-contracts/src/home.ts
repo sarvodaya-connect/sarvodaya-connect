@@ -3,6 +3,8 @@
  * Every figure is worked out by the API from the societies the user covers.
  */
 
+import type { ProfileMembership } from "./national.js";
+
 export type HomeRole = "PROGRAMME_COORDINATOR" | "DEPUTY_DISTRICT_MANAGER" | "DISTRICT_MANAGER";
 
 export type HomeGrade = "A" | "B" | "C";
@@ -174,17 +176,10 @@ export interface ScopedMembership {
   /** Only districts that hold societies in scope. `active` counts in-scope active societies. */
   districts: { id: string; name: string; active: number; female: number; male: number; total: number }[];
   /**
-   * The single member count on each society profile. It has no female/male or
-   * category split, so it is never added to the breakdown above.
+   * The current member counts on the society profiles (issue #141 added the
+   * female/male split). Never added to the category breakdown above.
    */
-  profile: {
-    /** Active societies in scope with a profile member count. */
-    societies: number;
-    /** Their profile member counts added together. */
-    members: number;
-    /** Of those, societies without category counts for `year`. */
-    withoutBreakdown: number;
-  };
+  profile: ProfileMembership;
   /** DDM only: whether a temporary district view is valid right now. */
   districtView: { available: boolean; expiresAt: string | null } | null;
 }

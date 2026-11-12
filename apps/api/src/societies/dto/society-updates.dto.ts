@@ -26,6 +26,9 @@ import { MembershipCategory } from '../../generated/prisma/client.js';
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
+/** The most members a society profile may record, in all and for each of female and male. */
+export const MAX_MEMBERS = 1_000_000;
+
 export const SOCIETY_GRADE_VALUES = ['A', 'B', 'C'] as const;
 export type SocietyGradeValue = (typeof SOCIETY_GRADE_VALUES)[number];
 
@@ -51,7 +54,22 @@ export class SocietyProfileUpdateDto {
   @Type(() => PrimaryContactDto)
   primaryContact?: PrimaryContactDto;
   // SC-65: V4 society record fields.
-  @IsOptional() @IsInt() @Min(0) @Max(1_000_000) memberCount?: number;
+  /**
+   * Apps from before issue #141 send the total alone. Accepted only while the
+   * society has no female/male split; otherwise it must equal female + male.
+   */
+  @IsOptional() @IsInt() @Min(0) @Max(MAX_MEMBERS) memberCount?: number;
+  /** Issue #141: sent together with maleMembers; the API works out the total. */
+  @IsOptional()
+  @IsInt({ message: 'femaleMembers must be a whole number' })
+  @Min(0, { message: 'femaleMembers cannot be negative' })
+  @Max(MAX_MEMBERS, { message: 'femaleMembers cannot be more than 1,000,000' })
+  femaleMembers?: number;
+  @IsOptional()
+  @IsInt({ message: 'maleMembers must be a whole number' })
+  @Min(0, { message: 'maleMembers cannot be negative' })
+  @Max(MAX_MEMBERS, { message: 'maleMembers cannot be more than 1,000,000' })
+  maleMembers?: number;
   /** A 10-digit number such as 037 000 0000, or +94 and 9 digits. Empty removes it. */
   @IsOptional()
   @Transform(trim)

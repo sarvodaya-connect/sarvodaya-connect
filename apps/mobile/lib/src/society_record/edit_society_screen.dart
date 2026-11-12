@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
 import '../models/society.dart';
 import '../screens/manual_pin_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/count_field.dart' show parseCount;
 import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
 import 'grade_change_request_screen.dart';
@@ -42,11 +44,18 @@ class _Field {
 
 final _landlinePattern = RegExp(r'^(0\d{9}|\+94\d{9})$');
 
+/// Issue #141: the most members for each of female and male, and in all.
+const maxMembers = 1000000;
+
 class _EditSocietyScreenState extends State<EditSocietyScreen> {
   late final _name = _Field((l) => l.editFieldName, widget.record.nameEn);
-  late final _members = _Field(
-    (l) => l.editFieldMembers,
-    widget.record.memberCount?.toString(),
+  late final _female = _Field(
+    (l) => l.editFieldFemale,
+    widget.record.femaleMembers?.toString(),
+  );
+  late final _male = _Field(
+    (l) => l.editFieldMale,
+    widget.record.maleMembers?.toString(),
   );
   late final _address = _Field(
     (l) => l.editFieldAddress,
@@ -60,7 +69,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     (l) => l.editFieldBusiness,
     widget.record.businessDescription,
   );
-  late final _fields = [_name, _members, _address, _landline, _business];
+  late final _fields = [_name, _female, _male, _address, _landline, _business];
   late GeoLocation? _location =
       widget.record.latitude == null || widget.record.longitude == null
       ? null
@@ -104,11 +113,35 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
 
   String? get _nameError => _name.value.length < 2 ? _l.editNameError : null;
 
+  int? get _femaleCount => parseCount(_female.value, max: maxMembers);
+  int? get _maleCount => parseCount(_male.value, max: maxMembers);
+
+  /// Issue #141: both boxes empty keeps an older record's total until the
+  /// split is entered; otherwise both are needed, as whole numbers.
+  bool get _keepsOldTotal =>
+      _female.value.isEmpty &&
+      _male.value.isEmpty &&
+      !widget.record.hasMemberSplit &&
+      widget.record.memberCount != null;
+
   String? get _membersError {
-    if (_members.value.isEmpty) return _l.editMembersRequired;
-    return RegExp(r'^\d{1,7}$').hasMatch(_members.value)
-        ? null
-        : _l.editMembersFormat;
+    if (_keepsOldTotal) return null;
+    if ((_female.value.isNotEmpty && _femaleCount == null) ||
+        (_male.value.isNotEmpty && _maleCount == null)) {
+      return _l.editMembersFormat;
+    }
+    if (_female.value.isEmpty || _male.value.isEmpty) {
+      return _l.editMembersBoth;
+    }
+    if (_femaleCount! + _maleCount! > maxMembers) return _l.editMembersTooMany;
+    return null;
+  }
+
+  /// Female plus male while both are valid; the old total while it is kept.
+  int? get _total {
+    if (_keepsOldTotal) return widget.record.memberCount;
+    if (_membersError != null) return null;
+    return _femaleCount! + _maleCount!;
   }
 
   String? get _addressError =>
@@ -136,7 +169,11 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     setState(() => _saving = true);
     final changes = <String, Object>{
       if (_name.changed) 'nameEn': _name.value,
-      if (_members.changed) 'memberCount': int.parse(_members.value),
+      // The API works out the total; both counts go together.
+      if (_female.changed || _male.changed) ...{
+        'femaleMembers': _femaleCount!,
+        'maleMembers': _maleCount!,
+      },
       if (_address.changed) 'addressLine': _address.value,
       if (_landline.changed) 'landline': _landline.value,
       if (_business.changed) 'businessDescription': _business.value,
@@ -295,6 +332,75 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     ),
   );
 
+  /// Issue #141: female and male side by side, and the total worked out from
+  /// them. The total is read only: it is shown, never typed.
+  Widget _members(AppLocalizations l) {
+    final total = _total;
+    final error = _submitted || _female.changed || _male.changed
+        ? _membersError
+        : null;
+    Widget count(_Field field, String label) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FieldLabel(label, required: !_keepsOldTotal),
+        TextField(
+          controller: field.controller,
+          keyboardType: TextInputType.number,
+          style: recordInputStyle,
+          decoration: changedDecoration(
+            changed: field.changed,
+            helper: field.changed && field.original.isNotEmpty
+                ? _l.editWas(field.original)
+                : null,
+            // The message is shown once, under both boxes.
+            error: error == null ? null : '',
+          ),
+        ),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: count(_female, l.editFemale)),
+              const SizedBox(width: 10),
+              Expanded(child: count(_male, l.editMale)),
+            ],
+          ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                error,
+                style: const TextStyle(fontSize: 12, color: AppColors.danger),
+              ),
+            ),
+          const SizedBox(height: 10),
+          FieldLabel(l.editTotal),
+          Semantics(
+            label: l.editTotal,
+            value: total == null ? '—' : l.number(total),
+            liveRegion: true,
+            readOnly: true,
+            excludeSemantics: true,
+            child: ReadOnlyField(total == null ? '—' : l.number(total)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _keepsOldTotal
+                ? l.editMembersOldTotal(widget.record.memberCount!)
+                : l.editTotalHelp,
+            style: RecordStyle.caption,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -390,13 +496,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                       ),
                     ),
                   const SizedBox(height: 12),
-                  _text(
-                    _members,
-                    l.editMembers,
-                    required: true,
-                    error: _membersError,
-                    keyboard: TextInputType.number,
-                  ),
+                  _members(l),
                   _text(
                     _address,
                     l.recAddress,
