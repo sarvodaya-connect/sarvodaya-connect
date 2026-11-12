@@ -1,3 +1,4 @@
+import 'motion/app_motion.dart';
 import 'national/national_screens.dart';
 import 'screens/live_societies_screen.dart';
 import 'home/home_screens.dart';
@@ -46,7 +47,10 @@ class _SarvodayaConnectAppState extends State<SarvodayaConnectApp> {
           locale: _store.selectedLanguage.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          builder: (context, child) => _PhoneWidth(child: child!),
+          builder: (context, child) => MotionScope(
+            key: ValueKey((_store.user?.id, _store.activeRole)),
+            child: _PhoneWidth(child: child!),
+          ),
           home: const _Root(),
         ),
       ),
@@ -170,7 +174,10 @@ class HomeShell extends StatelessWidget {
       body: IndexedStack(
         key: ValueKey((user?.id, role)),
         index: tab,
-        children: configuration.pages,
+        children: [
+          for (final (index, page) in configuration.pages.indexed)
+            TickerMode(enabled: index == tab, child: page),
+        ],
       ),
       // V5 bottom bar (Nav): icon-only, styled by the theme, with a hairline above.
       bottomNavigationBar: DecoratedBox(
@@ -178,6 +185,7 @@ class HomeShell extends StatelessWidget {
           border: Border(top: BorderSide(color: AppColors.headerLine)),
         ),
         child: NavigationBar(
+          animationDuration: AppMotion.duration(context, AppMotion.state),
           selectedIndex: tab,
           onDestinationSelected: store.selectTab,
           destinations: configuration.destinations,

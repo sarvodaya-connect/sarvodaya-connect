@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 import '../district_access/district_access_screens.dart';
 import '../incidents/incident_screens.dart';
 import '../l10n/l10n.dart';
@@ -675,7 +677,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
           load: (api) => api.fetchHome(),
           builder: (context, home) => ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
+            children: motionBlocks('roleHome', [
               Semantics(
                 header: true,
                 child: Text(
@@ -695,7 +697,7 @@ class _RoleHomeScreenState extends State<RoleHomeScreen> {
               ),
               const SizedBox(height: 10),
               ..._body(context, l, store, user, home),
-            ],
+            ]),
           ),
         ),
       ),
