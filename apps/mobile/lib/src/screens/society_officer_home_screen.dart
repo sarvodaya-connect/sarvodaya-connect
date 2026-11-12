@@ -96,25 +96,42 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
     final store = DemoScope.of(context);
     final user = store.user!;
     final record = _record;
-    final firstName = user.displayName.split(' ').first;
     return Scaffold(
-      body: Column(
-        children: [
-          MotionEntrance(
-            id: 'officer.header',
-            child: _OfficerHeader(
-              title: l.greeting(DateTime.now(), firstName),
-              subtitle: [l.recRoleSocietyOfficer, ?record?.nameEn].join(' · '),
+      body: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          children: [
+            // Match HQ: keep the header readable and scrollable even in
+            // landscape or at large text sizes without hiding the body.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    MotionEntrance(
+                      id: 'officer.header',
+                      child: HomeMasthead(
+                        title: l.greeting(store.now, user.displayName),
+                        subtitle: [
+                          l.recRoleSocietyOfficer,
+                          ?record?.nameEn,
+                        ].join(' · '),
+                      ),
+                    ),
+                    if (record != null)
+                      MotionEntrance(
+                        id: 'officer.access',
+                        order: 1,
+                        child: _AccessStrip(record: record),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          if (record != null)
-            MotionEntrance(
-              id: 'officer.access',
-              order: 1,
-              child: _AccessStrip(record: record),
-            ),
-          Expanded(child: _body(record)),
-        ],
+            Expanded(child: _body(record)),
+          ],
+        ),
       ),
     );
   }
@@ -277,64 +294,6 @@ abstract final class _HomeStyle {
     fontSize: 11,
     color: AppColors.muted,
     height: 1.35,
-  );
-}
-
-/// M05 masthead: small logo and bell, greeting, and hills on the right.
-class _OfficerHeader extends StatelessWidget {
-  const _OfficerHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.surface,
-    child: SafeArea(
-      bottom: false,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: ExcludeSemantics(
-              child: CustomPaint(painter: HillsPainter()),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 12, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [MastheadLogo(), Spacer(), NotificationsButton()],
-                ),
-                const SizedBox(height: 10),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
   );
 }
 

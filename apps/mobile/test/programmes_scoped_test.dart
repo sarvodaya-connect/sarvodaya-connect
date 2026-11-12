@@ -303,6 +303,47 @@ void main() {
     );
   });
 
+  test('the year in progress comes first, then the five that have ended (issue #131)', () {
+    expect(selectableProgrammeYears(DateTime(2026, 11, 10)), [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+    ]);
+    // 31 March is still the old financial year.
+    expect(selectableProgrammeYears(DateTime(2026, 3, 31)).first, 2025);
+    expect(
+      FinancialYearLabel.fromJson({
+        'startYear': 2026,
+        'label': 'FY 2026/27',
+        'inProgress': true,
+      }).inProgress,
+      isTrue,
+    );
+  });
+
+  testWidgets('the year in progress says what its completed counts mean', (
+    tester,
+  ) async {
+    final api = _Years(_api(demoDistrictManager));
+    await _pump(
+      tester,
+      const NationalActivitiesScreen(scoped: true),
+      role: UserRole.districtManager,
+      api: api,
+    );
+    expect(find.textContaining('is still in progress'), findsNothing);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'FY 2026/27'));
+    await tester.pumpAndSettle();
+    expect(api.years, [null, 2026]);
+    expect(
+      find.textContaining('FY 2026/27 is still in progress.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('an SPC with no societies sees an empty state, not zeros alone', (
     tester,
   ) async {

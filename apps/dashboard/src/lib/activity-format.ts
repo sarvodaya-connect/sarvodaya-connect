@@ -67,6 +67,15 @@ export function latestCompletedFinancialYear(now = new Date()) {
 }
 
 /** The five financial years that can be viewed, newest first. */
+/**
+ * Issue #131: Programmes also offers the financial year in progress, first,
+ * then the five that have ended. The API accepts the same years.
+ */
+export function selectableProgrammeYears(now = new Date()) {
+  const years = selectableStartYears(now);
+  return [years[0]! + 1, ...years];
+}
+
 export function selectableStartYears(now = new Date()) {
   const latest = latestCompletedFinancialYear(now);
   return Array.from({ length: 5 }, (_, index) => latest - index);

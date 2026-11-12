@@ -169,6 +169,8 @@ class HomeShell extends StatelessWidget {
     // A tab remembered from another role may not exist in this tab set.
     final tab = store.selectedTab.clamp(0, configuration.pages.length - 1);
     return Scaffold(
+      // Recreate per-user home state and notification buttons on account or
+      // role changes; cached home responses must not follow another user.
       body: IndexedStack(
         key: ValueKey((user?.id, role)),
         index: tab,

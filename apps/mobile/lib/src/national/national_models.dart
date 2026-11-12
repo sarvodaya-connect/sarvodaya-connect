@@ -24,13 +24,24 @@ class GradeCounts {
 }
 
 class FinancialYearLabel {
-  const FinancialYearLabel(this.startYear, this.label);
+  const FinancialYearLabel(
+    this.startYear,
+    this.label, {
+    this.inProgress = false,
+  });
 
-  factory FinancialYearLabel.fromJson(Json json) =>
-      FinancialYearLabel(_int(json['startYear']), json['label'] as String);
+  factory FinancialYearLabel.fromJson(Json json) => FinancialYearLabel(
+    _int(json['startYear']),
+    json['label'] as String,
+    inProgress: json['inProgress'] == true,
+  );
 
   final int startYear;
   final String label;
+
+  /// Issue #131: the year has not ended, so completed counts only the months
+  /// that have.
+  final bool inProgress;
 }
 
 class CategoryCount {
