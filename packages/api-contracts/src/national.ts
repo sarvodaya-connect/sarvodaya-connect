@@ -168,7 +168,8 @@ export interface NationalMembership {
 
 /** D07 / M63: done vs planned by sector, dimension and UN SDG. */
 export interface NationalProgrammes {
-  financialYear: FinancialYearPeriod;
+  /** `inProgress` (issue #131): the year has not ended, so completed counts only months that have. */
+  financialYear: FinancialYearPeriod & { inProgress?: boolean };
   planned: number;
   completed: number;
   sectors: { sector: string; planned: number; completed: number; societies: number }[];
@@ -185,12 +186,34 @@ export interface NationalProgrammes {
     approvedBy: string | null;
     datesLabel: string | null;
     year: number;
+    /** Issue #131: the activity's month, and whether it has ended (so it counts as completed). */
+    month?: number;
+    completed?: boolean;
     femaleParticipants: number;
     maleParticipants: number;
     householdsBenefited: number;
     createdBy: string | null;
     sdgs: number[];
   }[];
+}
+
+/**
+ * Issue #117: D07 / M64 for a DM, DDM or SPC (`GET programmes`), counted over
+ * the societies they may see. DISTRICT: a DM's own district. ASSIGNED: the
+ * societies assigned to an SPC or DDM. ASSIGNED_AND_DISTRICT: a DDM's
+ * societies plus a district while a temporary grant is valid.
+ */
+export type ProgrammeScopeKind = "DISTRICT" | "ASSIGNED" | "ASSIGNED_AND_DISTRICT";
+
+export interface ScopedProgrammes extends NationalProgrammes {
+  scope: {
+    kind: ProgrammeScopeKind;
+    /** Societies in scope, whether or not they have activities. */
+    societies: number;
+    districts: { id: string; name: string }[];
+    /** When a DDM's temporary district access ends; null otherwise. */
+    temporaryAccessEndsAt: string | null;
+  };
 }
 
 /** M62b: the two yearly totals and the societies that have not added them. */

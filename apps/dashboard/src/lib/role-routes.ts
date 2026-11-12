@@ -11,8 +11,14 @@ const FIELD_PATHS = [
   /^\/$/,
   /^\/dashboard$/,
   /^\/my-societies$/,
+  // Issue #118: Membership for the user's own scope; the API limits the figures.
+  /^\/membership$/,
+  // Issue #119: Audits & AGM for the user's own scope; documents keep their own access rules.
+  /^\/compliance$/,
   new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
   /^\/activities-to-approve(\/.*)?$/,
+  // Issue #117: Programmes & Activities over the user's own scope (the API limits it).
+  /^\/activities$/,
   /^\/district-access$/,
   // V5 PR 8: disaster response (IR01–IR05). The API limits each incident to the user's scope.
   new RegExp(`^/emergencies(/${UUID})?$`, "i"),

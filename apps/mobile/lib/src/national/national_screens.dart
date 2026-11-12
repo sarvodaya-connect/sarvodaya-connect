@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../home/home_api.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
 import '../models/user.dart';
 import '../society_record/society_record_models.dart'
-    show documentTypeLabels, registrarDocumentTypes, sdgAsset, sdgTitle;
+    show
+        documentTypeLabels,
+        registrarDocumentTypes,
+        sarvodayaSectors,
+        sdgAsset,
+        sdgTitle;
 import '../sarvoai/sarvoai_screen.dart';
 import '../society_admin/assign_staff_screen.dart';
 import '../society_admin/create_society_screen.dart';
@@ -60,9 +66,18 @@ class _Loader<T> extends StatefulWidget {
     required this.load,
     required this.builder,
     this.loadingLabel,
+    this.errorTitle,
+    this.hqOnly = true,
   });
 
   final Future<T> Function(NationalApi api) load;
+
+  /// Defaults to the national error title.
+  final String? errorTitle;
+
+  /// Whether a refusal says "HQ only"; screens for other roles (issue #117)
+  /// show the shared no-access state instead.
+  final bool hqOnly;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
 
@@ -82,8 +97,10 @@ class _LoaderState<T> extends State<_Loader<T>> {
     _future ??= widget.load(DemoScope.of(context).national);
   }
 
-  void _reload() =>
-      setState(() => _future = widget.load(DemoScope.of(context).national));
+  // A block body: setState refuses a callback that returns the Future.
+  void _reload() => setState(() {
+    _future = widget.load(DemoScope.of(context).national);
+  });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<T>(
@@ -94,6 +111,11 @@ class _LoaderState<T> extends State<_Loader<T>> {
         return LoadingSkeleton(label: widget.loadingLabel ?? l.nationalLoading);
       }
       final error = snapshot.error;
+      if (error is SocietyRecordException &&
+          error.status == 403 &&
+          !widget.hqOnly) {
+        return const NoAccessView();
+      }
       if (error is SocietyRecordException && error.status == 403) {
         final user = DemoScope.of(context).user;
         return NoAccessView(
@@ -113,7 +135,7 @@ class _LoaderState<T> extends State<_Loader<T>> {
       if (error != null) {
         return StateMessage(
           icon: Icons.error_outline,
-          title: l.nationalErrorTitle,
+          title: widget.errorTitle ?? l.nationalErrorTitle,
           message: error is SocietyRecordException
               ? (error.failure == null
                     ? error.message
@@ -1742,75 +1764,793 @@ class NationalMembershipScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Eyebrow(l.nationalByCategory),
-                  for (final row in overview.categories)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _categoryLabel(l, row.category),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                l.number(row.total),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text.rich(
-                            TextSpan(
-                              style: const TextStyle(fontSize: 12),
-                              children: styledSpans2(
-                                l.nationalCategoryShare(
-                                  styledSlot,
-                                  styledSlot2,
-                                  row.female,
-                                  row.male,
-                                ),
-                                TextSpan(
-                                  text:
-                                      '${sharePercent(row.female, row.total)}%',
-                                  style: const TextStyle(
-                                    color: _female,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: '${sharePercent(row.male, row.total)}%',
-                                  style: const TextStyle(
-                                    color: _male,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _CategoryCard([
+              for (final row in overview.categories)
+                (category: row.category, female: row.female, male: row.male),
+            ]),
             const SizedBox(height: 8),
             NoticeBanner(
               icon: Icons.info_outline,
               title: l.nationalCountsOnlyTitle,
               message: l.nationalCountsOnlyMessage,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "By Category · Female / Male", shared by HQ (M61) and the scoped view (#118).
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard(this.categories);
+
+  final List<({String category, int female, int male})> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Eyebrow(l.nationalByCategory),
+          for (final row in categories)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _categoryLabel(l, row.category),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Text(
+                        l.number(row.female + row.male),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      style: const TextStyle(fontSize: 12),
+                      children: styledSpans2(
+                        l.nationalCategoryShare(
+                          styledSlot,
+                          styledSlot2,
+                          row.female,
+                          row.male,
+                        ),
+                        TextSpan(
+                          text:
+                              '${sharePercent(row.female, row.female + row.male)}%',
+                          style: const TextStyle(
+                            color: _female,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        TextSpan(
+                          text:
+                              '${sharePercent(row.male, row.female + row.male)}%',
+                          style: const TextStyle(
+                            color: _male,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Issue #118: Membership for a DM, DDM or SPC, from `GET /home/membership`.
+/// The same cards as HQ, for the user's own societies only.
+class RoleMembershipScreen extends StatefulWidget {
+  const RoleMembershipScreen({super.key});
+
+  @override
+  State<RoleMembershipScreen> createState() => _RoleMembershipScreenState();
+}
+
+class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
+  bool _district = false;
+  Future<ScopedMembership>? _future;
+
+  Future<ScopedMembership> _load() async {
+    final home = DemoScope.of(context).home;
+    try {
+      return await home.fetchMembership(district: _district);
+    } on HomeException catch (error) {
+      // The temporary district view ended: show the user's own societies.
+      if (_district && error.status == 403) {
+        _district = false;
+        return home.fetchMembership();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.nationalMembershipTitle,
+      subtitle: l.nationalMembershipSubtitle,
+      body: FutureBuilder<ScopedMembership>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return LoadingSkeleton(label: l.roleMembershipLoading);
+          }
+          final error = snapshot.error;
+          if (error is HomeException && error.status == 403) {
+            return const NoAccessView();
+          }
+          if (error != null) {
+            return StateMessage(
+              icon: Icons.error_outline,
+              title: l.nationalErrorTitle,
+              message: error is HomeException
+                  ? (error.failure == null
+                        ? error.message
+                        : l.failure(error.failure!))
+                  : l.nationalErrorCheck,
+              tone: StateTone.error,
+              isAlert: true,
+              primaryLabel: l.commonTryAgain,
+              onPrimary: _reload,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: _body(context, snapshot.data!),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, ScopedMembership m) {
+    final l = context.l10n;
+    final district = m.districts.firstOrNull?.name ?? '';
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(
+          text: m.year == null
+              ? l.nationalDemoDataPlain
+              : l.nationalDemoData('${m.year}'),
+        ),
+        Text(switch (m.scope) {
+          'DISTRICT_MANAGER' => l.roleMembershipScopeDm(district),
+          'DISTRICT' => l.roleMembershipScopeDistrict(district),
+          _ => l.roleMembershipScopeMine(m.activeSocieties),
+        }, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        if (m.districtViewAvailable) ...[
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text(l.roleMembershipMine)),
+              ButtonSegment(value: true, label: Text(l.roleMembershipDistrict)),
+            ],
+            selected: {_district},
+            onSelectionChanged: (value) {
+              _district = value.first;
+              _reload();
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (m.activeSocieties == 0)
+          StateMessage(
+            icon: Icons.groups_outlined,
+            title: l.roleMembershipEmptyTitle,
+            message: l.roleMembershipEmptyMessage,
+          )
+        else ...[
+          if (m.year == null) ...[
+            NoticeBanner(
+              icon: Icons.info_outline,
+              title: l.roleMembershipNoneTitle,
+              message: l.roleMembershipNoneMessage,
+              tone: NoticeTone.warning,
+            ),
+            const SizedBox(height: 8),
+          ],
+          _Pair(
+            _Figure(
+              l.nationalTotalMembers,
+              l.number(m.total),
+              m.year == null
+                  ? l.roleMembershipNoYear
+                  : l.roleMembershipLatest('${m.year}'),
+            ),
+            _Figure(
+              l.roleMembershipReported,
+              l.roleMembershipReportedValue(
+                m.societiesReported,
+                m.activeSocieties,
+              ),
+              m.year == null
+                  ? l.roleMembershipNoYear
+                  : l.roleMembershipLatest('${m.year}'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Figure(
+            l.nationalFemaleMale,
+            '${sharePercent(m.female, m.total)}% · ${sharePercent(m.male, m.total)}%',
+            '${l.number(m.female)} · ${l.number(m.male)}',
+            colour: _female,
+            background: const Color(0xFFF6EFF9),
+            border: const Color(0xFFE4D3EC),
+          ),
+          if (m.profileSocieties > 0) ...[
+            const SizedBox(height: 8),
+            NoticeBanner(
+              icon: Icons.badge_outlined,
+              title: l.roleMembershipProfileTitle,
+              message: [
+                l.roleMembershipProfileMessage(
+                  m.profileMembers,
+                  m.profileSocieties,
+                ),
+                if (m.profileWithoutBreakdown > 0)
+                  m.year == null
+                      ? l.roleMembershipProfileMissingNoYear(
+                          m.profileWithoutBreakdown,
+                        )
+                      : l.roleMembershipProfileMissing(
+                          m.profileWithoutBreakdown,
+                          '${m.year}',
+                        ),
+              ].join(' '),
+            ),
+          ],
+          const SizedBox(height: 8),
+          _CategoryCard([
+            for (final row in m.categories)
+              (category: row.category, female: row.female, male: row.male),
+          ]),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleMembershipByDistrict),
+                for (final row in m.districts)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          row.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          l.roleMembershipDistrictLine(
+                            row.active,
+                            row.female + row.male,
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (row.female + row.male > 0)
+                          Text(
+                            l.nationalFemaleMaleShare(
+                              sharePercent(row.female, row.female + row.male),
+                              sharePercent(row.male, row.female + row.male),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        NoticeBanner(
+          icon: Icons.info_outline,
+          title: l.nationalCountsOnlyTitle,
+          message: l.nationalCountsOnlyMessage,
+        ),
+      ],
+    );
+  }
+}
+
+/// Issue #119: Audits & AGM for a DM, DDM or SPC, from `GET /home/audits`.
+/// The same figures and colours as HQ, for the user's own societies only.
+/// Opening a society goes to its documents, where each file keeps its own
+/// access rules: the signed members list stays closed to SPCs and DDMs.
+class RoleAuditsScreen extends StatefulWidget {
+  const RoleAuditsScreen({super.key});
+
+  @override
+  State<RoleAuditsScreen> createState() => _RoleAuditsScreenState();
+}
+
+class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
+  bool _district = false;
+  int? _year;
+  Future<ScopedAudits>? _future;
+  // Further pages of the follow-up list, added by "Show more".
+  final _more = <({String id, String name, String code, String district})>[];
+  int _page = 1;
+  bool _loadingMore = false;
+  // Why the last "Show more" failed; the rows already shown stay.
+  Object? _moreError;
+  // The year and scope of the figures on screen. "Show more" asks for the
+  // next page of exactly these, never of a choice made since.
+  ({int year, bool district})? _shown;
+  // Bumped by every reload and on leaving the screen, so a response to an
+  // older request (a page, or a whole load) never changes what is shown.
+  int _generation = 0;
+
+  Future<ScopedAudits> _load() async {
+    final generation = ++_generation;
+    final home = DemoScope.of(context).home;
+    _more.clear();
+    _page = 1;
+    _loadingMore = false;
+    _moreError = null;
+    _shown = null;
+    var district = _district;
+    ScopedAudits audits;
+    try {
+      audits = await home.fetchAudits(year: _year, district: district);
+    } on HomeException catch (error) {
+      // The temporary district view ended: show the user's own societies.
+      if (!district || error.status != 403) rethrow;
+      district = false;
+      if (generation == _generation) _district = false;
+      audits = await home.fetchAudits(year: _year);
+    }
+    if (generation == _generation) {
+      _shown = (year: audits.startYear, district: district);
+    }
+    return audits;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Future<void> _loadMore() async {
+    final shown = _shown;
+    if (shown == null || _loadingMore) return;
+    final generation = _generation;
+    final home = DemoScope.of(context).home;
+    bool current() => mounted && generation == _generation;
+    setState(() {
+      _loadingMore = true;
+      _moreError = null;
+    });
+    try {
+      final next = await home.fetchAudits(
+        year: shown.year,
+        district: shown.district,
+        page: _page + 1,
+      );
+      if (!current()) return;
+      setState(() {
+        _page = next.page;
+        _more.addAll(next.followUp);
+        _loadingMore = false;
+      });
+    } on HomeException catch (error) {
+      if (!current()) return;
+      if (shown.district && error.status == 403) {
+        // The temporary district view ended between pages. As on the first
+        // load, go back to the user's own societies; no district rows stay.
+        _district = false;
+        _reload();
+        return;
+      }
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!current()) return;
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.roleAuditsTitle,
+      subtitle: l.roleAuditsSubtitle,
+      body: FutureBuilder<ScopedAudits>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return LoadingSkeleton(label: l.roleAuditsLoading);
+          }
+          final error = snapshot.error;
+          if (error is HomeException && error.status == 403) {
+            return const NoAccessView();
+          }
+          if (error != null) {
+            return StateMessage(
+              icon: Icons.error_outline,
+              title: l.nationalErrorTitle,
+              message: error is HomeException
+                  ? (error.failure == null
+                        ? error.message
+                        : l.failure(error.failure!))
+                  : l.nationalErrorCheck,
+              tone: StateTone.error,
+              isAlert: true,
+              primaryLabel: l.commonTryAgain,
+              onPrimary: _reload,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: _body(context, snapshot.data!),
+          );
+        },
+      ),
+    );
+  }
+
+  String _docLabel(AppLocalizations l, String type) => switch (type) {
+    'AUDIT_REPORT' => l.roleAuditsDocAudit,
+    'AGM_MINUTES' => l.roleAuditsDocAgm,
+    'OFFICE_BEARER_LIST' => l.roleAuditsDocOfficers,
+    _ => l.roleAuditsDocMembers,
+  };
+
+  Widget _body(BuildContext context, ScopedAudits a) {
+    final l = context.l10n;
+    final now = DemoScope.of(context).now;
+    final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+    final due = l.date(a.dueOn);
+    final audit = a.audit;
+    final rows = [...a.followUp, ..._more];
+    final status = a.pastDue ? l.roleAuditsPastDue : l.roleAuditsNotYet;
+    final statusColour = a.pastDue ? AppColors.danger : AppColors.warning;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.nationalDemoData(a.yearLabel)),
+        Text(switch (a.scope) {
+          'DISTRICT_MANAGER' => l.roleAuditsScopeDm,
+          'DISTRICT' => l.roleAuditsScopeDistrict,
+          _ => l.roleAuditsScopeMine(a.activeSocieties),
+        }, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < 5; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(
+                      'FY ${latest - i}/${'${(latest - i + 1) % 100}'.padLeft(2, '0')}',
+                    ),
+                    selected: a.startYear == latest - i,
+                    onSelected: (_) {
+                      _year = latest - i;
+                      _reload();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (a.districtViewAvailable) ...[
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text(l.roleMembershipMine)),
+              ButtonSegment(value: true, label: Text(l.roleMembershipDistrict)),
+            ],
+            selected: {_district},
+            onSelectionChanged: (value) {
+              _district = value.first;
+              _reload();
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (a.activeSocieties == 0)
+          StateMessage(
+            icon: Icons.fact_check_outlined,
+            title: l.roleAuditsEmptyTitle,
+            message: l.roleAuditsEmptyMessage,
+          )
+        else ...[
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${sharePercent(audit.submitted, a.activeSocieties)}%',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.leaf,
+                  ),
+                ),
+                Text(
+                  l.roleAuditsUploadedLine(
+                    audit.submitted,
+                    a.activeSocieties,
+                    a.yearLabel,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                _Pair(
+                  _Figure(
+                    l.roleAuditsUploaded,
+                    l.number(audit.submitted),
+                    a.yearLabel,
+                    colour: AppColors.leaf,
+                  ),
+                  _Figure(
+                    status,
+                    l.number(audit.missing),
+                    a.pastDue
+                        ? l.roleAuditsDue(due)
+                        : l.roleAuditsDueNotPassed(due),
+                    colour: statusColour,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsDocuments(a.yearLabel)),
+                for (final (index, row) in a.byType.indexed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${index + 1} · ${_docLabel(l, row.documentType)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${sharePercent(row.submitted, a.activeSocieties)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          l.roleAuditsDocumentLine(
+                            row.submitted,
+                            a.activeSocieties,
+                            row.missing,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  l.roleAuditsAllFour(
+                    a.allFour,
+                    a.activeSocieties,
+                    sharePercent(a.allFour, a.activeSocieties),
+                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l.roleAuditsMembersNote,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsFollowUp),
+                Text(
+                  a.pastDue ? l.roleAuditsFollowPast : l.roleAuditsFollowNotYet,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (rows.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: StateMessage(
+                      icon: Icons.task_alt,
+                      title: l.roleAuditsNothingTitle,
+                      message: l.roleAuditsNothing(a.yearLabel),
+                    ),
+                  )
+                else ...[
+                  for (final row in rows)
+                    InkWell(
+                      // The Documents tab; each file keeps its own access rules.
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SocietyRecordScreen(
+                            societyId: row.id,
+                            initialTab: 3,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    row.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${row.code} · ${row.district} · $due',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // On its own line, so a longer translation never squeezes the name.
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColour.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusColour,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Text(
+                    l.roleAuditsShowing(rows.length, a.followUpTotal),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  if (_moreError != null)
+                    _MoreError(error: _moreError!, onRetry: _loadMore)
+                  else if (_page < a.totalPages)
+                    TextButton(
+                      onPressed: _loadingMore ? null : _loadMore,
+                      child: Text(l.roleAuditsMore),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Show more" failed: says so in the chosen language, under the rows that
+/// are still shown, with a way to ask for the same page again.
+class _MoreError extends StatelessWidget {
+  const _MoreError({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final error = this.error;
+    final reason = error is HomeException && error.failure != null
+        ? l.failure(error.failure!)
+        : l.roleAuditsMoreErrorCheck;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.roleAuditsMoreError,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.danger,
+              ),
+            ),
+            Text(reason, style: const TextStyle(fontSize: 12)),
+            TextButton(onPressed: onRetry, child: Text(l.commonTryAgain)),
           ],
         ),
       ),
@@ -2018,9 +2758,90 @@ class ProfitExpensesScreen extends StatelessWidget {
   );
 }
 
-/// V5 M63 Activities: done vs planned, SPC-approved only.
+/// The financial year in progress (issue #131), then the latest one that has
+/// ended (April to March), as the server chooses by default, and the four
+/// before it.
+List<int> selectableProgrammeYears(DateTime now) {
+  final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+  return [latest + 1, for (var i = 0; i < 5; i++) latest - i];
+}
+
+String _fyLabel(int year) =>
+    'FY $year/${((year + 1) % 100).toString().padLeft(2, '0')}';
+
+/// A stored sector in the reader's language; one the app does not know
+/// stays as stored.
+String programmeSectorLabel(AppLocalizations l, String sector) =>
+    switch (sarvodayaSectors.indexOf(sector)) {
+      0 => l.progSector1,
+      1 => l.progSector2,
+      2 => l.progSector3,
+      3 => l.progSector4,
+      4 => l.progSector5,
+      5 => l.progSector6,
+      6 => l.progSector7,
+      7 => l.progSector8,
+      8 => l.progSector9,
+      9 => l.progSector10,
+      _ => sector,
+    };
+
+/// A UN SDG's title in the reader's language.
+String programmeSdgLabel(AppLocalizations l, int sdg) => switch (sdg) {
+  1 => l.progSdg1,
+  2 => l.progSdg2,
+  3 => l.progSdg3,
+  4 => l.progSdg4,
+  5 => l.progSdg5,
+  6 => l.progSdg6,
+  7 => l.progSdg7,
+  8 => l.progSdg8,
+  9 => l.progSdg9,
+  10 => l.progSdg10,
+  11 => l.progSdg11,
+  12 => l.progSdg12,
+  13 => l.progSdg13,
+  14 => l.progSdg14,
+  15 => l.progSdg15,
+  16 => l.progSdg16,
+  17 => l.progSdg17,
+  _ => sdgTitle(sdg),
+};
+
+String _dimensionLabel(AppLocalizations l, String dimension) =>
+    switch (dimension) {
+      'SOCIAL' => l.progDimSocial,
+      'ECONOMIC' => l.progDimEconomic,
+      'GOVERNANCE' => l.progDimGovernance,
+      _ => dimension,
+    };
+
+/// Who the figures cover, for a DM, DDM or SPC.
+String programmeScopeLine(AppLocalizations l, ProgrammeScope scope) {
+  final district = scope.districts.join(', ');
+  return switch (scope.kind) {
+    ProgrammeScopeKind.district => l.progScopeDistrict(
+      district,
+      scope.societies,
+    ),
+    ProgrammeScopeKind.assignedAndDistrict
+        when scope.temporaryAccessEndsAt != null =>
+      l.progScopeTemporary(
+        district,
+        l.number(scope.societies),
+        l.accessEndsAt(scope.temporaryAccessEndsAt!),
+      ),
+    _ => l.progScopeAssigned(scope.societies),
+  };
+}
+
+/// V5 M64 Programmes & Activities: done vs planned, SPC-approved only.
+/// HQ sees the nation; with [scoped] a DM, DDM or SPC sees the same screen
+/// over the societies the server lets them count (issue #117).
 class NationalActivitiesScreen extends StatefulWidget {
-  const NationalActivitiesScreen({super.key});
+  const NationalActivitiesScreen({super.key, this.scoped = false});
+
+  final bool scoped;
 
   @override
   State<NationalActivitiesScreen> createState() =>
@@ -2029,182 +2850,274 @@ class NationalActivitiesScreen extends StatefulWidget {
 
 class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
   bool _bySector = true;
+  int? _year;
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Activities',
-    subtitle: 'Done vs planned · SPC-approved only',
-    body: _Loader<NationalProgrammes>(
-      load: (api) => api.fetchProgrammes(),
-      builder: (context, programmes, _) {
-        final ranked = programmes.sdgs
-            .where((row) => row.completed > 0)
-            .toList();
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(text: 'Demonstration data · ${programmes.year.label}'),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.progTitle,
+      subtitle: l.progSubtitle,
+      body: _Loader<NationalProgrammes>(
+        // A new year is a new request.
+        key: ValueKey(_year),
+        loadingLabel: l.progLoading,
+        errorTitle: l.progErrorTitle,
+        hqOnly: !widget.scoped,
+        load: (api) => widget.scoped
+            ? api.fetchScopedProgrammes(year: _year)
+            : api.fetchProgrammes(year: _year),
+        builder: (context, programmes, _) =>
+            _programmes(context, l, programmes),
+      ),
+    );
+  }
+
+  Widget _programmes(
+    BuildContext context,
+    AppLocalizations l,
+    NationalProgrammes programmes,
+  ) {
+    final ranked = programmes.sdgs.where((row) => row.completed > 0).toList();
+    final scope = programmes.scope;
+    final years = selectableProgrammeYears(DemoScope.of(context).now);
+    final summary = l.progSummary(
+      styledSlot,
+      l.number(programmes.planned),
+      l.number(sharePercent(programmes.completed, programmes.planned)),
+    );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.progDemo(programmes.year.label)),
+        Semantics(
+          label: l.progFinancialYear,
+          container: true,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final year in years)
+                ChoiceChip(
+                  label: Text(_fyLabel(year)),
+                  selected: year == programmes.year.startYear,
+                  onSelected: (_) => setState(() => _year = year),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (programmes.year.inProgress) ...[
+          _Card(
+            colour: AppColors.warningSoft,
+            border: const Color(0xFFE8D28A),
+            child: Text(
+              l.progInProgress(programmes.year.label),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (scope != null) ...[
+          _Card(
+            child: Text.rich(
+              TextSpan(
                 children: [
-                  Text.rich(
+                  TextSpan(
+                    text: '${l.progCountedOver} ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.leaf,
+                    ),
+                  ),
+                  TextSpan(text: programmeScopeLine(l, scope)),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (scope.societies == 0)
+            StateMessage(
+              icon: Icons.groups_outlined,
+              title: l.progNoSocietiesTitle,
+              message: l.progNoSocietiesBody,
+            )
+          else if (programmes.planned == 0)
+            Semantics(
+              liveRegion: true,
+              child: _Card(
+                colour: AppColors.stateGrey,
+                child: Text(
+                  l.progZeroYear(programmes.year.label),
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+        ],
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: styledSpans(
+                    summary,
                     TextSpan(
+                      text: l.number(programmes.completed),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: true, label: Text(l.progTenSectors)),
+                  ButtonSegment(value: false, label: Text(l.progDimensions)),
+                ],
+                selected: {_bySector},
+                onSelectionChanged: (value) =>
+                    setState(() => _bySector = value.first),
+              ),
+              const SizedBox(height: 6),
+              if (_bySector)
+                for (final (index, sector) in sarvodayaSectors.indexed)
+                  _sectorRow(l, index, sector, programmes.sectors[sector])
+              else
+                for (final row in programmes.byDimension)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
                       children: [
-                        TextSpan(
-                          text: count(programmes.completed),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Expanded(
+                          child: Text(_dimensionLabel(l, row.dimension)),
                         ),
-                        TextSpan(
-                          text:
-                              ' of ${count(programmes.planned)} planned completed — ${sharePercent(programmes.completed, programmes.planned)}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
-                          ),
+                        Text(
+                          '${l.number(row.completed)} / ${l.number(row.planned)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('10 Sectors')),
-                      ButtonSegment(value: false, label: Text('Dimensions')),
-                    ],
-                    selected: {_bySector},
-                    onSelectionChanged: (value) =>
-                        setState(() => _bySector = value.first),
-                  ),
-                  const SizedBox(height: 6),
-                  if (_bySector)
-                    for (final (
-                          index,
-                          MapEntry(key: sector, value: (done, planned)),
-                        )
-                        in programmes.sectors.entries.indexed)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 11,
-                              backgroundColor: AppColors.leaf,
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(sector)),
-                            Text(
-                              '${count(done)} / ${count(planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                  else
-                    for (final row in programmes.byDimension)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${row.dimension[0]}${row.dimension.substring(1).toLowerCase()}',
-                              ),
-                            ),
-                            Text(
-                              '${count(row.completed)} / ${count(row.planned)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Eyebrow(l.progSdgEyebrow),
+              Text(
+                l.progSdgNote(programmes.year.label),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _Eyebrow('UN SDGs · Ranked by Completed Activities'),
-                  Text(
-                    '${programmes.year.label} · equal counts listed by SDG number',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+              if (ranked.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(l.progNoSdg(programmes.year.label)),
+                ),
+              for (final (index, row) in ranked.indexed)
+                Semantics(
+                  container: true,
+                  label: l.progSdgSemantics(
+                    l.number(index + 1),
+                    '${row.sdg}',
+                    programmeSdgLabel(l, row.sdg),
+                    l.number(row.completed),
                   ),
-                  if (ranked.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('No completed activity with a UN SDG yet.'),
-                    ),
-                  for (final (index, row) in ranked.indexed)
-                    Semantics(
-                      container: true,
-                      label:
-                          'Number ${index + 1}, SDG ${row.sdg}: ${sdgTitle(row.sdg)}, ${count(row.completed)} completed',
-                      child: ExcludeSemantics(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: Text(
-                                  '#${index + 1}',
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Image.asset(
-                                  sdgAsset(row.sdg),
-                                  width: 48,
-                                  height: 48,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'SDG ${row.sdg}\n${sdgTitle(row.sdg)}',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              Text(
-                                count(row.completed),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                  child: ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              '#${index + 1}',
+                              style: const TextStyle(color: AppColors.muted),
+                            ),
                           ),
-                        ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.asset(
+                              sdgAsset(row.sdg),
+                              width: 48,
+                              height: 48,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'SDG ${row.sdg}\n${programmeSdgLabel(l, row.sdg)}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            l.number(row.completed),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectorRow(
+    AppLocalizations l,
+    int index,
+    String sector,
+    (int, int, int)? figures,
+  ) {
+    final (done, planned, societies) = figures ?? (0, 0, 0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 11,
+            backgroundColor: AppColors.leaf,
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(fontSize: 11, color: Colors.white),
             ),
-          ],
-        );
-      },
-    ),
-  );
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(programmeSectorLabel(l, sector)),
+                Text(
+                  l.progSectorSocieties(societies),
+                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${l.number(done)} / ${l.number(planned)}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
 }
