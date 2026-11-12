@@ -386,7 +386,8 @@ void main() {
           code: code,
           role: UserRole.hqAdmin,
         );
-        expect(find.text(l.nationalTitle), findsOneWidget);
+        // The page name is now part of the header's subtitle (#120).
+        expect(find.textContaining(l.nationalTitle), findsOneWidget);
         expect(
           find.text(l.moreAsk('SarvoAI'), findRichText: true),
           findsOneWidget,

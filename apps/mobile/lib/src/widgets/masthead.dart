@@ -6,6 +6,97 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import 'brand.dart';
 
+/// Shared M05 masthead for every role. Text determines the height so long
+/// names, translated copy and accessibility text sizes are never truncated.
+class HomeMasthead extends StatelessWidget {
+  const HomeMasthead({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.actions = const [],
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: AppColors.surface,
+    child: SafeArea(
+      bottom: false,
+      child: ClipRect(
+        child: Stack(
+          children: [
+            // Fixed artwork height: trees do not grow over long names when
+            // the text wraps. Decoration cannot intercept taps or be read.
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 120,
+              child: IgnorePointer(
+                child: ExcludeSemantics(
+                  child: CustomPaint(painter: HillsPainter()),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 12, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const MastheadLogo(),
+                      const Spacer(),
+                      ...actions,
+                      if (actions.isNotEmpty) const SizedBox(width: 8),
+                      NotificationsButton(
+                        key: ValueKey(DemoScope.of(context).user?.id),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Keep text clear of the tree cluster at the right edge.
+                  Padding(
+                    padding: const EdgeInsets.only(right: 48),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                              height: 1.15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 /// The small logo at the top of a home screen's masthead (M05, M05h).
 class MastheadLogo extends StatelessWidget {
   const MastheadLogo({super.key});

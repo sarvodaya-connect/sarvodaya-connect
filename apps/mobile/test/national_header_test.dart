@@ -114,8 +114,11 @@ void main() {
     expect(find.byType(BrandMark), findsOneWidget);
     expect(find.byTooltip('Search societies'), findsOneWidget);
     expect(find.byTooltip('Notifications'), findsOneWidget);
-    expect(find.text('National Dashboard'), findsOneWidget);
-    expect(find.text('Good morning, Nadeesha · HQ · National'), findsOneWidget);
+    // The page name is now part of the header's subtitle (#120).
+    expect(find.textContaining('National Dashboard'), findsOneWidget);
+    // The header greets the account by its full display name (#120).
+    expect(find.text('Good morning, Nadeesha Fictional'), findsOneWidget);
+    expect(find.text('National Dashboard · HQ · National'), findsOneWidget);
     expect(
       find.textContaining('Ask Sarvo', findRichText: true),
       findsOneWidget,
@@ -265,7 +268,8 @@ void main() {
         textScale: scale,
       );
       expect(tester.takeException(), isNull);
-      expect(find.text('National Dashboard'), findsOneWidget);
+      // The page name is now part of the header's subtitle (#120).
+      expect(find.textContaining('National Dashboard'), findsOneWidget);
       expect(find.byTooltip('Notifications'), findsOneWidget);
     });
   }

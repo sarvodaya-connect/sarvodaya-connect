@@ -6,7 +6,11 @@ import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../models/user.dart';
 import '../national/national_screens.dart'
-    show GradeBadge, NationalActivitiesScreen, RoleAuditsScreen, RoleMembershipScreen;
+    show
+        GradeBadge,
+        NationalActivitiesScreen,
+        RoleAuditsScreen,
+        RoleMembershipScreen;
 import '../society_record/activity_screens.dart';
 import '../society_record/society_record_screen.dart';
 import '../state/demo_store.dart';
