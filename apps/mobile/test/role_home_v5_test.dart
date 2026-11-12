@@ -46,6 +46,13 @@ class _Refusing implements HomeApi {
   @override
   Future<ScopedMembership> fetchMembership({bool district = false}) async =>
       throw const HomeException('Forbidden', status: 403);
+
+  @override
+  Future<ScopedAudits> fetchAudits({
+    int? year,
+    bool district = false,
+    int page = 1,
+  }) async => throw const HomeException('Forbidden', status: 403);
 }
 
 void main() {

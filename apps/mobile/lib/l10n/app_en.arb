@@ -2218,5 +2218,131 @@
       }
     }
   },
-  "roleMembershipLoading": "Loading membership"
+  "roleMembershipLoading": "Loading membership",
+  "roleAuditsTitle": "Audits & AGM",
+  "roleAuditsSubtitle": "Audit report and the other Registrar documents",
+  "roleAuditsTileSubtitle": "Audit reports and Registrar documents in your societies",
+  "roleAuditsLoading": "Loading audits",
+  "roleAuditsScopeDm": "All societies in your district",
+  "roleAuditsScopeMine": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@roleAuditsScopeMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsScopeDistrict": "All district societies · view only",
+  "roleAuditsUploadedLine": "{uploaded} of {active} active societies have uploaded an audit report for {year}.",
+  "@roleAuditsUploadedLine": {
+    "placeholders": {
+      "uploaded": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsUploaded": "Uploaded",
+  "roleAuditsPastDue": "Past due date",
+  "roleAuditsNotYet": "Not uploaded yet",
+  "roleAuditsDue": "Due {date}",
+  "@roleAuditsDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDueNotPassed": "Due date {date} not passed",
+  "@roleAuditsDueNotPassed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocuments": "4 Registrar Documents · {year}",
+  "@roleAuditsDocuments": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocumentLine": "{submitted} of {active} · {missing} not submitted",
+  "@roleAuditsDocumentLine": {
+    "placeholders": {
+      "submitted": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "missing": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsAllFour": "{count} of {active} active societies have all four · {percent}%",
+  "@roleAuditsAllFour": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "roleAuditsMembersNote": "The signed members list opens only for DMs and HQ.",
+  "roleAuditsFollowUp": "Needs Follow-Up",
+  "roleAuditsFollowPast": "Audit report past the due date",
+  "roleAuditsFollowNotYet": "Audit report not uploaded yet",
+  "roleAuditsNothingTitle": "Nothing to Follow Up",
+  "roleAuditsNothing": "Every active society has uploaded its {year} audit report.",
+  "@roleAuditsNothing": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsShowing": "Showing {shown} of {total}",
+  "@roleAuditsShowing": {
+    "placeholders": {
+      "shown": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsMore": "Show more",
+  "roleAuditsMoreError": "More societies could not be loaded",
+  "roleAuditsMoreErrorCheck": "The societies above are still shown. Check your connection and try again.",
+  "roleAuditsEmptyTitle": "No Active Societies",
+  "roleAuditsEmptyMessage": "There are no active societies in your scope yet, so there are no Registrar documents to follow up.",
+  "roleAuditsDocAudit": "Audit Report",
+  "roleAuditsDocAgm": "AGM Minutes",
+  "roleAuditsDocOfficers": "Office-Bearer List",
+  "roleAuditsDocMembers": "Members List"
 }

@@ -2125,6 +2125,481 @@ class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
   }
 }
 
+/// Issue #119: Audits & AGM for a DM, DDM or SPC, from `GET /home/audits`.
+/// The same figures and colours as HQ, for the user's own societies only.
+/// Opening a society goes to its documents, where each file keeps its own
+/// access rules: the signed members list stays closed to SPCs and DDMs.
+class RoleAuditsScreen extends StatefulWidget {
+  const RoleAuditsScreen({super.key});
+
+  @override
+  State<RoleAuditsScreen> createState() => _RoleAuditsScreenState();
+}
+
+class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
+  bool _district = false;
+  int? _year;
+  Future<ScopedAudits>? _future;
+  // Further pages of the follow-up list, added by "Show more".
+  final _more = <({String id, String name, String code, String district})>[];
+  int _page = 1;
+  bool _loadingMore = false;
+  // Why the last "Show more" failed; the rows already shown stay.
+  Object? _moreError;
+  // The year and scope of the figures on screen. "Show more" asks for the
+  // next page of exactly these, never of a choice made since.
+  ({int year, bool district})? _shown;
+  // Bumped by every reload and on leaving the screen, so a response to an
+  // older request (a page, or a whole load) never changes what is shown.
+  int _generation = 0;
+
+  Future<ScopedAudits> _load() async {
+    final generation = ++_generation;
+    final home = DemoScope.of(context).home;
+    _more.clear();
+    _page = 1;
+    _loadingMore = false;
+    _moreError = null;
+    _shown = null;
+    var district = _district;
+    ScopedAudits audits;
+    try {
+      audits = await home.fetchAudits(year: _year, district: district);
+    } on HomeException catch (error) {
+      // The temporary district view ended: show the user's own societies.
+      if (!district || error.status != 403) rethrow;
+      district = false;
+      if (generation == _generation) _district = false;
+      audits = await home.fetchAudits(year: _year);
+    }
+    if (generation == _generation) {
+      _shown = (year: audits.startYear, district: district);
+    }
+    return audits;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Future<void> _loadMore() async {
+    final shown = _shown;
+    if (shown == null || _loadingMore) return;
+    final generation = _generation;
+    final home = DemoScope.of(context).home;
+    bool current() => mounted && generation == _generation;
+    setState(() {
+      _loadingMore = true;
+      _moreError = null;
+    });
+    try {
+      final next = await home.fetchAudits(
+        year: shown.year,
+        district: shown.district,
+        page: _page + 1,
+      );
+      if (!current()) return;
+      setState(() {
+        _page = next.page;
+        _more.addAll(next.followUp);
+        _loadingMore = false;
+      });
+    } on HomeException catch (error) {
+      if (!current()) return;
+      if (shown.district && error.status == 403) {
+        // The temporary district view ended between pages. As on the first
+        // load, go back to the user's own societies; no district rows stay.
+        _district = false;
+        _reload();
+        return;
+      }
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!current()) return;
+      setState(() {
+        _moreError = error;
+        _loadingMore = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.roleAuditsTitle,
+      subtitle: l.roleAuditsSubtitle,
+      body: FutureBuilder<ScopedAudits>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return LoadingSkeleton(label: l.roleAuditsLoading);
+          }
+          final error = snapshot.error;
+          if (error is HomeException && error.status == 403) {
+            return const NoAccessView();
+          }
+          if (error != null) {
+            return StateMessage(
+              icon: Icons.error_outline,
+              title: l.nationalErrorTitle,
+              message: error is HomeException
+                  ? (error.failure == null
+                        ? error.message
+                        : l.failure(error.failure!))
+                  : l.nationalErrorCheck,
+              tone: StateTone.error,
+              isAlert: true,
+              primaryLabel: l.commonTryAgain,
+              onPrimary: _reload,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: _body(context, snapshot.data!),
+          );
+        },
+      ),
+    );
+  }
+
+  String _docLabel(AppLocalizations l, String type) => switch (type) {
+    'AUDIT_REPORT' => l.roleAuditsDocAudit,
+    'AGM_MINUTES' => l.roleAuditsDocAgm,
+    'OFFICE_BEARER_LIST' => l.roleAuditsDocOfficers,
+    _ => l.roleAuditsDocMembers,
+  };
+
+  Widget _body(BuildContext context, ScopedAudits a) {
+    final l = context.l10n;
+    final now = DemoScope.of(context).now;
+    final latest = now.month >= 4 ? now.year - 1 : now.year - 2;
+    final due = l.date(a.dueOn);
+    final audit = a.audit;
+    final rows = [...a.followUp, ..._more];
+    final status = a.pastDue ? l.roleAuditsPastDue : l.roleAuditsNotYet;
+    final statusColour = a.pastDue ? AppColors.danger : AppColors.warning;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        SampleLabel(text: l.nationalDemoData(a.yearLabel)),
+        Text(switch (a.scope) {
+          'DISTRICT_MANAGER' => l.roleAuditsScopeDm,
+          'DISTRICT' => l.roleAuditsScopeDistrict,
+          _ => l.roleAuditsScopeMine(a.activeSocieties),
+        }, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < 5; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(
+                      'FY ${latest - i}/${'${(latest - i + 1) % 100}'.padLeft(2, '0')}',
+                    ),
+                    selected: a.startYear == latest - i,
+                    onSelected: (_) {
+                      _year = latest - i;
+                      _reload();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (a.districtViewAvailable) ...[
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text(l.roleMembershipMine)),
+              ButtonSegment(value: true, label: Text(l.roleMembershipDistrict)),
+            ],
+            selected: {_district},
+            onSelectionChanged: (value) {
+              _district = value.first;
+              _reload();
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+        if (a.activeSocieties == 0)
+          StateMessage(
+            icon: Icons.fact_check_outlined,
+            title: l.roleAuditsEmptyTitle,
+            message: l.roleAuditsEmptyMessage,
+          )
+        else ...[
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${sharePercent(audit.submitted, a.activeSocieties)}%',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.leaf,
+                  ),
+                ),
+                Text(
+                  l.roleAuditsUploadedLine(
+                    audit.submitted,
+                    a.activeSocieties,
+                    a.yearLabel,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                _Pair(
+                  _Figure(
+                    l.roleAuditsUploaded,
+                    l.number(audit.submitted),
+                    a.yearLabel,
+                    colour: AppColors.leaf,
+                  ),
+                  _Figure(
+                    status,
+                    l.number(audit.missing),
+                    a.pastDue
+                        ? l.roleAuditsDue(due)
+                        : l.roleAuditsDueNotPassed(due),
+                    colour: statusColour,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsDocuments(a.yearLabel)),
+                for (final (index, row) in a.byType.indexed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${index + 1} · ${_docLabel(l, row.documentType)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${sharePercent(row.submitted, a.activeSocieties)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          l.roleAuditsDocumentLine(
+                            row.submitted,
+                            a.activeSocieties,
+                            row.missing,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  l.roleAuditsAllFour(
+                    a.allFour,
+                    a.activeSocieties,
+                    sharePercent(a.allFour, a.activeSocieties),
+                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l.roleAuditsMembersNote,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Eyebrow(l.roleAuditsFollowUp),
+                Text(
+                  a.pastDue ? l.roleAuditsFollowPast : l.roleAuditsFollowNotYet,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (rows.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: StateMessage(
+                      icon: Icons.task_alt,
+                      title: l.roleAuditsNothingTitle,
+                      message: l.roleAuditsNothing(a.yearLabel),
+                    ),
+                  )
+                else ...[
+                  for (final row in rows)
+                    InkWell(
+                      // The Documents tab; each file keeps its own access rules.
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SocietyRecordScreen(
+                            societyId: row.id,
+                            initialTab: 3,
+                          ),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    row.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${row.code} · ${row.district} · $due',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // On its own line, so a longer translation never squeezes the name.
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColour.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusColour,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Text(
+                    l.roleAuditsShowing(rows.length, a.followUpTotal),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  if (_moreError != null)
+                    _MoreError(error: _moreError!, onRetry: _loadMore)
+                  else if (_page < a.totalPages)
+                    TextButton(
+                      onPressed: _loadingMore ? null : _loadMore,
+                      child: Text(l.roleAuditsMore),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Show more" failed: says so in the chosen language, under the rows that
+/// are still shown, with a way to ask for the same page again.
+class _MoreError extends StatelessWidget {
+  const _MoreError({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final error = this.error;
+    final reason = error is HomeException && error.failure != null
+        ? l.failure(error.failure!)
+        : l.roleAuditsMoreErrorCheck;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.roleAuditsMoreError,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.danger,
+              ),
+            ),
+            Text(reason, style: const TextStyle(fontSize: 12)),
+            TextButton(onPressed: onRetry, child: Text(l.commonTryAgain)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A membership category's label in the chosen language; the API's value
 /// stays as sent.
 String _categoryLabel(AppLocalizations l, String category) =>

@@ -188,3 +188,25 @@ export interface ScopedMembership {
   /** DDM only: whether a temporary district view is valid right now. */
   districtView: { available: boolean; expiresAt: string | null } | null;
 }
+
+/**
+ * Issue #119: HQ's Audits & AGM figures (D11) for a DM, DDM or SPC, worked
+ * out only from the societies they may see, for one financial year.
+ */
+export interface ScopedAudits {
+  scope: ScopedMembership["scope"];
+  financialYear: { startYear: number; label: string };
+  /** Active societies in scope: the denominator for every figure. */
+  activeSocieties: number;
+  byType: { documentType: "AUDIT_REPORT" | "AGM_MINUTES" | "OFFICE_BEARER_LIST" | "MEMBERS_LIST"; submitted: number; missing: number }[];
+  allFour: number;
+  /** "2026-09-30" for FY 2025/26. */
+  auditReportDueOn: string;
+  /** In-scope active societies without the audit report, one page at a time. */
+  followUp: {
+    pastDue: boolean;
+    data: { id: string; name: string; societyCode: string; district: string }[];
+    meta: { page: number; pageSize: number; totalItems: number; totalPages: number };
+  };
+  districtView: { available: boolean; expiresAt: string | null } | null;
+}

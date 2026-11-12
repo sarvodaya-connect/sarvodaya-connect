@@ -13,6 +13,8 @@ const FIELD_PATHS = [
   /^\/my-societies$/,
   // Issue #118: Membership for the user's own scope; the API limits the figures.
   /^\/membership$/,
+  // Issue #119: Audits & AGM for the user's own scope; documents keep their own access rules.
+  /^\/compliance$/,
   new RegExp(`^/societies/${UUID}(/.*)?$`, "i"),
   /^\/activities-to-approve(\/.*)?$/,
   // Issue #117: Programmes & Activities over the user's own scope (the API limits it).
