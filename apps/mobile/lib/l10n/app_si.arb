@@ -767,5 +767,9 @@
   "roleAuditsDocAudit": "විගණන වාර්තාව",
   "roleAuditsDocAgm": "වාර්ෂික මහ සභා වාර්තාව",
   "roleAuditsDocOfficers": "නිලධාරීන්ගේ ලැයිස්තුව",
-  "roleAuditsDocMembers": "සාමාජික ලැයිස්තුව"
+  "roleAuditsDocMembers": "සාමාජික ලැයිස්තුව",
+  "countFewer": "අඩු කරන්න: {label}",
+  "countMore": "වැඩි කරන්න: {label}",
+  "countInvalid": "0 සිට {max} දක්වා පූර්ණ සංඛ්‍යාවක් ඇතුළත් කරන්න.",
+  "countFixBeforeNext": "එක් සංඛ්‍යාවක් පරාසය තුළ පූර්ණ සංඛ්‍යාවක් නොවේ. ඉදිරියට යාමට පෙර එය නිවැරදි කරන්න."
 }

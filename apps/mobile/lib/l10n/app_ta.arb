@@ -767,5 +767,9 @@
   "roleAuditsDocAudit": "தணிக்கை அறிக்கை",
   "roleAuditsDocAgm": "AGM கூட்டக் குறிப்புகள்",
   "roleAuditsDocOfficers": "பதவியாளர் பட்டியல்",
-  "roleAuditsDocMembers": "உறுப்பினர் பட்டியல்"
+  "roleAuditsDocMembers": "உறுப்பினர் பட்டியல்",
+  "countFewer": "குறை: {label}",
+  "countMore": "கூட்டு: {label}",
+  "countInvalid": "0 முதல் {max} வரையிலான முழு எண்ணை உள்ளிடவும்.",
+  "countFixBeforeNext": "எண்களில் ஒன்று வரம்புக்குள் உள்ள முழு எண் அல்ல. தொடர்வதற்கு முன் அதைச் சரிசெய்யவும்."
 }

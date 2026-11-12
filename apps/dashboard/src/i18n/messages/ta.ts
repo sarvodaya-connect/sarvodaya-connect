@@ -1196,4 +1196,7 @@ export const ta: Record<MessageKey, string> = {
   "au.scopeDistrict": "அனைத்து {district} சங்கங்களும் · {date} வரை பார்வைக்கு மட்டும்",
   "au.noSocietiesTitle": "செயலில் உள்ள சங்கங்கள் இல்லை",
   "au.noSocieties": "உங்கள் வரம்பில் இன்னும் செயலில் உள்ள சங்கங்கள் இல்லை, எனவே பின்தொடர பதிவாளர் ஆவணங்கள் இல்லை.",
+  // Issue #132: counts typed straight in.
+  "count.invalid": "0 முதல் {max} வரையிலான முழு எண்ணை உள்ளிடவும்.",
+  "count.fixBeforeNext": "எண்களில் ஒன்று வரம்புக்குள் உள்ள முழு எண் அல்ல. தொடர்வதற்கு முன் அதைச் சரிசெய்யவும்.",
 };

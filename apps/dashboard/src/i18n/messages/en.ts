@@ -1194,6 +1194,9 @@ export const en = {
   "au.scopeDistrict": "All {district} societies · view only until {date}",
   "au.noSocietiesTitle": "No Active Societies",
   "au.noSocieties": "There are no active societies in your scope yet, so there are no Registrar documents to follow up.",
+  // Issue #132: counts typed straight in.
+  "count.invalid": "Enter a whole number from 0 to {max}.",
+  "count.fixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on.",
 } as const;
 
 export type MessageKey = keyof typeof en;

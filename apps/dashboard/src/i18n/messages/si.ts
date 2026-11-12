@@ -1196,4 +1196,7 @@ export const si: Record<MessageKey, string> = {
   "au.scopeDistrict": "{district} සියලු සමිති · {date} දක්වා බැලීමට පමණි",
   "au.noSocietiesTitle": "ක්‍රියාකාරී සමිති නැත",
   "au.noSocieties": "ඔබේ විෂය පථයේ තවම ක්‍රියාකාරී සමිති නැති නිසා පසු විපරම් කළ යුතු රෙජිස්ට්‍රාර් ලේඛන නැත.",
+  // Issue #132: counts typed straight in.
+  "count.invalid": "0 සිට {max} දක්වා පූර්ණ සංඛ්‍යාවක් ඇතුළත් කරන්න.",
+  "count.fixBeforeNext": "එක් සංඛ්‍යාවක් පරාසය තුළ පූර්ණ සංඛ්‍යාවක් නොවේ. ඉදිරියට යාමට පෙර එය නිවැරදි කරන්න.",
 };
