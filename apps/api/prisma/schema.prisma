@@ -114,6 +114,8 @@ model Society {
   reportedIncidents    EmergencyIncident[]         @relation("IncidentReportingSociety")
   helpingActions       EmergencyActionHelper[]     @relation("ActionHelperSociety")
   emergencyEvidence    EmergencyEvidence[]
+  // Issue #145: businesses the society itself operates.
+  businesses           SocietyBusiness[]
   createdAt            DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -903,4 +905,135 @@ model AssistantSpendHold {
 
   @@index([detectedAt])
   @@map("assistant_spend_holds")
+}
+
+// Issue #145: Village Economic Profile. Businesses operated by the society
+// itself, what each produces, and the production reported for exact covered
+// periods. Society -> SocietyBusiness -> BusinessOutput -> ProductionRecord.
+// Industry, product and unit codes come from the shared catalogue in
+// packages/api-contracts/src/economy.ts. Nothing here is ever deleted: a
+// business is closed and an output archived, so past totals stay the same.
+enum BusinessStatus {
+  OPERATING
+  SEASONAL
+  TEMPORARILY_STOPPED
+  CLOSED
+
+  @@map("business_status")
+}
+
+enum ProductionBasis {
+  WEEKLY
+  MONTHLY
+  SEASONAL
+
+  @@map("production_basis")
+}
+
+// Actual and estimated figures are kept apart and never added together.
+enum ProductionMeasurement {
+  ACTUAL
+  ESTIMATED
+
+  @@map("production_measurement")
+}
+
+model SocietyBusiness {
+  id            String           @id @default(uuid()) @db.Uuid
+  societyId     String           @map("society_id") @db.Uuid
+  society       Society          @relation(fields: [societyId], references: [id], onDelete: Restrict)
+  name          String           @db.VarChar(150)
+  industry      String           @db.VarChar(40)
+  otherIndustry String?          @map("other_industry") @db.VarChar(150)
+  description   String?          @db.VarChar(500)
+  status        BusinessStatus   @default(OPERATING)
+  // Set when the status becomes CLOSED and cleared if it reopens.
+  closedAt      DateTime?        @map("closed_at") @db.Timestamptz(3)
+  // Raised on every change; an update naming an older version is refused.
+  version       Int              @default(1)
+  createdById   String           @map("created_by_id") @db.VarChar(64)
+  createdByName String           @map("created_by_name") @db.VarChar(150)
+  createdByRole String?          @map("created_by_role") @db.VarChar(40)
+  updatedByName String?          @map("updated_by_name") @db.VarChar(150)
+  updatedByRole String?          @map("updated_by_role") @db.VarChar(40)
+  outputs       BusinessOutput[]
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([societyId])
+  @@map("society_businesses")
+}
+
+model BusinessOutput {
+  id               String             @id @default(uuid()) @db.Uuid
+  businessId       String             @map("business_id") @db.Uuid
+  business         SocietyBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  product          String             @db.VarChar(40)
+  otherDescription String?            @map("other_description") @db.VarChar(150)
+  unit             String             @db.VarChar(20)
+  archivedAt       DateTime?          @map("archived_at") @db.Timestamptz(3)
+  version          Int                @default(1)
+  createdById      String             @map("created_by_id") @db.VarChar(64)
+  createdByName    String             @map("created_by_name") @db.VarChar(150)
+  createdByRole    String?            @map("created_by_role") @db.VarChar(40)
+  records          ProductionRecord[]
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([businessId])
+  @@index([product])
+  @@map("business_outputs")
+}
+
+// One record per output, measurement and exact covered period. Periods of the
+// same output and measurement never overlap (checked under a row lock on the
+// output), so a weekly and a monthly figure are never both counted.
+model ProductionRecord {
+  id              String                     @id @default(uuid()) @db.Uuid
+  outputId        String                     @map("output_id") @db.Uuid
+  output          BusinessOutput             @relation(fields: [outputId], references: [id], onDelete: Restrict)
+  basis           ProductionBasis
+  periodStart     DateTime                   @map("period_start") @db.Date
+  periodEnd       DateTime                   @map("period_end") @db.Date
+  seasonLabel     String?                    @map("season_label") @db.VarChar(60)
+  measurement     ProductionMeasurement
+  quantity        Decimal                    @db.Decimal(14, 3)
+  note            String?                    @db.VarChar(500)
+  source          String?                    @db.VarChar(150)
+  version         Int                        @default(1)
+  // Sent by the client so a retried save returns the same record.
+  clientRequestId String?                    @unique @map("client_request_id") @db.Uuid
+  createdById     String                     @map("created_by_id") @db.VarChar(64)
+  createdByName   String                     @map("created_by_name") @db.VarChar(150)
+  createdByRole   String?                    @map("created_by_role") @db.VarChar(40)
+  updatedByName   String?                    @map("updated_by_name") @db.VarChar(150)
+  updatedByRole   String?                    @map("updated_by_role") @db.VarChar(40)
+  revisions       ProductionRecordRevision[]
+  createdAt       DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([outputId, measurement, periodStart, periodEnd])
+  @@index([periodStart, periodEnd])
+  @@map("production_records")
+}
+
+// Every saved version of a record, including the first. A correction adds a
+// row; the record itself always holds the current figure.
+model ProductionRecordRevision {
+  id            String           @id @default(uuid()) @db.Uuid
+  recordId      String           @map("record_id") @db.Uuid
+  record        ProductionRecord @relation(fields: [recordId], references: [id], onDelete: Restrict)
+  version       Int
+  change        String           @db.VarChar(20)
+  quantity      Decimal          @db.Decimal(14, 3)
+  seasonLabel   String?          @map("season_label") @db.VarChar(60)
+  note          String?          @db.VarChar(500)
+  source        String?          @db.VarChar(150)
+  changedById   String           @map("changed_by_id") @db.VarChar(64)
+  changedByName String           @map("changed_by_name") @db.VarChar(150)
+  changedByRole String?          @map("changed_by_role") @db.VarChar(40)
+  changedAt     DateTime         @default(now()) @map("changed_at") @db.Timestamptz(3)
+
+  @@unique([recordId, version])
+  @@map("production_record_revisions")
 }
