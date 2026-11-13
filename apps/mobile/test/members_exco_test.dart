@@ -136,6 +136,7 @@ void main() {
     expect(labels, [
       'Overview',
       'Members & Exco',
+      'Village Economic Profile',
       'Work Plan',
       'Documents',
       'History',

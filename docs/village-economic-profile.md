@@ -171,6 +171,28 @@ This keeps past results understandable:
 
 The one exception is reopening a closed business: it clears the close date, so periods while it was closed count it as eligible again.
 
+## Phone app (#146)
+
+The society record has a **Village Economic Profile** tab, third after Overview and Members & Exco. The code is in `apps/mobile/lib/src/economy/`.
+
+| Screen | What it shows |
+|---|---|
+| The tab | A short note that these are businesses the society runs itself and that the figures are self-reported, a summary, and one card per business with its status and the latest actual and estimated figure of each product, each with its period. **Add business** appears for the assigned Society Officer only. |
+| Add/Edit Business | Name, industry (or Other with a description), short description, status and products/services. Standard products show their fixed unit; Other takes a description and a unit. The profile's free-text business description is not touched. |
+| Business details | Each product's latest figures and production history, with Record, Archive or Bring back, Edit, and Close or Reopen. Each figure opens on its own screen with every version of it and **Correct figure**. |
+| Record Production | Product, actual or estimated, weekly, monthly or seasonal (with a season name), the exact period, the quantity in the product's unit, an optional note and source, and a preview such as "Milk: 3,200 litres · October 2026 · Actual". |
+
+How the phone keeps the rules:
+
+- **A figure is never shown as a total of actual and estimated.** Cards show the latest of each as separate lines. A product with no figure says "Not reported"; a reported 0 shows as 0.
+- **Latest figures** come from one `GET /economic-profile/production-records?societyId=…` list (newest period first, up to five pages of 100) instead of one request per product, to stay within the TEST API's request limits.
+- **No duplicates.** Save is disabled while saving. A new figure carries a `clientRequestId` that stays the same while the figure stays the same, so a retry after a lost answer returns the record already saved. If the period already has a figure, the form offers to correct it instead.
+- **Corrections** send the version the form opened. A 409 shows "Changed by someone else" and keeps the typed value; **Reload latest** shows the saved figure and moves to its version, and nothing is overwritten without a second save.
+- **Failures keep what was typed** and are never shown as saved. Nothing is stored on the phone for later.
+- **Adding a business has no request id on the API.** After a lost answer, the phone checks the profile for the business before creating it again, and skips products that are already there.
+- **Read-only roles** see the same figures with no add or edit controls. A 403 or 404 from the API is shown as such, and access that has ended (for example an expired DDM grant) clears the tab.
+- The phone's copy of the catalogue is checked against `packages/api-contracts/src/economy.ts` by `test/economy_catalogue_test.dart`. In demo mode, `DemoEconomyApi` applies the same rules with fictional data.
+
 ## Deployment and migration notes
 
 - The PR only adds code, the migration and contracts. **No infrastructure is deployed and no live migration is applied** as part of it.

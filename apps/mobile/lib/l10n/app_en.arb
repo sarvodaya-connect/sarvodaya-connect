@@ -2490,5 +2490,1000 @@
     }
   },
   "memUnder18Required": "Enter the under 18s, or 0 if there are none.",
-  "memSaved": "Members saved. The change is in the society history."
+  "memSaved": "Members saved. The change is in the society history.",
+  "recTabEconomy": "Village Economic Profile",
+  "@recTabEconomy": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryAgriculture": "Agriculture",
+  "@vepIndustryAgriculture": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryLivestockDairy": "Livestock and dairy",
+  "@vepIndustryLivestockDairy": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryFisheries": "Fisheries",
+  "@vepIndustryFisheries": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryFoodProcessing": "Food processing",
+  "@vepIndustryFoodProcessing": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryTextilesGarments": "Textiles and garments",
+  "@vepIndustryTextilesGarments": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryHandicrafts": "Handicrafts",
+  "@vepIndustryHandicrafts": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryServices": "Services",
+  "@vepIndustryServices": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryOther": "Other",
+  "@vepIndustryOther": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepStatusOperating": "Operating",
+  "@vepStatusOperating": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepStatusSeasonal": "Seasonal",
+  "@vepStatusSeasonal": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepStatusTemporarilyStopped": "Temporarily stopped",
+  "@vepStatusTemporarilyStopped": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepStatusClosed": "Closed",
+  "@vepStatusClosed": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductMilk": "Milk",
+  "@vepProductMilk": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductCurd": "Curd",
+  "@vepProductCurd": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductEggs": "Eggs",
+  "@vepProductEggs": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductPaddy": "Paddy",
+  "@vepProductPaddy": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductVegetables": "Vegetables",
+  "@vepProductVegetables": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductFruit": "Fruit",
+  "@vepProductFruit": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductCoconuts": "Coconuts",
+  "@vepProductCoconuts": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductTeaLeaf": "Tea leaf",
+  "@vepProductTeaLeaf": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductFish": "Fish",
+  "@vepProductFish": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductDriedFish": "Dried fish",
+  "@vepProductDriedFish": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductRiceFlour": "Rice flour",
+  "@vepProductRiceFlour": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductSnackPackets": "Snack packets",
+  "@vepProductSnackPackets": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductGarments": "Garments",
+  "@vepProductGarments": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductHandloomFabric": "Handloom fabric",
+  "@vepProductHandloomFabric": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductHandicraftItems": "Handicraft items",
+  "@vepProductHandicraftItems": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductTailoringJobs": "Tailoring jobs",
+  "@vepProductTailoringJobs": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductRepairJobs": "Repair jobs",
+  "@vepProductRepairJobs": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductOther": "Other",
+  "@vepProductOther": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitLitre": "Litres",
+  "@vepUnitLitre": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitKilogram": "Kilograms (kg)",
+  "@vepUnitKilogram": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitMetre": "Metres",
+  "@vepUnitMetre": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitItem": "Items",
+  "@vepUnitItem": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitNut": "Nuts",
+  "@vepUnitNut": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitEgg": "Eggs",
+  "@vepUnitEgg": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitPacket": "Packets",
+  "@vepUnitPacket": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitJob": "Jobs",
+  "@vepUnitJob": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepQtyLitre": "{count, plural, =1{{quantity} litre} other{{quantity} litres}}",
+  "@vepQtyLitre": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyKilogram": "{count, plural, =1{{quantity} kg} other{{quantity} kg}}",
+  "@vepQtyKilogram": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyMetre": "{count, plural, =1{{quantity} metre} other{{quantity} metres}}",
+  "@vepQtyMetre": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyItem": "{count, plural, =1{{quantity} item} other{{quantity} items}}",
+  "@vepQtyItem": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyNut": "{count, plural, =1{{quantity} nut} other{{quantity} nuts}}",
+  "@vepQtyNut": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyEgg": "{count, plural, =1{{quantity} egg} other{{quantity} eggs}}",
+  "@vepQtyEgg": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyPacket": "{count, plural, =1{{quantity} packet} other{{quantity} packets}}",
+  "@vepQtyPacket": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQtyJob": "{count, plural, =1{{quantity} job} other{{quantity} jobs}}",
+  "@vepQtyJob": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepBasisWeekly": "Weekly",
+  "@vepBasisWeekly": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBasisMonthly": "Monthly",
+  "@vepBasisMonthly": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBasisSeasonal": "Seasonal",
+  "@vepBasisSeasonal": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepActual": "Actual",
+  "@vepActual": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEstimated": "Estimated",
+  "@vepEstimated": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPeriodRange": "{start} – {end}",
+  "@vepPeriodRange": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "vepPeriodSeason": "{label} ({range})",
+  "@vepPeriodSeason": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "vepIntro": "Businesses the society runs itself, not every business in the village. The Society Officer reports these figures; they are not verified.",
+  "@vepIntro": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSummaryBusinesses": "Businesses",
+  "@vepSummaryBusinesses": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSummaryOperating": "Operating now",
+  "@vepSummaryOperating": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSummaryOutputs": "Products and services",
+  "@vepSummaryOutputs": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSummaryUpdated": "Last updated",
+  "@vepSummaryUpdated": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepAddBusiness": "Add business",
+  "@vepAddBusiness": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEmptyTitle": "No businesses recorded yet",
+  "@vepEmptyTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEmptyManage": "Add the businesses the society runs, such as a dairy or a rice mill, then record what they produce.",
+  "@vepEmptyManage": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEmptyView": "The Society Officer has not added any society businesses yet.",
+  "@vepEmptyView": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepLoading": "Loading the economic profile",
+  "@vepLoading": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepLoadError": "Couldn't load the economic profile",
+  "@vepLoadError": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepShowingSaved": "{message} Showing the figures from the last time they loaded.",
+  "@vepShowingSaved": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "vepNoAccessTitle": "Economic profile not available",
+  "@vepNoAccessTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNoAccess": "You can no longer see this society's economic profile. Your access may have ended.",
+  "@vepNoAccess": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepViewOnly": "You can view this profile. Only the society's own Society Officer can change it.",
+  "@vepViewOnly": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepForbidden": "Not saved: only the society's own Society Officer can change this profile. Nothing was changed.",
+  "@vepForbidden": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSelfReported": "Self-reported by the Society Officer. Not sales, revenue, stock or capacity.",
+  "@vepSelfReported": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepLatestActual": "Latest actual",
+  "@vepLatestActual": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepLatestEstimated": "Latest estimate",
+  "@vepLatestEstimated": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNotReported": "Not reported",
+  "@vepNotReported": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNoOutputs": "No products or services yet.",
+  "@vepNoOutputs": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNoOutputsManage": "No products or services yet. Add one to start recording production.",
+  "@vepNoOutputsManage": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessUpdated": "Last updated {when} by {who}",
+  "@vepBusinessUpdated": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "vepDetailsTitle": "Business",
+  "@vepDetailsTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputsTitle": "Products and services",
+  "@vepOutputsTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepMeasuredIn": "Measured in {unit}",
+  "@vepMeasuredIn": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "vepHistoryTitle": "Production history",
+  "@vepHistoryTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepHistoryEmpty": "No figures recorded yet.",
+  "@vepHistoryEmpty": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepShowMore": "Show more",
+  "@vepShowMore": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSavedWhen": "Saved {when}",
+  "@vepSavedWhen": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "vepCorrected": "Corrected",
+  "@vepCorrected": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRecordProduction": "Record production",
+  "@vepRecordProduction": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRecordShort": "Record",
+  "@vepRecordShort": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepAddOutput": "Add product or service",
+  "@vepAddOutput": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputAdded": "Product or service added",
+  "@vepOutputAdded": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCloseBusiness": "Close business",
+  "@vepCloseBusiness": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepReopenBusiness": "Reopen business",
+  "@vepReopenBusiness": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCloseTitle": "Close this business?",
+  "@vepCloseTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCloseBody": "Its products and figures are kept and still count for the periods they cover. Figures can still be added for days before today. You can reopen it later.",
+  "@vepCloseBody": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepClosedDone": "Business closed",
+  "@vepClosedDone": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepReopenedDone": "Business reopened",
+  "@vepReopenedDone": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepClosedNote": "Closed on {date}. Its figures are kept.",
+  "@vepClosedNote": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "vepArchive": "Archive",
+  "@vepArchive": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRestore": "Bring back",
+  "@vepRestore": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepArchived": "Archived",
+  "@vepArchived": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepArchiveTitle": "Archive {name}?",
+  "@vepArchiveTitle": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vepArchiveBody": "Its figures are kept and still count for the periods they cover. You can bring it back later.",
+  "@vepArchiveBody": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepArchivedDone": "Archived. Its figures are kept.",
+  "@vepArchivedDone": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRestoredDone": "Brought back",
+  "@vepRestoredDone": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepConflictReloaded": "Someone else changed this since it loaded. The latest version is now shown; nothing was overwritten.",
+  "@vepConflictReloaded": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessAddTitle": "Add Business",
+  "@vepBusinessAddTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessEditTitle": "Edit Business",
+  "@vepBusinessEditTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessFormIntro": "Add a business the society runs itself. Keep the profile's free-text business description as it is; it stays separate.",
+  "@vepBusinessFormIntro": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldName": "Business name",
+  "@vepFieldName": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldIndustry": "Industry",
+  "@vepFieldIndustry": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldOtherIndustry": "Describe the industry",
+  "@vepFieldOtherIndustry": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldDescription": "Short description",
+  "@vepFieldDescription": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldDescriptionHint": "What the business does, in a sentence or two",
+  "@vepFieldDescriptionHint": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldStatus": "Operating status",
+  "@vepFieldStatus": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepChoose": "Choose",
+  "@vepChoose": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputsHelp": "Add each product the business makes or service it provides. Standard products have a fixed unit so figures can be compared.",
+  "@vepOutputsHelp": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepArchiveOnDetails": "To archive a product or service, use the business page.",
+  "@vepArchiveOnDetails": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRemoveOutput": "Remove {name}",
+  "@vepRemoveOutput": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "vepNameError": "Enter the business name (at least 2 characters)",
+  "@vepNameError": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepIndustryError": "Choose the industry",
+  "@vepIndustryError": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOtherIndustryError": "Describe the industry",
+  "@vepOtherIndustryError": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSaveBusiness": "Save business",
+  "@vepSaveBusiness": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessSaved": "Business saved",
+  "@vepBusinessSaved": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessSavedOutputsLeft": "The business is saved. Try again to add the products and services that are left.",
+  "@vepBusinessSavedOutputsLeft": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPartial": "The business is saved, but {count, plural, =1{1 product or service was} other{{count} products or services were}} not added.",
+  "@vepPartial": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vepConflictBusiness": "This business was changed since you opened it. What you typed is still here. Reload to see what is saved now, then save again if it is still right.",
+  "@vepConflictBusiness": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNowSavedBusiness": "Saved now: {name} · {status}. Your changes are still here.",
+  "@vepNowSavedBusiness": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "vepLeaveBody": "What you typed has not been saved and will be lost.",
+  "@vepLeaveBody": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputSheetTitle": "Add Product or Service",
+  "@vepOutputSheetTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldOutput": "Product or service",
+  "@vepFieldOutput": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepUnitFixed": "Always measured in {unit}, so figures can be compared.",
+  "@vepUnitFixed": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "vepOutputOtherDescription": "Describe the product or service",
+  "@vepOutputOtherDescription": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputUnit": "Unit",
+  "@vepOutputUnit": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOtherNotAdded": "Other products are listed on their own and are never added to other figures.",
+  "@vepOtherNotAdded": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputChoose": "Choose a product or service",
+  "@vepOutputChoose": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputOtherError": "Describe it and choose a unit",
+  "@vepOutputOtherError": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOutputAdd": "Add",
+  "@vepOutputAdd": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductionAddTitle": "Record Production",
+  "@vepProductionAddTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepProductionCorrectTitle": "Correct Figure",
+  "@vepProductionCorrectTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldMeasurement": "Measurement",
+  "@vepFieldMeasurement": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepActualHelp": "What was actually produced, in a period that has ended.",
+  "@vepActualHelp": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEstimatedHelp": "Your best estimate. Kept apart from actual figures and never added to them.",
+  "@vepEstimatedHelp": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldBasis": "Reporting period",
+  "@vepFieldBasis": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldMonth": "Month",
+  "@vepFieldMonth": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldWeek": "A day in the week (Monday to Sunday)",
+  "@vepFieldWeek": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldSeasonLabel": "Season name",
+  "@vepFieldSeasonLabel": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSeasonHint": "For example Maha 2026/27",
+  "@vepSeasonHint": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldStart": "First day",
+  "@vepFieldStart": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldEnd": "Last day",
+  "@vepFieldEnd": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPickDate": "Choose date",
+  "@vepPickDate": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCovers": "{days, plural, =1{Covers {period} · 1 day} other{Covers {period} · {days} days}}",
+  "@vepCovers": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "period": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "vepFieldQuantity": "Quantity",
+  "@vepFieldQuantity": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepQuantityHelpWhole": "Whole numbers only, in {unit}. Enter 0 if nothing was produced.",
+  "@vepQuantityHelpWhole": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "vepQuantityHelpDecimals": "In {unit}, up to {count, plural, =1{1 decimal place} other{{count} decimal places}}. Enter 0 if nothing was produced.",
+  "@vepQuantityHelpDecimals": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vepQuantityRequired": "Enter the quantity. Enter 0 if nothing was produced.",
+  "@vepQuantityRequired": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepQuantityNotNumber": "Enter the quantity as a number, without letters or a minus sign",
+  "@vepQuantityNotNumber": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepQuantityWhole": "This unit takes whole numbers only",
+  "@vepQuantityWhole": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepQuantityDecimals": "Use at most {count, plural, =1{1 decimal place} other{{count} decimal places}} for this unit",
+  "@vepQuantityDecimals": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vepQuantityTooLarge": "The quantity can be at most {max}",
+  "@vepQuantityTooLarge": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "vepPeriodRequired": "Choose the period",
+  "@vepPeriodRequired": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSeasonLabelRequired": "Name the season, for example Maha 2026/27",
+  "@vepSeasonLabelRequired": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSeasonDates": "Choose the first and last day of the season",
+  "@vepSeasonDates": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSeasonOrder": "The last day cannot be before the first day",
+  "@vepSeasonOrder": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSeasonTooLong": "A season can cover at most 366 days",
+  "@vepSeasonTooLong": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepActualFuture": "An actual figure can only cover days that have passed. Choose Estimated, or an earlier period.",
+  "@vepActualFuture": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepEstimateTooFar": "An estimate can look at most a year ahead",
+  "@vepEstimateTooFar": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldNote": "Note (optional)",
+  "@vepFieldNote": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepFieldSource": "Source (optional)",
+  "@vepFieldSource": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSourceHint": "For example the milk collection book",
+  "@vepSourceHint": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPreview": "Preview",
+  "@vepPreview": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPreviewEmpty": "Choose the product, period and quantity to see the figure as it will be saved.",
+  "@vepPreviewEmpty": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepPreviewNote": "Not saved until you tap Save.",
+  "@vepPreviewNote": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSaveFigure": "Save",
+  "@vepSaveFigure": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSaveCorrection": "Save correction",
+  "@vepSaveCorrection": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepSaved": "Figure saved",
+  "@vepSaved": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepAlreadySaved": "This figure was already saved. Nothing was added twice.",
+  "@vepAlreadySaved": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCorrectedDone": "Figure corrected",
+  "@vepCorrectedDone": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepNoChange": "Nothing changed",
+  "@vepNoChange": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepExistingTitle": "This period already has a figure",
+  "@vepExistingTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepExisting": "{period} already has a figure ({measurement}): {quantity}. Correct it instead of adding a second one.",
+  "@vepExisting": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "period": {
+        "type": "String"
+      },
+      "measurement": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepCorrectInstead": "Correct that figure",
+  "@vepCorrectInstead": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOverlapTitle": "These days already have a figure",
+  "@vepOverlapTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOverlapBody": "A figure of the same measurement already covers some of these days. Choose another period, or correct the saved figure from the production history.",
+  "@vepOverlapBody": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepOverlapWith": "{period} ({quantity}) already covers some of these days. Figures for overlapping days are never counted twice.",
+  "@vepOverlapWith": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "period": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepCorrectingNote": "You are correcting the figure ({measurement}) for {period}, saved as {quantity}. The period and measurement stay the same, and the earlier figure stays in the history.",
+  "@vepCorrectingNote": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "measurement": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepConflictTitle": "Changed by someone else",
+  "@vepConflictTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepConflictBody": "This figure was changed since you opened it. Your typed value is still here. Reload to see the saved figure, then save again if yours is still right.",
+  "@vepConflictBody": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepReload": "Reload latest",
+  "@vepReload": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepReloaded": "Saved now: {quantity}, by {who}. Your typed value is unchanged; save again if it is still right.",
+  "@vepReloaded": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "vepRecordPeriod": "Period covered",
+  "@vepRecordPeriod": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRecordNote": "Note",
+  "@vepRecordNote": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRecordSource": "Source",
+  "@vepRecordSource": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepCorrect": "Correct figure",
+  "@vepCorrect": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRevisionsTitle": "Changes",
+  "@vepRevisionsTitle": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepRevisionCreated": "Saved {quantity}",
+  "@vepRevisionCreated": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "vepRevisionCorrected": "Corrected to {quantity}",
+  "@vepRevisionCorrected": {
+    "description": "Issue #146 Village Economic Profile.",
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  }
 }

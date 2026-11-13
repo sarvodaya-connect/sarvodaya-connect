@@ -10,6 +10,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
+import '../economy/economic_profile_tab.dart';
 import 'annual_summary_screen.dart';
 import 'document_upload_screen.dart';
 import 'work_plan_view.dart';
@@ -22,14 +23,29 @@ import 'record_widgets.dart';
 import 'society_record_api.dart';
 import 'society_record_models.dart';
 
+/// The society record's tabs, in order. Callers name a tab instead of
+/// counting, so a new tab cannot send a link to the wrong one.
+abstract final class RecordTab {
+  static const overview = 0;
+  static const membersExco = 1;
+
+  /// Issue #146.
+  static const economy = 2;
+  static const workPlan = 3;
+  static const documents = 4;
+  static const history = 5;
+  static const count = 6;
+}
+
 /// M06 society detail (with M06v view only and M06fx summary not added).
-/// Tabs: Overview, Members & Exco, Work plan, Documents and History.
+/// Tabs: Overview, Members & Exco, Village Economic Profile, Work plan,
+/// Documents and History.
 class SocietyRecordScreen extends StatefulWidget {
   const SocietyRecordScreen({
     super.key,
     required this.societyId,
     this.showBack = true,
-    this.initialTab = 0,
+    this.initialTab = RecordTab.overview,
   });
 
   final String societyId;
@@ -37,8 +53,7 @@ class SocietyRecordScreen extends StatefulWidget {
   /// False when the record is the Society Officer's home tab.
   final bool showBack;
 
-  /// Tab shown first: 0 Overview, 1 Members & Exco, 2 Work plan, 3 Documents,
-  /// 4 History.
+  /// Tab shown first, one of [RecordTab].
   final int initialTab;
 
   @override
@@ -85,7 +100,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
     final record = _record;
     final user = DemoScope.of(context).user!;
     return DefaultTabController(
-      length: 5,
+      length: RecordTab.count,
       initialIndex: widget.initialTab,
       child: Scaffold(
         appBar: AppBar(
@@ -158,6 +173,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                       tabs: [
                         Tab(height: 38, text: l.recTabOverview),
                         Tab(height: 38, text: l.recTabMembersExco),
+                        Tab(height: 38, text: l.recTabEconomy),
                         Tab(height: 38, text: l.recTabWorkPlan),
                         Tab(height: 38, text: l.recTabDocuments),
                         Tab(height: 38, text: l.recTabHistory),
@@ -196,6 +212,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                           child: _OverviewTab(record: record, open: _open),
                         ),
                         _ExcoTab(record: record, open: _open),
+                        EconomicProfileTab(societyId: record.id),
                         _WorkPlanTab(record: record),
                         _DocumentsTab(record: record, open: _open),
                         _HistoryTab(societyId: record.id),

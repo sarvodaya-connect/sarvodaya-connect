@@ -2560,7 +2560,7 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
                         MaterialPageRoute<void>(
                           builder: (_) => SocietyRecordScreen(
                             societyId: row.id,
-                            initialTab: 3,
+                            initialTab: RecordTab.documents,
                           ),
                         ),
                       ),

@@ -546,6 +546,7 @@ class RecordChip extends StatelessWidget {
     super.key,
     this.tone = ChipTone.neutral,
     this.icon,
+    this.maxLines,
   });
 
   final String label;
@@ -553,6 +554,10 @@ class RecordChip extends StatelessWidget {
 
   /// Shown instead of the dot, e.g. a lock for "View only".
   final IconData? icon;
+
+  /// When set, a long label wraps to at most this many lines and then ends
+  /// with "…"; screen readers still read all of it.
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -572,6 +577,8 @@ class RecordChip extends StatelessWidget {
       child: icon == null
           ? Text(
               '● $label',
+              maxLines: maxLines,
+              overflow: maxLines == null ? null : TextOverflow.ellipsis,
               style: TextStyle(
                 color: foreground,
                 fontSize: 10,
@@ -671,7 +678,18 @@ class UnsavedChip extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(right: 12),
     child: Center(
-      child: RecordChip(context.l10n.recUnsaved, tone: ChipTone.warning),
+      // Long Sinhala and Tamil labels with large text wrap instead of
+      // pushing the app bar off the screen.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.36,
+        ),
+        child: RecordChip(
+          context.l10n.recUnsaved,
+          tone: ChipTone.warning,
+          maxLines: 2,
+        ),
+      ),
     ),
   );
 }
