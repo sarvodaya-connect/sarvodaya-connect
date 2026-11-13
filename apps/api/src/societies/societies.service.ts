@@ -7,6 +7,7 @@ import {
 import type { MembershipCategory } from '../generated/prisma/client.js';
 import type { Principal } from '../auth/principal.js';
 import { SocietyQueryDto } from './dto/society-query.dto.js';
+import { MAX_MEMBERS } from './dto/society-updates.dto.js';
 import type {
   SocietyCouncilUpdateDto,
   SocietyMembershipUpdateDto,
@@ -286,6 +287,55 @@ export function excoStatus(
   };
 }
 
+/**
+ * Issue #141: female and male members come together and the total is always
+ * worked out here, never taken from the app. A total sent alone (by an app
+ * from before #141) is accepted only while the society has no split, or when
+ * it already equals the split, so it cannot contradict the female and male
+ * counts. Sets `input.memberCount` to the total to save.
+ */
+export function memberSplit(
+  input: SocietyProfileUpdateDto,
+  current: {
+    femaleMembers?: number | null;
+    maleMembers?: number | null;
+  },
+) {
+  const { femaleMembers: female, maleMembers: male } = input;
+  if ((female === undefined) !== (male === undefined)) {
+    throw new BadRequestException(
+      'Enter both the female and the male members. The total is worked out from them',
+    );
+  }
+  if (female !== undefined && male !== undefined) {
+    const total = female + male;
+    if (total > MAX_MEMBERS) {
+      throw new BadRequestException(
+        'Female and male members together cannot be more than 1,000,000',
+      );
+    }
+    if (input.memberCount !== undefined && input.memberCount !== total) {
+      throw new BadRequestException(
+        'The total members must be the female plus the male members',
+      );
+    }
+    input.memberCount = total;
+    return;
+  }
+  const currentFemale = current.femaleMembers;
+  const currentMale = current.maleMembers;
+  if (
+    input.memberCount !== undefined &&
+    currentFemale != null &&
+    currentMale != null &&
+    input.memberCount !== currentFemale + currentMale
+  ) {
+    throw new BadRequestException(
+      'This society records female and male members. Update those instead; the total is worked out from them',
+    );
+  }
+}
+
 /** M06e: 10 digits such as 037 000 0000, or +94 and 9 digits. */
 export function normaliseLandline(value: string): string | null {
   const compact = value.replace(/[\s-]/g, '');
@@ -306,6 +356,8 @@ export function describeProfileChange(
     nameEn: string;
     nameLocal?: string | null;
     memberCount?: number | null;
+    femaleMembers?: number | null;
+    maleMembers?: number | null;
     landline?: string | null;
     addressLine?: string | null;
     dsDivision?: string | null;
@@ -348,6 +400,16 @@ export function describeProfileChange(
         : `Members ${lkrOrPlain(before.memberCount)} → ${lkrOrPlain(input.memberCount)}`,
     );
   }
+  const split = (label: string, previous?: number | null, next?: number) => {
+    if (next === undefined || next === (previous ?? null)) return;
+    parts.push(
+      previous == null
+        ? `${label} entered: ${lkrOrPlain(next)}`
+        : `${label} ${lkrOrPlain(previous)} → ${lkrOrPlain(next)}`,
+    );
+  };
+  split('Female members', before.femaleMembers, input.femaleMembers);
+  split('Male members', before.maleMembers, input.maleMembers);
   text('Landline', before.landline, input.landline);
   text('Address', before.addressLine, input.addressLine);
   text('DS division', before.dsDivision, input.dsDivision);
@@ -500,6 +562,8 @@ export class SocietiesService {
       createdAt: record.createdAt.toISOString(),
       // SC-65: V4 society record.
       memberCount: record.memberCount ?? null,
+      femaleMembers: record.femaleMembers ?? null,
+      maleMembers: record.maleMembers ?? null,
       landline: record.landline ?? null,
       businessDescription: record.businessDescription ?? null,
       grade: record.grade ?? null,
@@ -575,6 +639,7 @@ export class SocietiesService {
         'Latitude and longitude must be supplied together',
       );
     }
+    memberSplit(input, current);
     if (input.landline) {
       const landline = normaliseLandline(input.landline);
       if (!landline) {

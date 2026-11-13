@@ -71,6 +71,8 @@ const record: SocietyRecord = {
     problems: ["23 of 25 seats are still to fill.", "No Treasurer chosen yet."],
   },
   memberCount: 418,
+  femaleMembers: null,
+  maleMembers: null,
   landline: "037 000 0123",
   businessDescription: "A small rice mill for members' paddy.",
   grade: "B",
@@ -138,10 +140,15 @@ describe("D05 annual financial summary", () => {
 });
 
 describe("D05 society record overview", () => {
+  it("shows the female and male members with the total once entered (issue #141)", () => {
+    render(<RecordOverview record={{ ...record, memberCount: 42, femaleMembers: 25, maleMembers: 17 }} workPlan={null} />);
+    expect(screen.getByText("42 · 25 female, 17 male")).toBeInTheDocument();
+  });
+
   it("shows details, staff, the HQ-only grade with the open request and office bearers first", () => {
     render(<RecordOverview record={record} workPlan={null} />);
     expect(screen.getByText("S-104233")).toBeInTheDocument();
-    expect(screen.getByText("418")).toBeInTheDocument();
+    expect(screen.getByText("418 · female/male not entered yet")).toBeInTheDocument();
     expect(screen.getByText("Grade B · Developing")).toBeInTheDocument();
     expect(screen.getByText(/Request B → A · waiting/)).toBeInTheDocument();
     expect(screen.getByText(/Information only — no sales, stock or accounts/)).toBeInTheDocument();
@@ -172,14 +179,61 @@ describe("D05e HQ edit society information", () => {
     expect(save).toBeEnabled();
   });
 
-  it("flags a member count that is not a number", async () => {
+  it("works out the total from female and male as they are typed (issue #141)", async () => {
     const user = userEvent.setup();
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={record} />);
-    const members = screen.getByRole("textbox", { name: /Number of members/ });
-    await user.clear(members);
-    await user.type(members, "41a");
-    expect(screen.getByRole("alert")).toHaveTextContent("Use numbers only");
+    const total = screen.getByRole("status", { name: "Total members" });
+    // An older record keeps its total and says the split is missing.
+    expect(total).toHaveTextContent("418");
+    expect(screen.getByText(/Only a total of 418 members is on record/)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Total members" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox", { name: "Female members" }), "25");
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter both the female and the male members.");
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "Male members" }), "17");
+    expect(total).toHaveTextContent("42");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
+  it("updates the total when a count changes, and refuses counts that are not whole numbers", async () => {
+    const user = userEvent.setup();
+    render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={{ ...record, memberCount: 42, femaleMembers: 25, maleMembers: 17 }} />);
+    const female = screen.getByRole("textbox", { name: "Female members" });
+    const total = screen.getByRole("status", { name: "Total members" });
+    expect(total).toHaveTextContent("42");
+    expect(screen.queryByText(/Only a total of/)).not.toBeInTheDocument();
+    await user.clear(female);
+    await user.type(female, "30");
+    expect(total).toHaveTextContent("47");
+    for (const typed of ["2.5", "-3", "25a", "1,000,001"]) {
+      await user.clear(female);
+      await user.type(female, typed);
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter a whole number from 0 to 1,000,000");
+      expect(total).toHaveTextContent("—");
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    }
+    // Once entered, the split cannot be cleared back to a bare total.
+    await user.clear(female);
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter both the female and the male members.");
+    await user.type(female, "0");
+    expect(total).toHaveTextContent("17");
+  });
+
+  it("keeps the typed counts and shows the error when saving fails", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn().mockResolvedValue({ error: "The society could not be saved. Nothing was changed." });
+    render(<EditSocietyPanel action={action} hqName="HQ" record={record} />);
+    await user.type(screen.getByRole("textbox", { name: "Female members" }), "25");
+    await user.type(screen.getByRole("textbox", { name: "Male members" }), "17");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("The society could not be saved. Nothing was changed.")).toBeInTheDocument();
+    const form = action.mock.calls[0]![1] as FormData;
+    expect([form.get("femaleMembers"), form.get("maleMembers"), form.get("memberCount")]).toEqual(["25", "17", null]);
+    expect(screen.getByRole("textbox", { name: "Female members" })).toHaveValue("25");
+    expect(screen.getByRole("textbox", { name: "Male members" })).toHaveValue("17");
+    expect(screen.getByRole("status", { name: "Total members" })).toHaveTextContent("42");
   });
 
   it("fills the latitude and longitude fields from a click on the street map", async () => {

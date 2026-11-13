@@ -78,6 +78,11 @@ model Society {
   status               SocietyStatus               @default(UNDER_REVIEW)
   // SC-65: V4 society record fields (Prototype v4, M06 and D05).
   memberCount          Int?                        @map("member_count")
+  // Issue #141: the profile's female and male members. Both are null until
+  // entered; once entered, member_count is always their sum (a database
+  // check enforces it). Older records keep a total with no split.
+  femaleMembers        Int?                        @map("female_members")
+  maleMembers          Int?                        @map("male_members")
   landline             String?                     @db.VarChar(30)
   // Information only: the app keeps no sales, stock or business accounts.
   businessDescription  String?                     @map("business_description") @db.VarChar(1000)

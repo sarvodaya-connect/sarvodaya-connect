@@ -211,13 +211,13 @@ void main() {
 
       expect(find.text('Edit Society Information'), findsOneWidget);
       expect(find.text('S-104233'), findsOneWidget);
-      expect(find.text('Read only'), findsNWidgets(2));
+      // The S number, the grade and (issue #141) the total members.
+      expect(find.text('Read only'), findsNWidgets(3));
 
-      final members = find.widgetWithText(TextField, '412');
-      await tester.enterText(members, '418');
-      await tester.enterText(find.byType(TextField).at(3), '037 22');
+      await tester.enterText(find.byType(TextField).at(1), '25');
+      await tester.enterText(find.byType(TextField).at(2), '17');
+      await tester.enterText(find.byType(TextField).at(4), '037 22');
       await tester.pumpAndSettle();
-      expect(find.text('Was 412'), findsOneWidget);
       expect(
         find.text(
           'Enter a 10-digit number, for example 037 000 0000, or leave it empty.',
@@ -230,19 +230,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Leave Without Saving?'), findsOneWidget);
       expect(
-        find.textContaining('number of members and landline'),
+        find.textContaining('female members, male members and landline'),
         findsOneWidget,
       );
       await tester.tap(find.text('Keep editing'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField).at(3), '037 000 0123');
+      await tester.enterText(find.byType(TextField).at(4), '037 000 0123');
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
       await tester.pumpAndSettle();
 
       expect(find.text('Edit Society Information'), findsNothing);
-      expect(find.text('418'), findsOneWidget);
+      expect(find.text('42 · 25 female, 17 male'), findsOneWidget);
       expect(find.text('037 000 0123'), findsOneWidget);
     });
 
@@ -250,14 +250,15 @@ void main() {
       await _openRecord(tester, role: UserRole.societyOfficer);
       await tester.tap(find.widgetWithText(OutlinedButton, 'Edit'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.widgetWithText(TextField, '412'), '500');
+      await tester.enterText(find.byType(TextField).at(1), '500');
+      await tester.enterText(find.byType(TextField).at(2), '1');
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard changes'));
       await tester.pumpAndSettle();
-      expect(find.text('412'), findsOneWidget);
-      expect(find.text('500'), findsNothing);
+      expect(find.text('412 · female/male not entered yet'), findsOneWidget);
+      expect(find.textContaining('501'), findsNothing);
     });
   });
 

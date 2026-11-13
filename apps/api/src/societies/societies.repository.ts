@@ -223,6 +223,8 @@ export class SocietiesRepository {
           latitude: input.latitude,
           longitude: input.longitude,
           memberCount: input.memberCount,
+          femaleMembers: input.femaleMembers,
+          maleMembers: input.maleMembers,
           societyCode: input.societyCode,
           ...(input.landline !== undefined
             ? { landline: input.landline || null }

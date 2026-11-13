@@ -75,6 +75,18 @@ function MapPreview({ hasLocation }: { hasLocation: boolean }) {
   );
 }
 
+/**
+ * Issue #141: "42 · 25 female, 17 male", or the total with a note when the
+ * female/male split has not been entered yet. Nothing is guessed.
+ */
+function membersLine(record: SocietyRecord, t: Translator) {
+  if (record.memberCount === null || record.memberCount === undefined) return undefined;
+  const total = formatNumber(t.locale, record.memberCount);
+  if (record.femaleMembers === null || record.maleMembers === null || record.femaleMembers === undefined || record.maleMembers === undefined)
+    return t("sr.ov.splitNotEntered", { total });
+  return t("sr.ov.membersSplit", { total, female: formatNumber(t.locale, record.femaleMembers), male: formatNumber(t.locale, record.maleMembers) });
+}
+
 /** D05 society record overview below the yearly summary. */
 export function RecordOverview({
   canAssign = false,
@@ -126,7 +138,7 @@ export function RecordOverview({
               <Field
                 label={t("sr.ov.members")}
                 t={t}
-                value={record.memberCount === null || record.memberCount === undefined ? undefined : formatNumber(t.locale, record.memberCount)}
+                value={membersLine(record, t)}
               />
               <Field label={t("sr.ov.landline")} t={t} value={record.landline ?? t("sr.ov.noLandline")} />
               <div className="sm:col-span-2">

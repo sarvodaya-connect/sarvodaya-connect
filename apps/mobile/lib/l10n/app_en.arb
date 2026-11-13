@@ -1310,14 +1310,12 @@
     }
   },
   "editFieldName": "society name",
-  "editFieldMembers": "number of members",
   "editFieldAddress": "address",
   "editFieldLandline": "landline",
   "editFieldBusiness": "business run by the society",
   "editFieldLocation": "map location",
   "editNameError": "Enter the society name.",
-  "editMembersRequired": "Enter the number of members.",
-  "editMembersFormat": "Use numbers only, for example 418.",
+  "editMembersFormat": "Enter a whole number from 0 to 1,000,000, for example 25.",
   "editLandlineFormat": "Enter a 10-digit number, for example 037 000 0000, or leave it empty.",
   "editSaved": "Saved. The change is in the society history.",
   "editLeaveTitle": "Leave Without Saving?",
@@ -2169,20 +2167,6 @@
   "roleMembershipNoneMessage": "None of these societies has entered membership counts by category. Zeros here mean not reported, not zero members.",
   "roleMembershipEmptyTitle": "No Active Societies",
   "roleMembershipEmptyMessage": "There are no active societies in your scope yet, so there are no membership counts to show.",
-  "roleMembershipProfileTitle": "Society Profile Member Counts",
-  "roleMembershipProfileMessage": "Society profiles record {members} members across {societies} active societies. A profile count has no female/male or category split, so it is not added to the figures here.",
-  "@roleMembershipProfileMessage": {
-    "placeholders": {
-      "members": {
-        "type": "int",
-        "format": "decimalPattern"
-      },
-      "societies": {
-        "type": "int",
-        "format": "decimalPattern"
-      }
-    }
-  },
   "roleMembershipProfileMissing": "{count, plural, =1{1 of these societies has no category counts for {year}.} other{{count} of these societies have no category counts for {year}.}}",
   "@roleMembershipProfileMissing": {
     "placeholders": {
@@ -2370,5 +2354,102 @@
     }
   },
   "countFixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on.",
-  "homeAccessNational": "Your access: all societies nationally · view and edit"
+  "homeAccessNational": "Your access: all societies nationally · view and edit",
+  "editFieldFemale": "female members",
+  "editFieldMale": "male members",
+  "editFemale": "Female members",
+  "editMale": "Male members",
+  "editTotal": "Total members",
+  "editTotalHelp": "Female plus male, worked out for you. It cannot be typed.",
+  "editMembersOldTotal": "Only a total of {count} members is on record. Enter the female and male members to replace it. Until then the total stays as it is.",
+  "@editMembersOldTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "editMembersBoth": "Enter both the female and the male members.",
+  "editMembersTooMany": "Female and male members together cannot be more than 1,000,000.",
+  "recMembersSplit": "{total} · {female} female, {male} male",
+  "@recMembersSplit": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "female": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "male": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recMembersNoSplit": "{total} · female/male not entered yet",
+  "@recMembersNoSplit": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileEyebrow": "Society Profiles · Current",
+  "memberProfileHeading": "Members on Society Profiles",
+  "memberProfileTotal": "{count, plural, =1{Total members · 1 society profile} other{Total members · {count} society profiles}}",
+  "@memberProfileTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileSplitOf": "{withSplit, plural, =1{1 of {societies} societies has entered its female and male members} other{{withSplit} of {societies} societies have entered their female and male members}}",
+  "@memberProfileSplitOf": {
+    "placeholders": {
+      "withSplit": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "societies": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileFemale": "Female",
+  "memberProfileMale": "Male",
+  "memberProfileShare": "{percent}% where female and male are entered",
+  "@memberProfileShare": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "memberProfileTotalOnly": "{count, plural, =1{1 society has a total but no female/male split yet, so female and male add up to less than the total.} other{{count} societies have a total but no female/male split yet, so female and male add up to less than the total.}}",
+  "@memberProfileTotalOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileNone": "No active society has entered its members on its profile yet.",
+  "memberCategoryEyebrow": "Category Counts",
+  "memberCategoryEyebrowYear": "Category Counts · {year}",
+  "@memberCategoryEyebrowYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "memberCategoryNote": "Entered separately for each year, by category. Never added to the profile members above."
 }

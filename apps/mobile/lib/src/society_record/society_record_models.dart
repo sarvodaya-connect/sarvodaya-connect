@@ -599,6 +599,8 @@ class SocietyRecord {
     required this.permissions,
     this.nameLocal,
     this.memberCount,
+    this.femaleMembers,
+    this.maleMembers,
     this.landline,
     this.addressLine,
     this.dsDivision,
@@ -628,6 +630,8 @@ class SocietyRecord {
       nameLocal: json['nameLocal'] as String?,
       districtName: (json['district'] as Map)['nameEn'] as String,
       memberCount: json['memberCount'] as int?,
+      femaleMembers: json['femaleMembers'] as int?,
+      maleMembers: json['maleMembers'] as int?,
       landline: json['landline'] as String?,
       addressLine: address['addressLine'] as String?,
       dsDivision: address['dsDivision'] as String?,
@@ -680,6 +684,13 @@ class SocietyRecord {
   final String? nameLocal;
   final String districtName;
   final int? memberCount;
+
+  /// Issue #141: both null until the split is entered (an older record may
+  /// still have a total). Once entered, [memberCount] is their sum.
+  final int? femaleMembers;
+  final int? maleMembers;
+
+  bool get hasMemberSplit => femaleMembers != null && maleMembers != null;
   final String? landline;
   final String? addressLine;
   final String? dsDivision;

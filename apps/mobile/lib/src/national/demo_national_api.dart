@@ -434,6 +434,19 @@ class DemoNationalApi implements NationalApi {
   }
 
   @override
+  Future<ProfileMembership> fetchMembershipProfile() => _hq(
+    // Fictional: most societies have entered their split, some only a total.
+    () => const ProfileMembership(
+      societies: 1012,
+      members: 168_540,
+      withoutBreakdown: 64,
+      withSplit: 870,
+      female: 84_120,
+      male: 61_300,
+    ),
+  );
+
+  @override
   Future<FiguresNotAdded> fetchFiguresNotAdded() => _hq(
     () => const FiguresNotAdded(108, [
       ('society-kobeigane', 'Kobeigane SSS', 'Kurunegala'),

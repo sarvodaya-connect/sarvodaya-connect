@@ -227,6 +227,8 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       districtId: 'district-kurunegala',
       districtName: 'Kurunegala',
       memberCount: 143,
+      femaleMembers: 80,
+      maleMembers: 63,
       addressLine: 'Kanda Para, Wellawa',
       dsDivision: 'Wariyapola',
       grade: 'C',
@@ -458,6 +460,8 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       nameLocal: society.nameLocal,
       districtName: society.districtName,
       memberCount: society.memberCount,
+      femaleMembers: society.femaleMembers,
+      maleMembers: society.maleMembers,
       landline: society.landline,
       addressLine: society.addressLine,
       dsDivision: society.dsDivision,
@@ -580,7 +584,45 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       );
     }
     final parts = <String>[];
-    if (changes['memberCount'] case final int members) {
+    // Issue #141: the same rules as the API. Female and male go together and
+    // the total is worked out from them; a total sent alone may not
+    // contradict a split that is already entered.
+    final female = changes['femaleMembers'];
+    final male = changes['maleMembers'];
+    if ((female == null) != (male == null)) {
+      throw const SocietyRecordException(
+        'Enter both the female and the male members. The total is worked out from them',
+        status: 400,
+      );
+    }
+    if (female is int && male is int) {
+      if (female < 0 || male < 0 || female + male > 1000000) {
+        throw const SocietyRecordException(
+          'Female and male members together cannot be more than 1,000,000',
+          status: 400,
+        );
+      }
+      final total = female + male;
+      if (total != society.memberCount) {
+        parts.add('Members ${society.memberCount ?? '–'} → $total');
+      }
+      if (female != society.femaleMembers) {
+        parts.add('Female members ${society.femaleMembers ?? '–'} → $female');
+      }
+      if (male != society.maleMembers) {
+        parts.add('Male members ${society.maleMembers ?? '–'} → $male');
+      }
+      society
+        ..memberCount = total
+        ..femaleMembers = female
+        ..maleMembers = male;
+    } else if (changes['memberCount'] case final int members) {
+      if (society.femaleMembers != null && members != society.memberCount) {
+        throw const SocietyRecordException(
+          'This society records female and male members. Update those instead; the total is worked out from them',
+          status: 400,
+        );
+      }
       parts.add('Members ${society.memberCount ?? '–'} → $members');
       society.memberCount = members;
     }
@@ -1309,6 +1351,8 @@ class _DemoSociety {
     required this.districtName,
     this.nameLocal,
     this.memberCount,
+    this.femaleMembers,
+    this.maleMembers,
     this.landline,
     this.addressLine,
     this.dsDivision,
@@ -1329,6 +1373,10 @@ class _DemoSociety {
   final String districtId;
   final String districtName;
   int? memberCount;
+
+  /// Issue #141: null until the split is entered.
+  int? femaleMembers;
+  int? maleMembers;
   String? landline;
   String? addressLine;
   final String? dsDivision;

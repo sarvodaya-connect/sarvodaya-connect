@@ -2,6 +2,9 @@ import '../auth/api_auth_service.dart';
 import '../auth/auth_service.dart';
 import '../l10n/l10n_format.dart' show ClientFailure;
 import '../models/user.dart';
+import '../national/national_models.dart' show ProfileMembership;
+
+export '../national/national_models.dart' show ProfileMembership;
 
 typedef Json = Map<String, dynamic>;
 
@@ -296,9 +299,7 @@ class ScopedMembership {
     required this.male,
     required this.categories,
     required this.districts,
-    required this.profileSocieties,
-    required this.profileMembers,
-    required this.profileWithoutBreakdown,
+    required this.profile,
     required this.districtViewAvailable,
     this.districtViewEnds,
   });
@@ -331,9 +332,7 @@ class ScopedMembership {
             male: _int(row['male']),
           ),
       ],
-      profileSocieties: _int(profile['societies']),
-      profileMembers: _int(profile['members']),
-      profileWithoutBreakdown: _int(profile['withoutBreakdown']),
+      profile: ProfileMembership.fromJson(profile),
       districtViewAvailable: view?['available'] == true,
       districtViewEnds: view?['expiresAt'] == null
           ? null
@@ -357,9 +356,8 @@ class ScopedMembership {
   districts;
 
   /// Profile member counts: no female/male split, so kept apart.
-  final int profileSocieties;
-  final int profileMembers;
-  final int profileWithoutBreakdown;
+  /// Issue #141: the current profile member counts of these societies.
+  final ProfileMembership profile;
   final bool districtViewAvailable;
   final DateTime? districtViewEnds;
 
@@ -816,9 +814,15 @@ class DemoHomeApi implements HomeApi {
                 male: categories.fold(0, (sum, row) => sum + row.male),
               ),
             ],
-      profileSocieties: active,
-      profileMembers: active * 170,
-      profileWithoutBreakdown: active - (active * 3) ~/ 4,
+      // Fictional: three in four societies have entered their split.
+      profile: ProfileMembership(
+        societies: active,
+        members: (active * 3) ~/ 4 * 155 + (active - (active * 3) ~/ 4) * 170,
+        withoutBreakdown: active - (active * 3) ~/ 4,
+        withSplit: (active * 3) ~/ 4,
+        female: (active * 3) ~/ 4 * 95,
+        male: (active * 3) ~/ 4 * 60,
+      ),
       districtViewAvailable:
           role == UserRole.deputyDistrictManager && grant != null,
       districtViewEnds: role == UserRole.deputyDistrictManager

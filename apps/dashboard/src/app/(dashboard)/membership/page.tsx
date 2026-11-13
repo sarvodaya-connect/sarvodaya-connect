@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { CategoryTable, DistrictTable, MembershipStats } from "@/components/dashboard/membership/membership-tables";
+import { CategoryHeading, CategoryTable, DistrictTable, MembershipStats, ProfileMembers } from "@/components/dashboard/membership/membership-tables";
 import { ScopedMembershipView } from "@/components/dashboard/membership/scoped-membership";
 import { Breadcrumb, PageTitle, SampleBadge } from "@/components/dashboard/national/parts";
 import { first } from "@/components/dashboard/national/format";
@@ -41,6 +41,8 @@ export default async function MembershipPage({ searchParams }: PageProps<"/membe
         description={year ? t("mb.countsYear", { year }) : t("mb.counts")}
         title={t("nav.membership")}
       />
+      <ProfileMembers profile={membership.profile} t={t} />
+      <CategoryHeading profile={membership.profile} t={t} year={year} />
       <MembershipStats membership={membership} t={t} />
       <CategoryTable membership={membership} t={t} />
       <DistrictTable href={(id) => `/societies?districtId=${id}`} membership={membership} t={t} />

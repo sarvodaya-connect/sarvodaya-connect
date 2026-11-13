@@ -145,6 +145,54 @@ export class NationalRepository {
     return row?.year ?? null;
   }
 
+  /**
+   * Issue #141: the profile member counts of every active society, counted
+   * the same way as `profileMembership` in home/membership.compose.ts. A
+   * society without category counts for `year` (or any society, when no year
+   * has counts) is "without breakdown".
+   */
+  async profileMembership(year: number | null) {
+    const [row] = await this.run(
+      () => this.prisma.$queryRaw<
+        {
+          societies: number;
+          members: number;
+          withoutBreakdown: number;
+          withSplit: number;
+          female: number;
+          male: number;
+        }[]
+      >`
+        SELECT
+          COUNT(*) FILTER (WHERE s.member_count IS NOT NULL)::int AS societies,
+          COALESCE(SUM(s.member_count), 0)::int AS members,
+          COUNT(*) FILTER (
+            WHERE s.member_count IS NOT NULL AND NOT EXISTS (
+              SELECT 1 FROM society_membership_counts m
+              WHERE m.society_id = s.id AND m.year = ${year}::int
+                AND (m.female > 0 OR m.male > 0)
+            )
+          )::int AS "withoutBreakdown",
+          COUNT(*) FILTER (
+            WHERE s.female_members IS NOT NULL AND s.male_members IS NOT NULL
+          )::int AS "withSplit",
+          COALESCE(SUM(s.female_members) FILTER (WHERE s.male_members IS NOT NULL), 0)::int AS female,
+          COALESCE(SUM(s.male_members) FILTER (WHERE s.female_members IS NOT NULL), 0)::int AS male
+        FROM societies s
+        WHERE s.status = 'ACTIVE'`,
+    );
+    return (
+      row ?? {
+        societies: 0,
+        members: 0,
+        withoutBreakdown: 0,
+        withSplit: 0,
+        female: 0,
+        male: 0,
+      }
+    );
+  }
+
   async membership(year: number) {
     const [categories, reported, districts] = await this.run(() =>
       Promise.all([
