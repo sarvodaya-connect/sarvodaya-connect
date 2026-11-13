@@ -708,6 +708,7 @@ export const si: Record<MessageKey, string> = {
   "sr.exco.seatsToFill.one": "ආසන 25 න් {count} ක් තවම පිරවිය යුතුයි.",
   "sr.exco.seatsToFill.other": "ආසන 25 න් {count} ක් තවම පිරවිය යුතුයි.",
   "sr.tab.overview": "දළ විශ්ලේෂණය",
+  "sr.tab.membersExco": "සාමාජිකයන් සහ Exco",
   "sr.tab.workPlan": "වැඩ සැලැස්ම",
   "sr.tab.workPlanYear": "වැඩ සැලැස්ම {year}",
   "sr.tab.grade": "ශ්‍රේණිය",
@@ -1225,7 +1226,7 @@ export const si: Record<MessageKey, string> = {
   // Issue #147: Village Economic Profile.
   "nav.economicProfile": "ගම්මාන ආර්ථික පැතිකඩ",
   "sub.economicProfile": "සමිතිවල ම ව්‍යාපාර වාර්තා කළ නිෂ්පාදනය",
-  "sr.tab.economy": "ආර්ථික පැතිකඩ",
+  "sr.tab.economy": "ගම්මාන ආර්ථික පැතිකඩ",
   "eco.title": "ගම්මාන ආර්ථික පැතිකඩ",
   "eco.descriptionLine": "{period} · {measurement} සංඛ්‍යා",
   "eco.selfReported": "ස්වයං-වාර්තා කළ",

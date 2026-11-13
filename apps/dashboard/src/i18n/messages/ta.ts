@@ -708,6 +708,7 @@ export const ta: Record<MessageKey, string> = {
   "sr.exco.seatsToFill.one": "25 இடங்களில் {count} இன்னும் நிரப்பப்பட வேண்டும்.",
   "sr.exco.seatsToFill.other": "25 இடங்களில் {count} இன்னும் நிரப்பப்பட வேண்டும்.",
   "sr.tab.overview": "மேலோட்டம்",
+  "sr.tab.membersExco": "உறுப்பினர்கள் & Exco",
   "sr.tab.workPlan": "வேலைத் திட்டம்",
   "sr.tab.workPlanYear": "வேலைத் திட்டம் {year}",
   "sr.tab.grade": "தரம்",
@@ -1225,7 +1226,7 @@ export const ta: Record<MessageKey, string> = {
   // Issue #147: Village Economic Profile.
   "nav.economicProfile": "கிராம பொருளாதார விவரம்",
   "sub.economicProfile": "சங்கங்களின் சொந்த வணிகங்கள் அறிவித்த உற்பத்தி",
-  "sr.tab.economy": "பொருளாதார விவரம்",
+  "sr.tab.economy": "கிராம பொருளாதார விவரம்",
   "eco.title": "கிராம பொருளாதார விவரம்",
   "eco.descriptionLine": "{period} · {measurement} எண்ணிக்கைகள்",
   "eco.selfReported": "சுய அறிக்கை",

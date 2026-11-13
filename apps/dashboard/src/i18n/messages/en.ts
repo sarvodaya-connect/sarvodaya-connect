@@ -706,6 +706,7 @@ export const en = {
   "sr.exco.seatsToFill.one": "{count} of 25 seats is still to fill.",
   "sr.exco.seatsToFill.other": "{count} of 25 seats are still to fill.",
   "sr.tab.overview": "Overview",
+  "sr.tab.membersExco": "Members & Exco",
   "sr.tab.workPlan": "Work Plan",
   "sr.tab.workPlanYear": "Work Plan {year}",
   "sr.tab.grade": "Grade",
@@ -1223,7 +1224,7 @@ export const en = {
   // Issue #147: Village Economic Profile.
   "nav.economicProfile": "Village Economic Profile",
   "sub.economicProfile": "Production reported by the societies' own businesses",
-  "sr.tab.economy": "Economic Profile",
+  "sr.tab.economy": "Village Economic Profile",
   "eco.title": "Village Economic Profile",
   "eco.descriptionLine": "{period} · {measurement} figures",
   "eco.selfReported": "Self-reported",
