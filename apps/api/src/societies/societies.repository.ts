@@ -184,7 +184,11 @@ export class SocietiesRepository {
     id: string,
     input: SocietyProfileUpdateDto,
     principal: Principal,
-    change: { summary: string; grade?: GradeChange } = {
+    change: {
+      summary: string;
+      grade?: GradeChange;
+      membershipChanged?: boolean;
+    } = {
       summary: `Fields: ${Object.keys(input)
         .filter((key) => input[key as keyof typeof input] !== undefined)
         .join(', ')}`,
@@ -206,7 +210,11 @@ export class SocietiesRepository {
     id: string,
     input: SocietyProfileUpdateDto,
     principal: Principal,
-    change: { summary: string; grade?: GradeChange },
+    change: {
+      summary: string;
+      grade?: GradeChange;
+      membershipChanged?: boolean;
+    },
   ) {
     return this.prisma.$transaction(async (tx) => {
       const { primaryContact, establishedOn } = input;
@@ -225,6 +233,9 @@ export class SocietiesRepository {
           memberCount: input.memberCount,
           femaleMembers: input.femaleMembers,
           maleMembers: input.maleMembers,
+          under18Members: input.under18Members,
+          // Issue #143: only a changed membership figure moves this.
+          ...(change.membershipChanged ? { membershipUpdatedAt: now } : {}),
           societyCode: input.societyCode,
           ...(input.landline !== undefined
             ? { landline: input.landline || null }

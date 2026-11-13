@@ -336,6 +336,59 @@ export function memberSplit(
   }
 }
 
+/**
+ * Issue #143: members under 18 are a part of the total, never added to it.
+ * They can be entered only with the female/male split and never be more than
+ * female + male. Changing the split must not leave them above the new total.
+ * Runs after [memberSplit], which has already checked the split itself.
+ */
+export function checkUnder18(
+  input: SocietyProfileUpdateDto,
+  current: {
+    femaleMembers?: number | null;
+    maleMembers?: number | null;
+    under18Members?: number | null;
+  },
+) {
+  const female = input.femaleMembers ?? current.femaleMembers ?? null;
+  const male = input.maleMembers ?? current.maleMembers ?? null;
+  const total = female !== null && male !== null ? female + male : null;
+  const sent = input.under18Members;
+  if (sent !== undefined && total === null) {
+    throw new BadRequestException(
+      'Enter the female and male members together with the under 18s. Under 18s are a part of that total',
+    );
+  }
+  const under18 = sent ?? current.under18Members ?? null;
+  if (under18 === null || total === null || under18 <= total) return;
+  throw new BadRequestException(
+    sent !== undefined
+      ? 'Under 18s are a part of the total members, so they cannot be more than the female plus the male members'
+      : `This society records ${under18} members under 18. Female plus male members cannot be fewer than that; change the under 18s as well`,
+  );
+}
+
+/**
+ * Issue #143: whether a save changes a membership figure, so only those saves
+ * move the membership Last updated time. Unchanged values (a retry) do not.
+ */
+export function changesMembership(
+  input: SocietyProfileUpdateDto,
+  current: {
+    memberCount?: number | null;
+    femaleMembers?: number | null;
+    maleMembers?: number | null;
+    under18Members?: number | null;
+  },
+) {
+  return (
+    ['memberCount', 'femaleMembers', 'maleMembers', 'under18Members'] as const
+  ).some(
+    (field) =>
+      input[field] !== undefined && input[field] !== (current[field] ?? null),
+  );
+}
+
 /** M06e: 10 digits such as 037 000 0000, or +94 and 9 digits. */
 export function normaliseLandline(value: string): string | null {
   const compact = value.replace(/[\s-]/g, '');
@@ -358,6 +411,7 @@ export function describeProfileChange(
     memberCount?: number | null;
     femaleMembers?: number | null;
     maleMembers?: number | null;
+    under18Members?: number | null;
     landline?: string | null;
     addressLine?: string | null;
     dsDivision?: string | null;
@@ -410,6 +464,7 @@ export function describeProfileChange(
   };
   split('Female members', before.femaleMembers, input.femaleMembers);
   split('Male members', before.maleMembers, input.maleMembers);
+  split('Under 18s', before.under18Members, input.under18Members);
   text('Landline', before.landline, input.landline);
   text('Address', before.addressLine, input.addressLine);
   text('DS division', before.dsDivision, input.dsDivision);
@@ -564,6 +619,8 @@ export class SocietiesService {
       memberCount: record.memberCount ?? null,
       femaleMembers: record.femaleMembers ?? null,
       maleMembers: record.maleMembers ?? null,
+      under18Members: record.under18Members ?? null,
+      membershipUpdatedAt: record.membershipUpdatedAt?.toISOString() ?? null,
       landline: record.landline ?? null,
       businessDescription: record.businessDescription ?? null,
       grade: record.grade ?? null,
@@ -640,6 +697,8 @@ export class SocietiesService {
       );
     }
     memberSplit(input, current);
+    checkUnder18(input, current);
+    const membershipChanged = changesMembership(input, current);
     if (input.landline) {
       const landline = normaliseLandline(input.landline);
       if (!landline) {
@@ -668,6 +727,7 @@ export class SocietiesService {
     if (!summary && !grade) return this.getById(id, principal);
     await this.repository.updateProfile(id, profile, principal, {
       summary,
+      membershipChanged,
       ...(grade ? { grade } : {}),
     });
     return this.getById(id, principal);

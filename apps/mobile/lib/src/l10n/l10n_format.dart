@@ -58,6 +58,13 @@ extension LocalizedFormat on AppLocalizations {
     return '$hour:${value.minute.toString().padLeft(2, '0')} ${value.hour < 12 ? 'a.m.' : 'p.m.'}';
   });
 
+  /// "12 Nov 2026, 9:58 p.m." in Sri Lanka time (issue #143, membership
+  /// Last updated).
+  String savedAt(DateTime value) {
+    final local = english.sriLanka(value);
+    return '${date(local)}, ${clock(local)}';
+  }
+
   /// "27 Oct, 8:00 a.m." in Sri Lanka time.
   String accessDateTime(DateTime value) => _date(
     'd MMM, h:mm a',

@@ -73,6 +73,8 @@ const record: SocietyRecord = {
   memberCount: 418,
   femaleMembers: null,
   maleMembers: null,
+  under18Members: null,
+  membershipUpdatedAt: null,
   landline: "037 000 0123",
   businessDescription: "A small rice mill for members' paddy.",
   grade: "B",

@@ -70,6 +70,15 @@ export class SocietyProfileUpdateDto {
   @Min(0, { message: 'maleMembers cannot be negative' })
   @Max(MAX_MEMBERS, { message: 'maleMembers cannot be more than 1,000,000' })
   maleMembers?: number;
+  /**
+   * Issue #143: members younger than 18. A part of the total, not added to
+   * it: never more than female + male, and only once the split is entered.
+   */
+  @IsOptional()
+  @IsInt({ message: 'under18Members must be a whole number' })
+  @Min(0, { message: 'under18Members cannot be negative' })
+  @Max(MAX_MEMBERS, { message: 'under18Members cannot be more than 1,000,000' })
+  under18Members?: number;
   /** A 10-digit number such as 037 000 0000, or +94 and 9 digits. Empty removes it. */
   @IsOptional()
   @Transform(trim)
