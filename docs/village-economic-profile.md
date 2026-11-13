@@ -116,7 +116,8 @@ All endpoints are under `/api/v1` and need sign-in.
 | `PATCH /production-records/:id` | Correct a figure; send `version` |
 | `GET /production-records/:id/history` | The record and all its revisions, newest first |
 | `GET /economic-profile/production` | Reported production for one exact period ([below](#production-summary)) |
-| `GET /economic-profile/production-records` | Records across the caller's societies, filtered and paginated, with no total |
+| `GET /economic-profile/production-records` | Records across the caller's societies, filtered and paginated, with no total. With `basis`, `startsOn` and `endsOn`, exactly the records the same summary counts |
+| `GET /economic-profile/scope` | Who the figures cover (`kind`, society count, when a DDM's temporary access ends) and the districts and societies the caller may filter by (issue #147) |
 
 Errors use the usual `{ error: { code, message, requestId } }` body:
 
@@ -131,7 +132,7 @@ Timestamps are ISO 8601 UTC, and periods are `YYYY-MM-DD`.
 
 ## Production summary
 
-`GET /economic-profile/production?basis=MONTHLY&startsOn=2026-10-01&endsOn=2026-10-31` takes optional `measurement`, `product`, `districtId` and `societyId`. It returns:
+`GET /economic-profile/production?basis=MONTHLY&startsOn=2026-10-01&endsOn=2026-10-31` takes optional `measurement`, `product`, `industry` (the business's industry), `districtId` and `societyId`. Product and industry narrow both the totals and the eligible societies. It returns:
 
 - `label: "REPORTED_PRODUCTION"`: the totals are what societies reported, never a village's or district's capacity;
 - one row per standard product and unit, with:
@@ -171,10 +172,37 @@ This keeps past results understandable:
 
 The one exception is reopening a closed business: it clears the close date, so periods while it was closed count it as eligible again.
 
+## Dashboard (issue #147)
+
+The dashboard only shows what the API returns. It adds nothing up itself, and nothing on it can be edited: Society Officers enter everything on the phone (#146).
+
+- **Village Economic Profile** (`/economic-profile`) is in the sidebar for HQ, DM, DDM and SPC. It's one design for every role, with a "Counted over" line saying whose societies are counted.
+  - **Filters:** district (only when there is more than one to choose), society, industry, product, reporting period (month, week or season dates) and measurement (actual by default).
+  - The filters live in the address, so Back, refresh and shared links show the same figures.
+  - The cards and the table use the same query, and the table is paged by the API (25 per page).
+- **Each product is its own card, in its own unit,** with:
+  - the reported quantity, or "No reports yet" (never 0);
+  - contributing societies and businesses;
+  - "x of y eligible societies reported", how many reported zero, and how many have not reported;
+  - when the figures were last updated.
+- **No single total across products.** When several products are shown, a note explains why. Other outputs are listed separately.
+- **Exact periods only.** Weekly, monthly and seasonal figures are never added together, and estimates appear only when Estimated is chosen. A season needs both dates before anything is asked for.
+- **Drill-down:** the table links to the society's **Economic Profile** tab, which shows:
+  - its businesses, industries, statuses, and products or services (archived ones marked);
+  - the untouched profile description;
+  - its records, each with a **History** page listing every saved version.
+  - A "Back to Village Economic Profile" link returns to the same filters. It only ever goes back to `/economic-profile`.
+- **Scope:** a society or record outside the viewer's scope is a 404 from the API, shown as the usual not-found page, so direct addresses fail safely. The record history page also checks that the record belongs to the society in its address.
+- **Labels:**
+  - Every label is in `apps/dashboard/src/i18n/messages` (`eco.*`) in English, Sinhala and Tamil. The Sinhala and Tamil are unreviewed drafts.
+  - Business, society and Other names stay as typed.
+  - The dashboard repeats the catalogue codes in `src/lib/economy-catalogue.ts`, and a test keeps them equal to the contract.
+
 ## Deployment and migration notes
 
 - The PR only adds code, the migration and contracts. **No infrastructure is deployed and no live migration is applied** as part of it.
 - When the TEST or production database is migrated, `20261113090000_village_economic_profile` runs with the others (`prisma migrate deploy`). It creates empty tables, and existing rows are unchanged.
+- **Release order:** migrate the database first, then deploy the API, then release the dashboard and phone builds that use it. A merged PR doesn't mean its migration or release has reached TEST. #147 adds no migration; it needs the #145 migration and an API with the #147 endpoint changes, which are backwards-compatible additions.
 - **Rolling back:** drop the four tables and three enums. Nothing else depends on them.
 - The database also enforces the core rules:
   - quantities from 0 to 100,000,000;

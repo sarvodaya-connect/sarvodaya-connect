@@ -28,6 +28,7 @@ import {
   ProductionListQueryDto,
   ProductionRecordInputDto,
   ProductionSummaryQueryDto,
+  EconomyScopeQueryDto,
 } from './economy.dto.js';
 import { EconomyService } from './economy.service.js';
 
@@ -148,5 +149,14 @@ export class EconomyController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.service.listRecords(query, principal);
+  }
+
+  /** Issue #147: who the figures cover and the filter choices. */
+  @Get('economic-profile/scope')
+  scope(
+    @Query() query: EconomyScopeQueryDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.service.scope(query, principal);
   }
 }

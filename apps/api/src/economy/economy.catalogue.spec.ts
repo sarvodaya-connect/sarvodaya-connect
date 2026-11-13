@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import * as contracts from '../../../../packages/api-contracts/src/economy.js';
 import * as api from './economy.catalogue.js';
 import { outputUnit, quantityError } from './economy.catalogue.js';
 
 describe('Village Economic Profile catalogue (issue #145)', () => {
-  it('is the same list the clients use', () => {
+  it('is the same list the clients use', async () => {
+    // Loaded by path so the API's compile stays inside apps/api.
+    const source = new URL(
+      '../../../../packages/api-contracts/src/economy.ts',
+      import.meta.url,
+    ).href;
+    const contracts = (await import(source)) as Record<string, unknown>;
     for (const name of [
       'ECONOMY_INDUSTRIES',
       'BUSINESS_STATUSES',

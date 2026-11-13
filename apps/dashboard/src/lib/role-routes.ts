@@ -19,6 +19,8 @@ const FIELD_PATHS = [
   /^\/activities-to-approve(\/.*)?$/,
   // Issue #117: Programmes & Activities over the user's own scope (the API limits it).
   /^\/activities$/,
+  // Issue #147: Village Economic Profile over the user's own scope (the API limits it).
+  /^\/economic-profile$/,
   /^\/district-access$/,
   // V5 PR 8: disaster response (IR01–IR05). The API limits each incident to the user's scope.
   new RegExp(`^/emergencies(/${UUID})?$`, "i"),

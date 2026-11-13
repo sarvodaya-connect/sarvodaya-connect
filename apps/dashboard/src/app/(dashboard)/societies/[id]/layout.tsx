@@ -34,6 +34,8 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
             href: `${base}/work-plan`,
             label: plan ? t("sr.tab.workPlanYear", { year: plan.year }) : t("sr.tab.workPlan"),
           },
+          // Issue #147: read-only on the dashboard; entered on the phone.
+          { href: `${base}/economy`, label: t("sr.tab.economy") },
           { count: documents?.total, href: `${base}/documents`, label: t("nav.documents") },
           { count: requests?.length, href: `${base}/grade`, label: t("sr.tab.grade") },
           { href: `${base}/history`, label: t("sr.tab.history") },
