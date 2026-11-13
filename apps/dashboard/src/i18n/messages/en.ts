@@ -83,7 +83,7 @@ export const en = {
   "signIn.password": "Password",
   "signIn.showPassword": "Show password",
   "signIn.hidePassword": "Hide password",
-  "signIn.button": "Sign in",
+  "signIn.button": "Sign In",
   "signIn.waiting": "Signing in…",
   "signIn.officerTitle": "Society Officer?",
   "signIn.officerBody": "Society Officers use the Sarvodaya Connect phone app.",
