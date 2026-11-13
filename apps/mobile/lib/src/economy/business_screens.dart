@@ -467,7 +467,8 @@ class _OutputCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final latest = latestByOutput(records)[output.id];
+    // From the API's whole-history answer, not from the page shown below.
+    final latest = output.latest;
     final now = DemoScope.of(context).now;
     return RecordCard(
       color: output.archived ? const Color(0xFFF6F7F4) : AppColors.surface,
@@ -480,7 +481,11 @@ class _OutputCard extends StatelessWidget {
           l.vepMeasuredIn(l.unitName(output.unit)),
           style: RecordStyle.caption,
         ),
-        LatestFigure(measurement: 'ACTUAL', record: latest?.actual),
+        LatestFigure(
+          measurement: 'ACTUAL',
+          record: latest?.actual,
+          known: latest != null,
+        ),
         if (latest?.estimated != null)
           LatestFigure(measurement: 'ESTIMATED', record: latest?.estimated),
         const SizedBox(height: 12),
@@ -900,7 +905,8 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
         TextField(
           key: key,
           controller: controller,
-          enabled: !_saving && !(_detailsSaved && !_editing),
+          // Saved details are locked: a later change here would not be sent.
+          enabled: !_saving && !_detailsSaved,
           maxLines: maxLines,
           minLines: 1,
           maxLength: maxLength,
@@ -919,7 +925,10 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final dirty = _dirty;
-    final locked = _detailsSaved && !_editing;
+    // Issue #146 review: once the business details are saved (a new
+    // business, or an edit), they are locked here, so a retry that only adds
+    // the products left can never report an unsent change as saved.
+    final locked = _detailsSaved;
     final statuses = [
       ...businessStatuses.where((s) => s != 'CLOSED'),
       if (widget.business?.status == 'CLOSED') 'CLOSED',
@@ -951,7 +960,7 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
               RecordNote(
                 icon: Icons.check_circle_outline,
                 tone: NoteTone.success,
-                message: l.vepBusinessSavedOutputsLeft,
+                message: l.vepBusinessLocked,
               ),
               const SizedBox(height: 14),
             ],

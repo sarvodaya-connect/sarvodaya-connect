@@ -387,6 +387,119 @@ void main() {
     );
   });
 
+  group('latest figures come from the whole history (#146 review)', () {
+    Future<BusinessOutput> output(DemoEconomyApi api, String product) async {
+      final business = (await api.fetchProfile(_pahala)).businesses.first;
+      return api.createOutput(business.id, OutputInput(product: product));
+    }
+
+    Future<LatestProduction> latestOf(DemoEconomyApi api, String id) async =>
+        (await api.fetchProfile(_pahala)).businesses
+            .expand((b) => b.outputs)
+            .firstWhere((o) => o.id == id)
+            .latest!;
+
+    var n = 0;
+    String id() =>
+        '00000000-0000-4000-8000-${(++n).toString().padLeft(12, '0')}';
+
+    test('an actual on the first page and an estimate far behind it', () async {
+      final api = _demo(demoOfficer);
+      final fish = await output(api, 'FISH');
+      final milk = await _milk(api);
+      await api.createRecord(milk.id, _input(3200, id: id()));
+      await api.createRecord(
+        milk.id,
+        _input(
+          2900,
+          id: id(),
+          measurement: 'ESTIMATED',
+          period: ProductionPeriod.month(2008, 1),
+        ),
+      );
+      // 520 newer weekly figures of another output push the estimate past
+      // any first page of the society's records.
+      for (var i = 0; i < 520; i++) {
+        await api.createRecord(
+          fish.id,
+          _input(
+            40,
+            id: id(),
+            period: ProductionPeriod.weekOf(
+              DateTime.utc(2015, 1, 5).add(Duration(days: 7 * i)),
+            ),
+          ),
+        );
+      }
+      final latest = await latestOf(api, milk.id);
+      expect(latest.actual!.quantity, 3200);
+      expect(latest.estimated!.quantity, 2900);
+      expect(latest.estimated!.period.startsOn, DateTime.utc(2008));
+    });
+
+    test('an output whose latest figure is older than 500 others', () async {
+      final api = _demo(demoOfficer);
+      final fish = await output(api, 'FISH');
+      final nuts = await output(api, 'COCONUTS');
+      await api.createRecord(
+        nuts.id,
+        _input(1200, id: id(), period: ProductionPeriod.month(2010, 6)),
+      );
+      for (var i = 0; i < 520; i++) {
+        await api.createRecord(
+          fish.id,
+          _input(
+            40,
+            id: id(),
+            period: ProductionPeriod.weekOf(
+              DateTime.utc(2015, 1, 5).add(Duration(days: 7 * i)),
+            ),
+          ),
+        );
+      }
+      final latest = await latestOf(api, nuts.id);
+      expect(latest.actual!.quantity, 1200);
+      expect(latest.estimated, isNull);
+    });
+
+    test('ten newer estimates do not hide an older actual', () async {
+      final api = _demo(demoOfficer);
+      final tea = await output(api, 'TEA_LEAF');
+      for (var m = 1; m <= 10; m++) {
+        await api.createRecord(
+          tea.id,
+          _input(
+            75,
+            id: id(),
+            measurement: 'ESTIMATED',
+            period: ProductionPeriod.month(2026, m),
+          ),
+        );
+      }
+      await api.createRecord(
+        tea.id,
+        _input(68, id: id(), period: ProductionPeriod.month(2025, 6)),
+      );
+      final latest = await latestOf(api, tea.id);
+      expect(latest.actual!.quantity, 68);
+      expect(latest.estimated!.period.startsOn, DateTime.utc(2026, 10));
+    });
+
+    test(
+      'a reported zero is a figure; an unreported output has none',
+      () async {
+        final api = _demo(demoOfficer);
+        final eggs = await output(api, 'EGGS');
+        final fruit = await output(api, 'FRUIT');
+        await api.createRecord(eggs.id, _input(0, id: id()));
+        expect((await latestOf(api, eggs.id)).actual!.quantity, 0);
+        final none = await latestOf(api, fruit.id);
+        expect(none.actual, isNull);
+        expect(none.estimated, isNull);
+      },
+    );
+  });
+
   group('the HTTP client', () {
     test('uses the #145 endpoints, request ids and versions', () async {
       final calls = <String>[];
@@ -459,11 +572,13 @@ void main() {
       final profile = await api.fetchProfile('soc-1');
       expect(profile.canManage, isTrue);
       expect(profile.businessDescription, 'Free text, kept as typed.');
-      expect(profile.businesses.single.outputs.single.unit, 'LITRE');
-
-      final latest = await api.fetchLatest('soc-1', {'out-1'});
-      expect(latest['out-1']!.actual!.quantity, 3200);
-      expect(latest['out-1']!.estimated, isNull);
+      final outputs = profile.businesses.single.outputs;
+      expect(outputs.first.unit, 'LITRE');
+      // The latest figures come with the profile; null means none of that
+      // measurement, and no `latest` at all (an older API) means unknown.
+      expect(outputs.first.latest!.actual!.quantity, 3200);
+      expect(outputs.first.latest!.estimated, isNull);
+      expect(outputs.last.latest, isNull);
 
       final saved = await api.createRecord('out-1', _input(3200));
       expect(saved.created, isTrue);
@@ -475,7 +590,6 @@ void main() {
 
       expect(calls, [
         'GET /api/v1/societies/soc-1/economic-profile? ',
-        'GET /api/v1/economic-profile/production-records?societyId=soc-1&page=1&pageSize=100 ',
         'POST /api/v1/business-outputs/out-1/production-records? '
             '{"clientRequestId":"11111111-1111-4111-8111-111111111111","basis":"MONTHLY","startsOn":"2026-10-01","endsOn":"2026-10-31","seasonLabel":null,"measurement":"ACTUAL","quantity":3200.0,"note":null,"source":null}',
         'PATCH /api/v1/production-records/r1? {"version":1,"quantity":3400.0,"note":"","source":""}',
@@ -548,6 +662,22 @@ Map<String, dynamic> _businessJson() => {
       'product': 'MILK',
       'otherDescription': null,
       'unit': 'LITRE',
+      'kind': 'GOOD',
+      'archivedAt': null,
+      'version': 1,
+      'createdAt': '2026-09-01T03:00:00.000Z',
+      'updatedAt': '2026-09-01T03:00:00.000Z',
+      'latest': {
+        'actual': _recordJson('r1', '2026-10-01', '2026-10-31', 'ACTUAL', 3200),
+        'estimated': null,
+      },
+    },
+    {
+      'id': 'out-2',
+      'businessId': 'b-1',
+      'product': 'CURD',
+      'otherDescription': null,
+      'unit': 'KILOGRAM',
       'kind': 'GOOD',
       'archivedAt': null,
       'version': 1,

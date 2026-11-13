@@ -189,6 +189,28 @@ export class EconomyRepository {
     );
   }
 
+  /**
+   * The newest record (by period) of each output and measurement, for these
+   * outputs only: at most one actual and one estimate per output, however
+   * long the history. The profile's latest figures come from here, never
+   * from a page of history.
+   */
+  latestRecords(outputIds: string[]) {
+    return executeDatabaseOperation(async () => {
+      if (!outputIds.length) return [];
+      const ids = await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT DISTINCT ON (output_id, measurement) id
+        FROM production_records
+        WHERE output_id = ANY(${outputIds}::uuid[])
+        ORDER BY output_id, measurement, period_start DESC, id`;
+      if (!ids.length) return [];
+      return this.prisma.productionRecord.findMany({
+        where: { id: { in: ids.map((row) => row.id) } },
+        include: RECORD_WITH_SOCIETY,
+      });
+    });
+  }
+
   findBusiness(id: string) {
     return executeDatabaseOperation(() =>
       this.prisma.societyBusiness.findUnique({

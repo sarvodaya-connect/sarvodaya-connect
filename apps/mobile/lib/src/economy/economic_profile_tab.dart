@@ -31,7 +31,6 @@ class EconomicProfileTab extends StatefulWidget {
 class _EconomicProfileTabState extends State<EconomicProfileTab>
     with AutomaticKeepAliveClientMixin {
   EconomicProfile? _profile;
-  Map<String, LatestProduction> _latest = const {};
   SocietyRecordException? _error;
   bool _loading = false;
 
@@ -54,20 +53,10 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
     });
     final api = DemoScope.read(context).economy;
     try {
+      // The latest figures come with the profile, worked out by the API
+      // from each output's whole history.
       final profile = await api.fetchProfile(widget.societyId);
-      final outputs = {
-        for (final business in profile.businesses)
-          for (final output in business.outputs) output.id,
-      };
-      final latest = outputs.isEmpty
-          ? const <String, LatestProduction>{}
-          : await api.fetchLatest(widget.societyId, outputs);
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _latest = latest;
-        });
-      }
+      if (mounted) setState(() => _profile = profile);
     } on SocietyRecordException catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {
@@ -127,8 +116,7 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
               ),
             ],
             const SizedBox(height: 10),
-            if (businesses.isNotEmpty)
-              _Summary(profile: profile, latest: _latest),
+            if (businesses.isNotEmpty) _Summary(profile: profile),
           ]),
           if (businesses.isNotEmpty) const SizedBox(height: 10),
           if (profile.canManage) ...[
@@ -190,7 +178,6 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
             for (final business in businesses) ...[
               _BusinessCard(
                 business: business,
-                latest: _latest,
                 onOpen: () => _open(
                   BusinessDetailScreen(
                     societyId: widget.societyId,
@@ -219,10 +206,9 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
 /// How many businesses, how many operate, how many products and services,
 /// and when a business last changed. Figures are never added up here.
 class _Summary extends StatelessWidget {
-  const _Summary({required this.profile, required this.latest});
+  const _Summary({required this.profile});
 
   final EconomicProfile profile;
-  final Map<String, LatestProduction> latest;
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +220,7 @@ class _Summary extends StatelessWidget {
       (sum, business) => sum + business.activeOutputs.length,
     );
     final updated = businesses
-        .map((b) => _figuresChange(b, latest).$1)
+        .map((b) => _figuresChange(b).$1)
         .reduce((a, b) => a.isAfter(b) ? a : b);
     return RecordCard(
       children: [
@@ -250,14 +236,9 @@ class _Summary extends StatelessWidget {
 }
 
 class _BusinessCard extends StatelessWidget {
-  const _BusinessCard({
-    required this.business,
-    required this.latest,
-    required this.onOpen,
-  });
+  const _BusinessCard({required this.business, required this.onOpen});
 
   final SocietyBusiness business;
-  final Map<String, LatestProduction> latest;
   final VoidCallback onOpen;
 
   @override
@@ -324,18 +305,19 @@ class _BusinessCard extends StatelessWidget {
                     ),
                     LatestFigure(
                       measurement: 'ACTUAL',
-                      record: latest[output.id]?.actual,
+                      record: output.latest?.actual,
+                      known: output.latest != null,
                     ),
-                    if (latest[output.id]?.estimated != null)
+                    if (output.latest?.estimated != null)
                       LatestFigure(
                         measurement: 'ESTIMATED',
-                        record: latest[output.id]?.estimated,
+                        record: output.latest?.estimated,
                       ),
                   ],
                 const SizedBox(height: 8),
                 Builder(
                   builder: (context) {
-                    final (changedAt, who) = _figuresChange(business, latest);
+                    final (changedAt, who) = _figuresChange(business);
                     return Text(
                       l.vepBusinessUpdated(l.savedAt(changedAt), l.actor(who)),
                       style: RecordStyle.caption,
@@ -352,12 +334,10 @@ class _BusinessCard extends StatelessWidget {
 }
 
 /// The newest change to a business or its latest figures.
-(DateTime, ActorRef) _figuresChange(
-  SocietyBusiness business,
-  Map<String, LatestProduction> latest,
-) => lastChange(business, [
-  for (final output in business.outputs) ...[
-    latest[output.id]?.actual,
-    latest[output.id]?.estimated,
-  ],
-]);
+(DateTime, ActorRef) _figuresChange(SocietyBusiness business) =>
+    lastChange(business, [
+      for (final output in business.outputs) ...[
+        output.latest?.actual,
+        output.latest?.estimated,
+      ],
+    ]);

@@ -44,16 +44,22 @@ class MeasurementChip extends StatelessWidget {
 }
 
 /// One measurement of an output: "Latest actual · 3,200 litres ·
-/// October 2026", or "Not reported". Never a total of actual and estimated.
+/// October 2026", "Not reported", or "Not available" when the figures could
+/// not be loaded. Never a total of actual and estimated.
 class LatestFigure extends StatelessWidget {
   const LatestFigure({
     super.key,
     required this.measurement,
     required this.record,
+    this.known = true,
   });
 
   final String measurement;
   final ProductionRecord? record;
+
+  /// False when the latest figures were not loaded: then nothing is claimed
+  /// about whether the output was reported.
+  final bool known;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +95,7 @@ class LatestFigure extends StatelessWidget {
                     TextSpan(text: '$label · '),
                     if (record == null)
                       TextSpan(
-                        text: l.vepNotReported,
+                        text: known ? l.vepNotReported : l.vepLatestUnknown,
                         style: const TextStyle(
                           color: AppColors.muted,
                           fontStyle: FontStyle.italic,

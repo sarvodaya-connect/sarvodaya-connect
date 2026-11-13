@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/data/demo_data.dart';
 import 'package:sarvodaya_connect_mobile/src/economy/demo_economy_api.dart';
 import 'package:sarvodaya_connect_mobile/src/economy/economic_profile_tab.dart';
+import 'package:sarvodaya_connect_mobile/src/economy/economy_api.dart';
 import 'package:sarvodaya_connect_mobile/src/economy/economy_models.dart';
 import 'package:sarvodaya_connect_mobile/src/l10n/generated/app_localizations.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
@@ -11,6 +12,8 @@ import 'package:sarvodaya_connect_mobile/src/society_record/society_record_scree
 import 'package:sarvodaya_connect_mobile/src/society_record/work_plan_view.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
+
+import 'test_helpers.dart' show navTab, pumpApp, signInWithDemoAccount;
 
 /// Issue #146: the Village Economic Profile tab, business forms and
 /// production history on the phone, against the fictional demo API (which
@@ -35,6 +38,10 @@ Future<DemoStore> _pump(
   tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
+  // The same size when these tests run live on a simulator, where the view
+  // size above is not used.
+  await tester.binding.setSurfaceSize(size);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   final demo =
       store ??
       (DemoStore(loadDelay: Duration.zero, clock: () => _now)
@@ -128,6 +135,94 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
   }
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
+}
+
+/// Adding a product fails the first time, as when the answer is lost.
+class _FailingOutputs extends DemoEconomyApi {
+  _FailingOutputs({required super.user, required super.clock})
+    : super(delay: Duration.zero);
+
+  int failures = 1;
+  int attempts = 0;
+
+  @override
+  Future<BusinessOutput> createOutput(
+    String businessId,
+    OutputInput input,
+  ) async {
+    attempts++;
+    if (failures > 0) {
+      failures--;
+      throw const SocietyRecordException(
+        'The server did not answer. Try again.',
+        status: 503,
+      );
+    }
+    return super.createOutput(businessId, input);
+  }
+}
+
+/// A profile from an API that sends no latest figures (an older server).
+class _NoLatest extends DemoEconomyApi {
+  _NoLatest({required super.user, required super.clock})
+    : super(delay: Duration.zero);
+
+  @override
+  Future<EconomicProfile> fetchProfile(String societyId) async {
+    final profile = await super.fetchProfile(societyId);
+    return EconomicProfile(
+      societyId: profile.societyId,
+      societyName: profile.societyName,
+      canManage: profile.canManage,
+      businesses: [
+        for (final b in profile.businesses)
+          SocietyBusiness(
+            id: b.id,
+            societyId: b.societyId,
+            name: b.name,
+            industry: b.industry,
+            otherIndustry: b.otherIndustry,
+            description: b.description,
+            status: b.status,
+            closedAt: b.closedAt,
+            version: b.version,
+            createdBy: b.createdBy,
+            updatedBy: b.updatedBy,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt,
+            outputs: [
+              for (final o in b.outputs)
+                BusinessOutput(
+                  id: o.id,
+                  businessId: o.businessId,
+                  product: o.product,
+                  otherDescription: o.otherDescription,
+                  unit: o.unit,
+                  kind: o.kind,
+                  archivedAt: o.archivedAt,
+                  version: o.version,
+                  createdAt: o.createdAt,
+                  updatedAt: o.updatedAt,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// A store whose economy API is [make], for the signed-in demo officer.
+DemoStore _storeWith(
+  DemoEconomyApi Function(AuthenticatedUser? Function() user) make,
+) {
+  DemoStore? holder;
+  final store = DemoStore(
+    loadDelay: Duration.zero,
+    clock: () => _now,
+    economyApi: make(() => holder?.user),
+  )..switchDemoRole(UserRole.societyOfficer);
+  holder = store;
+  return store;
 }
 
 void main() {
@@ -705,4 +800,154 @@ void main() {
       );
     });
   }
+
+  group('review fixes', () {
+    testWidgets('the Work Plan and Exco buttons open their own record tabs', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await signInWithDemoAccount(tester);
+      await tester.tap(navTab('Work Plan'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WorkPlanView), findsOneWidget);
+      expect(find.text('Kosgama Dairy Collective'), findsNothing);
+      await tester.tap(navTab('Exco'));
+      await tester.pumpAndSettle();
+      expect(find.text('Exco · 25 Seats'), findsOneWidget);
+      expect(find.byType(WorkPlanView), findsNothing);
+    });
+
+    testWidgets(
+      'business details find an actual figure behind ten newer estimates',
+      (tester) async {
+        final store = await _pump(tester);
+        final api = store.economy;
+        final dairy = (await api.fetchProfile(_pahala)).businesses.first;
+        final tea = await api.createOutput(
+          dairy.id,
+          const OutputInput(product: 'TEA_LEAF'),
+        );
+        for (var m = 1; m <= 10; m++) {
+          await api.createRecord(
+            tea.id,
+            ProductionInput(
+              clientRequestId:
+                  '00000000-0000-4000-8000-0000000000${m.toString().padLeft(2, '0')}',
+              period: ProductionPeriod.month(2026, m),
+              measurement: 'ESTIMATED',
+              quantity: 75,
+            ),
+          );
+        }
+        await api.createRecord(
+          tea.id,
+          ProductionInput(
+            clientRequestId: '00000000-0000-4000-8000-000000000099',
+            period: ProductionPeriod.month(2025, 6),
+            measurement: 'ACTUAL',
+            quantity: 68,
+          ),
+        );
+        await _openBusiness(tester, 'Kosgama Dairy Collective');
+        final latest = find.text('Latest actual · 68 kg · June 2025');
+        await tester.scrollUntilVisible(
+          latest,
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView).last,
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(latest, findsOneWidget);
+        expect(
+          find.text('Latest estimate · 75 kg · October 2026'),
+          findsOneWidget,
+        );
+        // The first page of history holds only the ten estimates.
+        expect(find.text('68 kg'), findsNothing);
+      },
+    );
+
+    testWidgets('figures that were not sent are not shown as not reported', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        store: _storeWith((user) => _NoLatest(user: user, clock: () => _now)),
+      );
+      expect(find.text('Latest actual · Not available'), findsWidgets);
+      expect(find.text('Latest actual · Not reported'), findsNothing);
+      expect(find.textContaining('3,100 litres'), findsNothing);
+    });
+
+    testWidgets(
+      'after a partial save the saved details lock, and the retry adds only the product',
+      (tester) async {
+        late _FailingOutputs api;
+        final store = _storeWith(
+          (user) => api = _FailingOutputs(user: user, clock: () => _now),
+        );
+        await _pump(tester, store: store);
+        await _openBusiness(tester, 'Kosgama Dairy Collective');
+        await _tap(tester, find.byKey(const ValueKey('vep.editBusiness')));
+        final name = find.byKey(const ValueKey('vep.form.name'));
+        await tester.enterText(name, 'Kosgama Dairy Co-op');
+        await _tap(tester, find.byKey(const ValueKey('vep.form.addOutput')));
+        await _choose(
+          tester,
+          const ValueKey('vep.picker.product'),
+          'Eggs · Eggs',
+        );
+        await _tap(tester, find.byKey(const ValueKey('vep.picker.add')));
+        await _tap(tester, find.byKey(const ValueKey('vep.form.save')));
+
+        // The business change saved; adding Eggs did not.
+        var dairy = (await api.fetchProfile(_pahala)).businesses.first;
+        expect(dairy.name, 'Kosgama Dairy Co-op');
+        expect(dairy.version, 2);
+        expect(dairy.outputs.where((o) => o.product == 'EGGS'), isEmpty);
+        expect(find.text('Business saved'), findsNothing);
+        expect(find.textContaining('was not added'), findsOneWidget);
+        expect(find.text('Not Saved'), findsOneWidget);
+
+        // The saved details are locked and say why; nothing typed now could
+        // be skipped and then reported as saved.
+        expect(tester.widget<TextField>(name).enabled, isFalse);
+        expect(
+          tester
+              .widget<TextField>(
+                find.byKey(const ValueKey('vep.form.description')),
+              )
+              .enabled,
+          isFalse,
+        );
+        expect(
+          tester
+              .widget<DropdownButtonFormField<String>>(
+                find.byKey(const ValueKey('vep.form.status')),
+              )
+              .onChanged,
+          isNull,
+        );
+        expect(
+          find.textContaining(
+            'These business details are saved and are locked',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Eggs'), findsOneWidget);
+        expect(find.text('● Unsaved changes'), findsOneWidget);
+
+        await _tap(tester, find.byKey(const ValueKey('vep.form.save')));
+        expect(find.text('Business saved'), findsOneWidget);
+        dairy = (await api.fetchProfile(_pahala)).businesses.first;
+        expect(dairy.name, 'Kosgama Dairy Co-op');
+        expect(dairy.version, 2, reason: 'the details were not sent twice');
+        expect(dairy.outputs.where((o) => o.product == 'EGGS'), hasLength(1));
+        expect(api.attempts, 2);
+      },
+    );
+  });
 }

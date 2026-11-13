@@ -124,13 +124,9 @@ class SavedProduction {
 /// screens show them the same way: 404 outside the caller's scope, 403 for a
 /// write the caller may not make, 409 for a conflict.
 abstract interface class EconomyApi {
+  /// The society's businesses and outputs, each output with its latest actual
+  /// and estimate worked out by the API from the whole history.
   Future<EconomicProfile> fetchProfile(String societyId);
-
-  /// The latest actual and estimated figure of each of [outputIds].
-  Future<Map<String, LatestProduction>> fetchLatest(
-    String societyId,
-    Set<String> outputIds,
-  );
 
   Future<SocietyBusiness> createBusiness(String societyId, BusinessInput input);
 
@@ -167,10 +163,6 @@ abstract interface class EconomyApi {
   Future<ProductionHistory> fetchHistory(String recordId);
 }
 
-/// How many pages of the society's records [HttpEconomyApi.fetchLatest]
-/// reads at most. One page of 100 covers almost every society.
-const _latestPages = 5;
-
 class HttpEconomyApi implements EconomyApi {
   HttpEconomyApi(this.api);
 
@@ -205,31 +197,6 @@ class HttpEconomyApi implements EconomyApi {
         await _call('/societies/$societyId/economic-profile')
             as Map<String, dynamic>,
       );
-
-  @override
-  Future<Map<String, LatestProduction>> fetchLatest(
-    String societyId,
-    Set<String> outputIds,
-  ) async {
-    // One list across the society, newest period first, instead of one
-    // request per output: the TEST API limits how often a phone may ask.
-    final records = <ProductionRecord>[];
-    for (var page = 1; page <= _latestPages; page++) {
-      final data = RecordPage.fromJson(
-        await _call(
-          '/economic-profile/production-records?societyId=$societyId&page=$page&pageSize=100',
-        ) as Map<String, dynamic>,
-      );
-      records.addAll(data.items);
-      final latest = latestByOutput(records);
-      final settled = outputIds.every((id) => latest[id]?.actual != null);
-      if (!data.hasMore || settled) break;
-    }
-    final latest = latestByOutput(records);
-    return {
-      for (final id in outputIds) id: latest[id] ?? const LatestProduction(),
-    };
-  }
 
   @override
   Future<SocietyBusiness> createBusiness(

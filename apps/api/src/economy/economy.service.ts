@@ -199,6 +199,26 @@ export class EconomyService {
   async profile(societyId: string, principal: Principal) {
     const society = await this.visibleSociety(societyId, principal);
     const businesses = await this.repository.listBusinesses(society.id);
+    // Issue #146: each output's latest actual and latest estimate, kept
+    // apart. Null means the output has no record of that measurement.
+    const latest = new Map<
+      string,
+      {
+        actual: ReturnType<typeof toRecord> | null;
+        estimated: ReturnType<typeof toRecord> | null;
+      }
+    >();
+    for (const business of businesses)
+      for (const output of business.outputs)
+        latest.set(output.id, { actual: null, estimated: null });
+    for (const record of await this.repository.latestRecords([
+      ...latest.keys(),
+    ])) {
+      const entry = latest.get(record.outputId);
+      if (!entry) continue;
+      if (record.measurement === 'ACTUAL') entry.actual = toRecord(record);
+      else entry.estimated = toRecord(record);
+    }
     return {
       society: {
         id: society.id,
@@ -208,7 +228,16 @@ export class EconomyService {
       },
       // Kept as typed on the society profile; never turned into businesses.
       businessDescription: society.businessDescription,
-      businesses: businesses.map(toBusiness),
+      businesses: businesses.map((row) => {
+        const business = toBusiness(row);
+        return {
+          ...business,
+          outputs: business.outputs.map((output) => ({
+            ...output,
+            latest: latest.get(output.id) ?? { actual: null, estimated: null },
+          })),
+        };
+      }),
       permissions: { canManage: canManageEconomy(principal, society) },
     };
   }

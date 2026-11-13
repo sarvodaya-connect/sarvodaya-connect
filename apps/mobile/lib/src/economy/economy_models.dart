@@ -130,6 +130,7 @@ class BusinessOutput {
     required this.version,
     required this.createdAt,
     required this.updatedAt,
+    this.latest,
   });
 
   factory BusinessOutput.fromJson(Map<String, dynamic> json) => BusinessOutput(
@@ -143,6 +144,9 @@ class BusinessOutput {
     version: json['version'] as int,
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
+    latest: json['latest'] is Map<String, dynamic>
+        ? LatestProduction.fromJson(json['latest'] as Map<String, dynamic>)
+        : null,
   );
 
   final String id;
@@ -155,6 +159,11 @@ class BusinessOutput {
   final int version;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Issue #146: the latest actual and estimate, worked out by the API from
+  /// the whole history. Null when the API did not send them (an older
+  /// server), which is shown as "not available", never as "not reported".
+  final LatestProduction? latest;
 
   bool get archived => archivedAt != null;
   int get decimals => productionUnits[unit] ?? 0;
@@ -439,6 +448,20 @@ class RecordPage {
 /// different measurements and are never added together.
 class LatestProduction {
   const LatestProduction({this.actual, this.estimated});
+
+  /// `{actual, estimated}` from the economic profile; null means the output
+  /// has no record of that measurement.
+  factory LatestProduction.fromJson(Map<String, dynamic> json) =>
+      LatestProduction(
+        actual: json['actual'] == null
+            ? null
+            : ProductionRecord.fromJson(json['actual'] as Map<String, dynamic>),
+        estimated: json['estimated'] == null
+            ? null
+            : ProductionRecord.fromJson(
+                json['estimated'] as Map<String, dynamic>,
+              ),
+      );
 
   final ProductionRecord? actual;
   final ProductionRecord? estimated;

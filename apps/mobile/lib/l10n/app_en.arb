@@ -3097,10 +3097,6 @@
   "@vepBusinessSaved": {
     "description": "Issue #146 Village Economic Profile."
   },
-  "vepBusinessSavedOutputsLeft": "The business is saved. Try again to add the products and services that are left.",
-  "@vepBusinessSavedOutputsLeft": {
-    "description": "Issue #146 Village Economic Profile."
-  },
   "vepPartial": "The business is saved, but {count, plural, =1{1 product or service was} other{{count} products or services were}} not added.",
   "@vepPartial": {
     "description": "Issue #146 Village Economic Profile.",
@@ -3485,5 +3481,13 @@
         "type": "String"
       }
     }
+  },
+  "vepLatestUnknown": "Not available",
+  "@vepLatestUnknown": {
+    "description": "Issue #146 Village Economic Profile."
+  },
+  "vepBusinessLocked": "These business details are saved and are locked here. Save again to add the products and services that are left; change the details afterwards with Edit on the business page.",
+  "@vepBusinessLocked": {
+    "description": "Issue #146 Village Economic Profile."
   }
 }

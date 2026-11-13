@@ -931,7 +931,6 @@
   "vepOtherIndustryError": "කර්මාන්තය විස්තර කරන්න",
   "vepSaveBusiness": "ව්‍යාපාරය සුරකින්න",
   "vepBusinessSaved": "ව්‍යාපාරය සුරැකුණා",
-  "vepBusinessSavedOutputsLeft": "ව්‍යාපාරය සුරැකී ඇත. ඉතිරි නිෂ්පාදන සහ සේවා එක් කිරීමට නැවත උත්සාහ කරන්න.",
   "vepPartial": "ව්‍යාපාරය සුරැකී ඇත, නමුත් නිෂ්පාදන හෝ සේවා {count, plural, other{{count}}} ක් එක් නොවීය.",
   "vepConflictBusiness": "ඔබ විවෘත කළ පසු මෙම ව්‍යාපාරය වෙනස් කර ඇත. ඔබ ටයිප් කළ දේ තවමත් මෙහි ඇත. දැන් සුරැකී ඇති දේ බැලීමට නැවත පූරණය කර, තවමත් නිවැරදි නම් නැවත සුරකින්න.",
   "vepNowSavedBusiness": "දැන් සුරැකී ඇත්තේ: {name} · {status}. ඔබේ වෙනස්කම් තවමත් මෙහි ඇත.",
@@ -1003,5 +1002,7 @@
   "vepCorrect": "සංඛ්‍යාව නිවැරදි කරන්න",
   "vepRevisionsTitle": "වෙනස්කම්",
   "vepRevisionCreated": "{quantity} සුරැකුවා",
-  "vepRevisionCorrected": "{quantity} ලෙස නිවැරදි කළා"
+  "vepRevisionCorrected": "{quantity} ලෙස නිවැරදි කළා",
+  "vepLatestUnknown": "ලබා ගත නොහැක",
+  "vepBusinessLocked": "මෙම ව්‍යාපාර විස්තර සුරැකී ඇති අතර මෙහි අගුළු දමා ඇත. ඉතිරි නිෂ්පාදන සහ සේවා එක් කිරීමට නැවත සුරකින්න; පසුව ව්‍යාපාර පිටුවේ සංස්කරණය මගින් විස්තර වෙනස් කරන්න."
 }

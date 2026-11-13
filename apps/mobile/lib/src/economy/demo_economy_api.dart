@@ -322,7 +322,18 @@ class DemoEconomyApi implements EconomyApi {
     return EconomicProfile(
       societyId: societyId,
       societyName: _names[societyId]!,
-      businesses: [for (final business in businesses) business.snapshot()],
+      // As the API: each output's latest actual and estimate from its whole
+      // history, never from a page of it.
+      businesses: [
+        for (final business in businesses)
+          business.snapshot(
+            latestByOutput(
+              _newestFirst(
+                _records.values.where((r) => r.output.business == business),
+              ).map((r) => r.snapshot()),
+            ),
+          ),
+      ],
       canManage: _canManage(societyId),
     );
   }
@@ -332,23 +343,6 @@ class DemoEconomyApi implements EconomyApi {
         final byStart = b.period.startsOn.compareTo(a.period.startsOn);
         return byStart != 0 ? byStart : a.measurement.compareTo(b.measurement);
       });
-
-  @override
-  Future<Map<String, LatestProduction>> fetchLatest(
-    String societyId,
-    Set<String> outputIds,
-  ) async {
-    await _wait();
-    _visibleSociety(societyId);
-    final latest = latestByOutput(
-      _newestFirst(
-        _records.values.where((r) => r.output.business.societyId == societyId),
-      ).map((r) => r.snapshot()),
-    );
-    return {
-      for (final id in outputIds) id: latest[id] ?? const LatestProduction(),
-    };
-  }
 
   String? _businessError({
     required String name,
@@ -774,22 +768,31 @@ class _Business {
   final DateTime createdAt;
   DateTime updatedAt;
 
-  SocietyBusiness snapshot() => SocietyBusiness(
-    id: id,
-    societyId: societyId,
-    name: name,
-    industry: industry,
-    otherIndustry: otherIndustry,
-    description: description,
-    status: status,
-    closedAt: closedAt,
-    version: version,
-    outputs: [for (final output in outputs) output.snapshot()],
-    createdBy: createdBy,
-    updatedBy: updatedBy,
-    createdAt: createdAt,
-    updatedAt: updatedAt,
-  );
+  /// [latest] is given for the economic profile only, as on the API.
+  SocietyBusiness snapshot([Map<String, LatestProduction>? latest]) =>
+      SocietyBusiness(
+        id: id,
+        societyId: societyId,
+        name: name,
+        industry: industry,
+        otherIndustry: otherIndustry,
+        description: description,
+        status: status,
+        closedAt: closedAt,
+        version: version,
+        outputs: [
+          for (final output in outputs)
+            output.snapshot(
+              latest == null
+                  ? null
+                  : latest[output.id] ?? const LatestProduction(),
+            ),
+        ],
+        createdBy: createdBy,
+        updatedBy: updatedBy,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
 }
 
 class _Output {
@@ -812,7 +815,7 @@ class _Output {
   final DateTime createdAt;
   DateTime updatedAt;
 
-  BusinessOutput snapshot() => BusinessOutput(
+  BusinessOutput snapshot([LatestProduction? latest]) => BusinessOutput(
     id: id,
     businessId: business.id,
     product: product,
@@ -823,6 +826,7 @@ class _Output {
     version: version,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    latest: latest,
   );
 }
 
