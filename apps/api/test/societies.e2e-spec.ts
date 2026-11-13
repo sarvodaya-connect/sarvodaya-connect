@@ -296,7 +296,7 @@ describe('Societies endpoints (e2e)', () => {
           longitude: 80.6,
         },
         expect.objectContaining({ id: 'demo-hq-admin' }),
-        { summary: 'Map location changed' },
+        { summary: 'Map location changed', membershipChanged: false },
       );
     });
 
