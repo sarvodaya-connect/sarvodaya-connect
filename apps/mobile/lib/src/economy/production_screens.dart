@@ -50,7 +50,13 @@ class ProductionFormScreen extends StatefulWidget {
 
 class _ProductionFormScreenState extends State<ProductionFormScreen> {
   late final DateTime _today = sriLankaToday(DemoScope.read(context).now);
-  late final _outputs = widget.business.activeOutputs;
+
+  /// Archived products too, after the active ones: a figure for a period
+  /// before the archive (or close) date can still be added late.
+  late final _outputs = [
+    ...widget.business.activeOutputs,
+    ...widget.business.outputs.where((o) => o.archived),
+  ];
   late String? _outputId =
       widget.correcting?.outputId ??
       widget.initialOutputId ??
@@ -195,6 +201,31 @@ class _ProductionFormScreenState extends State<ProductionFormScreen> {
       return l.vepActualFuture;
     }
     if (period.endsOn.isAfter(_furthest)) return l.vepEstimateTooFar;
+    final cutoff = _cutoff;
+    if (cutoff != null && period.startsOn.isAfter(cutoff.day)) {
+      return cutoff.message;
+    }
+    return null;
+  }
+
+  /// The last day a new period may start on, for a product that was
+  /// archived or a business that was closed, and why. The earlier wins.
+  ({DateTime day, String message})? get _cutoff {
+    final l = _l;
+    final archived = _output?.archivedAt;
+    final closed = widget.business.closedAt;
+    final archivedDay = archived == null ? null : sriLankaToday(archived);
+    final closedDay = closed == null ? null : sriLankaToday(closed);
+    if (closedDay != null &&
+        (archivedDay == null || !archivedDay.isBefore(closedDay))) {
+      return (day: closedDay, message: l.vepLateUntilClosed(l.date(closedDay)));
+    }
+    if (archivedDay != null) {
+      return (
+        day: archivedDay,
+        message: l.vepLateUntilArchived(l.date(archivedDay)),
+      );
+    }
     return null;
   }
 
@@ -662,10 +693,13 @@ class _ProductionFormScreenState extends State<ProductionFormScreen> {
                     DropdownMenuItem(
                       value: option.id,
                       child: Text(
-                        l.withUnit(
-                          l.outputName(option),
-                          l.unitName(option.unit),
-                        ),
+                        [
+                          l.withUnit(
+                            l.outputName(option),
+                            l.unitName(option.unit),
+                          ),
+                          if (option.archived) l.vepArchived,
+                        ].join(' · '),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -674,6 +708,14 @@ class _ProductionFormScreenState extends State<ProductionFormScreen> {
                     ? null
                     : (value) => setState(() => _outputId = value),
               ),
+            if (correcting == null && _cutoff != null) ...[
+              const SizedBox(height: 8),
+              RecordNote(
+                key: const ValueKey('vep.production.cutoff'),
+                icon: Icons.history_outlined,
+                message: _cutoff!.message,
+              ),
+            ],
             const SizedBox(height: 14),
             if (correcting == null) ...[
               _choiceRow(

@@ -194,7 +194,7 @@ The society record has a **Village Economic Profile** tab, third after Overview 
 | The tab | A short note that these are businesses the society runs itself and that the figures are self-reported, a summary, and one card per business with its status and the latest actual and estimated figure of each product, each with its period. **Add business** appears for the assigned Society Officer only. |
 | Add/Edit Business | Name, industry (or Other with a description), short description, status and products/services. Standard products show their fixed unit; Other takes a description and a unit. The profile's free-text business description is not touched. |
 | Business details | Each product's latest figures and production history, with Record, Archive or Bring back, Edit, and Close or Reopen. Each figure opens on its own screen with every version of it and **Correct figure**. |
-| Record Production | Product, actual or estimated, weekly, monthly or seasonal (with a season name), the exact period, the quantity in the product's unit, an optional note and source, and a preview such as "Milk: 3,200 litres · October 2026 · Actual". |
+| Record Production | Product, actual or estimated, weekly, monthly or seasonal (with a season name), the exact period, the quantity in the product's unit, an optional note and source, and a preview such as "Milk: 3,200 litres · October 2026 · Actual". A closed business and an archived product still offer it for late figures: the form shows the close or archive date and refuses periods that start after it, as the API does. |
 
 How the phone keeps the rules:
 

@@ -413,7 +413,9 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
     spacing: 8,
     runSpacing: 8,
     children: [
-      if (!business.closed && business.activeOutputs.isNotEmpty)
+      // Also on a closed business: figures for periods before it closed
+      // can still be added late (the form enforces the cutoff).
+      if (business.outputs.isNotEmpty)
         FilledButton.icon(
           key: const ValueKey('vep.recordProduction'),
           style: compactFilledStyle,
@@ -516,14 +518,15 @@ class _OutputCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 4,
             children: [
-              if (!output.archived && !businessClosed)
-                TextButton.icon(
-                  key: ValueKey('vep.record.${output.id}'),
-                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                  onPressed: busy ? null : onRecord,
-                  icon: const Icon(Icons.add_chart, size: 16),
-                  label: Text(l.vepRecordShort),
-                ),
+              // Archived or closed: still offered for late figures before
+              // the archive or close date.
+              TextButton.icon(
+                key: ValueKey('vep.record.${output.id}'),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: busy ? null : onRecord,
+                icon: const Icon(Icons.add_chart, size: 16),
+                label: Text(l.vepRecordShort),
+              ),
               TextButton.icon(
                 key: ValueKey('vep.archive.${output.id}'),
                 style: TextButton.styleFrom(

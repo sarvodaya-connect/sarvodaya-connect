@@ -2983,6 +2983,24 @@
       }
     }
   },
+  "vepLateUntilClosed": "This business closed on {date}. Figures can still be added for periods that start on or before that day.",
+  "@vepLateUntilClosed": {
+    "description": "Issue #146 Village Economic Profile: late figures for a closed business or archived product.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "vepLateUntilArchived": "This product was archived on {date}. Figures can still be added for periods that start on or before that day.",
+  "@vepLateUntilArchived": {
+    "description": "Issue #146 Village Economic Profile: late figures for a closed business or archived product.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "vepArchive": "Archive",
   "@vepArchive": {
     "description": "Issue #146 Village Economic Profile."

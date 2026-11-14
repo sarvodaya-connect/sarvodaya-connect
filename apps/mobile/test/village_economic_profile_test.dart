@@ -1089,5 +1089,97 @@ void main() {
         expect(october.note, 'Second note.');
       },
     );
+
+    // Codex review: figures for periods before a business closed or a
+    // product was archived can still be added late, without reopening or
+    // bringing it back; later periods are refused on the phone too.
+    testWidgets('a closed business still takes late figures before it closed', (
+      tester,
+    ) async {
+      final store = DemoStore(loadDelay: Duration.zero, clock: () => _now)
+        ..switchDemoRole(UserRole.societyOfficer);
+      final dairy = (await store.economy.fetchProfile(_pahala)).businesses
+          .firstWhere((b) => b.name == 'Kosgama Dairy Collective');
+      await store.economy.updateBusiness(dairy.id, dairy.version, {
+        'status': 'CLOSED',
+      });
+      await _pump(tester, store: store);
+      final before = await _count(store, 'MILK');
+      await _recordMilk(tester);
+      expect(
+        find.text(
+          'This business closed on 13 Nov 2026. Figures can still be added '
+          'for periods that start on or before that day.',
+        ),
+        findsOneWidget,
+      );
+
+      // December 2026 starts after the close: refused, nothing sent.
+      await _tap(
+        tester,
+        find.byKey(const ValueKey('vep.production.measurement.ESTIMATED')),
+      );
+      await _choose(
+        tester,
+        const ValueKey('vep.production.month.ESTIMATED'),
+        'December 2026',
+      );
+      await tester.enterText(_quantity(), '3000');
+      await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+      expect(
+        find.text(
+          'This business closed on 13 Nov 2026. Figures can still be added '
+          'for periods that start on or before that day.',
+        ),
+        findsNWidgets(2),
+      );
+      expect(await _count(store, 'MILK'), before);
+
+      // October 2026, actual, is before the close: saved.
+      await _tap(
+        tester,
+        find.byKey(const ValueKey('vep.production.measurement.ACTUAL')),
+      );
+      await _choose(
+        tester,
+        const ValueKey('vep.production.month.ACTUAL'),
+        'October 2026',
+      );
+      await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+      expect(find.text('Figure saved'), findsOneWidget);
+      expect(await _count(store, 'MILK'), before + 1);
+      final closed = (await store.economy.fetchProfile(_pahala)).businesses
+          .firstWhere((b) => b.id == dairy.id);
+      expect(closed.status, 'CLOSED', reason: 'not reopened');
+    });
+
+    testWidgets('an archived product still takes late figures', (tester) async {
+      final store = DemoStore(loadDelay: Duration.zero, clock: () => _now)
+        ..switchDemoRole(UserRole.societyOfficer);
+      final milk = await _output(store, 'MILK');
+      await store.economy.setOutputArchived(
+        milk.id,
+        version: milk.version,
+        archived: true,
+      );
+      await _pump(tester, store: store);
+      final before = await _count(store, 'MILK');
+      await _openBusiness(tester, 'Kosgama Dairy Collective');
+      await _tap(tester, find.byKey(ValueKey('vep.record.${milk.id}')));
+      expect(find.text('Milk · Litres · Archived'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('vep.production.cutoff')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('This product was archived on 13 Nov 2026'),
+        findsOneWidget,
+      );
+      await tester.enterText(_quantity(), '3050');
+      await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+      expect(find.text('Figure saved'), findsOneWidget);
+      expect(await _count(store, 'MILK'), before + 1);
+      expect((await _output(store, 'MILK')).archived, isTrue);
+    });
   });
 }
