@@ -355,7 +355,11 @@ class EncryptedFileQueueStorage implements QueueStorage {
   }
 
   Future<void> _writeAtomically(File file, List<int> bytes) async {
-    final temporary = File('${file.path}.tmp');
+    // A temporary name of its own for every write, so two writes never share
+    // (and rename) the same file.
+    final temporary = File(
+      '${file.path}.${DateTime.now().microsecondsSinceEpoch}-${_next++}.tmp',
+    );
     await temporary.writeAsBytes(bytes, flush: true);
     await temporary.rename(file.path);
   }
@@ -423,6 +427,16 @@ class AssessmentQueue extends ChangeNotifier {
   List<QueuedAssessment> _items = const [];
   Future<SyncResult>? _syncing;
 
+  /// Every read and change of the saved queue runs one at a time, so a save
+  /// during a retry round (or a discard) never overwrites another change.
+  Future<void> _lock = Future.value();
+
+  Future<T> _serialized<T>(Future<T> Function() action) {
+    final result = _lock.then((_) => action());
+    _lock = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+
   /// The signed-in account's saved assessments. Empty after sign-out, and
   /// another account never sees them.
   List<QueuedAssessment> get items {
@@ -435,26 +449,34 @@ class AssessmentQueue extends ChangeNotifier {
   /// Reads the signed-in account's queue. A queue that cannot be read (for
   /// example after the app was reinstalled and its key is gone) is kept on
   /// disk untouched and treated as empty.
-  Future<List<QueuedAssessment>> load() async {
+  Future<List<QueuedAssessment>> load() => _serialized(() async {
     final account = _accountId();
     if (account == null) {
       forget();
-      return const [];
+      return const <QueuedAssessment>[];
     }
+    final stored = await _readStored(account);
+    // Signed out or switched account while reading: keep nothing in memory.
+    if (_accountId() != account) return const <QueuedAssessment>[];
+    _items = stored ?? const [];
+    _loadedFor = account;
+    notifyListeners();
+    return _items;
+  });
+
+  /// The account's queue as saved on the phone; null if it cannot be read.
+  Future<List<QueuedAssessment>?> _readStored(String account) async {
     try {
       final json = await _storage.readQueue(account);
       final decoded = json == null ? const [] : jsonDecode(json) as List;
-      _items = [
+      return [
         for (final item in decoded)
           QueuedAssessment.fromJson(Map<String, dynamic>.from(item as Map)),
       ];
     } catch (error) {
       debugPrint('Saved assessments could not be read: $error');
-      _items = const [];
+      return null;
     }
-    _loadedFor = account;
-    notifyListeners();
-    return _items;
   }
 
   /// Clears what is held in memory, for example at sign-out.
@@ -464,17 +486,31 @@ class AssessmentQueue extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _write(String account, List<QueuedAssessment> items) async {
+  /// Applies [change] to the account's saved queue, one change at a time.
+  ///
+  /// The change starts from the latest queue, never from an older snapshot.
+  /// If the account signed out or changed while this was running (a 401
+  /// during a send signs the user out), memory no longer holds this account's
+  /// queue, so the change starts from what is saved on the phone instead and
+  /// every saved assessment is kept for the next sign-in. A saved queue that
+  /// cannot be read is left untouched.
+  Future<void> _update(
+    String account,
+    List<QueuedAssessment> Function(List<QueuedAssessment> current) change,
+  ) => _serialized(() async {
+    final current = _loadedFor == account ? _items : await _readStored(account);
+    if (current == null) return;
+    final next = change(current);
     await _storage.writeQueue(
       account,
-      jsonEncode([for (final item in items) item.toJson()]),
+      jsonEncode([for (final item in next) item.toJson()]),
     );
     if (_accountId() == account) {
-      _items = items;
+      _items = next;
       _loadedFor = account;
       notifyListeners();
     }
-  }
+  });
 
   /// Saves an assessment on the phone before any attempt to send it.
   Future<QueuedAssessment> save({
@@ -508,11 +544,14 @@ class AssessmentQueue extends ChangeNotifier {
       photos: photos,
       savedAt: _clock(),
     );
-    await _write(account, [
-      for (final existing in _items)
-        if (existing.clientMutationId != clientMutationId) existing,
-      item,
-    ]);
+    await _update(
+      account,
+      (current) => [
+        for (final existing in current)
+          if (existing.clientMutationId != clientMutationId) existing,
+        item,
+      ],
+    );
     return item;
   }
 
@@ -571,10 +610,14 @@ class AssessmentQueue extends ChangeNotifier {
           await _replace(account, item);
           await _storage.deletePhoto(account, photo.ref);
         }
-        await _write(account, [
-          for (final existing in _items)
-            if (existing.clientMutationId != item.clientMutationId) existing,
-        ]);
+        final done = item.clientMutationId;
+        await _update(
+          account,
+          (current) => [
+            for (final existing in current)
+              if (existing.clientMutationId != done) existing,
+          ],
+        );
         sent++;
       } on IncidentException catch (error) {
         final problem = problemOf(error);
@@ -610,27 +653,33 @@ class AssessmentQueue extends ChangeNotifier {
     );
   }
 
-  Future<void> _replace(String account, QueuedAssessment item) =>
-      _write(account, [
-        for (final existing in _items)
-          existing.clientMutationId == item.clientMutationId ? item : existing,
-      ]);
+  /// Records [item]'s progress. An item discarded meanwhile stays removed.
+  Future<void> _replace(String account, QueuedAssessment item) => _update(
+    account,
+    (current) => [
+      for (final existing in current)
+        existing.clientMutationId == item.clientMutationId ? item : existing,
+    ],
+  );
 
   /// Removes a saved assessment the user chose not to send, with its photos.
   Future<void> discard(String clientMutationId) async {
     final account = _accountId();
     if (account == null) return;
     await _ensureLoaded(account);
-    final item = _items
-        .where((i) => i.clientMutationId == clientMutationId)
-        .firstOrNull;
-    if (item == null) return;
-    for (final photo in item.photos) {
+    QueuedAssessment? removed;
+    await _update(account, (current) {
+      removed = current
+          .where((i) => i.clientMutationId == clientMutationId)
+          .firstOrNull;
+      return [
+        for (final existing in current)
+          if (existing.clientMutationId != clientMutationId) existing,
+      ];
+    });
+    // The answers are gone from the queue first, then their photos.
+    for (final photo in removed?.photos ?? const <QueuedPhoto>[]) {
       await _storage.deletePhoto(account, photo.ref);
     }
-    await _write(account, [
-      for (final existing in _items)
-        if (existing.clientMutationId != clientMutationId) existing,
-    ]);
   }
 }

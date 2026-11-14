@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,9 @@ class _FakeApi extends DemoIncidentApi {
   bool photoOffline = false;
   int sendCalls = 0;
 
+  /// Runs inside a send before it answers, to act while it is in flight.
+  Future<void> Function(String clientMutationId)? beforeSend;
+
   @override
   Future<String> sendAssessment(
     String incidentId,
@@ -36,6 +40,7 @@ class _FakeApi extends DemoIncidentApi {
     AssessmentAnswers answers,
   ) async {
     sendCalls++;
+    await beforeSend?.call(clientMutationId);
     if (offline) {
       throw const IncidentException('offline', offline: true);
     }
@@ -307,5 +312,89 @@ void main() {
     expect(store.assessments.items, hasLength(1));
     store.signOut();
     expect(store.assessments.items, isEmpty);
+  });
+
+  test('a 401 that signs the user out keeps every saved assessment', () async {
+    final q = queue();
+    final first = await save(q);
+    final second = await save(q);
+    // As in the app: a 401 signs the user out, which clears memory.
+    api.beforeSend = (_) async {
+      account = null;
+      q.forget();
+      throw const IncidentException('Sign in again', status: 401);
+    };
+    await q.sync();
+    expect(q.items, isEmpty);
+
+    account = 'account-a';
+    api.beforeSend = null;
+    final items = await queue().load();
+    expect(items.map((i) => i.clientMutationId), [
+      first.clientMutationId,
+      second.clientMutationId,
+    ]);
+    expect(items.first.problem, QueueProblem.signIn);
+    expect(items.last.problem, isNull);
+  });
+
+  test('a save during a retry round is not overwritten', () async {
+    final q = queue();
+    final first = await save(q);
+    final inFlight = Completer<void>();
+    final release = Completer<void>();
+    api.beforeSend = (id) async {
+      if (id != first.clientMutationId) return;
+      inFlight.complete();
+      await release.future;
+    };
+    final round = q.sync();
+    await inFlight.future;
+    final second = await save(q, photos: 1);
+    release.complete();
+    await round;
+
+    expect(api.received.keys, [first.clientMutationId]);
+    expect(q.items.map((i) => i.clientMutationId), [second.clientMutationId]);
+    final relaunched = await queue().load();
+    expect(relaunched.map((i) => i.clientMutationId), [
+      second.clientMutationId,
+    ]);
+    expect(relaunched.single.photos, hasLength(1));
+    expect(
+      root.listSync(recursive: true).where((f) => f.path.endsWith('.tmp')),
+      isEmpty,
+    );
+  });
+
+  test('an assessment discarded during a retry round stays removed', () async {
+    final q = queue();
+    final first = await save(q);
+    final inFlight = Completer<void>();
+    final release = Completer<void>();
+    api
+      ..refuse = 403
+      ..beforeSend = (_) async {
+        inFlight.complete();
+        await release.future;
+      };
+    final round = q.sync();
+    await inFlight.future;
+    await q.discard(first.clientMutationId);
+    release.complete();
+    await round;
+
+    expect(q.items, isEmpty);
+    expect(await queue().load(), isEmpty);
+  });
+
+  test('saves made at the same moment are all kept', () async {
+    final q = queue();
+    final saved = await Future.wait([save(q), save(q), save(q)]);
+    final items = await queue().load();
+    expect(
+      items.map((i) => i.clientMutationId).toSet(),
+      saved.map((i) => i.clientMutationId).toSet(),
+    );
   });
 }
