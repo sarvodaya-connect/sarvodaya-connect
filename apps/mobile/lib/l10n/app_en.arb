@@ -1310,14 +1310,12 @@
     }
   },
   "editFieldName": "society name",
-  "editFieldMembers": "number of members",
   "editFieldAddress": "address",
   "editFieldLandline": "landline",
   "editFieldBusiness": "business run by the society",
   "editFieldLocation": "map location",
   "editNameError": "Enter the society name.",
-  "editMembersRequired": "Enter the number of members.",
-  "editMembersFormat": "Use numbers only, for example 418.",
+  "editMembersFormat": "Enter a whole number from 0 to 1,000,000, for example 25.",
   "editLandlineFormat": "Enter a 10-digit number, for example 037 000 0000, or leave it empty.",
   "editSaved": "Saved. The change is in the society history.",
   "editLeaveTitle": "Leave Without Saving?",
@@ -1955,6 +1953,546 @@
       }
     }
   },
+  "progTitle": "Programmes & Activities",
+  "progSubtitle": "Done vs planned · SPC-approved only",
+  "progDemo": "Demonstration data · {year}",
+  "@progDemo": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSummary": "{completed} of {planned} planned completed — {percent}%",
+  "@progSummary": {
+    "placeholders": {
+      "completed": {
+        "type": "String"
+      },
+      "planned": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "progTenSectors": "10 Sectors",
+  "progDimensions": "Dimensions",
+  "progSectorSocieties": "{count, plural, =1{1 society} other{{count} societies}}",
+  "@progSectorSocieties": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progSdgEyebrow": "UN SDGs · Ranked by Completed Activities",
+  "progSdgNote": "{year} · equal counts listed by SDG number · an activity can have several SDGs",
+  "@progSdgNote": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSdg": "No completed activity with a UN SDG yet for {year}.",
+  "@progNoSdg": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progSdgSemantics": "Number {rank}, SDG {sdg}: {title}, {count} completed",
+  "@progSdgSemantics": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "sdg": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "progFinancialYear": "Financial year",
+  "progCountedOver": "Counted over",
+  "progScopeDistrict": "{district} · {count, plural, =1{1 society} other{{count} societies}}",
+  "@progScopeDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeAssigned": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@progScopeAssigned": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "progScopeTemporary": "Your assigned societies and {district} · {count} in all · temporary access until {time}",
+  "@progScopeTemporary": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "progNoSocietiesTitle": "No Societies Assigned Yet",
+  "progNoSocietiesBody": "When societies are assigned to you, their programme figures appear here. Every count below is zero until then.",
+  "progZeroYear": "No SPC-approved activities in {year} for these societies yet. The zeros below are real counts, not missing data.",
+  "@progZeroYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "progErrorTitle": "Programme Figures Are Unavailable",
+  "progLoading": "Loading programme figures",
+  "progHomeLink": "Programmes & Activities",
+  "progHomeLinkDistrict": "Done vs planned and UN SDGs in your district",
+  "progHomeLinkAssigned": "Done vs planned and UN SDGs for your societies",
+  "progDimSocial": "Social",
+  "progDimEconomic": "Economic",
+  "progDimGovernance": "Governance",
+  "progSector1": "Community education",
+  "progSector2": "Child wellbeing",
+  "progSector3": "Culture",
+  "progSector4": "Economy",
+  "progSector5": "Governance",
+  "progSector6": "Health and nutrition",
+  "progSector7": "Housing and infrastructure",
+  "progSector8": "Spiritual development",
+  "progSector9": "Agriculture",
+  "progSector10": "Environment",
+  "progSdg1": "No Poverty",
+  "progSdg2": "Zero Hunger",
+  "progSdg3": "Good Health and Well-Being",
+  "progSdg4": "Quality Education",
+  "progSdg5": "Gender Equality",
+  "progSdg6": "Clean Water and Sanitation",
+  "progSdg7": "Affordable and Clean Energy",
+  "progSdg8": "Decent Work and Economic Growth",
+  "progSdg9": "Industry, Innovation and Infrastructure",
+  "progSdg10": "Reduced Inequalities",
+  "progSdg11": "Sustainable Cities and Communities",
+  "progSdg12": "Responsible Consumption and Production",
+  "progSdg13": "Climate Action",
+  "progSdg14": "Life Below Water",
+  "progSdg15": "Life on Land",
+  "progSdg16": "Peace, Justice and Strong Institutions",
+  "progSdg17": "Partnerships for the Goals",
+  "progInProgress": "{year} is still in progress. Planned counts every activity approved for the year so far; completed counts those whose month has ended.",
+  "@progInProgress": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipTileSubtitle": "Members by category in your societies · counts only",
+  "roleMembershipScopeDm": "All societies in {district} · counts only",
+  "@roleMembershipScopeDm": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipScopeMine": "{count, plural, =1{Your 1 assigned society · counts only} other{Your {count} assigned societies · counts only}}",
+  "@roleMembershipScopeMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipScopeDistrict": "All {district} societies · view only",
+  "@roleMembershipScopeDistrict": {
+    "placeholders": {
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipMine": "My societies",
+  "roleMembershipDistrict": "District · view only",
+  "roleMembershipReported": "Societies Reported",
+  "roleMembershipReportedValue": "{reported} of {active}",
+  "@roleMembershipReportedValue": {
+    "placeholders": {
+      "reported": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipLatest": "Latest counts, {year}",
+  "@roleMembershipLatest": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipNoYear": "No counts entered yet",
+  "roleMembershipNoneTitle": "No Membership Counts Yet",
+  "roleMembershipNoneMessage": "None of these societies has entered membership counts by category. Zeros here mean not reported, not zero members.",
+  "roleMembershipEmptyTitle": "No Active Societies",
+  "roleMembershipEmptyMessage": "There are no active societies in your scope yet, so there are no membership counts to show.",
+  "roleMembershipProfileMissing": "{count, plural, =1{1 of these societies has no category counts for {year}.} other{{count} of these societies have no category counts for {year}.}}",
+  "@roleMembershipProfileMissing": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleMembershipProfileMissingNoYear": "{count, plural, =1{1 of these societies has not entered category counts yet.} other{{count} of these societies have not entered category counts yet.}}",
+  "@roleMembershipProfileMissingNoYear": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipByDistrict": "Members in Each District",
+  "roleMembershipDistrictLine": "{active} active societies · {members} members",
+  "@roleMembershipDistrictLine": {
+    "placeholders": {
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "members": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleMembershipLoading": "Loading membership",
+  "roleAuditsTitle": "Audits & AGM",
+  "roleAuditsSubtitle": "Audit report and the other Registrar documents",
+  "roleAuditsTileSubtitle": "Audit reports and Registrar documents in your societies",
+  "roleAuditsLoading": "Loading audits",
+  "roleAuditsScopeDm": "All societies in your district",
+  "roleAuditsScopeMine": "{count, plural, =1{Your 1 assigned society} other{Your {count} assigned societies}}",
+  "@roleAuditsScopeMine": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsScopeDistrict": "All district societies · view only",
+  "roleAuditsUploadedLine": "{uploaded} of {active} active societies have uploaded an audit report for {year}.",
+  "@roleAuditsUploadedLine": {
+    "placeholders": {
+      "uploaded": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsUploaded": "Uploaded",
+  "roleAuditsPastDue": "Past due date",
+  "roleAuditsNotYet": "Not uploaded yet",
+  "roleAuditsDue": "Due {date}",
+  "@roleAuditsDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDueNotPassed": "Due date {date} not passed",
+  "@roleAuditsDueNotPassed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocuments": "4 Registrar Documents · {year}",
+  "@roleAuditsDocuments": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsDocumentLine": "{submitted} of {active} · {missing} not submitted",
+  "@roleAuditsDocumentLine": {
+    "placeholders": {
+      "submitted": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "missing": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsAllFour": "{count} of {active} active societies have all four · {percent}%",
+  "@roleAuditsAllFour": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "active": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "roleAuditsMembersNote": "The signed members list opens only for DMs and HQ.",
+  "roleAuditsFollowUp": "Needs Follow-Up",
+  "roleAuditsFollowPast": "Audit report past the due date",
+  "roleAuditsFollowNotYet": "Audit report not uploaded yet",
+  "roleAuditsNothingTitle": "Nothing to Follow Up",
+  "roleAuditsNothing": "Every active society has uploaded its {year} audit report.",
+  "@roleAuditsNothing": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAuditsShowing": "Showing {shown} of {total}",
+  "@roleAuditsShowing": {
+    "placeholders": {
+      "shown": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "roleAuditsMore": "Show more",
+  "roleAuditsMoreError": "More societies could not be loaded",
+  "roleAuditsMoreErrorCheck": "The societies above are still shown. Check your connection and try again.",
+  "roleAuditsEmptyTitle": "No Active Societies",
+  "roleAuditsEmptyMessage": "There are no active societies in your scope yet, so there are no Registrar documents to follow up.",
+  "roleAuditsDocAudit": "Audit Report",
+  "roleAuditsDocAgm": "AGM Minutes",
+  "roleAuditsDocOfficers": "Office-Bearer List",
+  "roleAuditsDocMembers": "Members List",
+  "countFewer": "Fewer: {label}",
+  "@countFewer": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "countMore": "More: {label}",
+  "@countMore": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "countInvalid": "Enter a whole number from 0 to {max}.",
+  "@countInvalid": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "countFixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on.",
+  "homeAccessNational": "Your access: all societies nationally · view and edit",
+  "editFieldFemale": "female members",
+  "editFieldMale": "male members",
+  "editFemale": "Female members",
+  "editMale": "Male members",
+  "editTotal": "Total members",
+  "editTotalHelp": "Female plus male, worked out for you. It cannot be typed.",
+  "editMembersOldTotal": "Only a total of {count} members is on record. Enter the female and male members to replace it. Until then the total stays as it is.",
+  "@editMembersOldTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "editMembersBoth": "Enter both the female and the male members.",
+  "editMembersTooMany": "Female and male members together cannot be more than 1,000,000.",
+  "recMembersSplit": "{total} · {female} female, {male} male",
+  "@recMembersSplit": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "female": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "male": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "recMembersNoSplit": "{total} · female/male not entered yet",
+  "@recMembersNoSplit": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileEyebrow": "Society Profiles · Current",
+  "memberProfileHeading": "Members on Society Profiles",
+  "memberProfileTotal": "{count, plural, =1{Total members · 1 society profile} other{Total members · {count} society profiles}}",
+  "@memberProfileTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileSplitOf": "{withSplit, plural, =1{1 of {societies} societies has entered its female and male members} other{{withSplit} of {societies} societies have entered their female and male members}}",
+  "@memberProfileSplitOf": {
+    "placeholders": {
+      "withSplit": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "societies": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileFemale": "Female",
+  "memberProfileMale": "Male",
+  "memberProfileShare": "{percent}% where female and male are entered",
+  "@memberProfileShare": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "memberProfileTotalOnly": "{count, plural, =1{1 society has a total but no female/male split yet, so female and male add up to less than the total.} other{{count} societies have a total but no female/male split yet, so female and male add up to less than the total.}}",
+  "@memberProfileTotalOnly": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memberProfileNone": "No active society has entered its members on its profile yet.",
+  "memberCategoryEyebrow": "Category Counts",
+  "memberCategoryEyebrowYear": "Category Counts · {year}",
+  "@memberCategoryEyebrowYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "memberCategoryNote": "Entered separately for each year, by category. Never added to the profile members above.",
+  "recTabMembersExco": "Members & Exco",
+  "@recTabMembersExco": {
+    "description": "Society record tab (issue #143): society membership plus the 25 Exco seats."
+  },
+  "memTitle": "Members",
+  "memUnder18": "Under 18s",
+  "@memUnder18": {
+    "description": "Members younger than 18. Not the Youth (15–25) category."
+  },
+  "memNotEntered": "Not entered",
+  "memSplitMissing": "Female, male and under 18 figures have not been entered yet.",
+  "memUnder18Missing": "The under 18 figure has not been entered yet.",
+  "memUnder18Part": "Under 18s are counted in the total, not added to it.",
+  "memEditLabel": "Edit members",
+  "memLastUpdated": "Last updated {when}",
+  "@memLastUpdated": {
+    "description": "Below the Members card. {when} is a date and time such as 12 Nov 2026, 9:58 p.m.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "memLastUpdatedNever": "Last updated: not recorded yet",
+  "memExcoSection": "Exco · 25 Seats",
+  "memEditTitle": "Edit Members",
+  "memEditIntro": "The society's members, not the 25 Exco seats. The total is worked out from the female and male members.",
+  "memUnder18Help": "Members younger than 18. They are already counted as female or male, so they are a part of the total, not added to it.",
+  "memUnder18TooMany": "Under 18s cannot be more than the total members ({total}).",
+  "@memUnder18TooMany": {
+    "placeholders": {
+      "total": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "memUnder18Required": "Enter the under 18s, or 0 if there are none.",
+  "memSaved": "Members saved. The change is in the society history.",
+  "editFieldMembers": "number of members",
+  "editMembersRequired": "Enter the number of members.",
   "aqPendingTitle": "{count, plural, =1{1 assessment saved on this phone} other{{count} assessments saved on this phone}}",
   "@aqPendingTitle": {
     "placeholders": {

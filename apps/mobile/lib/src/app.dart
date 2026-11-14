@@ -1,3 +1,4 @@
+import 'motion/app_motion.dart';
 import 'national/national_screens.dart';
 import 'screens/live_societies_screen.dart';
 import 'home/home_screens.dart';
@@ -46,7 +47,10 @@ class _SarvodayaConnectAppState extends State<SarvodayaConnectApp> {
           locale: _store.selectedLanguage.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          builder: (context, child) => _PhoneWidth(child: child!),
+          builder: (context, child) => MotionScope(
+            key: ValueKey((_store.user?.id, _store.activeRole)),
+            child: _PhoneWidth(child: child!),
+          ),
           home: const _Root(),
         ),
       ),
@@ -165,13 +169,23 @@ class HomeShell extends StatelessWidget {
     // A tab remembered from another role may not exist in this tab set.
     final tab = store.selectedTab.clamp(0, configuration.pages.length - 1);
     return Scaffold(
-      body: IndexedStack(index: tab, children: configuration.pages),
+      // Recreate per-user home state and notification buttons on account or
+      // role changes; cached home responses must not follow another user.
+      body: IndexedStack(
+        key: ValueKey((user?.id, role)),
+        index: tab,
+        children: [
+          for (final (index, page) in configuration.pages.indexed)
+            TickerMode(enabled: index == tab, child: page),
+        ],
+      ),
       // V5 bottom bar (Nav): icon-only, styled by the theme, with a hairline above.
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.headerLine)),
         ),
         child: NavigationBar(
+          animationDuration: AppMotion.duration(context, AppMotion.state),
           selectedIndex: tab,
           onDestinationSelected: store.selectTab,
           destinations: configuration.destinations,

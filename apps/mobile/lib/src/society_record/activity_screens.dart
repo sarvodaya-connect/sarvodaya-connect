@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/count_field.dart';
 import '../widgets/state_views.dart';
 import 'record_widgets.dart';
 import 'sdg_widgets.dart';
@@ -73,6 +75,9 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
     'households': _existing?.householdsBenefited ?? 0,
     'womenHeaded': _existing?.womenHeadedHouseholds ?? 0,
   };
+
+  /// Issue #132: counts whose box does not hold a valid number right now.
+  final _invalidCounts = <String>{};
   var _step = 0;
   var _attempted = false;
   var _saving = false;
@@ -106,6 +111,7 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
         'Describe the activity in at least 10 characters.',
     ],
     1 => [
+      if (_invalidCounts.isNotEmpty) context.l10n.countFixBeforeNext,
       if (_people['youth']! > _people['female']! + _people['male']!) 'Youth are counted inside the female and male participants, so they cannot be more than both together.',
       if (_people['womenHeaded']! > _people['households']!) 'Women-headed households are part of the households benefited, so they cannot be more.',
     ],
@@ -229,7 +235,11 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
               ? null
               : _step == 0
               ? () => Navigator.of(context).maybePop()
-              : () => setState(() => _step -= 1),
+              : () => setState(() {
+                  // Going back keeps the last valid numbers.
+                  _invalidCounts.clear();
+                  _step -= 1;
+                }),
           child: Text(_step == 0 ? 'Cancel' : 'Back'),
         ),
         primary: FilledButton(
@@ -362,7 +372,14 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
         label: label,
         note: note,
         value: _people[key]!,
-        onChanged: (value) => setState(() => _people[key] = value),
+        onChanged: (value) => setState(() {
+          if (value == null) {
+            _invalidCounts.add(key);
+          } else {
+            _invalidCounts.remove(key);
+            _people[key] = value;
+          }
+        }),
       ),
     const SizedBox(height: 6),
     RecordCard(
@@ -487,7 +504,9 @@ class _ActivityWizardScreenState extends State<ActivityWizardScreen> {
   }
 }
 
-/// A count with − and + buttons and a number field (M09b).
+/// A count with − and + buttons and a number field (M09b). Issue #132: the
+/// number can be typed straight in; [onChanged] gets null while it is not a
+/// valid count.
 class _Counter extends StatelessWidget {
   const _Counter({
     required this.label,
@@ -499,7 +518,7 @@ class _Counter extends StatelessWidget {
   final String label;
   final String note;
   final int value;
-  final ValueChanged<int> onChanged;
+  final ValueChanged<int?> onChanged;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -508,41 +527,27 @@ class _Counter extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: RecordStyle.value),
-                  Text(note, style: RecordStyle.caption),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Fewer $label'.toLowerCase(),
-              onPressed: value > 0 ? () => onChanged(value - 1) : null,
-              icon: const Icon(Icons.remove_circle_outline),
-            ),
-            Semantics(
-              label: '$label: $value',
-              excludeSemantics: true,
-              child: SizedBox(
-                width: 44,
-                child: Text(
-                  '$value',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: RecordStyle.value),
+                    Text(note, style: RecordStyle.caption),
+                  ],
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'More $label'.toLowerCase(),
-              onPressed: value < 100000 ? () => onChanged(value + 1) : null,
-              icon: const Icon(Icons.add_circle_outline),
+            CountField(
+              label: label,
+              value: value,
+              onChanged: onChanged,
+              max: maxActivityCount,
+              decreaseTooltip: 'Fewer $label'.toLowerCase(),
+              increaseTooltip: 'More $label'.toLowerCase(),
             ),
           ],
         ),
@@ -550,6 +555,9 @@ class _Counter extends StatelessWidget {
     ),
   );
 }
+
+/// The API's limit for each activity count (activities.dto.ts MAX_PEOPLE).
+const maxActivityCount = 100000;
 
 /// M09s: sent to the SPC.
 class _SentScreen extends StatelessWidget {

@@ -7,6 +7,49 @@ typedef Json = Map<String, dynamic>;
 
 int _int(Object? value) => (value as num?)?.toInt() ?? 0;
 
+/// Issue #141: the current member counts on the profiles of the active
+/// societies in view, from `profile` in `/national/membership` (HQ) or
+/// `/home/membership` (DM, DDM, SPC). Kept apart from the yearly category
+/// counts and never added to them.
+class ProfileMembership {
+  const ProfileMembership({
+    this.societies = 0,
+    this.members = 0,
+    this.withoutBreakdown = 0,
+    this.withSplit = 0,
+    this.female = 0,
+    this.male = 0,
+  });
+
+  factory ProfileMembership.fromJson(Json? json) => ProfileMembership(
+    societies: _int(json?['societies']),
+    members: _int(json?['members']),
+    withoutBreakdown: _int(json?['withoutBreakdown']),
+    withSplit: _int(json?['withSplit']),
+    female: _int(json?['female']),
+    male: _int(json?['male']),
+  );
+
+  /// Active societies with a profile member total.
+  final int societies;
+
+  /// Their totals added together, including those with no split yet.
+  final int members;
+
+  /// Of those, societies without category counts for the membership year.
+  final int withoutBreakdown;
+
+  /// Societies whose female and male members are entered.
+  final int withSplit;
+
+  /// Female and male added over the [withSplit] societies only.
+  final int female;
+  final int male;
+
+  /// Societies with a total but no female/male split yet.
+  int get totalOnly => societies - withSplit;
+}
+
 class GradeCounts {
   const GradeCounts({this.a = 0, this.b = 0, this.c = 0, this.ungraded = 0});
 
@@ -24,13 +67,24 @@ class GradeCounts {
 }
 
 class FinancialYearLabel {
-  const FinancialYearLabel(this.startYear, this.label);
+  const FinancialYearLabel(
+    this.startYear,
+    this.label, {
+    this.inProgress = false,
+  });
 
-  factory FinancialYearLabel.fromJson(Json json) =>
-      FinancialYearLabel(_int(json['startYear']), json['label'] as String);
+  factory FinancialYearLabel.fromJson(Json json) => FinancialYearLabel(
+    _int(json['startYear']),
+    json['label'] as String,
+    inProgress: json['inProgress'] == true,
+  );
 
   final int startYear;
   final String label;
+
+  /// Issue #131: the year has not ended, so completed counts only the months
+  /// that have.
+  final bool inProgress;
 }
 
 class CategoryCount {
@@ -481,7 +535,45 @@ class SocietyAtAGlance {
   final List<String> excoMissingOffices;
 }
 
-/// M63: done vs planned by sector, dimension and UN SDG.
+/// Issue #117: whose societies a DM, DDM or SPC sees on M64.
+enum ProgrammeScopeKind { district, assigned, assignedAndDistrict }
+
+class ProgrammeScope {
+  const ProgrammeScope({
+    required this.kind,
+    required this.societies,
+    this.districts = const [],
+    this.temporaryAccessEndsAt,
+  });
+
+  factory ProgrammeScope.fromJson(Json json) => ProgrammeScope(
+    kind: switch (json['kind']) {
+      'DISTRICT' => ProgrammeScopeKind.district,
+      'ASSIGNED_AND_DISTRICT' => ProgrammeScopeKind.assignedAndDistrict,
+      _ => ProgrammeScopeKind.assigned,
+    },
+    societies: _int(json['societies']),
+    districts: [
+      for (final row in json['districts'] as List? ?? const [])
+        (row as Json)['name'] as String,
+    ],
+    temporaryAccessEndsAt: json['temporaryAccessEndsAt'] == null
+        ? null
+        : DateTime.parse(json['temporaryAccessEndsAt'] as String),
+  );
+
+  final ProgrammeScopeKind kind;
+
+  /// Societies in scope, whether or not they have activities.
+  final int societies;
+  final List<String> districts;
+
+  /// When a DDM's temporary district access ends.
+  final DateTime? temporaryAccessEndsAt;
+}
+
+/// M64: done vs planned by sector, dimension and UN SDG. HQ's figures
+/// are national; a DM's, DDM's or SPC's carry the [scope] they cover.
 class NationalProgrammes {
   const NationalProgrammes(
     this.year,
@@ -489,8 +581,9 @@ class NationalProgrammes {
     this.completed,
     this.sectors,
     this.byDimension,
-    this.sdgs,
-  );
+    this.sdgs, {
+    this.scope,
+  });
 
   factory NationalProgrammes.fromJson(Json json) => NationalProgrammes(
     FinancialYearLabel.fromJson(json['financialYear'] as Json),
@@ -501,6 +594,7 @@ class NationalProgrammes {
         (row as Json)['sector'] as String: (
           _int(row['completed']),
           _int(row['planned']),
+          _int(row['societies']),
         ),
     },
     [
@@ -508,16 +602,20 @@ class NationalProgrammes {
         DimensionCount.fromJson(row as Json),
     ],
     [for (final row in json['sdgs'] as List) SdgCount.fromJson(row as Json)],
+    scope: json['scope'] == null
+        ? null
+        : ProgrammeScope.fromJson(json['scope'] as Json),
   );
 
   final FinancialYearLabel year;
   final int planned;
   final int completed;
 
-  /// Sector → (completed, planned).
-  final Map<String, (int, int)> sectors;
+  /// Sector → (completed, planned, societies with activities).
+  final Map<String, (int, int, int)> sectors;
   final List<DimensionCount> byDimension;
   final List<SdgCount> sdgs;
+  final ProgrammeScope? scope;
 }
 
 /// M62b: societies that have not added both yearly figures.

@@ -60,7 +60,7 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | D03b | District view | HQ | 2 Homes, lists and national views |
 | Done | D08 | Membership | HQ | 2 Homes, lists and national views |
 | Not started | D11 | Audits and AGM | HQ | 4 Records and documents |
-| Not started | D07 | Programmes and activities | HQ | 5 Activities and work plans |
+| Done | D07 | Programmes and activities | HQ; DM, DDM and SPC over their own societies (issue #117) | 5 Activities and work plans |
 | Done | D18 | Search | HQ | 2 Homes, lists and national views |
 | Not started | D19 | Alerts | HQ | 7 Administration and notifications |
 | Done | D13 | Requests and tasks | HQ | 2 Homes, lists and national views |
@@ -215,7 +215,7 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | M61 | HQ: membership | HQ | 2 Homes, lists and national views |
 | Not started | M62 | HQ: audit and AGM | HQ | 4 Records and documents |
 | Not started | M63 | HQ: profit and expenses | HQ | 4 Records and documents |
-| Not started | M64 | HQ: activities | HQ | 5 Activities and work plans |
+| Done | M64 | HQ: activities | HQ; DM, DDM and SPC over their own societies (issue #117) | 5 Activities and work plans |
 | Done | M65 | HQ: districts | HQ | 2 Homes, lists and national views |
 | Done | M66 | HQ: societies | HQ | 3 Society records |
 | Done | M67 | HQ: society summary | HQ | 3 Society records |
@@ -282,4 +282,15 @@ Numbers on the converted screens use the language's digit grouping (Tamil groups
 D02o, D02s and D02n (two societies at one place, a society chosen on the map, societies with no location) take their text from the catalogs through #110's map components. This PR checked the code and marks them `Done`; they were not rendered here, because no Mapbox token was set.
 
 Office titles (President, Secretary, Treasurer), seat groups, grades and record statuses are stored in English and sent that way to the API. Only their display labels are translated.
+
+### Programmes and activities (D07, M64; issue #117), dashboard and phone
+
+The page chrome, the 10 sector names, the 17 UN SDG titles on these screens, the scope line and the empty, zero and error states are translated. The SDG chips on D07 use the translated titles; the same chips on the SPC's approval pages still show English titles until phase 5.
+
+| Text | Where | Why it is still English | Phase |
+|---|---|---|---|
+| Activity names, society names, district names and the "12–14 Sep" dates label | API data | Stored as the Society Officer or HQ wrote them | — |
+| "FY 2025/26" on the year choices | Both | The financial-year label the rest of the app uses | 10 |
+| "SDG 4" before each goal's title | Both | The goal's number, kept as the UN writes it | — |
+| The header subtitle on the dashboard ("Your assigned societies") while a DDM has temporary access | `headingFor` | Shared by every DDM page; the scope line on D07 says what is counted | 2 |
 

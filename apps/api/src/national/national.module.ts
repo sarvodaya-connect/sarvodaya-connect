@@ -7,6 +7,7 @@ import { DirectoryService } from './directory.service.js';
 import {
   DirectoryController,
   NationalController,
+  ScopedProgrammesController,
 } from './national.controller.js';
 import { NationalRepository } from './national.repository.js';
 import { NationalService } from './national.service.js';
@@ -17,7 +18,11 @@ import { SearchService } from './search.service.js';
 /** V5 PR 5: the HQ National Dashboard, its drill-downs, directory, search, requests and reports. */
 @Module({
   imports: [DocumentsModule, NotificationsModule],
-  controllers: [NationalController, DirectoryController],
+  controllers: [
+    NationalController,
+    ScopedProgrammesController,
+    DirectoryController,
+  ],
   providers: [
     NationalRepository,
     NationalService,

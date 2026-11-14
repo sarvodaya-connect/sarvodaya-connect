@@ -49,7 +49,8 @@ describe("provisional role-based visibility", () => {
     ]);
     expect(documents.every((document) => document.category === "GENERAL")).toBe(true);
     expect(documents.some((document) => document.reviewersOnly)).toBe(false);
-    expect(canViewCompliance(coordinator)).toBe(false);
+    // Issue #119: the Audits & AGM overview opens for their own societies; the files above stay hidden.
+    expect(canViewCompliance(coordinator)).toBe(true);
   });
 
   it("gives the System Administrator no society data", () => {
@@ -80,10 +81,11 @@ describe("provisional role-based visibility", () => {
       "Administration",
       "Settings",
     ]);
-    // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8).
-    expect(labels(districtManager)).toEqual(["District Overview", "Societies", "Temporary DDM Access", "Disaster Response"]);
-    expect(labels(coordinator)).toEqual(["Home", "My Societies", "Activities to Approve", "Disaster Response"]);
-    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Disaster Response"]);
+    // V5 SP01, DD01, DM01 (DM04 from PR 7, Disaster response from PR 8,
+    // Membership from issue #118, Audits from issue #119, Programmes from issue #117).
+    expect(labels(districtManager)).toEqual(["District Overview", "Societies", "Membership", "Audits", "Programmes", "Temporary DDM Access", "Disaster Response"]);
+    expect(labels(coordinator)).toEqual(["Home", "My Societies", "Membership", "Audits", "Activities to Approve", "Programmes", "Disaster Response"]);
+    expect(labels({ ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" })).toEqual(["Home", "Societies", "Membership", "Audits", "Programmes", "Disaster Response"]);
     expect(labels(systemAdmin)).toEqual(["Platform Access", "Notifications"]);
   });
 

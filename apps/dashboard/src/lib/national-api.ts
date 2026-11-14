@@ -10,6 +10,7 @@ import type {
   NationalMembership,
   NationalOverview,
   NationalProgrammes,
+  ScopedProgrammes,
   PageMeta,
   ReportTable,
   ReportType,
@@ -52,6 +53,11 @@ export function getNationalMembership(): Promise<NationalMembership> {
 /** V5 D07. */
 export function getNationalProgrammes(year?: number): Promise<NationalProgrammes> {
   return platformApi(`/national/programmes${query({ year })}`);
+}
+
+/** Issue #117: D07 for a DM, DDM or SPC, over the societies the API lets them count. */
+export function getScopedProgrammes(year?: number): Promise<ScopedProgrammes> {
+  return platformApi(`/programmes${query({ year })}`);
 }
 
 export function getNationalFinance(input: { year?: number; page?: number }): Promise<NationalFinance> {

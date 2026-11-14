@@ -27,6 +27,7 @@ import { AssistantModule } from './assistant/assistant.module.js';
 import { ActivitiesModule } from './activities/activities.module.js';
 import { NationalModule } from './national/national.module.js';
 import { HomeModule } from './home/home.module.js';
+import { EconomyModule } from './economy/economy.module.js';
 
 const repositoryEnvironmentFile = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -49,6 +50,7 @@ const repositoryEnvironmentFile = resolve(
     ActivitiesModule,
     NationalModule,
     HomeModule,
+    EconomyModule,
   ],
   controllers: [
     AppController,

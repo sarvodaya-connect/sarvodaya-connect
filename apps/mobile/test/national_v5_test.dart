@@ -57,7 +57,8 @@ void main() {
       tester,
     ) async {
       await _pump(tester, const NationalDashboardScreen());
-      expect(find.text('National Dashboard'), findsOneWidget);
+      // The page name is now part of the header's subtitle (#120).
+      expect(find.textContaining('National Dashboard'), findsOneWidget);
       expect(find.text('5,340'), findsOneWidget);
       expect(find.text('1,076'), findsOneWidget);
       expect(find.text('98,640'), findsOneWidget);

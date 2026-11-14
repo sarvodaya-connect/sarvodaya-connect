@@ -100,3 +100,24 @@ test("society record grades, grade requests and history categories are explicit"
   assert.equal(new Set(SOCIETY_HISTORY_CATEGORIES).size, SOCIETY_HISTORY_CATEGORIES.length);
   assert.ok(SOCIETY_HISTORY_CATEGORIES.includes("ANNUAL_SUMMARY"));
 });
+
+test("Village Economic Profile catalogue is consistent (issue #145)", async () => {
+  const economy = await import("../dist/index.js");
+  const units = new Map(economy.PRODUCTION_UNITS.map((unit) => [unit.code, unit.decimals]));
+  const codes = economy.ECONOMY_PRODUCTS.map((product) => product.code);
+  assert.equal(new Set(codes).size, codes.length);
+  for (const product of economy.ECONOMY_PRODUCTS) {
+    if (product.code === "OTHER") {
+      assert.equal(product.unit, null);
+      continue;
+    }
+    assert.ok(units.has(product.unit), `${product.code} has a known unit`);
+    assert.ok(economy.ECONOMY_INDUSTRIES.includes(product.industry), `${product.code} has a known industry`);
+  }
+  // Count units are whole numbers; services are counted in jobs.
+  for (const code of ["ITEM", "NUT", "EGG", "PACKET", "JOB"]) assert.equal(units.get(code), 0);
+  assert.equal(economy.ECONOMY_PRODUCTS.find((p) => p.code === "TAILORING_JOBS").kind, "SERVICE");
+  assert.deepEqual(economy.PRODUCTION_MEASUREMENTS, ["ACTUAL", "ESTIMATED"]);
+  assert.deepEqual(economy.PRODUCTION_BASES, ["WEEKLY", "MONTHLY", "SEASONAL"]);
+  assert.deepEqual(economy.BUSINESS_STATUSES, ["OPERATING", "SEASONAL", "TEMPORARILY_STOPPED", "CLOSED"]);
+});

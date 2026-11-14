@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 import '../l10n/l10n.dart';
 import '../models/app_language.dart';
 import '../state/demo_store.dart';
@@ -22,7 +24,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-          children: [
+          children: motionBlocks('language', [
             Text(
               context.l10n.languageChooseTitle,
               style: Theme.of(context).textTheme.headlineSmall
@@ -53,7 +55,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
               context.l10n.languageChangeLater,
               style: const TextStyle(color: AppColors.muted, fontSize: 12),
             ),
-          ],
+          ]),
         ),
       ),
       bottomNavigationBar: Material(
@@ -65,10 +67,12 @@ class _LanguageScreenState extends State<LanguageScreen> {
               border: Border(top: BorderSide(color: AppColors.line)),
             ),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: FilledButton(
-              onPressed: () =>
-                  DemoScope.read(context).chooseLanguage(_selection),
-              child: Text(context.l10n.languageContinue),
+            child: MotionPress(
+              child: FilledButton(
+                onPressed: () =>
+                    DemoScope.read(context).chooseLanguage(_selection),
+                child: Text(context.l10n.languageContinue),
+              ),
             ),
           ),
         ),
@@ -102,7 +106,9 @@ class _LanguageOption extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Ink(
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.state),
+          curve: AppMotion.curve,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: selected ? AppColors.mintSoft : Colors.white,

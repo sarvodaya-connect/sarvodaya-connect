@@ -3,6 +3,8 @@
  * Every figure is worked out by the API from the societies the user covers.
  */
 
+import type { ProfileMembership } from "./national.js";
+
 export type HomeRole = "PROGRAMME_COORDINATOR" | "DEPUTY_DISTRICT_MANAGER" | "DISTRICT_MANAGER";
 
 export type HomeGrade = "A" | "B" | "C";
@@ -152,4 +154,54 @@ export interface HomeSocietyList {
     spcs: { id: string; name: string }[];
     ddms: { id: string; name: string }[];
   };
+}
+
+/**
+ * Issue #118: the HQ Membership figures (D08) for a DM, DDM or SPC, worked
+ * out only from the societies they may see. Counts only, never member records.
+ */
+export interface ScopedMembership {
+  /** "DISTRICT_MANAGER": the DM's district. "MINE": assigned societies. "DISTRICT": a DDM's temporary district view. */
+  scope: "DISTRICT_MANAGER" | "MINE" | "DISTRICT";
+  /** The latest year with category counts from these societies, or null when none are entered. */
+  year: number | null;
+  /** Active societies in scope: the denominator for "reported". */
+  activeSocieties: number;
+  /** Active societies with category counts above zero for `year`. */
+  societiesReported: number;
+  female: number;
+  male: number;
+  total: number;
+  categories: { category: string; female: number; male: number; total: number }[];
+  /** Only districts that hold societies in scope. `active` counts in-scope active societies. */
+  districts: { id: string; name: string; active: number; female: number; male: number; total: number }[];
+  /**
+   * The current member counts on the society profiles (issue #141 added the
+   * female/male split). Never added to the category breakdown above.
+   */
+  profile: ProfileMembership;
+  /** DDM only: whether a temporary district view is valid right now. */
+  districtView: { available: boolean; expiresAt: string | null } | null;
+}
+
+/**
+ * Issue #119: HQ's Audits & AGM figures (D11) for a DM, DDM or SPC, worked
+ * out only from the societies they may see, for one financial year.
+ */
+export interface ScopedAudits {
+  scope: ScopedMembership["scope"];
+  financialYear: { startYear: number; label: string };
+  /** Active societies in scope: the denominator for every figure. */
+  activeSocieties: number;
+  byType: { documentType: "AUDIT_REPORT" | "AGM_MINUTES" | "OFFICE_BEARER_LIST" | "MEMBERS_LIST"; submitted: number; missing: number }[];
+  allFour: number;
+  /** "2026-09-30" for FY 2025/26. */
+  auditReportDueOn: string;
+  /** In-scope active societies without the audit report, one page at a time. */
+  followUp: {
+    pastDue: boolean;
+    data: { id: string; name: string; societyCode: string; district: string }[];
+    meta: { page: number; pageSize: number; totalItems: number; totalPages: number };
+  };
+  districtView: { available: boolean; expiresAt: string | null } | null;
 }

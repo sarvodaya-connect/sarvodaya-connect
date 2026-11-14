@@ -14,6 +14,39 @@ import {
 const int = (value: unknown) => Number(value ?? 0);
 
 /**
+ * Issue #117: the societies a DM, DDM or SPC may count. Whole districts (a
+ * DM's own, or a DDM's while a temporary grant is valid) and named societies
+ * (assignments). Both empty means nothing at all.
+ */
+export interface SocietyScope {
+  districtIds: string[];
+  societyIds: string[];
+}
+
+/** `a` is the work_plan_activities alias. */
+function activityInScope(within: SocietyScope) {
+  const parts = [
+    within.districtIds.length
+      ? Prisma.sql`s.district_id = ANY(${within.districtIds}::uuid[])`
+      : null,
+    within.societyIds.length
+      ? Prisma.sql`s.id = ANY(${within.societyIds}::uuid[])`
+      : null,
+  ].filter((part) => part !== null);
+  if (!parts.length) return Prisma.sql`FALSE`;
+  return Prisma.sql`a.society_id IN (SELECT s.id FROM societies s WHERE ${Prisma.join(parts, ' OR ')})`;
+}
+
+function societyWhere(within: SocietyScope): Prisma.SocietyWhereInput {
+  return {
+    OR: [
+      { districtId: { in: within.districtIds } },
+      { id: { in: within.societyIds } },
+    ],
+  };
+}
+
+/**
  * PostgreSQL access for the national figures. Every count is a grouped query
  * over all societies, never a loop over them, so the cost does not grow with
  * the number of requests a page makes.
@@ -112,6 +145,54 @@ export class NationalRepository {
     return row?.year ?? null;
   }
 
+  /**
+   * Issue #141: the profile member counts of every active society, counted
+   * the same way as `profileMembership` in home/membership.compose.ts. A
+   * society without category counts for `year` (or any society, when no year
+   * has counts) is "without breakdown".
+   */
+  async profileMembership(year: number | null) {
+    const [row] = await this.run(
+      () => this.prisma.$queryRaw<
+        {
+          societies: number;
+          members: number;
+          withoutBreakdown: number;
+          withSplit: number;
+          female: number;
+          male: number;
+        }[]
+      >`
+        SELECT
+          COUNT(*) FILTER (WHERE s.member_count IS NOT NULL)::int AS societies,
+          COALESCE(SUM(s.member_count), 0)::int AS members,
+          COUNT(*) FILTER (
+            WHERE s.member_count IS NOT NULL AND NOT EXISTS (
+              SELECT 1 FROM society_membership_counts m
+              WHERE m.society_id = s.id AND m.year = ${year}::int
+                AND (m.female > 0 OR m.male > 0)
+            )
+          )::int AS "withoutBreakdown",
+          COUNT(*) FILTER (
+            WHERE s.female_members IS NOT NULL AND s.male_members IS NOT NULL
+          )::int AS "withSplit",
+          COALESCE(SUM(s.female_members) FILTER (WHERE s.male_members IS NOT NULL), 0)::int AS female,
+          COALESCE(SUM(s.male_members) FILTER (WHERE s.female_members IS NOT NULL), 0)::int AS male
+        FROM societies s
+        WHERE s.status = 'ACTIVE'`,
+    );
+    return (
+      row ?? {
+        societies: 0,
+        members: 0,
+        withoutBreakdown: 0,
+        withSplit: 0,
+        female: 0,
+        male: 0,
+      }
+    );
+  }
+
   async membership(year: number) {
     const [categories, reported, districts] = await this.run(() =>
       Promise.all([
@@ -145,9 +226,15 @@ export class NationalRepository {
     };
   }
 
-  /** Approved activities in the financial year by dimension and sector, and UN SDGs. */
-  async activities(startYear: number, now = new Date()) {
-    const scope = approvedInYear(startYear);
+  /**
+   * Approved activities in the financial year by dimension and sector, and UN
+   * SDGs. `within` limits them to some societies (issue #117); without it the
+   * figures are national, for HQ.
+   */
+  async activities(startYear: number, now = new Date(), within?: SocietyScope) {
+    const scope = within
+      ? Prisma.sql`${approvedInYear(startYear)} AND ${activityInScope(within)}`
+      : approvedInYear(startYear);
     const done = completed(now);
     const [dimensions, sectors, sdgs] = await this.run(() =>
       Promise.all([
@@ -182,10 +269,27 @@ export class NationalRepository {
     return { dimensions, sectors, sdgs };
   }
 
-  recentApprovedActivities(limit: number) {
+  /**
+   * The latest approved activities in the financial year, by the same April to
+   * March rule as `approvedInYear`, so the list never shows an activity the
+   * year's totals leave out.
+   */
+  recentApprovedActivities(
+    startYear: number,
+    limit: number,
+    within?: SocietyScope,
+  ) {
     return this.run(() =>
       this.prisma.workPlanActivity.findMany({
-        where: { status: 'APPROVED', reviewedAt: { not: null } },
+        where: {
+          status: 'APPROVED',
+          reviewedAt: { not: null },
+          OR: [
+            { year: startYear, month: { gte: 4 } },
+            { year: startYear + 1, month: { lt: 4 } },
+          ],
+          ...(within ? { society: societyWhere(within) } : {}),
+        },
         include: {
           sdgs: { orderBy: { sdg: 'asc' } },
           society: { select: { id: true, nameEn: true } },
@@ -194,6 +298,21 @@ export class NationalRepository {
         take: limit,
       }),
     );
+  }
+
+  /** Issue #117: how many societies, and which districts, a scope covers. */
+  async scopeSummary(within: SocietyScope) {
+    const [societies, districts] = await this.run(() =>
+      Promise.all([
+        this.prisma.society.count({ where: societyWhere(within) }),
+        this.prisma.district.findMany({
+          where: { id: { in: within.districtIds } },
+          select: { id: true, nameEn: true },
+          orderBy: { nameEn: 'asc' },
+        }),
+      ]),
+    );
+    return { societies, districts };
   }
 
   async finance(startYear: number) {

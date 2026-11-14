@@ -119,7 +119,11 @@ class DemoStore extends ChangeNotifier {
     national =
         nationalApi ??
         (isDemo
-            ? DemoNationalApi(user: () => _user, delay: loadDelay)
+            ? DemoNationalApi(
+                user: () => _user,
+                delay: loadDelay,
+                clock: _clock,
+              )
             : HttpNationalApi(this.identityApi));
     societyAdmin =
         societyAdminApi ??

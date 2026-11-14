@@ -220,6 +220,8 @@ export class SocietyAdminService {
           gnDivision: input.gnDivision,
           addressLine: input.addressLine,
           memberCount: input.memberCount,
+          // Issue #143: the first membership figure is saved now.
+          membershipUpdatedAt: now,
           landline: input.landline || null,
           businessDescription: input.businessDescription || null,
           latitude: input.latitude,

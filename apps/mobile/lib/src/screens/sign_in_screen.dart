@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 import '../auth/auth_service.dart';
 import '../data/demo_data.dart';
 import '../l10n/l10n.dart';
@@ -32,6 +34,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
@@ -95,7 +98,7 @@ class _SignInScreenState extends State<SignInScreen> {
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+                children: motionBlocks('signIn', [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Semantics(
@@ -124,66 +127,86 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _FieldLabel(l10n.signInUsername),
-                  TextFormField(
-                    controller: _username,
-                    decoration: _field(
-                      hint: l10n.signInUsername,
-                      suffix: const Icon(Icons.person_outline, size: 20),
-                    ),
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.username],
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? l10n.signInEnterUsername
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _FieldLabel(l10n.signInPassword),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: _obscure,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.password],
-                    onFieldSubmitted: (_) => _submit(),
-                    decoration: _field(
-                      hint: l10n.signInPassword,
-                      suffix: IconButton(
-                        tooltip: _obscure
-                            ? l10n.signInShowPassword
-                            : l10n.signInHidePassword,
-                        icon: Icon(
-                          _obscure
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          size: 20,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _FieldLabel(l10n.signInUsername),
+                      TextFormField(
+                        controller: _username,
+                        decoration: _field(
+                          hint: l10n.signInUsername,
+                          suffix: const Icon(Icons.person_outline, size: 20),
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.username],
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? l10n.signInEnterUsername
+                            : null,
                       ),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? l10n.signInEnterPassword
-                        : null,
+                    ],
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    _SignInError(_error!),
-                  ],
                   const SizedBox(height: 14),
-                  FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    child: _busy
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                              semanticsLabel: l10n.signInSigningIn,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _FieldLabel(l10n.signInPassword),
+                      TextFormField(
+                        controller: _password,
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: _field(
+                          hint: l10n.signInPassword,
+                          suffix: IconButton(
+                            tooltip: _obscure
+                                ? l10n.signInShowPassword
+                                : l10n.signInHidePassword,
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              size: 20,
                             ),
-                          )
-                        : Text(l10n.signInButton),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? l10n.signInEnterPassword
+                            : null,
+                      ),
+                    ],
+                  ),
+                  MotionSize(
+                    child: _error == null
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: _SignInError(_error!),
+                          ),
+                  ),
+                  const SizedBox(height: 14),
+                  MotionPress(
+                    enabled: !_busy,
+                    child: FilledButton(
+                      onPressed: _busy ? null : _submit,
+                      child: _busy
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                                semanticsLabel: l10n.signInSigningIn,
+                              ),
+                            )
+                          : Text(l10n.signInButton),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(
@@ -212,7 +235,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ],
-                ],
+                ]),
               ),
             ),
           ),

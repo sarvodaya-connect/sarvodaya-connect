@@ -70,7 +70,8 @@ void main() {
   ) async {
     final store = testStore()..switchDemoRole(UserRole.hqAdmin);
     await pumpApp(tester, store: store);
-    expect(find.text('National Dashboard'), findsOneWidget);
+    // The page name is now part of the header's subtitle (#120).
+    expect(find.textContaining('National Dashboard'), findsOneWidget);
     for (final tab in [
       'Overview',
       'Districts',

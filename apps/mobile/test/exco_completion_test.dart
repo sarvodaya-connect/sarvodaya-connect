@@ -254,7 +254,7 @@ void main() {
       );
 
       await _pump(tester, store, const SocietyRecordScreen(societyId: id));
-      await tester.tap(find.widgetWithText(Tab, 'Exco'));
+      await tester.tap(find.widgetWithText(Tab, 'Members & Exco'));
       await tester.pumpAndSettle();
 
       expect(find.text('25 of 25 members entered'), findsOneWidget);

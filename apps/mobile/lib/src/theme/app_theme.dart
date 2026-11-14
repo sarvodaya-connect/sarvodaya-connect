@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
+
 /// Prototype V5 palette, shared with the dashboard (`globals.css`).
 class AppColors {
   const AppColors._();
@@ -91,6 +93,12 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          for (final entry in base.pageTransitionsTheme.builders.entries)
+            entry.key: AccessiblePageTransitions(entry.value),
+        },
+      ),
       textTheme: text.copyWith(
         headlineSmall: text.headlineSmall?.copyWith(
           fontWeight: FontWeight.w700,

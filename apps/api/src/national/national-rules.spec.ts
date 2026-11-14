@@ -5,10 +5,15 @@ import { recordFields } from './directory.service.js';
 import {
   auditPastDue,
   districtLabel,
+  activityCompleted,
   monthIndex,
   percent,
 } from './national-rules.js';
-import { chosenYear, rankSdgs } from './national.service.js';
+import {
+  chosenProgrammeYear,
+  chosenYear,
+  rankSdgs,
+} from './national.service.js';
 import { toCsv } from './reports.service.js';
 import { sriLankaToday } from './requests.service.js';
 
@@ -35,6 +40,34 @@ describe('V5 PR 5 national rules', () => {
     expect(chosenYear(2023, now)).toBe(2023);
     expect(() => chosenYear(2026, now)).toThrow(BadRequestException);
     expect(() => chosenYear(2015, now)).toThrow(BadRequestException);
+  });
+
+  it('lets Programmes choose the year in progress, and nothing later (issue #131)', () => {
+    expect(chosenProgrammeYear(undefined, now)).toBe(2025);
+    expect(chosenProgrammeYear(2026, now)).toBe(2026);
+    expect(chosenProgrammeYear(2021, now)).toBe(2021);
+    expect(() => chosenProgrammeYear(2027, now)).toThrow(BadRequestException);
+    expect(() => chosenProgrammeYear(2020, now)).toThrow(BadRequestException);
+    // Other national pages keep the completed years only.
+    expect(() => chosenYear(2026, now)).toThrow(BadRequestException);
+  });
+
+  it('counts an activity as completed once its month has ended in Sri Lanka', () => {
+    // 3 Nov 2026: October is over, November is not.
+    expect(activityCompleted({ year: 2026, month: 10 }, now)).toBe(true);
+    expect(activityCompleted({ year: 2026, month: 11 }, now)).toBe(false);
+    expect(activityCompleted({ year: 2027, month: 3 }, now)).toBe(false);
+    // 31 Oct 19:00 UTC is already 1 Nov in Sri Lanka.
+    const lateOctober = new Date('2026-10-31T19:00:00.000Z');
+    expect(activityCompleted({ year: 2026, month: 10 }, lateOctober)).toBe(
+      true,
+    );
+    expect(
+      activityCompleted(
+        { year: 2026, month: 10 },
+        new Date('2026-10-31T18:00:00.000Z'),
+      ),
+    ).toBe(false);
   });
 
   it('marks the audit report past due after 30 September, Sri Lanka time', () => {

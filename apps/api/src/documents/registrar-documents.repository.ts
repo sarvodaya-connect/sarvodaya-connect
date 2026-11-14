@@ -81,6 +81,42 @@ export class RegistrarDocumentsRepository {
     };
   }
 
+  /**
+   * Issue #119: the same counts as `nationalTotals`, for the societies in
+   * `scope` only (a DM's district, or a user's assigned societies).
+   */
+  async scopedTotals(financialYear: number, scope: Prisma.SocietyWhereInput) {
+    const active: Prisma.SocietyWhereInput = {
+      AND: [scope, { status: 'ACTIVE' }],
+    };
+    const [activeSocieties, uploaded] = await executeDatabaseOperation(() =>
+      Promise.all([
+        this.prisma.society.count({ where: active }),
+        this.prisma.societyDocument.findMany({
+          where: {
+            society: active,
+            financialYear,
+            uploadedAt: { not: null },
+            documentType: { in: [...REGISTRAR_DOCUMENT_TYPES] },
+          },
+          select: { societyId: true, documentType: true },
+          distinct: ['societyId', 'documentType'],
+        }),
+      ]),
+    );
+    const byType = new Map<RegistrarType, number>();
+    const perSociety = new Map<string, number>();
+    for (const row of uploaded) {
+      const type = row.documentType as RegistrarType;
+      byType.set(type, (byType.get(type) ?? 0) + 1);
+      perSociety.set(row.societyId, (perSociety.get(row.societyId) ?? 0) + 1);
+    }
+    const allFour = [...perSociety.values()].filter(
+      (types) => types === REGISTRAR_DOCUMENT_TYPES.length,
+    ).length;
+    return { activeSocieties, byType, allFour };
+  }
+
   /** D12: every uploaded document by type, all years. */
   async documentCounts() {
     const rows = await executeDatabaseOperation(() =>
@@ -102,8 +138,11 @@ export class RegistrarDocumentsRepository {
     financialYear: number,
     page: number,
     pageSize: number,
+    /** Issue #119: limits the list to these societies; HQ passes nothing. */
+    scope?: Prisma.SocietyWhereInput,
   ) {
-    const where = {
+    const where: Prisma.SocietyWhereInput = {
+      ...(scope ? { AND: [scope] } : {}),
       status: 'ACTIVE' as const,
       documents: {
         none: { documentType, financialYear, uploadedAt: { not: null } },

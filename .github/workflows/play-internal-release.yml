@@ -1,0 +1,168 @@
+name: Android internal release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version shown to testers (e.g. 0.1.1)'
+        required: true
+        type: string
+      version_code:
+        description: 'New integer higher than every previous Play upload (e.g. 2)'
+        required: true
+        type: string
+      release_notes:
+        description: 'What changed for testers (1-500 characters)'
+        required: true
+        type: string
+      publish:
+        description: 'Publish to Play internal testing (off = build artifact only)'
+        default: false
+        type: boolean
+      translation_review:
+        description: 'Expose unreviewed Sinhala/Tamil for internal tester review'
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-internal-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && github.repository == 'sarvodaya-connect/sarvodaya-connect'
+    name: Build and optionally publish internal Android release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: play-internal
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION_NAME: ${{ inputs.version_name }}
+      VERSION_CODE: ${{ inputs.version_code }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+      PUBLISH: ${{ inputs.publish }}
+      TRANSLATION_REVIEW: ${{ inputs.translation_review }}
+    steps:
+      - name: Check out exact selected main commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Prepare validated signing and TEST build settings
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          COGNITO_USER_POOL_ID: ${{ vars.COGNITO_USER_POOL_ID }}
+          COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+          MAPBOX_TOKEN: ${{ vars.MAPBOX_TOKEN }}
+          GOOGLE_WIF_PROVIDER: ${{ vars.GOOGLE_WIF_PROVIDER }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+        run: python3 scripts/play/prepare_release.py
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: false
+
+      - name: Restore dependencies
+        working-directory: apps/mobile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze mobile code
+        working-directory: apps/mobile
+        run: flutter analyze
+
+      - name: Check mobile behaviour
+        working-directory: apps/mobile
+        run: flutter test
+
+      - name: Build signed bundle
+        working-directory: apps/mobile
+        run: >-
+          flutter build appbundle --release
+          --build-name="$VERSION_NAME"
+          --build-number="$VERSION_CODE"
+          --dart-define-from-file="$RUNNER_TEMP/sarvodaya-release-defines.json"
+
+      - name: Verify signature and existing upload certificate
+        env:
+          ANDROID_UPLOAD_CERT_SHA256: ${{ vars.ANDROID_UPLOAD_CERT_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, re, ssl, subprocess
+          bundle = 'apps/mobile/build/app/outputs/bundle/release/app-release.aab'
+          result = subprocess.check_output(['jarsigner', '-verify', bundle], text=True)
+          if 'jar verified.' not in result:
+              raise SystemExit('Bundle signature verification failed.')
+          expected = re.sub(r'[:\s]', '', os.environ['ANDROID_UPLOAD_CERT_SHA256']).lower()
+          if not re.fullmatch(r'[0-9a-f]{64}', expected):
+              raise SystemExit('Configure ANDROID_UPLOAD_CERT_SHA256 from the existing Play upload certificate.')
+          certs = subprocess.check_output(['keytool', '-printcert', '-jarfile', bundle, '-rfc'], text=True)
+          cert = re.search(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', certs, re.S)
+          if not cert or hashlib.sha256(ssl.PEM_cert_to_DER_cert(cert.group())).hexdigest() != expected:
+              raise SystemExit('Bundle signer is not the existing Play upload key; refusing upload.')
+          print('Signed bundle matches the approved existing upload certificate.')
+          PY
+
+      - name: Retain signed bundle for seven days
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sarvodaya-android-${{ inputs.version_name }}-${{ inputs.version_code }}
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Authenticate to Google with short-lived GitHub identity
+        if: inputs.publish
+        id: google
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: sarvodaya-connect-releases
+          workload_identity_provider: ${{ vars.GOOGLE_WIF_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 1800s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Publish only to Play internal testing
+        if: inputs.publish
+        env:
+          GOOGLE_PLAY_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
+        run: python3 scripts/play/publish_internal.py
+
+      - name: Record build-only result
+        if: '!inputs.publish'
+        run: |
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          digest = hashlib.sha256(Path('apps/mobile/build/app/outputs/bundle/release/app-release.aab').read_bytes()).hexdigest()
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+              stream.write(f'Built **{os.environ["VERSION_NAME"]} ({os.environ["VERSION_CODE"]})**. Nothing uploaded to Play.\n\nSource: `{os.environ["GITHUB_SHA"]}`\n\nSHA-256: `{digest}`\n')
+          PY
+
+      - name: Remove ephemeral signing and build settings
+        if: always()
+        run: |
+          rm -f apps/mobile/android/key.properties
+          rm -f "$RUNNER_TEMP/sarvodaya-upload.jks" "$RUNNER_TEMP/sarvodaya-release-defines.json"

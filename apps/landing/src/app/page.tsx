@@ -1,11 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 
+import { DASHBOARD_URL } from "./dashboard-url";
 import { HeroScrubFrames } from "./hero-scrub";
 
-const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL?.trim() ||
-  "https://dashboard.sarvodayaconnect.com";
 const CONTACT_EMAIL = "info@sarvodayaconnect.com";
 
 const navLinks = [
