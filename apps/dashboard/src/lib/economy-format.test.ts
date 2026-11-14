@@ -57,6 +57,21 @@ describe("Village Economic Profile filters", () => {
     });
   });
 
+  it("refuses periods before the API's earliest day, without querying", () => {
+    for (const search of [
+      { month: "1999-12" },
+      // 1 January 2000 is a Saturday: its week starts on 27 December 1999.
+      { basis: "WEEKLY", week: "2000-01-01" },
+      { basis: "SEASONAL", startsOn: "1999-12-15", endsOn: "2000-03-10" },
+    ]) {
+      const filters = parseOverviewFilters(search, NOW);
+      expect(periodFor(filters)).toEqual({ problem: "TOO_EARLY" });
+      expect(productionQuery(filters)).toBeNull();
+    }
+    expect(periodFor(parseOverviewFilters({ month: "2000-01" }, NOW))).toEqual({ startsOn: "2000-01-01", endsOn: "2000-01-31" });
+    expect(periodFor(parseOverviewFilters({ basis: "WEEKLY", week: "2000-01-03" }, NOW))).toEqual({ startsOn: "2000-01-03", endsOn: "2000-01-09" });
+  });
+
   it("drops anything that is not a known code, date or id", () => {
     const filters = parseOverviewFilters(
       { basis: "YEARLY", month: "2026-13", measurement: "GUESSED", product: "GOLD", industry: "MINING", districtId: "north", societyId: "1 OR 1=1", page: "-3" },

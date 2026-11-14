@@ -50,6 +50,13 @@ describe("Village Economic Profile page", () => {
     expect(page.props).toMatchObject({ summary: null, records: null, periodProblem: "CHOOSE_SEASON" });
   });
 
+  it("asks for nothing for a period before the API's earliest day", async () => {
+    const page = await EconomicProfilePage(props({ month: "1999-12" }));
+    expect(getProductionSummary).not.toHaveBeenCalled();
+    expect(getProductionRecords).not.toHaveBeenCalled();
+    expect(page.props).toMatchObject({ summary: null, records: null, periodProblem: "TOO_EARLY" });
+  });
+
   it("never sends an unknown filter on to the API", async () => {
     await EconomicProfilePage(props({ month: "2026-10", districtId: "../national", product: "GOLD" }));
     expect(getProductionSummary).toHaveBeenCalledWith({ basis: "MONTHLY", startsOn: "2026-10-01", endsOn: "2026-10-31", measurement: "ACTUAL" });

@@ -22,6 +22,7 @@ import {
   measurementLabel,
   type OverviewFilters,
   overviewHref,
+  type PeriodProblem,
   periodLabel,
   productLabel,
   quantityLabel,
@@ -93,7 +94,7 @@ type Props = {
   /** Null when the filters do not make an exact period yet. */
   summary: ProductionSummary | null;
   records: Paged<ProductionRecordListItem> | null;
-  periodProblem?: "CHOOSE_SEASON" | "INVALID";
+  periodProblem?: PeriodProblem;
   role: DashboardRole;
   demo: boolean;
   t: Translator;
@@ -142,7 +143,7 @@ export function EconomyOverview({ demo, filters, periodProblem, records, role, s
 
       {periodProblem && (
         <p className="mt-3 rounded-lg border border-[#e8d28a] bg-warn-bg px-3 py-2 text-[12px] text-warn-text" role="status">
-          {t(periodProblem === "CHOOSE_SEASON" ? "eco.chooseSeason" : "eco.periodInvalid")}
+          {t(periodProblem === "CHOOSE_SEASON" ? "eco.chooseSeason" : periodProblem === "TOO_EARLY" ? "eco.periodTooEarly" : "eco.periodInvalid")}
         </p>
       )}
 

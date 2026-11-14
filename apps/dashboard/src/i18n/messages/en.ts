@@ -1252,6 +1252,7 @@ export const en = {
   "eco.filter.reset": "Clear filters",
   "eco.chooseSeason": "Choose the first and last day of the season to see its figures. Seasons with different dates are never added together.",
   "eco.periodInvalid": "Choose a season that ends on or after it starts and lasts at most 366 days.",
+  "eco.periodTooEarly": "Choose a period that starts on or after 1 January 2000. No records are kept before then.",
   "eco.exactPeriod": "Only figures for exactly {period} are counted. Weekly, monthly and seasonal figures are never added to each other.",
   "eco.noGrandTotal": "Each product is totalled on its own, in its own unit, so there is no single grand total. Milk in litres is never added to coconuts.",
   "eco.estimateNote": "Estimates are shown on their own and never added to actual figures.",

@@ -110,11 +110,25 @@ export function parseOverviewFilters(search: Search, now = new Date()): Overview
   };
 }
 
+/** The API keeps no records before this day, and refuses earlier periods. */
+export const EARLIEST_PERIOD = "2000-01-01";
+/** The first week the API accepts: the Monday on or after EARLIEST_PERIOD. */
+export const EARLIEST_WEEK = "2000-01-03";
+
+export type PeriodProblem = "CHOOSE_SEASON" | "INVALID" | "TOO_EARLY";
+
 /**
  * The exact period the filters ask for, or why there is none: a season
- * needs both dates, ending on or after the start and within 366 days.
+ * needs both dates, ending on or after the start and within 366 days, and no
+ * period may start before the API's earliest day.
  */
-export function periodFor(filters: OverviewFilters): { startsOn: string; endsOn: string } | { problem: "CHOOSE_SEASON" | "INVALID" } {
+export function periodFor(filters: OverviewFilters): { startsOn: string; endsOn: string } | { problem: PeriodProblem } {
+  const period = exactPeriod(filters);
+  if ("problem" in period) return period;
+  return period.startsOn < EARLIEST_PERIOD ? { problem: "TOO_EARLY" } : period;
+}
+
+function exactPeriod(filters: OverviewFilters): { startsOn: string; endsOn: string } | { problem: PeriodProblem } {
   if (filters.basis === "MONTHLY") {
     const [year, month] = filters.month.split("-").map(Number) as [number, number];
     return { startsOn: `${filters.month}-01`, endsOn: iso(new Date(Date.UTC(year, month, 0))) };

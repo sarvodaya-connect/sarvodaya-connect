@@ -9,10 +9,13 @@ import { primaryButtonClass, secondaryButtonClass } from "@/components/dashboard
 import { useI18n } from "@/i18n/provider";
 import {
   basisLabel,
+  EARLIEST_PERIOD,
+  EARLIEST_WEEK,
   ECONOMY_INDUSTRIES,
   ECONOMY_PRODUCTS,
   industryLabel,
   measurementLabel,
+  overviewHref,
   type OverviewFilters,
   productLabel,
 } from "@/lib/economy-format";
@@ -34,8 +37,15 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
  * address holds them: Back, refresh and shared links show the same figures.
  * Product, industry and period choices come from the shared catalogue; the
  * district and society choices come from the API's view of the caller's scope.
+ *
+ * The form starts again from the applied filters whenever they change (Reset,
+ * a shared link, Back), so no earlier choice lingers in its fields.
  */
 export function EconomyFilters({ filters, scope }: { filters: OverviewFilters; scope: EconomyFilterScope }) {
+  return <FilterForm filters={filters} key={overviewHref(filters, { page: 1 })} scope={scope} />;
+}
+
+function FilterForm({ filters, scope }: { filters: OverviewFilters; scope: EconomyFilterScope }) {
   const { t } = useI18n();
   const [basis, setBasis] = useState(filters.basis);
   const [districtId, setDistrictId] = useState(filters.districtId ?? "");
@@ -102,21 +112,21 @@ export function EconomyFilters({ filters, scope }: { filters: OverviewFilters; s
       </Field>
       {basis === "MONTHLY" && (
         <Field label={t("eco.filter.month")}>
-          <input className={field} defaultValue={filters.month} name="month" required type="month" />
+          <input className={field} defaultValue={filters.month} min={EARLIEST_PERIOD.slice(0, 7)} name="month" required type="month" />
         </Field>
       )}
       {basis === "WEEKLY" && (
         <Field label={t("eco.filter.week")}>
-          <input className={field} defaultValue={filters.week} name="week" required type="date" />
+          <input className={field} defaultValue={filters.week} min={EARLIEST_WEEK} name="week" required type="date" />
         </Field>
       )}
       {basis === "SEASONAL" && (
         <>
           <Field label={t("eco.filter.seasonStart")}>
-            <input className={field} defaultValue={filters.startsOn} name="startsOn" required type="date" />
+            <input className={field} defaultValue={filters.startsOn} min={EARLIEST_PERIOD} name="startsOn" required type="date" />
           </Field>
           <Field label={t("eco.filter.seasonEnd")}>
-            <input className={field} defaultValue={filters.endsOn} name="endsOn" required type="date" />
+            <input className={field} defaultValue={filters.endsOn} min={EARLIEST_PERIOD} name="endsOn" required type="date" />
           </Field>
         </>
       )}

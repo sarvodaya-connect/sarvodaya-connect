@@ -228,6 +228,31 @@ describe("Production Overview", () => {
     expect(screen.getAllByTestId("economy-scope").at(-1)).toHaveTextContent("All districts · 24 societies");
   });
 
+  it("starts the filters again from the address after Reset", () => {
+    const national = scope({ kind: "NATIONAL", canChooseDistrict: true });
+    const t = createTranslator(en, "en");
+    const at = (search: Record<string, string>) => (
+      <I18nProvider available={["en", "si", "ta"]} locale="en" messages={en}>
+        <EconomyOverview demo={false} filters={parseOverviewFilters(search, NOW)} records={page([record()])} role="HQ_ADMIN" scope={national} summary={summary()} t={t} />
+      </I18nProvider>
+    );
+    const { rerender } = render(at({ basis: "WEEKLY", week: "2026-11-02", districtId: NORTH }));
+    expect(screen.getByLabelText("District")).toHaveValue(NORTH);
+    expect(screen.getByLabelText("Reporting period")).toHaveValue("WEEKLY");
+    // Reset is a link to the bare overview: the page stays, the address changes.
+    rerender(at({}));
+    expect(screen.getByLabelText("District")).toHaveValue("");
+    expect(screen.getByLabelText("Reporting period")).toHaveValue("MONTHLY");
+    expect(screen.getByLabelText("Month")).toHaveValue("2026-10");
+    expect(within(screen.getByLabelText("Society")).getAllByRole("option")).toHaveLength(3);
+  });
+
+  it("explains a period before the earliest records", () => {
+    overview({ filters: parseOverviewFilters({ month: "1999-12" }, NOW), periodProblem: "TOO_EARLY", summary: null, records: null });
+    expect(screen.getByRole("status")).toHaveTextContent("on or after 1 January 2000");
+    expect(screen.getByLabelText("Month")).toHaveAttribute("min", "2000-01");
+  });
+
   it("says when a DDM's temporary district access ends", () => {
     overview({ role: "DEPUTY_DISTRICT_MANAGER", scope: scope({ kind: "ASSIGNED_AND_DISTRICT", temporaryAccessEndsAt: "2026-11-14T12:30:00.000Z" }) });
     expect(screen.getByTestId("economy-scope")).toHaveTextContent("temporary access until");
