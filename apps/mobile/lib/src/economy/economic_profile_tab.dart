@@ -20,9 +20,21 @@ import 'economy_widgets.dart';
 /// figure of each, with its period. Only the assigned Society Officer sees
 /// Add business; everyone else in scope sees the same figures, read only.
 class EconomicProfileTab extends StatefulWidget {
-  const EconomicProfileTab({super.key, required this.societyId});
+  const EconomicProfileTab({
+    super.key,
+    required this.societyId,
+    this.initialProfile,
+    this.onLoaded,
+  });
 
   final String societyId;
+
+  /// Issue #163: the profile the Overview already loaded, shown at once
+  /// instead of being fetched a second time. Pull to refresh reloads it.
+  final EconomicProfile? initialProfile;
+
+  /// Told about every profile this tab loads, so the Overview stays current.
+  final ValueChanged<EconomicProfile>? onLoaded;
 
   @override
   State<EconomicProfileTab> createState() => _EconomicProfileTabState();
@@ -30,7 +42,7 @@ class EconomicProfileTab extends StatefulWidget {
 
 class _EconomicProfileTabState extends State<EconomicProfileTab>
     with AutomaticKeepAliveClientMixin {
-  EconomicProfile? _profile;
+  late EconomicProfile? _profile = widget.initialProfile;
   SocietyRecordException? _error;
   bool _loading = false;
 
@@ -40,7 +52,9 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    if (_profile == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
 
   /// Keeps what is on screen while it reloads, so the list and its scroll
@@ -57,6 +71,7 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
       // from each output's whole history.
       final profile = await api.fetchProfile(widget.societyId);
       if (mounted) setState(() => _profile = profile);
+      widget.onLoaded?.call(profile);
     } on SocietyRecordException catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {

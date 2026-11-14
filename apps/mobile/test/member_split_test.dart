@@ -107,7 +107,12 @@ void main() {
     'female 25 and male 17 show a total of 42 at once, and it is kept',
     (tester) async {
       await _pump(tester, const SocietyRecordScreen(societyId: _pahala));
-      expect(find.text('412 · female/male not entered yet'), findsOneWidget);
+      expectOverviewMembers(
+        tester,
+        '412',
+        female: 'Not entered',
+        male: 'Not entered',
+      );
       await _openEdit(tester);
 
       // An older record keeps its total, says the split is missing, and the
@@ -133,7 +138,7 @@ void main() {
 
       await _save(tester);
       expect(find.text('Edit Society Information'), findsNothing);
-      expect(find.text('42 · 25 female, 17 male'), findsOneWidget);
+      expectOverviewMembers(tester, '42', female: '25', male: '17');
 
       // Reopening shows the saved counts and their total.
       await _openEdit(tester);
@@ -152,21 +157,21 @@ void main() {
       const SocietyRecordScreen(societyId: _wellawa),
       role: UserRole.programmeCoordinator,
     );
-    expect(find.text('143 · 80 female, 63 male'), findsWidgets);
+    expectOverviewMembers(tester, '143', female: '80', male: '63');
     await _openEdit(tester);
     expect(_total(tester), '143');
     await tester.enterText(_box(1), '85');
     await tester.pump();
     expect(_total(tester), '148');
     await _save(tester);
-    expect(find.text('148 · 85 female, 63 male'), findsWidgets);
+    expectOverviewMembers(tester, '148', female: '85', male: '63');
 
     await _openEdit(tester);
     await tester.enterText(_box(2), '50');
     await tester.pump();
     expect(_total(tester), '135');
     await _save(tester);
-    expect(find.text('135 · 85 female, 50 male'), findsWidgets);
+    expectOverviewMembers(tester, '135', female: '85', male: '50');
   });
 
   testWidgets('counts that are not whole numbers hold Save with a message', (
