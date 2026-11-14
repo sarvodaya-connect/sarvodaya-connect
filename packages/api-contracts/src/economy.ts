@@ -117,6 +117,18 @@ export interface BusinessOutput {
   version: number;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+  /**
+   * Issue #146: only in `GET /societies/:id/economic-profile`. The newest
+   * record (by period) of each measurement, whatever the length of the
+   * history; null when the output has no record of that measurement.
+   */
+  latest?: LatestProduction;
+}
+
+/** The latest actual and the latest estimate of one output, never added together. */
+export interface LatestProduction {
+  actual: ProductionRecord | null;
+  estimated: ProductionRecord | null;
 }
 
 export interface SocietyBusiness {
