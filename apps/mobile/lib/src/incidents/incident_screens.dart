@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -396,10 +398,10 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool send = true}) async {
     final store = DemoScope.read(context);
     final api = store.incidents;
-    await _sendSaved(store);
+    if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
       final active = await api.active();
       final detail = active.isEmpty ? null : await api.detail(active.first.id);
@@ -412,7 +414,9 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
   @override
   Widget build(BuildContext context) {
     final detail = _detail;
-    if (detail == null) return PendingAssessmentsCard(onSent: _load);
+    if (detail == null) {
+      return PendingAssessmentsCard(onSent: () => _load(send: false));
+    }
     final store = DemoScope.of(context);
     final mine = widget.societyId == null
         ? const <ResponseAction>[]
@@ -420,7 +424,7 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PendingAssessmentsCard(onSent: _load),
+        PendingAssessmentsCard(onSent: () => _load(send: false)),
         ActiveIncidentCard(
           incident: detail.incident,
           now: store.now,
@@ -456,13 +460,36 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
 /// Issue #125: sends assessments saved on this phone when a disaster screen
 /// opens or is refreshed. Problems are kept on each saved item and shown in
 /// its card; they never stop the screen loading.
-Future<void> _sendSaved(DemoStore store) async {
-  try {
-    await store.assessments.sync();
-  } catch (error) {
-    debugPrint('Saved assessments were not sent: $error');
-  }
+///
+/// It runs alongside loading the screen, never before it: large photos or a
+/// stalled upload must not keep anyone from the incident and its response
+/// actions. When something was sent, [onSent] reloads the screen once so
+/// its counts include it.
+void _sendSavedThen(DemoStore store, void Function() onSent) {
+  unawaited(
+    store.assessments.sync().then(
+      (result) {
+        if (result.sent > 0) onSent();
+      },
+      onError: (Object error) {
+        debugPrint('Saved assessments were not sent: $error');
+      },
+    ),
+  );
 }
+
+/// Saved assessments stay in reach while the screen loads or cannot load,
+/// for example offline: their state, Retry sending and Remove.
+Widget _withSavedAssessments(Widget child, VoidCallback onSent) => Column(
+  crossAxisAlignment: CrossAxisAlignment.stretch,
+  children: [
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: PendingAssessmentsCard(onSent: onSent),
+    ),
+    Expanded(child: child),
+  ],
+);
 
 Future<void> openIncident(BuildContext context, String id) => Navigator.of(
   context,
@@ -502,11 +529,11 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool send = true}) async {
     final store = DemoScope.read(context);
     final api = store.incidents;
     setState(() => _error = null);
-    await _sendSaved(store);
+    if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
       final incidents = await api.active();
       final alerts = await api.notifications().catchError(
@@ -543,24 +570,30 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
         subtitle: 'Live incidents for your societies',
       ),
       body: _error != null
-          ? StateMessage(
-              icon: Icons.error_outline,
-              tone: StateTone.error,
-              isAlert: true,
-              title: "Couldn't load incidents",
-              message: _error!,
-              primaryLabel: 'Try again',
-              onPrimary: _load,
+          ? _withSavedAssessments(
+              StateMessage(
+                icon: Icons.error_outline,
+                tone: StateTone.error,
+                isAlert: true,
+                title: "Couldn't load incidents",
+                message: _error!,
+                primaryLabel: 'Try again',
+                onPrimary: _load,
+              ),
+              () => _load(send: false),
             )
           : incidents == null
-          ? const LoadingSkeleton(label: 'Loading incidents')
+          ? _withSavedAssessments(
+              const LoadingSkeleton(label: 'Loading incidents'),
+              () => _load(send: false),
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
-                  PendingAssessmentsCard(onSent: _load),
+                  PendingAssessmentsCard(onSent: () => _load(send: false)),
                   if (incidents.isEmpty)
                     const _Card(
                       child: Text(
@@ -681,10 +714,14 @@ class _IncidentScreenState extends State<IncidentScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool send = true}) async {
     setState(() => _error = null);
-    await _sendSaved(DemoScope.read(context));
-    if (!mounted) return;
+    if (send) {
+      _sendSavedThen(
+        DemoScope.read(context),
+        () => mounted ? _load(send: false) : null,
+      );
+    }
     try {
       final detail = await DemoScope.read(context).incidents
           .detail(widget.incidentId);
@@ -829,23 +866,29 @@ class _IncidentScreenState extends State<IncidentScreen> {
         ],
       ),
       body: _error != null
-          ? StateMessage(
-              icon: Icons.lock_outline,
-              tone: StateTone.noAccess,
-              title: "Can't open this incident",
-              message: _error!,
-              primaryLabel: 'Try again',
-              onPrimary: _load,
+          ? _withSavedAssessments(
+              StateMessage(
+                icon: Icons.lock_outline,
+                tone: StateTone.noAccess,
+                title: "Can't open this incident",
+                message: _error!,
+                primaryLabel: 'Try again',
+                onPrimary: _load,
+              ),
+              () => _load(send: false),
             )
           : detail == null
-          ? const LoadingSkeleton(label: 'Loading the incident')
+          ? _withSavedAssessments(
+              const LoadingSkeleton(label: 'Loading the incident'),
+              () => _load(send: false),
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
-                  PendingAssessmentsCard(onSent: _load),
+                  PendingAssessmentsCard(onSent: () => _load(send: false)),
                   _Card(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

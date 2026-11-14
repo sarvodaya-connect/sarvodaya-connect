@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -50,6 +51,57 @@ class _OfflineIncidentApi extends DemoIncidentApi {
       stillSignedIn: stillSignedIn,
     );
   }
+}
+
+/// Sending a saved assessment hangs until [release] completes, like a large
+/// photo or a stalled upload.
+class _StalledIncidentApi extends DemoIncidentApi {
+  _StalledIncidentApi({required super.clock});
+  final release = Completer<void>();
+  int sends = 0;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    sends++;
+    await release.future;
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
+      stillSignedIn: stillSignedIn,
+    );
+  }
+}
+
+/// Offline: nothing about incidents can be loaded or sent.
+class _DownIncidentApi extends DemoIncidentApi {
+  _DownIncidentApi({required super.clock});
+  static const _offline = IncidentException(
+    "You're offline or the server did not answer.",
+    offline: true,
+  );
+
+  @override
+  Future<List<IncidentSummary>> active() async => throw _offline;
+
+  @override
+  Future<IncidentDetail> detail(String id) async => throw _offline;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async => throw _offline;
 }
 
 /// The phone's storage fills up after [writes] successful queue writes.
@@ -273,6 +325,80 @@ void main() {
       expect(store.assessments.items, hasLength(1));
     },
   );
+
+  testWidgets('a stalled send does not hold up Disaster Response', (
+    tester,
+  ) async {
+    final api = _StalledIncidentApi(clock: () => demoNow);
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(tester, const SizedBox(), api: api);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await tester.pumpWidget(
+      DemoScope(
+        store: store,
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const IncidentsScreen(),
+        ),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // Still sending, yet the incidents and response actions are there.
+    expect(api.sends, 1);
+    expect(store.assessments.syncing, isTrue);
+    expect(find.text('Report an incident'), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+    api.release.complete();
+    await tester.pumpAndSettle();
+    expect(store.assessments.items, isEmpty);
+    expect(api.sends, 1);
+  });
+
+  testWidgets('saved assessments stay visible when incidents cannot load', (
+    tester,
+  ) async {
+    final api = _DownIncidentApi(clock: () => demoNow);
+    final detail = await DemoIncidentApi(clock: () => demoNow)
+        .detail('incident-demo');
+    final store = await _pump(tester, const IncidentsScreen(), api: api);
+    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+    expect(find.text('Remove from this phone'), findsOneWidget);
+    expect(find.text('Retry sending'), findsOneWidget);
+
+    // The incident's own page keeps them in reach too.
+    await tester.pumpWidget(
+      DemoScope(
+        store: store,
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const IncidentScreen(incidentId: 'incident-demo'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Can't open this incident"), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+    expect(find.text('Remove from this phone'), findsOneWidget);
+  });
 
   testWidgets('a saved assessment that is only waiting can be removed', (
     tester,

@@ -18,6 +18,11 @@ Retries happen only while the app is open:
 
 Nothing is sent in the background after the app is closed.
 
+Sending never holds up a screen:
+- Disaster Response, the incident page and the home's incident card load at the same time as saved assessments are sent, and reload once when something was sent.
+- A photo upload that does not finish within 2 minutes counts as no connection, and the assessment is retried later.
+- The "saved on this phone" card stays visible while a screen is loading and when it cannot load (for example offline), with each item's state, **Retry sending** and **Remove from this phone**.
+
 ## What each answer from the server does
 
 | Answer | Shown as | What happens |

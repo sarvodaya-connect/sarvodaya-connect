@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 
 import '../auth/api_auth_service.dart';
@@ -530,10 +532,16 @@ abstract class IncidentApi {
 }
 
 class HttpIncidentApi implements IncidentApi {
-  HttpIncidentApi(this._api, {http.Client? uploadClient})
-    : _uploadClient = uploadClient ?? http.Client();
+  HttpIncidentApi(
+    this._api, {
+    http.Client? uploadClient,
+    this.uploadTimeout = const Duration(minutes: 2),
+  }) : _uploadClient = uploadClient ?? http.Client();
   final IdentityApi _api;
   final http.Client _uploadClient;
+
+  /// How long one photo may take to reach storage before it counts as lost.
+  final Duration uploadTimeout;
 
   Future<dynamic> _call(
     String path, {
@@ -644,7 +652,8 @@ class HttpIncidentApi implements IncidentApi {
       throw const IncidentException('Sign in again to send this.', status: 401);
     }
     try {
-      final response = await _uploadClient.send(request);
+      // A stalled upload ends, so the queue can mark it and retry later.
+      final response = await _uploadClient.send(request).timeout(uploadTimeout);
       if (response.statusCode >= 300) {
         throw const IncidentException(
           'The photo did not reach storage. Try again.',
@@ -652,6 +661,11 @@ class HttpIncidentApi implements IncidentApi {
         );
       }
     } on http.ClientException {
+      throw const IncidentException(
+        'The photo did not reach storage. Check your connection and try again.',
+        offline: true,
+      );
+    } on TimeoutException {
       throw const IncidentException(
         'The photo did not reach storage. Check your connection and try again.',
         offline: true,
