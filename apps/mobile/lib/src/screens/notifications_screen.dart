@@ -4,6 +4,7 @@ import '../app.dart';
 import '../format.dart';
 import '../models/notification.dart';
 import '../models/submission.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
@@ -101,12 +102,9 @@ class _NotificationsContent extends StatelessWidget {
     final store = DemoScope.of(context);
     final notifications = store.notifications;
     if (notifications.isEmpty) {
-      return StateMessage(
-        icon: Icons.notifications_none,
-        title: 'No Notifications',
-        message: 'Approvals, returned updates, requests from your District Centre and reminders will appear here.',
-        secondaryLabel: 'Back to Home',
-        onSecondary: () => HomeShell.openTab(context, HomeShell.homeTab),
+      return const MotionEntrance(
+        id: 'notifications.empty',
+        child: _EmptyNotifications(),
       );
     }
     final now = store.now;
@@ -116,29 +114,43 @@ class _NotificationsContent extends StatelessWidget {
     final earlier = notifications.where((n) => !isToday(n.receivedAt)).toList();
     final unread = store.unreadNotificationCount;
 
+    final items = <Widget>[
+      // Spoken count only; the catalogue shows no visible counter.
+      Semantics(
+        container: true,
+        liveRegion: true,
+        label: unread == 0 ? 'All caught up' : '$unread unread',
+        child: const SizedBox(width: double.infinity, height: 1),
+      ),
+      if (today.isNotEmpty) ...[
+        const _GroupHeader('Today'),
+        for (final notification in today)
+          _NotificationTile(notification: notification, showTime: true),
+      ],
+      if (earlier.isNotEmpty) ...[
+        const _GroupHeader('Earlier'),
+        for (final notification in earlier)
+          _NotificationTile(notification: notification, showTime: false),
+      ],
+    ];
     return ListView(
       padding: EdgeInsets.zero,
-      children: [
-        // Spoken count only; the catalogue shows no visible counter.
-        Semantics(
-          container: true,
-          liveRegion: true,
-          label: unread == 0 ? 'All caught up' : '$unread unread',
-          child: const SizedBox(width: double.infinity, height: 1),
-        ),
-        if (today.isNotEmpty) ...[
-          const _GroupHeader('Today'),
-          for (final notification in today)
-            _NotificationTile(notification: notification, showTime: true),
-        ],
-        if (earlier.isNotEmpty) ...[
-          const _GroupHeader('Earlier'),
-          for (final notification in earlier)
-            _NotificationTile(notification: notification, showTime: false),
-        ],
-      ],
+      children: motionBlocks('notifications.list', items),
     );
   }
+}
+
+class _EmptyNotifications extends StatelessWidget {
+  const _EmptyNotifications();
+
+  @override
+  Widget build(BuildContext context) => StateMessage(
+    icon: Icons.notifications_none,
+    title: 'No Notifications',
+    message: 'Approvals, returned updates, requests from your District Centre and reminders will appear here.',
+    secondaryLabel: 'Back to Home',
+    onSecondary: () => HomeShell.openTab(context, HomeShell.homeTab),
+  );
 }
 
 class _GroupHeader extends StatelessWidget {
@@ -195,11 +207,14 @@ class _NotificationTile extends StatelessWidget {
       excludeSemantics: true,
       onTap: () => openNotification(context, notification),
       child: Material(
-        color: unread ? AppColors.mintSoft : AppColors.surface,
+        color: Colors.transparent,
         child: InkWell(
           onTap: () => openNotification(context, notification),
-          child: Container(
-            decoration: const BoxDecoration(
+          child: AnimatedContainer(
+            duration: AppMotion.duration(context, AppMotion.state),
+            curve: AppMotion.curve,
+            decoration: BoxDecoration(
+              color: unread ? AppColors.mintSoft : AppColors.surface,
               border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
             padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
@@ -220,8 +235,10 @@ class _NotificationTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        notification.title,
+                      AnimatedDefaultTextStyle(
+                        key: ValueKey('notification-title-${notification.id}'),
+                        duration: AppMotion.duration(context, AppMotion.state),
+                        curve: AppMotion.curve,
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.3,
@@ -229,6 +246,7 @@ class _NotificationTile extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                         ),
+                        child: Text(notification.title),
                       ),
                       const SizedBox(height: 3),
                       Text(

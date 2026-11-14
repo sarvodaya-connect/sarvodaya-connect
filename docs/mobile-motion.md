@@ -100,3 +100,35 @@ home tests are run with this change. See the PR description for the exact result
 No screenshot submission, physical-device performance measurement, AWS deployment
 or Google Play/TestFlight upload is performed as part of this work. The requester
 will review the visual experience on devices.
+
+## Remaining-screen coverage — issue #137
+
+This change reuses the motion tokens and components above. It adds no separate
+animation layer.
+
+| Role or area | Coverage |
+| --- | --- |
+| All five roles | Existing native route transitions and settings-row press feedback continue to use the shared system. The first few notification rows and empty state enter once per signed-in session; read/unread background and title-weight changes use the 180 ms state timing. |
+| Society Officer | The Registrar-document summary, supporting-document notice and document empty state use stable entrances. Audit checklist/history sections animate only the current and first four past years. Upload validation, failure, retry and server-confirmed progress use a reduced-motion-aware size transition; the existing status text remains authoritative. |
+| SPC, DDM, DM | Existing scoped Programmes, Membership and Audits read views enter once after data is available. Scope filters, requests and permission checks are unchanged. |
+| HQ | National overview, Programmes, Membership, Audit & AGM and Profit & Expenses content reuse the same entrance timing. SarvoAI animates only a confirmed answer; working and actionable error states remain immediate. |
+| Disaster response | The incident-notification heading uses a short entrance. Incident lists, reporting, rapid assessment, response entry and close controls remain immediate; native route and dialog transitions are retained. |
+| Forms and society records | The Society record and activity/form workflows remain assigned to #136. Their navigation still uses the shared native transitions. |
+
+Entrance IDs are stable through rebuilds, refresh and language changes and are
+remembered by the existing account/role `MotionScope`. Long/lazy lists are not
+staggered; notification and audit lists limit entrances to a small initial group.
+Error/retry messages are not faded or delayed. `MotionSize` renders its child
+directly when reduced motion is enabled, avoiding a size-animation layout pass.
+The upload sheet keeps Flutter's native bottom-sheet entrance; no nested sheet
+animation is added.
+
+### Role/screen review checklist
+
+- [x] SO: documents, audit, notifications, settings, disaster response, shared navigation.
+- [x] SPC: scoped Programmes, Membership and Audits read views, notifications, settings, disaster response, shared navigation.
+- [x] DDM: scoped Programmes, Membership and Audits read views, notifications, settings, disaster response, shared navigation.
+- [x] DM: scoped Programmes, Membership and Audits read views, notifications, settings, disaster response, shared navigation.
+- [x] HQ: national overview, Programmes, Membership, Audit & AGM, Profit & Expenses, SarvoAI, notifications and settings.
+- [ ] Final cross-PR consistency review after #136 lands; no #136 branch/PR was available during this work.
+- [ ] Physical-device performance and visual review; not performed here.

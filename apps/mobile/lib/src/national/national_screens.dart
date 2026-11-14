@@ -69,6 +69,7 @@ class _Loader<T> extends StatefulWidget {
     this.loadingLabel,
     this.errorTitle,
     this.hqOnly = true,
+    this.motionId,
   });
 
   final Future<T> Function(NationalApi api) load;
@@ -79,6 +80,9 @@ class _Loader<T> extends StatefulWidget {
   /// Whether a refusal says "HQ only"; screens for other roles (issue #117)
   /// show the shared no-access state instead.
   final bool hqOnly;
+
+  /// Stable entrance ID for selected national/scoped read views.
+  final String? motionId;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
 
@@ -148,9 +152,12 @@ class _LoaderState<T> extends State<_Loader<T>> {
           onPrimary: _reload,
         );
       }
+      final content = widget.builder(context, snapshot.data as T, _reload);
       return RefreshIndicator(
         onRefresh: () async => _reload(),
-        child: widget.builder(context, snapshot.data as T, _reload),
+        child: widget.motionId == null
+            ? content
+            : MotionEntrance(id: widget.motionId!, child: content),
       );
     },
   );
@@ -505,6 +512,7 @@ class NationalDashboardScreen extends StatelessWidget {
             ),
             Expanded(
               child: _Loader<NationalOverview>(
+                motionId: 'hq.overview.content',
                 load: (api) => api.fetchOverview(),
                 builder: (context, overview, _) => _Overview(overview),
               ),
@@ -1743,6 +1751,7 @@ class NationalMembershipScreen extends StatelessWidget {
       title: l.nationalMembershipTitle,
       subtitle: l.nationalMembershipSubtitle,
       body: _Loader<(NationalOverview, ProfileMembership)>(
+        motionId: 'hq.membership',
         load: (api) async {
           final figures = await Future.wait([
             api.fetchOverview(),
@@ -2062,7 +2071,10 @@ class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
           }
           return RefreshIndicator(
             onRefresh: () async => _reload(),
-            child: _body(context, snapshot.data!),
+            child: MotionEntrance(
+              id: 'role.membership',
+              child: _body(context, snapshot.data!),
+            ),
           );
         },
       ),
@@ -2351,7 +2363,10 @@ class _RoleAuditsScreenState extends State<RoleAuditsScreen> {
           }
           return RefreshIndicator(
             onRefresh: () async => _reload(),
-            child: _body(context, snapshot.data!),
+            child: MotionEntrance(
+              id: 'role.audits',
+              child: _body(context, snapshot.data!),
+            ),
           );
         },
       ),
@@ -2699,6 +2714,7 @@ class AuditAgmScreen extends StatelessWidget {
     title: 'Audit & AGM',
     subtitle: 'Audit report and Registrar documents',
     body: _Loader<NationalOverview>(
+      motionId: 'hq.audit-agm',
       load: (api) => api.fetchOverview(),
       builder: (context, overview, _) {
         final audit = overview.auditReport;
@@ -2792,6 +2808,7 @@ class ProfitExpensesScreen extends StatelessWidget {
     title: 'Profit & Expenses',
     subtitle: 'The only two yearly figures societies enter',
     body: _Loader<(NationalOverview, FiguresNotAdded)>(
+      motionId: 'hq.profit-expenses',
       load: (api) async =>
           (await api.fetchOverview(), await api.fetchFiguresNotAdded()),
       builder: (context, data, _) {
@@ -2979,6 +2996,7 @@ class _NationalActivitiesScreenState extends State<NationalActivitiesScreen> {
       title: l.progTitle,
       subtitle: l.progSubtitle,
       body: _Loader<NationalProgrammes>(
+        motionId: widget.scoped ? 'role.programmes' : 'hq.programmes',
         // A new year is a new request.
         key: ValueKey(_year),
         loadingLabel: l.progLoading,

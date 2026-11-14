@@ -45,8 +45,10 @@ void main() {
       find.bySemanticsLabel(RegExp('^Unread\\. $_auditTitle\\.')),
       findsOneWidget,
     );
-    final unreadTitle = tester.widget<Text>(find.text(_auditTitle));
-    expect(unreadTitle.style?.fontWeight, FontWeight.w700);
+    final unreadTitleStyle = tester.widget<AnimatedDefaultTextStyle>(
+      find.byKey(const ValueKey('notification-title-note-audit-overdue')),
+    );
+    expect(unreadTitleStyle.style.fontWeight, FontWeight.w700);
 
     // Read: no dot, regular weight, no "Unread" label.
     expect(_unreadDot('note-membership-q2'), findsNothing);
@@ -54,10 +56,10 @@ void main() {
       find.bySemanticsLabel(RegExp('^Membership Apr–Jun approved\\.')),
       findsOneWidget,
     );
-    final readTitle = tester.widget<Text>(
-      find.text('Membership Apr–Jun approved'),
+    final readTitleStyle = tester.widget<AnimatedDefaultTextStyle>(
+      find.byKey(const ValueKey('notification-title-note-membership-q2')),
     );
-    expect(readTitle.style?.fontWeight, FontWeight.w500);
+    expect(readTitleStyle.style.fontWeight, FontWeight.w500);
   });
 
   testWidgets('Tapping a notification marks it read and opens the audit', (

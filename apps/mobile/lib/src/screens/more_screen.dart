@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/app_language.dart';
 import '../models/user.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_options_sheet.dart';
@@ -300,49 +301,54 @@ class _MenuRow extends StatelessWidget {
     final color = danger ? AppColors.danger : AppColors.ink;
     return InkWell(
       onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 52),
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : const Border(bottom: BorderSide(color: AppColors.line)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: danger ? color : AppColors.inkSoft),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (subtitle != null)
+      child: MotionPress(
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          decoration: BoxDecoration(
+            border: last
+                ? null
+                : const Border(bottom: BorderSide(color: AppColors.line)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: danger ? color : AppColors.inkSoft),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.muted,
+                      title,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: color,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            if (trailing != null)
-              Text(
-                trailing!,
-                style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
-              ),
-            if (chevron)
-              const Icon(Icons.chevron_right, color: AppColors.muted),
-          ],
+              if (trailing != null)
+                Text(
+                  trailing!,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              if (chevron)
+                const Icon(Icons.chevron_right, color: AppColors.muted),
+            ],
+          ),
         ),
       ),
     );

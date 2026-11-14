@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user.dart';
+import '../motion/app_motion.dart';
 import '../national/national_screens.dart' show count;
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -96,8 +97,8 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
       if (_scroll.hasClients) {
         _scroll.animateTo(
           _scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+          duration: AppMotion.duration(context, AppMotion.state),
+          curve: AppMotion.curve,
         );
       }
     });
@@ -472,11 +473,14 @@ class _SarvoAiScreenState extends State<SarvoAiScreen> {
         ),
       );
     }
-    return _AnswerView(
-      answer: turn.answer!,
-      question: turn.question,
-      onAsk: (text) => _ask(text, upTo: index + 1),
-      onRefine: () => _edit(turn.question),
+    return MotionEntrance(
+      id: 'sarvoai.answer.$index',
+      child: _AnswerView(
+        answer: turn.answer!,
+        question: turn.question,
+        onAsk: (text) => _ask(text, upTo: index + 1),
+        onRefine: () => _edit(turn.question),
+      ),
     );
   }
 }
