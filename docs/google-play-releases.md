@@ -3,9 +3,11 @@
 Status (14 Nov 2026): Google Cloud federation and the dedicated service account are
 configured. Play Console shows the service account as Active with app-only viewing
 and testing-release permissions. The protected `play-internal` GitHub environment
-has the signing secrets and release variables. The workflow still needs review and
-merge; no GitHub build/upload has run yet, so end-to-end authentication and publishing
-remain unverified. Merging does not publish a release.
+has the signing secrets and release variables. The workflow is merged. The first run passed analysis, tests, bundle build and upload
+certificate verification, then failed authentication because the expected OIDC subject
+used the older name-only format. Google trust now uses the immutable subject below;
+a retry is pending. End-to-end publishing remains unverified. Merging does not publish
+a release.
 
 ## What the release owner does each time
 
@@ -71,6 +73,18 @@ GitHub numeric identities checked on 13 Nov 2026:
 - Repository ID: `1400137463`
 - Organization ID: `336569133`
 
+Confirm the repository's subject format before configuring Google:
+
+```bash
+gh api repos/sarvodaya-connect/sarvodaya-connect/actions/oidc/customization/sub
+```
+
+This repository uses `use_immutable_subject: true` and prefix
+`repo:sarvodaya-connect@336569133/sarvodaya-connect@1400137463`. The environment
+suffix is `:environment:play-internal`. Do not substitute the older name-only subject
+or remove the subject restriction to work around an authentication failure.
+See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
+
 Create a dedicated pool/provider only if missing:
 
 ```bash
@@ -83,7 +97,7 @@ gcloud iam workload-identity-pools providers create-oidc github-main \
   --workload-identity-pool=github-play \
   --issuer-uri='https://token.actions.githubusercontent.com' \
   --attribute-mapping='google.subject=assertion.sub,attribute.repository_id=assertion.repository_id' \
-  --attribute-condition="assertion.repository_owner_id == '336569133' && assertion.repository_id == '1400137463' && assertion.ref == 'refs/heads/main' && assertion.sub == 'repo:sarvodaya-connect/sarvodaya-connect:environment:play-internal' && assertion.workflow_ref == 'sarvodaya-connect/sarvodaya-connect/.github/workflows/play-internal-release.yml@refs/heads/main'"
+  --attribute-condition="assertion.repository_owner_id == '336569133' && assertion.repository_id == '1400137463' && assertion.ref == 'refs/heads/main' && assertion.sub == 'repo:sarvodaya-connect@336569133/sarvodaya-connect@1400137463:environment:play-internal' && assertion.workflow_ref == 'sarvodaya-connect/sarvodaya-connect/.github/workflows/play-internal-release.yml@refs/heads/main'"
 
 gcloud iam service-accounts add-iam-policy-binding \
   github-play-release@sarvodaya-connect-releases.iam.gserviceaccount.com \
