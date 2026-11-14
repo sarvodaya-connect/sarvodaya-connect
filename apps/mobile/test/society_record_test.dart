@@ -62,6 +62,21 @@ class _FixedPicker implements DocumentPicker {
 
 void main() {
   group('M06 society detail', () {
+    testWidgets('record tabs are at least 44 logical pixels tall', (
+      tester,
+    ) async {
+      await _openRecord(tester, role: UserRole.societyOfficer);
+
+      final tabs = find.byType(Tab);
+      expect(tabs, findsNWidgets(RecordTab.count));
+      for (final tab in tabs.evaluate()) {
+        expect(
+          tester.getSize(find.byWidget(tab.widget)).height,
+          greaterThanOrEqualTo(44),
+        );
+      }
+    });
+
     testWidgets(
       'shows the yearly summary, grade request and record for the Society Officer',
       (tester) async {
