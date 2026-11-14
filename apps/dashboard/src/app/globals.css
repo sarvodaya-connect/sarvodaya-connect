@@ -180,8 +180,9 @@ body {
   body:has(#situation-report) * {
     visibility: hidden;
   }
-  #situation-report,
-  #situation-report * {
+  /* Match the body scope so this overrides the blanket hide above. */
+  body:has(#situation-report) #situation-report,
+  body:has(#situation-report) #situation-report * {
     visibility: visible;
   }
   #situation-report {
