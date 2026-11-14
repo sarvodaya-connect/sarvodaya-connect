@@ -1,8 +1,11 @@
 # Google Play internal releases from GitHub
 
-Status: workflow prepared; Google Cloud trust, Play access and GitHub environment
-settings must be configured before the first run. A merged workflow does not itself
-connect the accounts or publish a release.
+Status (14 Nov 2026): Google Cloud federation and the dedicated service account are
+configured. Play Console shows the service account as Active with app-only viewing
+and testing-release permissions. The protected `play-internal` GitHub environment
+has the signing secrets and release variables. The workflow still needs review and
+merge; no GitHub build/upload has run yet, so end-to-end authentication and publishing
+remain unverified. Merging does not publish a release.
 
 ## What the release owner does each time
 
@@ -40,7 +43,7 @@ Project already created by the owner:
 
 - ID: `sarvodaya-connect-releases`
 - Number: `684695981135`
-- Proposed service account: `github-play-release@sarvodaya-connect-releases.iam.gserviceaccount.com`
+- Service account: `github-play-release@sarvodaya-connect-releases.iam.gserviceaccount.com`
 
 Check what already exists before creating resources. No billing trial or runtime
 hosting needs to be provisioned merely to host the application in this project;
