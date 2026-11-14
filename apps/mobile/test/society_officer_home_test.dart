@@ -94,7 +94,7 @@ void main() {
       final record = tester.widget<SocietyRecordScreen>(
         find.byType(SocietyRecordScreen),
       );
-      expect(record.initialTab, 4);
+      expect(record.initialTab, RecordTab.history);
     });
 
     for (final (label, size, scale) in [

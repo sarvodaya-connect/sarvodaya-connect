@@ -164,7 +164,7 @@ void main() {
     final screen = tester.widget<SocietyRecordScreen>(
       find.byType(SocietyRecordScreen),
     );
-    expect(screen.initialTab, 3);
+    expect(screen.initialTab, RecordTab.documents);
   });
 
   testWidgets('says when there are no active societies', (tester) async {

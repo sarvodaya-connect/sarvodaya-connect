@@ -68,7 +68,7 @@ void main() {
       await _openRecord(tester, role: UserRole.societyOfficer);
 
       final tabs = find.byType(Tab);
-      expect(tabs, findsNWidgets(5));
+      expect(tabs, findsNWidgets(RecordTab.count));
       for (final tab in tabs.evaluate()) {
         expect(
           tester.getSize(find.byWidget(tab.widget)).height,

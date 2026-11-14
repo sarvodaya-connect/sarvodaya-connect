@@ -106,7 +106,7 @@ All endpoints are under `/api/v1` and need sign-in.
 
 | Endpoint | What it does |
 |---|---|
-| `GET /societies/:id/economic-profile` | The society, its free-text business description, businesses with outputs, and `permissions.canManage` |
+| `GET /societies/:id/economic-profile` | The society, its free-text business description, businesses with outputs, and `permissions.canManage`. Each output has `latest: { actual, estimated }` ([below](#latest-figures)) |
 | `POST /societies/:id/businesses` | Add a business (at most 50 per society) |
 | `PATCH /businesses/:id` | Change a business; send `version` |
 | `POST /businesses/:id/outputs` | Add a product or service (`unit` only for Other) |
@@ -128,6 +128,20 @@ Errors use the usual `{ error: { code, message, requestId } }` body:
 | 409 | `CONFLICT`, for an overlap, a stale version or a reused request id |
 
 Timestamps are ISO 8601 UTC, and periods are `YYYY-MM-DD`.
+
+### Latest figures
+
+Issue #146. In the economic profile, each output carries:
+
+```json
+"latest": { "actual": ProductionRecord | null, "estimated": ProductionRecord | null }
+```
+
+- Each is the record with the newest period of that measurement, worked out by the database (`DISTINCT ON (output_id, measurement)`) from the output's **whole history**, however many records the society has. There is at most one actual and one estimate per output.
+- `null` means the output has no record of that measurement. A reported zero is a record with quantity 0.
+- The two are never added together.
+- The figures follow the profile's permissions (404 outside the caller's scope), and a correction shows up straight away.
+- `latest` is only on the profile. Other answers that include an output leave it out, and older clients ignore it.
 
 ## Production summary
 
@@ -171,6 +185,29 @@ This keeps past results understandable:
 
 The one exception is reopening a closed business: it clears the close date, so periods while it was closed count it as eligible again.
 
+## Phone app (#146)
+
+The society record has a **Village Economic Profile** tab, third after Overview and Members & Exco. The code is in `apps/mobile/lib/src/economy/`.
+
+| Screen | What it shows |
+|---|---|
+| The tab | A short note that these are businesses the society runs itself and that the figures are self-reported, a summary, and one card per business with its status and the latest actual and estimated figure of each product, each with its period. **Add business** appears for the assigned Society Officer only. |
+| Add/Edit Business | Name, industry (or Other with a description), short description, status and products/services. Standard products show their fixed unit; Other takes a description and a unit. The profile's free-text business description is not touched. |
+| Business details | Each product's latest figures and production history, with Record, Archive or Bring back, Edit, and Close or Reopen. Each figure opens on its own screen with every version of it and **Correct figure**. |
+| Record Production | Product, actual or estimated, weekly, monthly or seasonal (with a season name), the exact period, the quantity in the product's unit, an optional note and source, and a preview such as "Milk: 3,200 litres · October 2026 · Actual". |
+
+How the phone keeps the rules:
+
+- **A figure is never shown as a total of actual and estimated.** Cards show the latest of each as separate lines. A product with no figure says "Not reported"; a reported 0 shows as 0.
+- **Latest figures** come with the profile (`latest` on each output), so the cards and the business page never work them out from a page of history and need no extra requests. If the API sends no `latest` (an older server), the phone says "Not available", never "Not reported".
+- **A partly saved business form locks the saved details.** If the business saves but adding a product fails, the details are locked with a note, and Save adds only the products that are left. Later detail changes are made with Edit, against the latest version.
+- **No duplicates.** Save is disabled while saving. A new figure carries a `clientRequestId` that stays the same while the figure stays the same, so a retry after a lost answer returns the record already saved. If the period already has a figure, the form offers to correct it instead.
+- **Corrections** send the version the form opened. A 409 shows "Changed by someone else" and keeps the typed value; **Reload latest** shows the saved figure and moves to its version, and nothing is overwritten without a second save.
+- **Failures keep what was typed** and are never shown as saved. Nothing is stored on the phone for later.
+- **Adding a business has no request id on the API.** After a lost answer, the phone checks the profile for the business before creating it again, and skips products that are already there.
+- **Read-only roles** see the same figures with no add or edit controls. A 403 or 404 from the API is shown as such, and access that has ended (for example an expired DDM grant) clears the tab.
+- The phone's copy of the catalogue is checked against `packages/api-contracts/src/economy.ts` by `test/economy_catalogue_test.dart`. In demo mode, `DemoEconomyApi` applies the same rules with fictional data.
+
 ## Deployment and migration notes
 
 - The PR only adds code, the migration and contracts. **No infrastructure is deployed and no live migration is applied** as part of it.
@@ -194,6 +231,7 @@ Every record in these tests is fictional.
   - period shapes, including leap years, and the Sri Lanka "today";
   - overlaps;
   - permissions and the DDM grant timeline.
+- **`apps/api/test/db/economy-latest.db-spec.ts`** (#146): latest figures across more than 500 records, an older actual behind ten newer estimates, reported zero against never reported, and scope.
 - **`apps/api/test/db/village-economic-profile.db-spec.ts`** (real PostgreSQL, two fictional districts):
   - **Acceptance criteria:** 3,200 litres saved once; retries; correction to 3,400 and a decrease; stale conflicts; actual and estimated kept apart; overlap refusal; several businesses, services and Other; zero against missing; coverage per society.
   - **Scope:** refusals across districts on detail, list, history and summary; the DDM before, during, after revocation and after expiry of a grant.

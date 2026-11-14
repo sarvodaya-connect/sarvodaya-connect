@@ -232,7 +232,7 @@ class _OfficerHomeState extends State<SocietyOfficerHomeScreen> {
                       : l.officerLastChange(
                           l.recordWhen(record.lastChangeAt!, DateTime.now()),
                         ),
-                  onTap: () => _openRecordTab(4),
+                  onTap: () => _openRecordTab(RecordTab.history),
                 ),
               ],
             ),

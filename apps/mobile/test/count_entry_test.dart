@@ -75,7 +75,10 @@ Future<DemoStore> _toParticipants(
 }) async {
   final store = await _pump(
     tester,
-    const SocietyRecordScreen(societyId: _pahala, initialTab: 2),
+    const SocietyRecordScreen(
+      societyId: _pahala,
+      initialTab: RecordTab.workPlan,
+    ),
     code: code,
     textScale: textScale,
     size: size,

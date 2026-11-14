@@ -52,7 +52,10 @@ void main() {
     ) async {
       await _pump(
         tester,
-        const SocietyRecordScreen(societyId: _pahala, initialTab: 2),
+        const SocietyRecordScreen(
+          societyId: _pahala,
+          initialTab: RecordTab.workPlan,
+        ),
       );
       expect(find.text('Approved · SDG 6, 15'), findsOneWidget);
       expect(find.text('● Waiting for SPC'), findsOneWidget);
@@ -70,7 +73,10 @@ void main() {
     ) async {
       await _pump(
         tester,
-        const SocietyRecordScreen(societyId: _pahala, initialTab: 2),
+        const SocietyRecordScreen(
+          societyId: _pahala,
+          initialTab: RecordTab.workPlan,
+        ),
         role: UserRole.districtManager,
       );
       expect(find.text('Youth leadership camp'), findsOneWidget);
@@ -82,7 +88,10 @@ void main() {
       (tester) async {
         final store = await _pump(
           tester,
-          const SocietyRecordScreen(societyId: _pahala, initialTab: 2),
+          const SocietyRecordScreen(
+            societyId: _pahala,
+            initialTab: RecordTab.workPlan,
+          ),
         );
         await _tap(tester, find.widgetWithText(FilledButton, 'Add'));
         expect(find.text('STEP 1 OF 4'), findsOneWidget);
@@ -276,7 +285,10 @@ void main() {
     ) async {
       await _pump(
         tester,
-        const SocietyRecordScreen(societyId: _pahala, initialTab: 3),
+        const SocietyRecordScreen(
+          societyId: _pahala,
+          initialTab: RecordTab.documents,
+        ),
       );
       expect(find.text('Annual Documents · FY 2025/26'), findsOneWidget);
       expect(find.text('3 of 4 uploaded'), findsOneWidget);

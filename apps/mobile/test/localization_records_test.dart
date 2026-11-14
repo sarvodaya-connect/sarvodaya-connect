@@ -164,7 +164,10 @@ void main() {
       ) async {
         await _pump(
           tester,
-          const SocietyRecordScreen(societyId: _pahala, initialTab: 1),
+          const SocietyRecordScreen(
+            societyId: _pahala,
+            initialTab: RecordTab.membersExco,
+          ),
           code: code,
           role: UserRole.societyOfficer,
         );
@@ -193,7 +196,10 @@ void main() {
       testWidgets('M07o: choosing an office bearer', (tester) async {
         await _pump(
           tester,
-          const SocietyRecordScreen(societyId: _pahala, initialTab: 1),
+          const SocietyRecordScreen(
+            societyId: _pahala,
+            initialTab: RecordTab.membersExco,
+          ),
           code: code,
           role: UserRole.societyOfficer,
         );
@@ -212,7 +218,10 @@ void main() {
       testWidgets('M06h: the change history and its filters', (tester) async {
         await _pump(
           tester,
-          const SocietyRecordScreen(societyId: _pahala, initialTab: 4),
+          const SocietyRecordScreen(
+            societyId: _pahala,
+            initialTab: RecordTab.history,
+          ),
           code: code,
           role: UserRole.societyOfficer,
         );
@@ -307,7 +316,10 @@ void main() {
         ),
         (
           UserRole.societyOfficer,
-          const SocietyRecordScreen(societyId: _pahala, initialTab: 1),
+          const SocietyRecordScreen(
+            societyId: _pahala,
+            initialTab: RecordTab.membersExco,
+          ),
         ),
         (
           UserRole.societyOfficer,
