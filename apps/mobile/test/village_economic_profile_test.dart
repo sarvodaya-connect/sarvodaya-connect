@@ -162,6 +162,46 @@ class _FailingOutputs extends DemoEconomyApi {
   }
 }
 
+/// Saves on the server, then loses the answer, as on a dropped connection.
+class _LostAnswers extends DemoEconomyApi {
+  _LostAnswers({required super.user, required super.clock})
+    : super(delay: Duration.zero);
+
+  int loseBusinesses = 0;
+  int loseRecords = 0;
+
+  static const _lost = SocietyRecordException(
+    'The server did not answer. Try again.',
+    status: 503,
+  );
+
+  @override
+  Future<SocietyBusiness> createBusiness(
+    String societyId,
+    BusinessInput input,
+  ) async {
+    final saved = await super.createBusiness(societyId, input);
+    if (loseBusinesses > 0) {
+      loseBusinesses--;
+      throw _lost;
+    }
+    return saved;
+  }
+
+  @override
+  Future<SavedProduction> createRecord(
+    String outputId,
+    ProductionInput input,
+  ) async {
+    final saved = await super.createRecord(outputId, input);
+    if (loseRecords > 0) {
+      loseRecords--;
+      throw _lost;
+    }
+    return saved;
+  }
+}
+
 /// A profile from an API that sends no latest figures (an older server).
 class _NoLatest extends DemoEconomyApi {
   _NoLatest({required super.user, required super.clock})
@@ -947,6 +987,106 @@ void main() {
         expect(dairy.version, 2, reason: 'the details were not sent twice');
         expect(dairy.outputs.where((o) => o.product == 'EGGS'), hasLength(1));
         expect(api.attempts, 2);
+      },
+    );
+
+    // Codex review: a business created on a try whose answer was lost is
+    // found again, and fields changed in the form since are sent, not
+    // dropped. Found by the name that was sent, even if renamed since.
+    for (final renamed in [false, true]) {
+      testWidgets('edits made after a lost business answer are saved'
+          '${renamed ? ' (renamed too)' : ''}', (tester) async {
+        late _LostAnswers api;
+        final store = _storeWith(
+          (user) =>
+              api = _LostAnswers(user: user, clock: () => _now)
+                ..loseBusinesses = 1,
+        );
+        await _pump(tester, store: store);
+        final before = (await api.fetchProfile(_pahala)).businesses.length;
+        await _tap(tester, find.byKey(const ValueKey('vep.addBusiness')));
+        final name = find.byKey(const ValueKey('vep.form.name'));
+        final description = find.byKey(const ValueKey('vep.form.description'));
+        await tester.enterText(name, 'Fictional Lost Dairy');
+        await _choose(
+          tester,
+          const ValueKey('vep.form.industry'),
+          'Livestock and dairy',
+        );
+        await tester.enterText(description, 'First description.');
+        await _tap(tester, find.byKey(const ValueKey('vep.form.save')));
+        expect(find.text('Business saved'), findsNothing);
+
+        // Changed while the first answer is unknown.
+        await tester.enterText(description, 'Second description.');
+        await _choose(tester, const ValueKey('vep.form.status'), 'Seasonal');
+        if (renamed) await tester.enterText(name, 'Fictional Lost Dairy Co-op');
+        await _tap(tester, find.byKey(const ValueKey('vep.form.save')));
+        expect(find.text('Business saved'), findsOneWidget);
+
+        final businesses = (await api.fetchProfile(_pahala)).businesses;
+        expect(businesses, hasLength(before + 1), reason: 'not created twice');
+        final dairy = businesses.singleWhere(
+          (b) => b.name.startsWith('Fictional Lost Dairy'),
+        );
+        expect(
+          dairy.name,
+          renamed ? 'Fictional Lost Dairy Co-op' : 'Fictional Lost Dairy',
+        );
+        expect(dairy.description, 'Second description.');
+        expect(dairy.status, 'SEASONAL');
+      });
+    }
+
+    // Codex review: a retry after a lost answer that changed only the note
+    // (or source, or season name) is not reported as already saved; it
+    // becomes a correction that keeps what was typed.
+    testWidgets(
+      'a retry with a changed note becomes a correction, not already saved',
+      (tester) async {
+        late _LostAnswers api;
+        final store = _storeWith(
+          (user) =>
+              api = _LostAnswers(user: user, clock: () => _now)
+                ..loseRecords = 1,
+        );
+        await _pump(tester, store: store);
+        final before = await _count(store, 'MILK');
+        await _recordMilk(tester);
+        await tester.enterText(_quantity(), '3200');
+        final note = find.byKey(const ValueKey('vep.production.note'));
+        await _reveal(tester, note);
+        await tester.enterText(note, 'First note.');
+        await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+        expect(find.text('Figure saved'), findsNothing);
+        expect(await _count(store, 'MILK'), before + 1);
+
+        await _reveal(tester, note);
+        await tester.enterText(note, 'Second note.');
+        await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+        expect(
+          find.text('This figure was already saved. Nothing was added twice.'),
+          findsNothing,
+        );
+        expect(find.text('This period already has a figure'), findsOneWidget);
+        await _tap(
+          tester,
+          find.byKey(const ValueKey('vep.production.correctInstead')),
+        );
+        expect(find.text('Correct Figure'), findsOneWidget);
+        expect(tester.widget<TextField>(_quantity()).controller!.text, '3200');
+        expect(tester.widget<TextField>(note).controller!.text, 'Second note.');
+        await _tap(tester, find.byKey(const ValueKey('vep.production.save')));
+        expect(find.text('Figure corrected'), findsOneWidget);
+
+        final milk = await _output(store, 'MILK');
+        final records = await api.fetchRecords(milk.id);
+        expect(records.total, before + 1, reason: 'nothing added twice');
+        final october = records.items.firstWhere(
+          (r) => formatDay(r.period.startsOn) == '2026-10-01',
+        );
+        expect(october.quantity, 3200);
+        expect(october.note, 'Second note.');
       },
     );
   });
