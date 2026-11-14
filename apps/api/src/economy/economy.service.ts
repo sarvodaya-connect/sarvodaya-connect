@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import type { Principal } from '../auth/principal.js';
+import { delegationEndsAt } from '../national/programme-scope.js';
 import { canViewSociety } from '../societies/society-access.policy.js';
 import {
   productDefinition,
@@ -21,6 +22,7 @@ import type {
   ProductionListQueryDto,
   ProductionRecordInputDto,
   ProductionSummaryQueryDto,
+  EconomyScopeQueryDto,
 } from './economy.dto.js';
 import {
   calendarDate,
@@ -28,6 +30,7 @@ import {
   parseCalendarDate,
   periodShape,
   sriLankaToday,
+  type Period,
 } from './economy.periods.js';
 import {
   assertCanManageEconomy,
@@ -36,6 +39,7 @@ import {
 } from './economy.policy.js';
 import {
   EconomyRepository,
+  MAX_SCOPE_SOCIETIES,
   type BusinessFields,
   type BusinessRow,
   type RecordRow,
@@ -130,6 +134,8 @@ function toListItem(record: RecordRow) {
     business: {
       id: record.output.business.id,
       name: record.output.business.name,
+      industry: record.output.business.industry,
+      otherIndustry: record.output.business.otherIndustry,
     },
     society: { id: society.id, name: society.nameEn },
   };
@@ -460,16 +466,32 @@ export class EconomyService {
       throw new BadRequestException('Enter dates as YYYY-MM-DD');
     if (from && to && to < from)
       throw new BadRequestException('The end date cannot be before the start');
+    // Issue #147: an exact period lists the same records a summary counts.
+    let exact: Period | undefined;
+    if (query.basis || query.startsOn || query.endsOn) {
+      if (!query.basis || !query.startsOn || !query.endsOn)
+        throw new BadRequestException(
+          'Send basis, startsOn and endsOn together for an exact period',
+        );
+      const shaped = periodShape(
+        { basis: query.basis, startsOn: query.startsOn, endsOn: query.endsOn },
+        { labelRequired: false },
+      );
+      if ('error' in shaped) throw new BadRequestException(shaped.error);
+      exact = shaped.period;
+    }
     const { page: current, pageSize } = page(query);
     const { rows, total } = await this.repository.listRecords(
       economyScopeFor(principal),
       {
         product: query.product,
+        industry: query.industry,
         districtId: query.districtId,
         societyId: query.societyId,
         measurement: query.measurement,
         from,
         to,
+        exact,
       },
       current,
       pageSize,
@@ -492,6 +514,7 @@ export class EconomyService {
       economyScopeFor(principal),
       {
         product: query.product,
+        industry: query.industry,
         districtId: query.districtId,
         societyId: query.societyId,
       },
@@ -528,6 +551,47 @@ export class EconomyService {
         businessName: row.businessName,
       })),
       lastUpdatedAt: iso(result.lastUpdatedAt),
+    };
+  }
+
+  /**
+   * GET /economic-profile/scope (issue #147): who the figures cover, and the
+   * districts and societies the caller may filter by. Worked out from the
+   * signed-in account on every request, like the figures themselves.
+   */
+  async scope(query: EconomyScopeQueryDto, principal: Principal) {
+    const scope = economyScopeFor(principal);
+    const kind = scope.national
+      ? ('NATIONAL' as const)
+      : principal.roles.includes('DISTRICT_MANAGER')
+        ? ('DISTRICT' as const)
+        : scope.districtIds.length
+          ? ('ASSIGNED_AND_DISTRICT' as const)
+          : ('ASSIGNED' as const);
+    const options = await this.repository.scopeOptions(scope, query.districtId);
+    const districts = options.districts.map((d) => ({
+      id: d.id,
+      name: d.nameEn,
+    }));
+    // A district outside the caller's scope gives no societies, never others.
+    const societies =
+      query.districtId && !districts.some((d) => d.id === query.districtId)
+        ? []
+        : options.societies.map((s) => ({
+            id: s.id,
+            name: s.nameEn,
+            districtId: s.districtId,
+          }));
+    return {
+      kind,
+      societyCount: options.societyCount,
+      temporaryAccessEndsAt: scope.national
+        ? null
+        : delegationEndsAt(principal, scope.districtIds),
+      districts,
+      canChooseDistrict: districts.length > 1,
+      societies,
+      societiesTruncated: options.societies.length >= MAX_SCOPE_SOCIETIES,
     };
   }
 }

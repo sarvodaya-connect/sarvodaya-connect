@@ -268,6 +268,53 @@ export interface OtherProductionRow {
 export interface ProductionRecordListItem extends ProductionRecord {
   product: EconomyProduct;
   otherDescription: string | null;
-  business: { id: string; name: string };
+  business: {
+    id: string;
+    name: string;
+    industry: EconomyIndustry;
+    otherIndustry: string | null;
+  };
   society: { id: string; name: string };
+}
+
+/**
+ * Query for both GET /economic-profile/production and (with `page` and
+ * `pageSize`) GET /economic-profile/production-records. The same values give
+ * the summary and exactly the records it counts. `districtId`, `societyId`
+ * and `industry` only narrow the caller's own scope.
+ */
+export interface ProductionQuery {
+  basis: ProductionBasis;
+  startsOn: CalendarDate;
+  endsOn: CalendarDate;
+  measurement?: ProductionMeasurement;
+  product?: EconomyProduct;
+  industry?: EconomyIndustry;
+  districtId?: string;
+  societyId?: string;
+}
+
+/**
+ * GET /economic-profile/scope (issue #147): who the figures cover and the
+ * filter choices. `societies` are those in scope with at least one business
+ * (within `districtId` when one is sent), at most 500.
+ */
+export interface EconomyFilterScope {
+  kind: "NATIONAL" | "DISTRICT" | "ASSIGNED" | "ASSIGNED_AND_DISTRICT";
+  /** Every society in scope, with or without businesses. */
+  societyCount: number;
+  /** A DDM's temporary district access ends then; otherwise null. */
+  temporaryAccessEndsAt: IsoDateTime | null;
+  districts: { id: string; name: string }[];
+  /** Only when there is more than one district to choose from. */
+  canChooseDistrict: boolean;
+  societies: { id: string; name: string; districtId: string }[];
+  societiesTruncated: boolean;
+}
+
+export interface Paged<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
 }

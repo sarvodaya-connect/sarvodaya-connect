@@ -28,7 +28,9 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
         t={t}
         tabs={[
           { href: base, label: t("sr.tab.overview") },
-          { count: record.committee.filter((member) => member.isActive).length, href: `${base}/exco`, label: "Exco" },
+          { count: record.committee.filter((member) => member.isActive).length, href: `${base}/exco`, label: t("sr.tab.membersExco") },
+          // Issue #147: read-only on the dashboard; entered on the phone. Same tab order as the phone app.
+          { href: `${base}/economy`, label: t("sr.tab.economy") },
           {
             count: plan?.activities.length,
             href: `${base}/work-plan`,

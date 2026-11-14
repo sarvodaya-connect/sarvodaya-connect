@@ -969,4 +969,133 @@ describe('Issue #145 Village Economic Profile (PostgreSQL)', () => {
       }),
     ).rejects.toThrow();
   });
+
+  it('filters by industry and lists exactly the period a summary counts (issue #147)', async () => {
+    const services = await summary(
+      'dmNorth',
+      `${OCTOBER_QUERY}&industry=SERVICES`,
+    );
+    expect(services.products.map((r) => r.product)).toEqual(['TAILORING_JOBS']);
+    const dairy = await summary(
+      'dmNorth',
+      `${OCTOBER_QUERY}&industry=LIVESTOCK_DAIRY`,
+    );
+    expect(dairy.products.map((r) => r.product)).toEqual(['MILK']);
+    // The River Farm's milk is under Agriculture, so it is not eligible here.
+    expect(dairy.products[0]).toMatchObject({
+      reportedQuantity: 3200.5,
+      coverage: { eligibleSocieties: 1, missingSocieties: 0 },
+    });
+
+    const listed = (
+      await get(
+        `/economic-profile/production-records?${OCTOBER_QUERY}&measurement=ACTUAL&pageSize=100`,
+        'dmNorth',
+      ).expect(200)
+    ).body as {
+      total: number;
+      items: {
+        startsOn: string;
+        endsOn: string;
+        measurement: string;
+        product: string;
+        business: { industry: string; otherIndustry: string | null };
+      }[];
+    };
+    expect(listed.items.length).toBe(listed.total);
+    expect(
+      listed.items.every(
+        (item) =>
+          item.startsOn === '2026-10-01' &&
+          item.endsOn === '2026-10-31' &&
+          item.measurement === 'ACTUAL',
+      ),
+    ).toBe(true);
+    // 2 milk, coconuts, the zero coconuts, tailoring and 2 Other.
+    expect(listed.total).toBe(7);
+    expect(
+      listed.items.find((item) => item.product === 'OTHER')?.business,
+    ).toMatchObject({
+      industry: 'OTHER',
+      otherIndustry: 'Fictional sweet making',
+    });
+    const tailoring = (
+      await get(
+        `/economic-profile/production-records?${OCTOBER_QUERY}&industry=SERVICES`,
+        'dmNorth',
+      ).expect(200)
+    ).body;
+    expect(tailoring.total).toBe(1);
+    await get(
+      '/economic-profile/production-records?basis=MONTHLY&startsOn=2026-10-01',
+      'dmNorth',
+    ).expect(400);
+    await get(
+      `/economic-profile/production?${OCTOBER_QUERY}&industry=MINING`,
+      'dmNorth',
+    ).expect(400);
+  });
+
+  it('offers only the districts and societies in scope as filter choices (issue #147)', async () => {
+    const scope = async (who: Who, query = '') =>
+      (await get(`/economic-profile/scope${query}`, who).expect(200)).body as {
+        kind: string;
+        societyCount: number;
+        canChooseDistrict: boolean;
+        temporaryAccessEndsAt: string | null;
+        districts: { id: string }[];
+        societies: { id: string }[];
+      };
+    const dm = await scope('dmNorth');
+    expect(dm).toMatchObject({
+      kind: 'DISTRICT',
+      societyCount: 2,
+      canChooseDistrict: false,
+      temporaryAccessEndsAt: null,
+    });
+    expect(dm.districts.map((d) => d.id)).toEqual([north]);
+    expect(dm.societies.map((s) => s.id).sort()).toEqual(
+      [society.n1, society.n2].sort(),
+    );
+    // Asking for another district gives nothing, not that district's societies.
+    expect(
+      (await scope('dmNorth', `?districtId=${central}`)).societies,
+    ).toEqual([]);
+
+    // The SPC covers two districts; Central's society has no business yet.
+    const spc = await scope('spc');
+    expect(spc).toMatchObject({
+      kind: 'ASSIGNED',
+      societyCount: 2,
+      canChooseDistrict: true,
+    });
+    expect(spc.societies.map((s) => s.id)).toEqual([society.n1]);
+
+    const ddm = await scope('ddm');
+    expect(ddm).toMatchObject({ kind: 'ASSIGNED', societyCount: 1 });
+    const valid = await grant(-1, 5);
+    const during = await scope('ddm');
+    expect(during).toMatchObject({
+      kind: 'ASSIGNED_AND_DISTRICT',
+      societyCount: 2,
+    });
+    expect(during.temporaryAccessEndsAt).not.toBeNull();
+    await db.districtAccessGrant.update({
+      where: { id: valid.id },
+      data: { revokedAt: new Date() },
+    });
+    expect(await scope('ddm')).toMatchObject({
+      kind: 'ASSIGNED',
+      societyCount: 1,
+    });
+
+    const hq = await scope('hq', `?districtId=${north}`);
+    expect(hq.kind).toBe('NATIONAL');
+    expect(hq.districts.map((d) => d.id)).toEqual(
+      expect.arrayContaining([north, central]),
+    );
+    expect(hq.societies.map((s) => s.id).sort()).toEqual(
+      [society.n1, society.n2].sort(),
+    );
+  });
 });

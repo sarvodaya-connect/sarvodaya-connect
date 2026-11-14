@@ -14,6 +14,8 @@ import type { EconomyScope } from './economy.policy.js';
 /** A society has a few businesses; these bound every list regardless. */
 const MAX_BUSINESSES = 100;
 const MAX_OTHER_ROWS = 200;
+/** Society filter choices; past this, choose a district first. */
+export const MAX_SCOPE_SOCIETIES = 500;
 
 const SOCIETY_SELECT = {
   id: true,
@@ -27,6 +29,8 @@ const OUTPUT_WITH_SOCIETY = {
     select: {
       id: true,
       name: true,
+      industry: true,
+      otherIndustry: true,
       status: true,
       closedAt: true,
       society: { select: SOCIETY_SELECT },
@@ -75,6 +79,8 @@ export interface CorrectionFields {
 
 export interface SummaryFilters {
   product?: string;
+  /** The business's industry. */
+  industry?: string;
   districtId?: string;
   societyId?: string;
 }
@@ -524,6 +530,8 @@ export class EconomyRepository {
     filters: SummaryFilters & {
       from?: Date;
       to?: Date;
+      /** Only records for exactly this period (issue #147). */
+      exact?: Period;
       measurement?: ProductionMeasurementValue;
     },
     page: number,
@@ -533,9 +541,19 @@ export class EconomyRepository {
       ...(filters.measurement ? { measurement: filters.measurement } : {}),
       ...(filters.from ? { periodEnd: { gte: filters.from } } : {}),
       ...(filters.to ? { periodStart: { lte: filters.to } } : {}),
+      ...(filters.exact
+        ? {
+            basis: filters.exact.basis,
+            periodStart: filters.exact.start,
+            periodEnd: filters.exact.end,
+          }
+        : {}),
       output: {
         ...(filters.product ? { product: filters.product } : {}),
-        business: { society: societyWhere(scope, filters) },
+        business: {
+          ...(filters.industry ? { industry: filters.industry } : {}),
+          society: societyWhere(scope, filters),
+        },
       },
     };
     return executeDatabaseOperation(async () => {
@@ -577,9 +595,16 @@ export class EconomyRepository {
     const inScope = societySql(scope, filters);
     const start = calendarDate(period.start);
     const end = calendarDate(period.end);
-    const product = filters.product
-      ? Prisma.sql`AND o.product = ${filters.product}`
-      : Prisma.empty;
+    // Product and industry narrow the totals and the eligible societies alike.
+    const product = Prisma.sql`${
+      filters.product
+        ? Prisma.sql`AND o.product = ${filters.product}`
+        : Prisma.empty
+    } ${
+      filters.industry
+        ? Prisma.sql`AND b.industry = ${filters.industry}`
+        : Prisma.empty
+    }`;
     const reports = Prisma.sql`
       SELECT r.quantity, r.updated_at, o.id AS output_id, o.product, o.unit,
              o.other_description, b.id AS business_id, b.name AS business_name,
@@ -691,6 +716,39 @@ export class EconomyRepository {
         })),
         lastUpdatedAt: latest?.at ?? null,
       };
+    });
+  }
+
+  /**
+   * Issue #147: the districts a caller may pick, and the societies in scope
+   * that have registered a business (the only ones with anything to show),
+   * optionally within one district.
+   */
+  async scopeOptions(scope: EconomyScope, districtId?: string) {
+    const where = societyWhere(scope, {});
+    return executeDatabaseOperation(async () => {
+      const [districts, societies, societyCount] =
+        await this.prisma.$transaction([
+          this.prisma.district.findMany({
+            where: scope.national ? {} : { societies: { some: where } },
+            select: { id: true, nameEn: true },
+            orderBy: { nameEn: 'asc' },
+          }),
+          this.prisma.society.findMany({
+            where: {
+              AND: [
+                where,
+                ...(districtId ? [{ districtId }] : []),
+                { businesses: { some: {} } },
+              ],
+            },
+            select: { id: true, nameEn: true, districtId: true },
+            orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+            take: MAX_SCOPE_SOCIETIES,
+          }),
+          this.prisma.society.count({ where }),
+        ]);
+      return { districts, societies, societyCount };
     });
   }
 }

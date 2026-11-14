@@ -24,7 +24,7 @@ const keys = Object.keys(en) as MessageKey[];
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 
 /** Same in every language on purpose: brand names, acronyms and pure placeholders. */
-const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "shell.sarvoai", "prog.sdgNumber"]);
+const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "shell.sarvoai", "prog.sdgNumber", "eco.period.range", "eco.period.season", "eco.history.by"]);
 
 describe.each(["si", "ta"] as const)("the %s catalog", (locale) => {
   const catalog = CATALOGS[locale];
