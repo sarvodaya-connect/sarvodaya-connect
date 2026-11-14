@@ -136,6 +136,7 @@ void main() {
     expect(labels, [
       'Overview',
       'Members & Exco',
+      'Village Economic Profile',
       'Work Plan',
       'Documents',
       'History',
@@ -221,7 +222,7 @@ void main() {
       expect(_text(tester, 'updated'), 'Last updated ${l.savedAt(demoNow)}');
       // The Overview says the same total.
       await _openTab(tester, 'Overview');
-      expect(find.text('42 · 25 female, 17 male'), findsOneWidget);
+      expectOverviewMembers(tester, '42', female: '25', male: '17');
     },
   );
 

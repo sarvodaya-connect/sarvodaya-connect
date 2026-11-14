@@ -1,5 +1,6 @@
 import 'motion/app_motion.dart';
 import 'national/national_screens.dart';
+import 'society_record/society_record_screen.dart' show RecordTab;
 import 'screens/live_societies_screen.dart';
 import 'home/home_screens.dart';
 import 'screens/notifications_screen.dart';
@@ -211,10 +212,10 @@ class HomeShell extends StatelessWidget {
               ? const IncidentsScreen()
               : const SizedBox.shrink(),
           selectedTab == OfficerTabs.exco
-              ? const LiveSocietiesScreen(initialTab: 1)
+              ? const LiveSocietiesScreen(initialTab: RecordTab.membersExco)
               : const SizedBox.shrink(),
           selectedTab == OfficerTabs.workPlan
-              ? const LiveSocietiesScreen(initialTab: 2)
+              ? const LiveSocietiesScreen(initialTab: RecordTab.workPlan)
               : const SizedBox.shrink(),
           const MoreScreen(),
         ],
