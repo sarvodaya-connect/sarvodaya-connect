@@ -24,6 +24,7 @@ class EconomicProfileTab extends StatefulWidget {
     super.key,
     required this.societyId,
     this.initialProfile,
+    this.sharedError,
     this.onLoaded,
   });
 
@@ -32,6 +33,10 @@ class EconomicProfileTab extends StatefulWidget {
   /// Issue #163: the profile the Overview already loaded, shown at once
   /// instead of being fetched a second time. Pull to refresh reloads it.
   final EconomicProfile? initialProfile;
+
+  /// The Overview's last load error. Only ended access (403 or 404) is
+  /// taken from it: the tab then clears its figures too.
+  final SocietyRecordException? sharedError;
 
   /// Told about every profile this tab loads, so the Overview stays current.
   final ValueChanged<EconomicProfile>? onLoaded;
@@ -54,6 +59,31 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
     super.initState();
     if (_profile == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
+
+  /// The tab is kept alive, so a profile the Overview refreshes later (pull
+  /// to refresh there) replaces the one this tab started with.
+  @override
+  void didUpdateWidget(EconomicProfileTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final fresh = widget.initialProfile;
+    if (fresh != null &&
+        !identical(fresh, oldWidget.initialProfile) &&
+        !identical(fresh, _profile)) {
+      setState(() {
+        _profile = fresh;
+        _error = null;
+      });
+    }
+    final shared = widget.sharedError;
+    if (shared != null &&
+        !identical(shared, oldWidget.sharedError) &&
+        (shared.status == 403 || shared.status == 404)) {
+      setState(() {
+        _profile = null;
+        _error = shared;
+      });
     }
   }
 

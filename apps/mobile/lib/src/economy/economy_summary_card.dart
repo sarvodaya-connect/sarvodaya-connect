@@ -68,9 +68,11 @@ class EconomySummaryCard extends StatelessWidget {
       ),
     );
 
+    // Access that has ended (403, or 404 after a grant expires) wins over
+    // any figures loaded earlier, as in the Village Economic Profile tab.
+    final ended = error != null && (error.status == 403 || error.status == 404);
     final List<Widget> body;
-    if (profile == null && error != null) {
-      final ended = error.status == 403 || error.status == 404;
+    if (error != null && (ended || profile == null)) {
       body = [
         RecordNote(
           icon: ended ? Icons.lock_outline : Icons.error_outline,

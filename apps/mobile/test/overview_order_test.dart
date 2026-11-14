@@ -35,9 +35,16 @@ class _CountingEconomy extends DemoEconomyApi {
   int profileRequests = 0;
   int failures = 0;
 
+  /// When set, every profile request is refused with this status, as when
+  /// a DDM's temporary grant has expired.
+  int? deniedStatus;
+
   @override
   Future<EconomicProfile> fetchProfile(String societyId) async {
     profileRequests++;
+    if (deniedStatus case final status?) {
+      throw SocietyRecordException('Not found', status: status);
+    }
     if (failures > 0) {
       failures--;
       throw const SocietyRecordException(
@@ -107,6 +114,17 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
+}
+
+/// Pull to refresh on the Overview, wherever it is scrolled to.
+Future<void> _refreshOverview(WidgetTester tester) async {
+  final indicator = find.ancestor(
+    of: find.byKey(const ValueKey('overview.society')),
+    matching: find.byType(RefreshIndicator),
+  );
+  final done = tester.state<RefreshIndicatorState>(indicator.first).show();
+  await tester.pumpAndSettle();
+  await done;
 }
 
 void main() {
@@ -223,6 +241,71 @@ void main() {
       findsOneWidget,
     );
   });
+
+  // Review fix: the Village Economic Profile tab is kept alive, so it must
+  // take the profile the Overview refreshes, not keep the first one.
+  testWidgets('an Overview refresh reaches the kept-alive profile tab', (
+    tester,
+  ) async {
+    final (_, economy) = await _pump(tester);
+    await _tap(tester, find.byKey(const ValueKey('overview.openEconomy')));
+    expect(find.text('Fictional Mat Weaving'), findsNothing);
+    await _tap(tester, find.text('Overview'));
+    // A business added elsewhere since the record opened.
+    await economy.createBusiness(
+      _pahala,
+      const BusinessInput(
+        name: 'Fictional Mat Weaving',
+        industry: 'LIVESTOCK_DAIRY',
+      ),
+    );
+    await _refreshOverview(tester);
+    expect(economy.profileRequests, 2);
+    await _tap(tester, find.byKey(const ValueKey('overview.openEconomy')));
+    expect(find.text('Fictional Mat Weaving'), findsOneWidget);
+    // Shown from the shared profile, not fetched again.
+    expect(economy.profileRequests, 2);
+  });
+
+  // Review fix: a refresh that is refused (403/404, e.g. an expired grant)
+  // clears figures loaded earlier, in the summary and in the tab.
+  for (final status in [403, 404]) {
+    testWidgets('a $status on refresh hides the figures loaded earlier', (
+      tester,
+    ) async {
+      final (_, economy) = await _pump(tester);
+      const figure = 'Latest actual · 3,100 litres · September 2026';
+      expect(find.text(figure), findsOneWidget);
+      await _tap(tester, find.byKey(const ValueKey('overview.openEconomy')));
+      expect(find.byKey(const ValueKey('vep.addBusiness')), findsOneWidget);
+      await _tap(tester, find.text('Overview'));
+      economy.deniedStatus = status;
+      await _refreshOverview(tester);
+      final card = find.byKey(const ValueKey('overview.economy'));
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.textContaining('You can no longer see'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text(figure)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Milk · Litres')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('overview.economyRetry')), findsNothing);
+      // The rest of the record stays.
+      expect(find.byKey(const ValueKey('overview.grade')), findsOneWidget);
+      await _tap(tester, find.byKey(const ValueKey('overview.openEconomy')));
+      expect(find.text('Economic profile not available'), findsOneWidget);
+      expect(find.byKey(const ValueKey('vep.addBusiness')), findsNothing);
+      expect(find.text(figure), findsNothing);
+    });
+  }
 
   testWidgets('read-only viewers keep their access rules', (tester) async {
     await _pump(tester, role: UserRole.districtManager);

@@ -94,7 +94,13 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
           .fetchProfile(widget.societyId);
       if (mounted) setState(() => _economy = profile);
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _economyError = error);
+      if (mounted) {
+        setState(() {
+          _economyError = error;
+          // Ended access clears the figures instead of keeping them on show.
+          if (error.status == 403 || error.status == 404) _economy = null;
+        });
+      }
     } finally {
       if (mounted) setState(() => _economyLoading = false);
     }
@@ -262,6 +268,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                         EconomicProfileTab(
                           societyId: record.id,
                           initialProfile: _economy,
+                          sharedError: _economyError,
                           onLoaded: _economyLoaded,
                         ),
                         _WorkPlanTab(record: record),
