@@ -20,9 +20,31 @@ import 'economy_widgets.dart';
 /// figure of each, with its period. Only the assigned Society Officer sees
 /// Add business; everyone else in scope sees the same figures, read only.
 class EconomicProfileTab extends StatefulWidget {
-  const EconomicProfileTab({super.key, required this.societyId});
+  const EconomicProfileTab({
+    super.key,
+    required this.societyId,
+    this.initialProfile,
+    this.sharedError,
+    this.onLoaded,
+    this.onAccessEnded,
+  });
 
   final String societyId;
+
+  /// Issue #163: the profile the Overview already loaded, shown at once
+  /// instead of being fetched a second time. Pull to refresh reloads it.
+  final EconomicProfile? initialProfile;
+
+  /// The Overview's last load error. Only ended access (403 or 404) is
+  /// taken from it: the tab then clears its figures too.
+  final SocietyRecordException? sharedError;
+
+  /// Told about every profile this tab loads, so the Overview stays current.
+  final ValueChanged<EconomicProfile>? onLoaded;
+
+  /// Told when this tab's own load is refused (403, or 404 once a grant has
+  /// ended), so the Overview clears its figures too.
+  final ValueChanged<SocietyRecordException>? onAccessEnded;
 
   @override
   State<EconomicProfileTab> createState() => _EconomicProfileTabState();
@@ -30,7 +52,7 @@ class EconomicProfileTab extends StatefulWidget {
 
 class _EconomicProfileTabState extends State<EconomicProfileTab>
     with AutomaticKeepAliveClientMixin {
-  EconomicProfile? _profile;
+  late EconomicProfile? _profile = widget.initialProfile;
   SocietyRecordException? _error;
   bool _loading = false;
 
@@ -40,7 +62,34 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    if (_profile == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
+
+  /// The tab is kept alive, so a profile the Overview refreshes later (pull
+  /// to refresh there) replaces the one this tab started with.
+  @override
+  void didUpdateWidget(EconomicProfileTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final fresh = widget.initialProfile;
+    if (fresh != null &&
+        !identical(fresh, oldWidget.initialProfile) &&
+        !identical(fresh, _profile)) {
+      setState(() {
+        _profile = fresh;
+        _error = null;
+      });
+    }
+    final shared = widget.sharedError;
+    if (shared != null &&
+        !identical(shared, oldWidget.sharedError) &&
+        (shared.status == 403 || shared.status == 404)) {
+      setState(() {
+        _profile = null;
+        _error = shared;
+      });
+    }
   }
 
   /// Keeps what is on screen while it reloads, so the list and its scroll
@@ -57,8 +106,12 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
       // from each output's whole history.
       final profile = await api.fetchProfile(widget.societyId);
       if (mounted) setState(() => _profile = profile);
+      widget.onLoaded?.call(profile);
     } on SocietyRecordException catch (error) {
       if (mounted) setState(() => _error = error);
+      if (error.status == 403 || error.status == 404) {
+        widget.onAccessEnded?.call(error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

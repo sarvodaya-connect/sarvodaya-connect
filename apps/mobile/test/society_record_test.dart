@@ -257,7 +257,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Edit Society Information'), findsNothing);
-      expect(find.text('42 · 25 female, 17 male'), findsOneWidget);
+      expectOverviewMembers(tester, '42', female: '25', male: '17');
       expect(find.text('037 000 0123'), findsOneWidget);
     });
 
@@ -272,7 +272,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard changes'));
       await tester.pumpAndSettle();
-      expect(find.text('412 · female/male not entered yet'), findsOneWidget);
+      expectOverviewMembers(
+        tester,
+        '412',
+        female: 'Not entered',
+        male: 'Not entered',
+      );
       expect(find.textContaining('501'), findsNothing);
     });
   });
