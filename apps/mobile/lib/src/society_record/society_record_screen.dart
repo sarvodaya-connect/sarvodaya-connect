@@ -116,6 +116,16 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
     }
   }
 
+  /// The tab's own refresh was refused: the summary drops its figures too.
+  void _economyAccessEnded(SocietyRecordException error) {
+    if (mounted) {
+      setState(() {
+        _economy = null;
+        _economyError = error;
+      });
+    }
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -270,6 +280,7 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                           initialProfile: _economy,
                           sharedError: _economyError,
                           onLoaded: _economyLoaded,
+                          onAccessEnded: _economyAccessEnded,
                         ),
                         _WorkPlanTab(record: record),
                         _DocumentsTab(record: record, open: _open),

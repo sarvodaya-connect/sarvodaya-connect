@@ -26,6 +26,7 @@ class EconomicProfileTab extends StatefulWidget {
     this.initialProfile,
     this.sharedError,
     this.onLoaded,
+    this.onAccessEnded,
   });
 
   final String societyId;
@@ -40,6 +41,10 @@ class EconomicProfileTab extends StatefulWidget {
 
   /// Told about every profile this tab loads, so the Overview stays current.
   final ValueChanged<EconomicProfile>? onLoaded;
+
+  /// Told when this tab's own load is refused (403, or 404 once a grant has
+  /// ended), so the Overview clears its figures too.
+  final ValueChanged<SocietyRecordException>? onAccessEnded;
 
   @override
   State<EconomicProfileTab> createState() => _EconomicProfileTabState();
@@ -104,6 +109,9 @@ class _EconomicProfileTabState extends State<EconomicProfileTab>
       widget.onLoaded?.call(profile);
     } on SocietyRecordException catch (error) {
       if (mounted) setState(() => _error = error);
+      if (error.status == 403 || error.status == 404) {
+        widget.onAccessEnded?.call(error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

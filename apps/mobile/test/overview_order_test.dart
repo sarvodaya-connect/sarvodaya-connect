@@ -269,6 +269,45 @@ void main() {
 
   // Review fix: a refresh that is refused (403/404, e.g. an expired grant)
   // clears figures loaded earlier, in the summary and in the tab.
+  // Codex review: a refusal on the tab's own refresh reaches the Overview,
+  // which then drops the figures it was showing.
+  for (final status in [403, 404]) {
+    testWidgets('a $status on the tab refresh clears the Overview too', (
+      tester,
+    ) async {
+      final (_, economy) = await _pump(tester);
+      const figure = 'Latest actual · 3,100 litres · September 2026';
+      await _tap(tester, find.byKey(const ValueKey('overview.openEconomy')));
+      economy.deniedStatus = status;
+      final indicator = find.ancestor(
+        of: find.byKey(const ValueKey('vep.addBusiness')),
+        matching: find.byType(RefreshIndicator),
+      );
+      final done = tester.state<RefreshIndicatorState>(indicator.first).show();
+      await tester.pumpAndSettle();
+      await done;
+      expect(find.text('Economic profile not available'), findsOneWidget);
+      await _tap(tester, find.text('Overview'));
+      final card = find.byKey(const ValueKey('overview.economy'));
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.textContaining('You can no longer see'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text(figure)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Milk · Litres')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('overview.grade')), findsOneWidget);
+    });
+  }
+
   for (final status in [403, 404]) {
     testWidgets('a $status on refresh hides the figures loaded earlier', (
       tester,
