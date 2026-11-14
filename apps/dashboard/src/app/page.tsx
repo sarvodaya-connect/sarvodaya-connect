@@ -27,14 +27,14 @@ export default async function Home() {
           D01: left-aligned, one line per language. Sizes use the panel's width (cqw), not the
           window's, so each line keeps fitting the panel instead of wrapping on smaller screens.
         */}
-        <blockquote className="mb-10 w-full space-y-1 text-left font-normal leading-[1.6] text-[#f7f6ee] [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] md:mb-[clamp(3rem,10vh,6rem)] md:pl-[4.6cqw]">
-          <p className="whitespace-nowrap text-[3.95cqw] [font-family:var(--font-noto-sinhala),sans-serif]" lang="si">
+        <blockquote className="mb-10 w-full space-y-1 text-left font-normal leading-[1.6] text-[#f7f6ee] [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] md:mb-8">
+          <p className="whitespace-nowrap text-[3.05cqw] [font-family:var(--font-noto-sinhala),sans-serif]" lang="si">
             මනුෂ්‍යත්වයේ උදාවක් ~ පරිවර්තනීය ප්‍රජාවක්
           </p>
-          <p className="whitespace-nowrap text-[3.35cqw] [font-family:var(--font-noto-tamil),sans-serif]" lang="ta">
+          <p className="whitespace-nowrap text-[2.6cqw] [font-family:var(--font-noto-tamil),sans-serif]" lang="ta">
             மனித நேயத்தின் எழுச்சி ~ மாற்றம் பெறும் சமூகம்
           </p>
-          <p className="whitespace-nowrap text-[4.4cqw] italic tracking-[-0.01em] [font-family:'Times_New_Roman',Times,'Liberation_Serif',serif]" lang="en">
+          <p className="whitespace-nowrap text-[3.4cqw] italic tracking-[-0.01em] [font-family:'Times_New_Roman',Times,'Liberation_Serif',serif]" lang="en">
             Awakening Humanity ~ Transforming Community
           </p>
         </blockquote>
