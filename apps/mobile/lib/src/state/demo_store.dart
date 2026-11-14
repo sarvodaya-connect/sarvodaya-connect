@@ -1,3 +1,5 @@
+import '../economy/demo_economy_api.dart';
+import '../economy/economy_api.dart';
 import '../home/home_api.dart';
 import '../national/demo_national_api.dart';
 import '../national/national_api.dart';
@@ -87,6 +89,7 @@ class DemoStore extends ChangeNotifier {
     DistrictAccessApi? districtAccessApi,
     IncidentApi? incidentApi,
     QueueStorage? assessmentStorage,
+    EconomyApi? economyApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
     this.languageChosen = false,
@@ -166,6 +169,16 @@ class DemoStore extends ChangeNotifier {
       api: () => incidents,
       clock: _clock,
     );
+    economy =
+        economyApi ??
+        (isDemo
+            ? DemoEconomyApi(
+                user: () => _user,
+                clock: _clock,
+                delay: loadDelay,
+                isOnline: () => !offline,
+              )
+            : HttpEconomyApi(this.identityApi));
     this.documentPicker =
         documentPicker ??
         (isDemo ? const DemoDocumentPicker() : const DeviceDocumentPicker());
@@ -220,6 +233,10 @@ class DemoStore extends ChangeNotifier {
 
   /// Issue #125: rapid assessments saved on this phone until the API has them.
   late final AssessmentQueue assessments;
+
+  /// Issue #146 Village Economic Profile (#145 API): only the assigned
+  /// Society Officer writes on the server.
+  late final EconomyApi economy;
 
   /// Chooses the audit report file to upload (M13a).
   late final DocumentPicker documentPicker;
