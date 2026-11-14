@@ -51,6 +51,10 @@ enum QueueProblem {
 
   /// The server refused the answers.
   rejected,
+
+  /// A photo saved with it can no longer be read on this phone (damaged, or
+  /// it fails decryption). Retrying cannot help, so it waits to be removed.
+  photoUnreadable,
 }
 
 extension QueueProblemRetry on QueueProblem {
@@ -59,7 +63,8 @@ extension QueueProblemRetry on QueueProblem {
   bool get blocked =>
       this == QueueProblem.noAccess ||
       this == QueueProblem.closed ||
-      this == QueueProblem.rejected;
+      this == QueueProblem.rejected ||
+      this == QueueProblem.photoUnreadable;
 }
 
 QueueProblem problemOf(IncidentException error) {
@@ -482,6 +487,13 @@ class EncryptedFileQueueStorage implements QueueStorage {
   }
 }
 
+/// A saved photo that could not be read back (missing, damaged, or failing
+/// decryption), so that one assessment can be set apart from the rest.
+class _UnreadablePhoto implements Exception {
+  const _UnreadablePhoto(this.cause);
+  final Object cause;
+}
+
 /// What one round of sending did.
 class SyncResult {
   const SyncResult({this.sent = 0, this.waiting = 0, this.blocked = 0});
@@ -738,7 +750,12 @@ class AssessmentQueue extends ChangeNotifier {
               status: 401,
             );
           }
-          final bytes = await _storage.readPhoto(account, photo.ref);
+          final List<int> bytes;
+          try {
+            bytes = await _storage.readPhoto(account, photo.ref);
+          } catch (error) {
+            throw _UnreadablePhoto(error);
+          }
           await api.addPhoto(
             assessmentId,
             PickedDocument(
@@ -780,6 +797,17 @@ class AssessmentQueue extends ChangeNotifier {
         // No point trying the rest without a connection or a session.
         stop =
             problem == QueueProblem.offline || problem == QueueProblem.signIn;
+      } on _UnreadablePhoto catch (error) {
+        // Only this assessment is affected: mark it and go on to the next.
+        debugPrint('A saved photo could not be read: ${error.cause}');
+        await _replace(
+          account,
+          item.copyWith(
+            problem: QueueProblem.photoUnreadable,
+            attempts: item.attempts + 1,
+            lastAttemptAt: _clock(),
+          ),
+        );
       } on FileSystemException catch (error) {
         await _replace(
           account,

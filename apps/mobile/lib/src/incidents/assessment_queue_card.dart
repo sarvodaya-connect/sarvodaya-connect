@@ -17,6 +17,7 @@ String queueProblemText(AppLocalizations l, QueuedAssessment item) {
     QueueProblem.noAccess => l.aqNoAccess,
     QueueProblem.closed => l.aqClosed,
     QueueProblem.rejected => l.aqRejected(item.message ?? ''),
+    QueueProblem.photoUnreadable => l.aqPhotoUnreadable,
   };
   return item.assessmentId != null && item.photosLeft > 0
       ? '${l.aqReceivedPhotosLeft(item.photosLeft)} $text'

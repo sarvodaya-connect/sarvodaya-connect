@@ -1064,16 +1064,13 @@ export class EmergenciesService {
         'Only people who look after this society can add photos',
       );
     }
-    if (assessment._count.evidence >= MAX_EVIDENCE_PER_RECORD) {
-      throw new BadRequestException(
-        `An assessment can have at most ${MAX_EVIDENCE_PER_RECORD} photos`,
-      );
-    }
     return this.createEvidence(input, principal, {
       incidentId: assessment.incidentId,
       societyId: assessment.societyId,
       assessmentId,
       kind: 'assessments',
+      count: assessment._count.evidence,
+      limitMessage: `An assessment can have at most ${MAX_EVIDENCE_PER_RECORD} photos`,
     });
   }
 
@@ -1090,16 +1087,13 @@ export class EmergenciesService {
         'Only the helping society and HQ can add delivery photos',
       );
     }
-    if (helper._count.evidence >= MAX_EVIDENCE_PER_RECORD) {
-      throw new BadRequestException(
-        `A delivery can have at most ${MAX_EVIDENCE_PER_RECORD} photos`,
-      );
-    }
     return this.createEvidence(input, principal, {
       incidentId: helper.action.incidentId,
       societyId: helper.helperSocietyId,
       helperId,
       kind: 'deliveries',
+      count: helper._count.evidence,
+      limitMessage: `A delivery can have at most ${MAX_EVIDENCE_PER_RECORD} photos`,
     });
   }
 
@@ -1175,6 +1169,9 @@ export class EmergenciesService {
       assessmentId?: string;
       helperId?: string;
       kind: 'assessments' | 'deliveries';
+      /** Evidence records the assessment or delivery already has. */
+      count: number;
+      limitMessage: string;
     },
   ) {
     const maxBytes = maxUploadBytes(
@@ -1184,6 +1181,46 @@ export class EmergenciesService {
       throw new BadRequestException(
         `The file is larger than ${Math.round(maxBytes / 1_000_000)} MB. Choose a smaller PDF or photo.`,
       );
+    }
+    // Issue #125: a retry of an upload that was cut off is the same file
+    // again. It reuses that unfinished record, with a new upload link, so
+    // retries never use up the photo limit.
+    const pending = input.checksumSha256
+      ? await executeDatabaseOperation(() =>
+          this.prisma.emergencyEvidence.findFirst({
+            where: {
+              assessmentId: target.assessmentId ?? null,
+              helperId: target.helperId ?? null,
+              uploadedById: principal.id,
+              uploadedAt: null,
+              contentType: input.contentType,
+              sizeBytes: input.sizeBytes,
+              checksumSha256: input.checksumSha256,
+            },
+            orderBy: { createdAt: 'desc' },
+          }),
+        )
+      : null;
+    if (pending) {
+      const upload = await this.withStorage(() =>
+        this.storage.createUploadRequest({
+          key: pending.storageKey,
+          contentType: input.contentType,
+          sizeBytes: input.sizeBytes,
+          checksumSha256: input.checksumSha256!,
+        }),
+      );
+      return {
+        evidence: {
+          id: pending.id,
+          contentType: input.contentType,
+          sizeBytes: input.sizeBytes,
+        },
+        upload,
+      };
+    }
+    if (target.count >= MAX_EVIDENCE_PER_RECORD) {
+      throw new BadRequestException(target.limitMessage);
     }
     const id = randomUUID();
     // Keys hold only ids generated here, never names or other personal data.

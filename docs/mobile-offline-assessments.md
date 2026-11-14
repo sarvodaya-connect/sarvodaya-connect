@@ -28,6 +28,7 @@ Nothing is sent in the background after the app is closed.
 | 403 or 404 | You can no longer send this for this society… | Kept as blocked; the user can retry or remove it |
 | 409 "closed" | The incident was closed before this arrived | Kept as blocked |
 | Other 4xx | The server did not accept it, with its reason | Kept as blocked |
+| A saved photo can't be read on the phone (damaged, or fails decryption) | A saved photo can't be read on this phone… | Only that item is kept as blocked; the rest of the queue is still sent |
 
 "Remove from this phone" is on every saved item, whether it is waiting or blocked, and is turned off while a round of sending runs. It asks first, then deletes the answers and photos. The API checks permissions, the incident's state and temporary access again on every attempt.
 
@@ -37,7 +38,9 @@ Nothing is sent in the background after the app is closed.
   - A retry, even after a lost response, returns the same assessment with `replayed: true`.
   - Two copies of the same send arriving together are also confirmed: the one that loses the race reads back the assessment the other recorded, instead of failing with a database error.
   - The repeat is checked before the incident's state and the user's current access, so an assessment already received is confirmed even if the incident has since closed or the user lost access. A new assessment in that situation is still refused.
-- **Photos:** a photo whose upload was cut off is uploaded again on the next try. The photo upload endpoint has no mutation id, so a retry after a lost response can leave an unfinished upload record on the server. It is never marked as uploaded and is not shown.
+- **Photos:** a photo whose upload was cut off is uploaded again on the next try.
+  - The retry reuses the unfinished upload record for the same file (same uploader, assessment, type, size and SHA-256), with a new upload link. Retries therefore never use up the 10-photo limit.
+  - If the confirmation of a finished upload is lost, the retry creates a second record for the same photo. The endpoint has no mutation id to prevent this.
 
 ## Where the data is kept
 

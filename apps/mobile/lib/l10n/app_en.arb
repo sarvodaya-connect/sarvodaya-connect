@@ -2526,6 +2526,7 @@
   "aqSignIn": "Sign in again to send it.",
   "aqNoAccess": "You can no longer send this for this society, for example because temporary district access ended. Ask your DM or HQ.",
   "aqClosed": "The incident was closed before this arrived.",
+  "aqPhotoUnreadable": "A saved photo can't be read on this phone. Remove this assessment and send it again.",
   "aqRejected": "The server did not accept it: {reason}",
   "@aqRejected": {
     "placeholders": {

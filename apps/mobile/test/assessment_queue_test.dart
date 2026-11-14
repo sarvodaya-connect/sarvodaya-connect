@@ -498,6 +498,32 @@ void main() {
     );
   });
 
+  test('a damaged photo blocks only its own assessment', () async {
+    final q = queue();
+    final damaged = await save(q, photos: 1);
+    final next = await save(q);
+    final photo = root
+        .listSync(recursive: true)
+        .whereType<File>()
+        .singleWhere((f) => f.path.endsWith(damaged.photos.single.ref));
+    final bytes = [...photo.readAsBytesSync()]..[20] ^= 0xff;
+    photo.writeAsBytesSync(bytes);
+
+    final result = await q.sync();
+    expect(result.sent, 1);
+    expect(result.blocked, 1);
+    expect(api.received.keys, [
+      damaged.clientMutationId,
+      next.clientMutationId,
+    ]);
+    final left = q.items.single;
+    expect(left.clientMutationId, damaged.clientMutationId);
+    expect(left.problem, QueueProblem.photoUnreadable);
+    expect(left.blocked, isTrue);
+    // Kept as it is, for the user to remove.
+    expect(left.photosLeft, 1);
+  });
+
   test('photos saved together share one key and can all be read', () async {
     final slowKeys = _SlowKeyStore();
     final storage = EncryptedFileQueueStorage(
