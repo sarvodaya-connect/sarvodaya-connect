@@ -64,7 +64,7 @@ describe("dashboard sign-in with Cognito", () => {
   it("signs in with Cognito, asks the API who this is, and keeps the tokens in httpOnly cookies", async () => {
     fetchMock.mockResolvedValueOnce(cognitoReply(signedIn));
     api.platformApi.mockResolvedValueOnce({ id: "u1", roles: ["DISTRICT_MANAGER"] });
-    await expect(login({}, form(" Fictional.DM ", "fictional-pass-1"))).rejects.toMatchObject({ path: "/dashboard" });
+    await expect(login({}, form(" Fictional.DM ", "fictional-pass-1"))).rejects.toMatchObject({ path: "/welcome" });
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).AuthParameters.USERNAME).toBe("fictional.dm");
     expect(api.platformApi).toHaveBeenCalledWith("/identity/me", { headers: { Authorization: "Bearer a.b.c" } });
     expect(api.platformApi).not.toHaveBeenCalledWith("/identity/login", expect.anything());
@@ -128,7 +128,7 @@ describe("dashboard sign-in in local development", () => {
 
   it("uses the API's local sign-in and stores no refresh token", async () => {
     api.platformApi.mockResolvedValueOnce({ token: "localtoken", user: { roles: ["HQ_ADMIN"] } });
-    await expect(login({}, form("dev.hq", "dev-pass-123"))).rejects.toMatchObject({ path: "/dashboard" });
+    await expect(login({}, form("dev.hq", "dev-pass-123"))).rejects.toMatchObject({ path: "/welcome" });
     expect(api.platformApi).toHaveBeenCalledWith("/identity/login", expect.objectContaining({ method: "POST" }));
     expect(jar.get("sc_session")?.value).toBe("localtoken");
     expect(jar.has("sc_refresh")).toBe(false);

@@ -10,6 +10,8 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const FIELD_PATHS = [
   /^\/$/,
   /^\/dashboard$/,
+  // The same post-sign-in tribute for every supported desktop role.
+  /^\/welcome$/,
   /^\/my-societies$/,
   // Issue #118: Membership for the user's own scope; the API limits the figures.
   /^\/membership$/,

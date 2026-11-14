@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 
-import { DASHBOARD_ENTRY_PATH, DASHBOARD_URL } from "./dashboard-url";
+import { DASHBOARD_URL } from "./dashboard-url";
 import { HeroScrubFrames } from "./hero-scrub";
 
 const CONTACT_EMAIL = "info@sarvodayaconnect.com";
@@ -306,7 +306,7 @@ function SiteHeader() {
 
         <a
           className="group inline-flex shrink-0 items-center gap-2 rounded-button bg-brand-action px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(212,86,14,0.7)] transition hover:-translate-y-0.5 hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-orange-ring"
-          href={DASHBOARD_ENTRY_PATH}
+          href={DASHBOARD_URL}
         >
           Go To Dashboard
           <Icon className="size-4 transition-transform group-hover:translate-x-1" name="arrow" />
@@ -689,7 +689,7 @@ function Platforms() {
             </p>
             <a
               className="group mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#ffab70] underline-offset-4 hover:underline"
-              href={DASHBOARD_ENTRY_PATH}
+              href={DASHBOARD_URL}
             >
               Go To Dashboard
               <Icon className="size-4 transition-transform group-hover:translate-x-1" name="arrow" />
