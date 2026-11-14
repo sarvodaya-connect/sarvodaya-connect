@@ -163,14 +163,15 @@ class _PendingAssessmentsCardState extends State<PendingAssessmentsCard> {
                             : AppColors.inkBody,
                       ),
                     ),
-                    if (item.blocked || item.problem == QueueProblem.rejected)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: queue.syncing ? null : () => _remove(item),
-                          child: Text(l.aqRemove),
-                        ),
+                    // Any saved assessment can be removed, not only blocked
+                    // ones; never while a round of sending is running.
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: queue.syncing ? null : () => _remove(item),
+                        child: Text(l.aqRemove),
                       ),
+                    ),
                   ],
                   const SizedBox(height: 8),
                   SizedBox(

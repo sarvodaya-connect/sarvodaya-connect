@@ -482,6 +482,42 @@ export class EmergenciesService {
     // The replay is looked up first, among this user's own sends only, so an
     // assessment already received is confirmed even if the incident has since
     // closed or the user's temporary district access has ended.
+    const replay = await this.assessmentReplay(id, input, principal);
+    if (replay) return replay;
+    const incident = await this.visibleIncident(id, viewingScope(principal));
+    this.assertActive(incident);
+    const society = await this.areaSociety(input.societyId, incident);
+    if (!coversSociety(actingScope(principal), society)) {
+      throw new ForbiddenException(
+        'You can send an assessment only for a society you look after',
+      );
+    }
+    let record;
+    try {
+      record = await this.recordAssessment(incident, society, input, principal);
+    } catch (error) {
+      // Two sends of the same assessment arrived together and the other one
+      // was recorded first: confirm that one instead of failing this retry.
+      const cause = (error as { cause?: unknown }).cause ?? error;
+      if (isUniqueViolation(cause)) {
+        const raced = await this.assessmentReplay(id, input, principal);
+        if (raced) return raced;
+      }
+      throw error;
+    }
+    return {
+      id: record.id,
+      sentAt: record.createdAt.toISOString(),
+      replayed: false,
+    };
+  }
+
+  /** The assessment this user already sent with this clientMutationId. */
+  private async assessmentReplay(
+    id: string,
+    input: SendAssessmentDto,
+    principal: Principal,
+  ) {
     const replay = await executeDatabaseOperation(() =>
       this.prisma.emergencyAssessment.findUnique({
         where: {
@@ -492,27 +528,26 @@ export class EmergenciesService {
         },
       }),
     );
-    if (replay) {
-      if (replay.incidentId !== id || replay.societyId !== input.societyId) {
-        throw new ConflictException(
-          'This assessment ID was already used for another society',
-        );
-      }
-      return {
-        id: replay.id,
-        sentAt: replay.createdAt.toISOString(),
-        replayed: true,
-      };
-    }
-    const incident = await this.visibleIncident(id, viewingScope(principal));
-    this.assertActive(incident);
-    const society = await this.areaSociety(input.societyId, incident);
-    if (!coversSociety(actingScope(principal), society)) {
-      throw new ForbiddenException(
-        'You can send an assessment only for a society you look after',
+    if (!replay) return null;
+    if (replay.incidentId !== id || replay.societyId !== input.societyId) {
+      throw new ConflictException(
+        'This assessment ID was already used for another society',
       );
     }
-    const record = await executeDatabaseOperation(() =>
+    return {
+      id: replay.id,
+      sentAt: replay.createdAt.toISOString(),
+      replayed: true,
+    };
+  }
+
+  private recordAssessment(
+    incident: Awaited<ReturnType<EmergenciesService['visibleIncident']>>,
+    society: Awaited<ReturnType<EmergenciesService['areaSociety']>>,
+    input: SendAssessmentDto,
+    principal: Principal,
+  ) {
+    return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         const created = await tx.emergencyAssessment.create({
           data: {
@@ -552,11 +587,6 @@ export class EmergenciesService {
         return created;
       }),
     );
-    return {
-      id: record.id,
-      sentAt: record.createdAt.toISOString(),
-      replayed: false,
-    };
   }
 
   /** V5 IR04, M49: close an incident. Records who closed it and when. */

@@ -497,6 +497,31 @@ void main() {
       isEmpty,
     );
   });
+
+  test('photos saved together share one key and can all be read', () async {
+    final slowKeys = _SlowKeyStore();
+    final storage = EncryptedFileQueueStorage(
+      keys: slowKeys,
+      root: () async => root,
+    );
+    final refs = await Future.wait([
+      for (var i = 0; i < 3; i++)
+        storage.putPhoto('account-a', 'photo-$i.jpg', List.filled(32, i)),
+    ]);
+    expect(slowKeys.writes, 1);
+    for (var i = 0; i < 3; i++) {
+      expect(await storage.readPhoto('account-a', refs[i]), List.filled(32, i));
+    }
+    // A new storage object (the app after a relaunch) reads them too.
+    final relaunched = EncryptedFileQueueStorage(
+      keys: slowKeys,
+      root: () async => root,
+    );
+    expect(
+      await relaunched.readPhoto('account-a', refs[2]),
+      List.filled(32, 2),
+    );
+  });
 }
 
 /// Reading the queue fails while [failReads] is set, as a passing storage
@@ -539,4 +564,22 @@ class _FlakyStorage implements QueueStorage {
   @override
   Future<void> deletePhoto(String accountId, String ref) =>
       _inner.deletePhoto(accountId, ref);
+}
+
+/// The phone's key store answers after a moment, as the real Keychain does.
+class _SlowKeyStore extends MemoryQueueKeyStore {
+  int writes = 0;
+
+  @override
+  Future<List<int>?> read(String name) async {
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    return super.read(name);
+  }
+
+  @override
+  Future<void> write(String name, List<int> key) async {
+    writes++;
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    return super.write(name, key);
+  }
 }

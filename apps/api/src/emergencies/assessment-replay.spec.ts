@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Principal } from '../auth/principal.js';
@@ -114,5 +118,63 @@ describe('sending the same assessment again (issue #125)', () => {
       svc.sendAssessment(INCIDENT, input, ddm),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('confirms the other send when two copies arrive together', async () => {
+    const officer: Principal = {
+      id: 'so-1',
+      displayName: 'Fictional Officer',
+      roles: ['HQ_ADMIN'],
+      districtIds: [],
+      societyIds: [],
+    };
+    const { svc, prisma } = service(null);
+    const existing = {
+      id: 'a1',
+      incidentId: INCIDENT,
+      societyId: SOCIETY,
+      createdAt: new Date('2026-11-10T03:00:00Z'),
+    };
+    // Not there when this send looked, there once the other one committed.
+    prisma.emergencyAssessment.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(existing as never);
+    const internals = svc as unknown as Record<string, unknown>;
+    internals.visibleIncident = vi.fn(async () => ({ id: INCIDENT }));
+    internals.assertActive = vi.fn();
+    internals.areaSociety = vi.fn(async () => ({
+      id: SOCIETY,
+      districtId: 'district-1',
+    }));
+    prisma.$transaction.mockRejectedValueOnce(
+      Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+    );
+    await expect(svc.sendAssessment(INCIDENT, input, officer)).resolves.toEqual(
+      { id: 'a1', sentAt: '2026-11-10T03:00:00.000Z', replayed: true },
+    );
+    expect(prisma.emergencyAssessment.findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it('still reports a database failure that is not a repeat', async () => {
+    const officer: Principal = {
+      id: 'so-1',
+      displayName: 'Fictional Officer',
+      roles: ['HQ_ADMIN'],
+      districtIds: [],
+      societyIds: [],
+    };
+    const { svc, prisma } = service(null);
+    const internals = svc as unknown as Record<string, unknown>;
+    internals.visibleIncident = vi.fn(async () => ({ id: INCIDENT }));
+    internals.assertActive = vi.fn();
+    internals.areaSociety = vi.fn(async () => ({
+      id: SOCIETY,
+      districtId: 'district-1',
+    }));
+    prisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+    await expect(
+      svc.sendAssessment(INCIDENT, input, officer),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(prisma.emergencyAssessment.findUnique).toHaveBeenCalledTimes(1);
   });
 });

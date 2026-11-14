@@ -358,7 +358,22 @@ class EncryptedFileQueueStorage implements QueueStorage {
     return folder;
   }
 
-  Future<SecretKey> _key(String accountId) async {
+  /// One key lookup per account at a time. Without this, two photos saved
+  /// together could each find no key, create different ones, and leave the
+  /// photo encrypted with the key that lost unreadable.
+  final _keyLoads = <String, Future<SecretKey>>{};
+
+  Future<SecretKey> _key(String accountId) =>
+      _keyLoads[accountId] ??= _loadKey(accountId).then(
+        (key) => key,
+        onError: (Object error, StackTrace stack) {
+          // Try again next time instead of keeping the failure.
+          _keyLoads.remove(accountId);
+          Error.throwWithStackTrace(error, stack);
+        },
+      );
+
+  Future<SecretKey> _loadKey(String accountId) async {
     final name = 'sc.assessmentQueue.${accountFolder(accountId)}';
     final existing = await _keys.read(name);
     if (existing != null) return SecretKey(existing);

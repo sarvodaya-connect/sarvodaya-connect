@@ -29,19 +29,20 @@ Nothing is sent in the background after the app is closed.
 | 409 "closed" | The incident was closed before this arrived | Kept as blocked |
 | Other 4xx | The server did not accept it, with its reason | Kept as blocked |
 
-"Remove from this phone" asks first and deletes the answers and photos. The API checks permissions, the incident's state and temporary access again on every attempt.
+"Remove from this phone" is on every saved item, whether it is waiting or blocked, and is turned off while a round of sending runs. It asks first, then deletes the answers and photos. The API checks permissions, the incident's state and temporary access again on every attempt.
 
 ## Duplicates
 
 - **Assessments:** each assessment keeps one `clientMutationId` for every retry. The API stores one assessment per user and id.
   - A retry, even after a lost response, returns the same assessment with `replayed: true`.
+  - Two copies of the same send arriving together are also confirmed: the one that loses the race reads back the assessment the other recorded, instead of failing with a database error.
   - The repeat is checked before the incident's state and the user's current access, so an assessment already received is confirmed even if the incident has since closed or the user lost access. A new assessment in that situation is still refused.
 - **Photos:** a photo whose upload was cut off is uploaded again on the next try. The photo upload endpoint has no mutation id, so a retry after a lost response can leave an unfinished upload record on the server. It is never marked as uploaded and is not shown.
 
 ## Where the data is kept
 
 - **Folder:** each account has its own folder in the app's private support directory (`assessment-queue/<hash of the account id>`).
-- **Encryption:** the queue and each photo are encrypted with AES-256-GCM. Each account's key is in the iOS Keychain or the Android Keystore-backed secure storage (`flutter_secure_storage`).
+- **Encryption:** the queue and each photo are encrypted with AES-256-GCM. Each account's key is in the iOS Keychain or the Android Keystore-backed secure storage (`flutter_secure_storage`). The key is created once per account, even when several photos are saved at the same moment.
 - **Other accounts:** another account on the same phone reads only its own folder. It cannot decrypt anyone else's files.
 - **Sign-out:** the saved items stay encrypted on the phone so the same person can send them after signing in again. Nothing of them is kept in memory.
   - Sending stops as soon as the account that saved an item signs out, including in the middle of a photo upload. Each request is checked just before it leaves, so nothing is ever sent with the next account's sign-in.

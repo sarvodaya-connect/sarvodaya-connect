@@ -274,6 +274,30 @@ void main() {
     },
   );
 
+  testWidgets('a saved assessment that is only waiting can be removed', (
+    tester,
+  ) async {
+    final api = _OfflineIncidentApi(clock: () => demoNow);
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(tester, const IncidentsScreen(), api: api);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await store.assessments.sync();
+    await tester.pumpAndSettle();
+    expect(store.assessments.items.single.blocked, isFalse);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+    await _tap(tester, find.text('Remove from this phone'));
+    await _tap(tester, find.widgetWithText(FilledButton, 'Remove'));
+    expect(store.assessments.items, isEmpty);
+    expect(find.text('1 assessment saved on this phone'), findsNothing);
+  });
+
   testWidgets('a closed incident keeps the assessment and explains why', (
     tester,
   ) async {
