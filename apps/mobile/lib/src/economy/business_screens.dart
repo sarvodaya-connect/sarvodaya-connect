@@ -661,6 +661,10 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
 
   /// The business saved by this form, once it has been.
   SocietyBusiness? _saved;
+
+  /// What the last create sent. After a lost answer the business is looked
+  /// up by this name, even if the name box has changed since.
+  BusinessInput? _attempted;
   bool _detailsSaved = false;
   bool _uncertain = false;
   bool _submitted = false;
@@ -693,8 +697,11 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
   }
 
   /// The business fields that differ from what the form opened with.
-  Map<String, Object?> get _changes {
-    final business = widget.business;
+  Map<String, Object?> get _changes => _changesFrom(widget.business);
+
+  /// The business fields that differ from [business]; with no business,
+  /// every field.
+  Map<String, Object?> _changesFrom(SocietyBusiness? business) {
     final otherIndustry = _industry == 'OTHER' ? _text(_otherIndustry) : null;
     if (business == null) {
       return {
@@ -744,10 +751,13 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
       _industryError == null &&
       _otherIndustryError == null;
 
-  /// After an answer was lost, the business may have been created already.
+  /// After an answer was lost, the business may have been created already
+  /// (or, once known, changed since). Looks it up as the server has it now.
   Future<SocietyBusiness?> _findCreated(EconomyApi api) async {
     final profile = await api.fetchProfile(widget.societyId);
-    final name = _name.text.trim().toLowerCase();
+    final known = _saved;
+    if (known != null) return profile.business(known.id) ?? known;
+    final name = (_attempted?.name ?? _name.text.trim()).toLowerCase();
     return profile.businesses
         .where(
           (b) =>
@@ -787,19 +797,31 @@ class _BusinessFormScreenState extends State<BusinessFormScreen> {
     final api = DemoScope.read(context).economy;
     try {
       var business = _saved ?? widget.business;
-      if (!_editing && _saved == null) {
-        if (_uncertain) _saved = await _findCreated(api);
-        _saved ??= await api.createBusiness(
-          widget.societyId,
-          BusinessInput(
+      if (!_editing && !_detailsSaved) {
+        var saved = _saved;
+        if (_uncertain) saved = _saved = await _findCreated(api);
+        if (saved == null) {
+          final input = _attempted = BusinessInput(
             name: _name.text.trim(),
             industry: _industry!,
-            otherIndustry: _text(_otherIndustry),
+            otherIndustry: _industry == 'OTHER' ? _text(_otherIndustry) : null,
             description: _text(_description),
             status: _status,
-          ),
-        );
-        business = _saved;
+          );
+          saved = _saved = await api.createBusiness(widget.societyId, input);
+        } else {
+          // Found after a lost answer: anything changed in the form since
+          // the first try is sent now, never dropped.
+          final changes = _changesFrom(saved);
+          if (changes.isNotEmpty) {
+            saved = _saved = await api.updateBusiness(
+              saved.id,
+              saved.version,
+              changes,
+            );
+          }
+        }
+        business = saved;
         _detailsSaved = true;
       } else if (_editing && !_detailsSaved && _changes.isNotEmpty) {
         business = _saved = await api.updateBusiness(

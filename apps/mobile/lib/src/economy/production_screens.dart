@@ -270,11 +270,18 @@ class _ProductionFormScreenState extends State<ProductionFormScreen> {
 
   void _correctInstead(ProductionRecord record) {
     setState(() {
-      final typed = _quantity.text;
+      final typed = [
+        _quantity,
+        _note,
+        _source,
+        _seasonLabel,
+      ].map((c) => c.text).toList();
       _correcting = record;
       _fill(record);
-      // Keep the figure the officer typed; it is what they mean to save.
-      if (typed.trim().isNotEmpty) _quantity.text = typed;
+      // Keep what the officer typed; it is what they mean to save.
+      for (final (i, c) in [_quantity, _note, _source, _seasonLabel].indexed) {
+        if (typed[i].trim().isNotEmpty) c.text = typed[i];
+      }
       _overlap = false;
       _serverError = null;
     });
@@ -361,8 +368,17 @@ class _ProductionFormScreenState extends State<ProductionFormScreen> {
         ),
       );
       if (!mounted) return;
-      if (!saved.created && saved.record.quantity != value) {
-        // The period already had another figure: correcting it is the way.
+      final record = saved.record;
+      final same =
+          record.quantity == value &&
+          record.note == _text(_note) &&
+          record.source == _text(_source) &&
+          (period.basis != 'SEASONAL' ||
+              record.period.seasonLabel == _text(_seasonLabel));
+      if (!saved.created && !same) {
+        // The period already has a figure that differs from what was typed,
+        // in the quantity or in its note, source or season name (also after
+        // a lost answer): correcting it is the way, nothing is dropped.
         setState(() {
           _saving = false;
           _known[output.id] = [saved.record, ...?_known[output.id]];
