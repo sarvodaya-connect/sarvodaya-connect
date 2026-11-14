@@ -493,13 +493,21 @@ abstract class IncidentApi {
 
   /// Sends one assessment online, then its photos. A retry with the same
   /// [clientMutationId] returns the update already received.
+  ///
+  /// [stillSignedIn] is checked before each request: when it is false the
+  /// account that saved the work has signed out, and nothing more is sent.
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  );
-  Future<void> addPhoto(String assessmentId, PickedDocument photo);
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  });
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+  });
   Future<void> updateDelivery(
     String helperId, {
     required HelperStatus status,
@@ -531,9 +539,15 @@ class HttpIncidentApi implements IncidentApi {
     String path, {
     String method = 'GET',
     Map<String, dynamic>? body,
+    bool Function()? stillSignedIn,
   }) async {
     try {
-      return await _api.request(path, method: method, body: body);
+      return await _api.request(
+        path,
+        method: method,
+        body: body,
+        stillSignedIn: stillSignedIn,
+      );
     } on IdentityError catch (error) {
       throw IncidentException(error.message, status: error.status);
     } on AuthNetworkException {
@@ -589,18 +603,24 @@ class HttpIncidentApi implements IncidentApi {
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
     final sent = await _call(
       '/emergencies/incidents/$incidentId/assessments',
       method: 'POST',
       body: answers.toJson(clientMutationId, societyId),
+      stillSignedIn: stillSignedIn,
     ) as Map<String, dynamic>;
     return sent['id'] as String;
   }
 
   /// Pre-signed upload straight to storage, then the API checks the size.
-  Future<void> _upload(String path, PickedDocument file) async {
+  Future<void> _upload(
+    String path,
+    PickedDocument file, {
+    bool Function()? stillSignedIn,
+  }) async {
     final created = await _call(
       path,
       method: 'POST',
@@ -609,6 +629,7 @@ class HttpIncidentApi implements IncidentApi {
         'sizeBytes': file.sizeBytes,
         'checksumSha256': sha256Base64(file.bytes),
       },
+      stillSignedIn: stillSignedIn,
     ) as Map<String, dynamic>;
     final evidence = created['evidence'] as Map<String, dynamic>;
     final upload = created['upload'] as Map<String, dynamic>;
@@ -619,6 +640,9 @@ class HttpIncidentApi implements IncidentApi {
     (upload['headers'] as Map? ?? const {}).forEach(
       (key, value) => request.headers['$key'] = '$value',
     );
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again to send this.', status: 401);
+    }
     try {
       final response = await _uploadClient.send(request);
       if (response.statusCode >= 300) {
@@ -637,12 +661,20 @@ class HttpIncidentApi implements IncidentApi {
       '/emergencies/evidence/${evidence['id']}/complete',
       method: 'POST',
       body: const {},
+      stillSignedIn: stillSignedIn,
     );
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) =>
-      _upload('/emergencies/assessments/$assessmentId/evidence', photo);
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+  }) => _upload(
+    '/emergencies/assessments/$assessmentId/evidence',
+    photo,
+    stillSignedIn: stillSignedIn,
+  );
 
   @override
   Future<void> updateDelivery(

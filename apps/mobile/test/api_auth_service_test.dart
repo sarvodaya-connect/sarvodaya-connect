@@ -106,4 +106,31 @@ void main() {
       );
     });
   });
+
+  test('a request for an account that signed out is never sent', () async {
+    var sent = 0;
+    var signedOut = 0;
+    final api =
+        IdentityApi(
+            baseUrl: 'http://test.invalid',
+            client: MockClient((r) async {
+              sent++;
+              return http.Response('{}', 200);
+            }),
+          )
+          ..token = 'next-account-token'
+          ..onUnauthorized = () => signedOut++;
+    await expectLater(
+      api.request(
+        '/emergencies/assessments/a/evidence',
+        method: 'POST',
+        stillSignedIn: () => false,
+      ),
+      throwsA(isA<IdentityError>().having((e) => e.status, 'status', 401)),
+    );
+    expect(sent, 0);
+    // The next account's own session is untouched.
+    expect(api.token, 'next-account-token');
+    expect(signedOut, 0);
+  });
 }

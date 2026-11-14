@@ -48,7 +48,14 @@ class _PendingAssessmentsCardState extends State<PendingAssessmentsCard> {
   Future<void> _retry() async {
     final l = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
-    final result = await DemoScope.read(context).assessments.sync();
+    final SyncResult result;
+    try {
+      result = await DemoScope.read(context).assessments.sync();
+    } catch (error) {
+      // Each item keeps its own state in the card; nothing more to show.
+      debugPrint('Saved assessments were not sent: $error');
+      return;
+    }
     if (!mounted) return;
     if (result.sent > 0) {
       messenger.showSnackBar(SnackBar(content: Text(l.aqSent(result.sent))));

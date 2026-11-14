@@ -1244,9 +1244,10 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
       _error = null;
       _status = l.aqSaving;
     });
+    final QueuedAssessment saved;
     try {
       // Saved before any attempt to send, so a dropped connection loses nothing.
-      await queue.save(
+      saved = await queue.save(
         incident: widget.incident,
         societyId: society.id,
         societyName: society.name,
@@ -1265,10 +1266,23 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
     }
     if (!mounted) return;
     setState(() => _status = l.aqSyncing);
-    await queue.sync();
-    final left = queue.items
-        .where((item) => item.clientMutationId == _clientMutationId)
-        .firstOrNull;
+    // A failure while sending (for example, the phone's storage is full) is
+    // not a failure to save: the answers are on the phone already.
+    var syncFailed = false;
+    try {
+      await queue.sync();
+    } catch (error) {
+      debugPrint('The saved assessment was not sent: $error');
+      syncFailed = true;
+    }
+    if (!mounted) return;
+    // This assessment is the newest in the queue, so it is sent last: if
+    // sending stopped with an error, it is still saved on the phone.
+    final left =
+        queue.items
+            .where((item) => item.clientMutationId == _clientMutationId)
+            .firstOrNull ??
+        (syncFailed ? saved : null);
     if (left != null) {
       if (mounted) {
         setState(() {

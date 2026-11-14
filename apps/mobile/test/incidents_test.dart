@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sarvodaya_connect_mobile/src/incidents/assessment_queue.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/demo_incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_format.dart';
@@ -26,8 +29,9 @@ class _OfflineIncidentApi extends DemoIncidentApi {
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
     attempts++;
     ids.add(clientMutationId);
     if (refusal != null) throw refusal!;
@@ -43,7 +47,22 @@ class _OfflineIncidentApi extends DemoIncidentApi {
       societyId,
       clientMutationId,
       answers,
+      stillSignedIn: stillSignedIn,
     );
+  }
+}
+
+/// The phone's storage fills up after [writes] successful queue writes.
+class _FillingStorage extends MemoryQueueStorage {
+  _FillingStorage({required this.writes});
+  int writes;
+
+  @override
+  Future<void> writeQueue(String accountId, String json) async {
+    if (writes-- <= 0) {
+      throw const FileSystemException('No space left on device');
+    }
+    return super.writeQueue(accountId, json);
   }
 }
 
@@ -51,6 +70,7 @@ Future<DemoStore> _pump(
   WidgetTester tester,
   Widget home, {
   IncidentApi? api,
+  QueueStorage? assessmentStorage,
   UserRole role = UserRole.societyOfficer,
 }) async {
   tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
@@ -60,6 +80,7 @@ Future<DemoStore> _pump(
     loadDelay: Duration.zero,
     clock: () => demoNow,
     incidentApi: api ?? DemoIncidentApi(clock: () => demoNow),
+    assessmentStorage: assessmentStorage,
   )..switchDemoRole(role);
   await tester.pumpWidget(
     DemoScope(
@@ -222,6 +243,34 @@ void main() {
       expect(store.assessments.items, isEmpty);
       expect(api.ids, [id, id, id]);
       expect(api.received, 1);
+    },
+  );
+
+  testWidgets(
+    'a storage error while sending still shows the assessment as saved',
+    (tester) async {
+      final api = DemoIncidentApi(clock: () => demoNow);
+      final detail = await api.detail('incident-demo');
+      final store = await _pump(
+        tester,
+        RapidAssessmentScreen(
+          incident: detail.incident,
+          societies: detail.assessableSocieties,
+        ),
+        api: api,
+        // The save works; recording progress afterwards does not.
+        assessmentStorage: _FillingStorage(writes: 1),
+      );
+      await _tap(tester, find.text('Critical'));
+      for (var i = 0; i < 9; i++) {
+        await _tap(tester, find.text('Next'));
+      }
+      await _tap(tester, find.text('Check answers'));
+      await _tap(tester, find.text('Send assessment'));
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(store.assessments.items, hasLength(1));
     },
   );
 

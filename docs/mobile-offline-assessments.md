@@ -44,7 +44,13 @@ Nothing is sent in the background after the app is closed.
 - **Encryption:** the queue and each photo are encrypted with AES-256-GCM. Each account's key is in the iOS Keychain or the Android Keystore-backed secure storage (`flutter_secure_storage`).
 - **Other accounts:** another account on the same phone reads only its own folder. It cannot decrypt anyone else's files.
 - **Sign-out:** the saved items stay encrypted on the phone so the same person can send them after signing in again. Nothing of them is kept in memory.
-- **Reinstall:** if the key is lost, for example after a reinstall, the old files cannot be read. They are left alone and treated as empty.
+  - Sending stops as soon as the account that saved an item signs out, including in the middle of a photo upload. Each request is checked just before it leaves, so nothing is ever sent with the next account's sign-in.
+  - A 401 during a send marks the item "Sign in again" and keeps every other saved item.
+- **One change at a time:** saving, sending progress and removing all update the queue in turn, each starting from the latest queue, so none of them overwrites another.
+- **Unreadable queue:** if the queue cannot be read, it is never written over.
+  - The next save sets the old file aside (`queue.set-aside-*.bin`) and starts a new queue.
+  - Each time the queue loads, set-aside items are added back if they can be read again, for example after a passing storage error.
+  - If the key is lost for good (for example after a reinstall or a restore to another phone), the old file stays aside, unread.
 - **Demonstration mode:** the queue is kept in memory only.
 
 ## Device check

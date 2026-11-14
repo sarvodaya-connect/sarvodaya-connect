@@ -227,6 +227,16 @@ class QueuedAssessment {
 abstract interface class QueueStorage {
   Future<String?> readQueue(String accountId);
   Future<void> writeQueue(String accountId, String json);
+
+  /// Keeps a queue that cannot be read under another name, so a new queue
+  /// never overwrites it.
+  Future<void> setAsideQueue(String accountId);
+
+  /// The queues set aside earlier that can be read now, by name. Ones that
+  /// still cannot be read are left where they are.
+  Future<Map<String, String>> readSetAside(String accountId);
+  Future<void> deleteSetAside(String accountId, String name);
+
   Future<String> putPhoto(String accountId, String name, List<int> bytes);
   Future<List<int>> readPhoto(String accountId, String ref);
   Future<void> deletePhoto(String accountId, String ref);
@@ -235,6 +245,7 @@ abstract interface class QueueStorage {
 /// Demonstration mode and tests: nothing is written to the phone.
 class MemoryQueueStorage implements QueueStorage {
   final _queues = <String, String>{};
+  final _setAside = <String, Map<String, String>>{};
   final _photos = <String, List<int>>{};
   var _next = 0;
 
@@ -244,6 +255,22 @@ class MemoryQueueStorage implements QueueStorage {
   @override
   Future<void> writeQueue(String accountId, String json) async =>
       _queues[accountId] = json;
+
+  @override
+  Future<void> setAsideQueue(String accountId) async {
+    final queue = _queues.remove(accountId);
+    if (queue != null) {
+      (_setAside[accountId] ??= {})['set-aside-${_next++}'] = queue;
+    }
+  }
+
+  @override
+  Future<Map<String, String>> readSetAside(String accountId) async =>
+      Map.of(_setAside[accountId] ?? const {});
+
+  @override
+  Future<void> deleteSetAside(String accountId, String name) async =>
+      _setAside[accountId]?.remove(name);
 
   @override
   Future<String> putPhoto(
@@ -377,6 +404,44 @@ class EncryptedFileQueueStorage implements QueueStorage {
     await _writeAtomically(file, await _encrypt(accountId, utf8.encode(json)));
   }
 
+  static final _setAsideName = RegExp(r'^queue\.set-aside-[0-9]+-[0-9]+\.bin$');
+
+  @override
+  Future<void> setAsideQueue(String accountId) async {
+    final folder = await _folder(accountId);
+    final file = File('${folder.path}/queue.bin');
+    if (!await file.exists()) return;
+    await file.rename(
+      '${folder.path}/queue.set-aside-'
+      '${DateTime.now().microsecondsSinceEpoch}-${_next++}.bin',
+    );
+  }
+
+  @override
+  Future<Map<String, String>> readSetAside(String accountId) async {
+    final folder = await _folder(accountId);
+    final found = <String, String>{};
+    await for (final entry in folder.list()) {
+      final name = entry.uri.pathSegments.last;
+      if (entry is! File || !_setAsideName.hasMatch(name)) continue;
+      try {
+        found[name] = utf8.decode(
+          await _decrypt(accountId, await entry.readAsBytes()),
+        );
+      } catch (error) {
+        debugPrint('A set-aside queue still cannot be read: $error');
+      }
+    }
+    return found;
+  }
+
+  @override
+  Future<void> deleteSetAside(String accountId, String name) async {
+    if (!_setAsideName.hasMatch(name)) return;
+    final file = File('${(await _folder(accountId)).path}/$name');
+    if (await file.exists()) await file.delete();
+  }
+
   @override
   Future<String> putPhoto(
     String accountId,
@@ -446,23 +511,72 @@ class AssessmentQueue extends ChangeNotifier {
 
   bool get syncing => _syncing != null;
 
-  /// Reads the signed-in account's queue. A queue that cannot be read (for
-  /// example after the app was reinstalled and its key is gone) is kept on
-  /// disk untouched and treated as empty.
+  /// Reads the signed-in account's queue.
+  ///
+  /// A queue that cannot be read (a passing storage error, or a key lost
+  /// after the phone was restored) is never treated as a loaded empty queue:
+  /// nothing is marked loaded, so the next load tries again, and the first
+  /// change sets the file aside rather than writing over it. Queues set aside
+  /// earlier are added back as soon as they can be read.
   Future<List<QueuedAssessment>> load() => _serialized(() async {
     final account = _accountId();
     if (account == null) {
       forget();
       return const <QueuedAssessment>[];
     }
-    final stored = await _readStored(account);
+    var stored = await _readStored(account);
+    if (stored != null) stored = await _recoverSetAside(account, stored);
     // Signed out or switched account while reading: keep nothing in memory.
     if (_accountId() != account) return const <QueuedAssessment>[];
     _items = stored ?? const [];
-    _loadedFor = account;
+    _loadedFor = stored == null ? null : account;
     notifyListeners();
     return _items;
   });
+
+  /// Adds back the assessments from queues set aside earlier that can be
+  /// read now, then removes those set-aside copies.
+  Future<List<QueuedAssessment>> _recoverSetAside(
+    String account,
+    List<QueuedAssessment> stored,
+  ) async {
+    final Map<String, String> setAside;
+    try {
+      setAside = await _storage.readSetAside(account);
+    } catch (error) {
+      debugPrint('Set-aside queues could not be read: $error');
+      return stored;
+    }
+    if (setAside.isEmpty) return stored;
+    final merged = [...stored];
+    final recovered = <String>[];
+    for (final MapEntry(key: name, value: json) in setAside.entries) {
+      try {
+        final items = [
+          for (final item in jsonDecode(json) as List)
+            QueuedAssessment.fromJson(Map<String, dynamic>.from(item as Map)),
+        ];
+        for (final item in items) {
+          if (!merged.any((i) => i.clientMutationId == item.clientMutationId)) {
+            merged.add(item);
+          }
+        }
+        recovered.add(name);
+      } catch (error) {
+        debugPrint('A set-aside queue could not be read: $error');
+      }
+    }
+    if (recovered.isEmpty) return stored;
+    merged.sort((a, b) => a.savedAt.compareTo(b.savedAt));
+    await _storage.writeQueue(
+      account,
+      jsonEncode([for (final item in merged) item.toJson()]),
+    );
+    for (final name in recovered) {
+      await _storage.deleteSetAside(account, name);
+    }
+    return merged;
+  }
 
   /// The account's queue as saved on the phone; null if it cannot be read.
   Future<List<QueuedAssessment>?> _readStored(String account) async {
@@ -492,14 +606,21 @@ class AssessmentQueue extends ChangeNotifier {
   /// If the account signed out or changed while this was running (a 401
   /// during a send signs the user out), memory no longer holds this account's
   /// queue, so the change starts from what is saved on the phone instead and
-  /// every saved assessment is kept for the next sign-in. A saved queue that
-  /// cannot be read is left untouched.
+  /// every saved assessment is kept for the next sign-in.
+  ///
+  /// A saved queue that cannot be read is never written over. Once signed
+  /// out it is left untouched; for the signed-in account it is set aside (and
+  /// added back once it can be read), and the change starts a new queue.
   Future<void> _update(
     String account,
     List<QueuedAssessment> Function(List<QueuedAssessment> current) change,
   ) => _serialized(() async {
-    final current = _loadedFor == account ? _items : await _readStored(account);
-    if (current == null) return;
+    var current = _loadedFor == account ? _items : await _readStored(account);
+    if (current == null) {
+      if (_accountId() != account) return;
+      await _storage.setAsideQueue(account);
+      current = const [];
+    }
     final next = change(current);
     await _storage.writeQueue(
       account,
@@ -574,9 +695,12 @@ class AssessmentQueue extends ChangeNotifier {
     notifyListeners();
     var sent = 0;
     var stop = false;
+    // Every request in this round is for this account only. Once it signs
+    // out, nothing more is sent, even if someone else has signed in since.
+    bool stillSignedIn() => _accountId() == account;
     for (final saved in List.of(_items)) {
       // The account changed while sending: stop, and never mix queues.
-      if (stop || _accountId() != account) break;
+      if (stop || !stillSignedIn()) break;
       var item = saved;
       try {
         final api = _api();
@@ -587,11 +711,18 @@ class AssessmentQueue extends ChangeNotifier {
             item.societyId,
             item.clientMutationId,
             AssessmentAnswers.fromJson(item.answers),
+            stillSignedIn: stillSignedIn,
           );
           item = item.copyWith(assessmentId: assessmentId);
           await _replace(account, item);
         }
         for (final photo in item.photos.where((p) => !p.sent).toList()) {
+          if (!stillSignedIn()) {
+            throw const IncidentException(
+              'Sign in again to send this.',
+              status: 401,
+            );
+          }
           final bytes = await _storage.readPhoto(account, photo.ref);
           await api.addPhoto(
             assessmentId,
@@ -600,6 +731,7 @@ class AssessmentQueue extends ChangeNotifier {
               bytes: bytes,
               contentType: photo.contentType,
             ),
+            stillSignedIn: stillSignedIn,
           );
           item = item.copyWith(
             photos: [

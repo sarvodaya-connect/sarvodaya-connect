@@ -197,13 +197,22 @@ class DemoIncidentApi implements IncidentApi {
     }
   }
 
+  /// As the real API: nothing is sent once the account has signed out.
+  void _requireSignedIn(bool Function()? stillSignedIn) {
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again to send this.', status: 401);
+    }
+  }
+
   @override
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    _requireSignedIn(stillSignedIn);
     _requireOnline();
     final replay = _byMutation[clientMutationId];
     if (replay != null) return replay;
@@ -222,7 +231,12 @@ class DemoIncidentApi implements IncidentApi {
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) async {
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+  }) async {
+    _requireSignedIn(stillSignedIn);
     _requireOnline();
     final index = _updates.indexWhere((u) => u.id == assessmentId);
     if (index < 0) return;

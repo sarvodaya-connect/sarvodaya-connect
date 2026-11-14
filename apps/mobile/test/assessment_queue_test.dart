@@ -32,15 +32,23 @@ class _FakeApi extends DemoIncidentApi {
   /// Runs inside a send before it answers, to act while it is in flight.
   Future<void> Function(String clientMutationId)? beforeSend;
 
+  /// Runs inside a photo upload before it checks the session.
+  Future<void> Function()? beforePhoto;
+  int photoCalls = 0;
+
   @override
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
     sendCalls++;
     await beforeSend?.call(clientMutationId);
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again', status: 401);
+    }
     if (offline) {
       throw const IncidentException('offline', offline: true);
     }
@@ -59,7 +67,16 @@ class _FakeApi extends DemoIncidentApi {
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) async {
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+  }) async {
+    photoCalls++;
+    await beforePhoto?.call();
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again', status: 401);
+    }
     if (photoOffline) {
       throw const IncidentException('offline', offline: true);
     }
@@ -397,4 +414,129 @@ void main() {
       saved.map((i) => i.clientMutationId).toSet(),
     );
   });
+
+  test(
+    'nothing more is sent once the account changes during a photo upload',
+    () async {
+      final q = queue();
+      final item = await save(q, photos: 2);
+      // Account A signs out and B signs in while the first photo is going up.
+      api.beforePhoto = () async {
+        account = 'account-b';
+        q.forget();
+      };
+      await q.sync();
+      expect(api.received.keys, [item.clientMutationId]);
+      expect(api.photos, isEmpty);
+      expect(api.photoCalls, 1);
+      expect(q.items, isEmpty);
+
+      // A signs in again: both photos are still saved and are sent.
+      account = 'account-a';
+      api.beforePhoto = null;
+      final again = queue();
+      final kept = await again.load();
+      expect(kept.single.problem, QueueProblem.signIn);
+      expect(kept.single.photosLeft, 2);
+      await again.sync();
+      expect(api.photos['assessment-${item.clientMutationId}'], 2);
+      expect(again.items, isEmpty);
+    },
+  );
+
+  test('an unreadable queue is set aside, not written over', () async {
+    final first = await save(queue());
+    final file = root
+        .listSync(recursive: true)
+        .whereType<File>()
+        .singleWhere((f) => f.path.endsWith('queue.bin'));
+    final damaged = [...file.readAsBytesSync()]..[40] ^= 0xff;
+    file.writeAsBytesSync(damaged);
+
+    final q = queue();
+    expect(await q.load(), isEmpty);
+    final second = await save(q);
+    expect(q.items.map((i) => i.clientMutationId), [second.clientMutationId]);
+    final setAside = root
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.contains('queue.set-aside-'))
+        .single;
+    expect(setAside.readAsBytesSync(), damaged);
+    expect(
+      (await queue().load()).map((i) => i.clientMutationId),
+      isNot(contains(first.clientMutationId)),
+    );
+  });
+
+  test('a queue that could not be read for a moment comes back', () async {
+    final storage = _FlakyStorage(
+      EncryptedFileQueueStorage(keys: keys, root: () async => root),
+    );
+    AssessmentQueue flakyQueue() => AssessmentQueue(
+      storage: storage,
+      accountId: () => account,
+      api: () => api,
+      clock: () => demoNow,
+    );
+    final first = await save(flakyQueue());
+
+    storage.failReads = true;
+    final q = flakyQueue();
+    expect(await q.load(), isEmpty);
+    final second = await save(q);
+    storage.failReads = false;
+
+    final items = await flakyQueue().load();
+    expect(items.map((i) => i.clientMutationId).toSet(), {
+      first.clientMutationId,
+      second.clientMutationId,
+    });
+    expect(
+      root.listSync(recursive: true).where((f) => f.path.contains('set-aside')),
+      isEmpty,
+    );
+  });
+}
+
+/// Reading the queue fails while [failReads] is set, as a passing storage
+/// error would.
+class _FlakyStorage implements QueueStorage {
+  _FlakyStorage(this._inner);
+  final QueueStorage _inner;
+  bool failReads = false;
+
+  @override
+  Future<String?> readQueue(String accountId) {
+    if (failReads) throw const FileSystemException('Storage busy');
+    return _inner.readQueue(accountId);
+  }
+
+  @override
+  Future<void> writeQueue(String accountId, String json) =>
+      _inner.writeQueue(accountId, json);
+
+  @override
+  Future<void> setAsideQueue(String accountId) =>
+      _inner.setAsideQueue(accountId);
+
+  @override
+  Future<Map<String, String>> readSetAside(String accountId) async =>
+      failReads ? const {} : _inner.readSetAside(accountId);
+
+  @override
+  Future<void> deleteSetAside(String accountId, String name) =>
+      _inner.deleteSetAside(accountId, name);
+
+  @override
+  Future<String> putPhoto(String accountId, String name, List<int> bytes) =>
+      _inner.putPhoto(accountId, name, bytes);
+
+  @override
+  Future<List<int>> readPhoto(String accountId, String ref) =>
+      _inner.readPhoto(accountId, ref);
+
+  @override
+  Future<void> deletePhoto(String accountId, String ref) =>
+      _inner.deletePhoto(accountId, ref);
 }
