@@ -94,7 +94,7 @@ export async function login(
     console.error(`Sign-in is not configured: ${e instanceof Error ? e.message : "unknown error"}`);
     return { error: SIGN_IN_UNAVAILABLE, username };
   }
-  redirect("/dashboard");
+  redirect("/welcome");
 }
 
 /** Removes every sign-in cookie. */
