@@ -7,6 +7,49 @@ typedef Json = Map<String, dynamic>;
 
 int _int(Object? value) => (value as num?)?.toInt() ?? 0;
 
+/// Issue #141: the current member counts on the profiles of the active
+/// societies in view, from `profile` in `/national/membership` (HQ) or
+/// `/home/membership` (DM, DDM, SPC). Kept apart from the yearly category
+/// counts and never added to them.
+class ProfileMembership {
+  const ProfileMembership({
+    this.societies = 0,
+    this.members = 0,
+    this.withoutBreakdown = 0,
+    this.withSplit = 0,
+    this.female = 0,
+    this.male = 0,
+  });
+
+  factory ProfileMembership.fromJson(Json? json) => ProfileMembership(
+    societies: _int(json?['societies']),
+    members: _int(json?['members']),
+    withoutBreakdown: _int(json?['withoutBreakdown']),
+    withSplit: _int(json?['withSplit']),
+    female: _int(json?['female']),
+    male: _int(json?['male']),
+  );
+
+  /// Active societies with a profile member total.
+  final int societies;
+
+  /// Their totals added together, including those with no split yet.
+  final int members;
+
+  /// Of those, societies without category counts for the membership year.
+  final int withoutBreakdown;
+
+  /// Societies whose female and male members are entered.
+  final int withSplit;
+
+  /// Female and male added over the [withSplit] societies only.
+  final int female;
+  final int male;
+
+  /// Societies with a total but no female/male split yet.
+  int get totalOnly => societies - withSplit;
+}
+
 class GradeCounts {
   const GradeCounts({this.a = 0, this.b = 0, this.c = 0, this.ungraded = 0});
 

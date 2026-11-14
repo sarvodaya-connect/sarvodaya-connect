@@ -227,6 +227,11 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       districtId: 'district-kurunegala',
       districtName: 'Kurunegala',
       memberCount: 143,
+      femaleMembers: 80,
+      maleMembers: 63,
+      // Issue #143: 21 of the 143 are under 18 (counted inside the total).
+      under18Members: 21,
+      membershipUpdatedAt: now.subtract(const Duration(days: 12, hours: 3)),
       addressLine: 'Kanda Para, Wellawa',
       dsDivision: 'Wariyapola',
       grade: 'C',
@@ -458,6 +463,10 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       nameLocal: society.nameLocal,
       districtName: society.districtName,
       memberCount: society.memberCount,
+      femaleMembers: society.femaleMembers,
+      maleMembers: society.maleMembers,
+      under18Members: society.under18Members,
+      membershipUpdatedAt: society.membershipUpdatedAt,
       landline: society.landline,
       addressLine: society.addressLine,
       dsDivision: society.dsDivision,
@@ -580,9 +589,92 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       );
     }
     final parts = <String>[];
-    if (changes['memberCount'] case final int members) {
-      parts.add('Members ${society.memberCount ?? '–'} → $members');
+    // Issue #141: the same rules as the API. Female and male go together and
+    // the total is worked out from them; a total sent alone may not
+    // contradict a split that is already entered.
+    final female = changes['femaleMembers'];
+    final male = changes['maleMembers'];
+    final under18 = changes['under18Members'];
+    if ((female == null) != (male == null)) {
+      throw const SocietyRecordException(
+        'Enter both the female and the male members. The total is worked out from them',
+        status: 400,
+      );
+    }
+    // Issue #143: under 18s are a part of the total, so they need the split
+    // (sent now or already saved) and are never more than female + male.
+    final nextFemale = female is int ? female : society.femaleMembers;
+    final nextMale = male is int ? male : society.maleMembers;
+    final nextTotal = nextFemale != null && nextMale != null
+        ? nextFemale + nextMale
+        : null;
+    final nextUnder18 = under18 is int ? under18 : society.under18Members;
+    if (under18 is int && (nextTotal == null || under18 < 0)) {
+      throw const SocietyRecordException(
+        'Enter the female and male members together with the under 18s. Under 18s are a part of that total',
+        status: 400,
+      );
+    }
+    if (nextUnder18 != null && nextTotal != null && nextUnder18 > nextTotal) {
+      throw SocietyRecordException(
+        under18 is int
+            ? 'Under 18s are a part of the total members, so they cannot be more than the female plus the male members'
+            : 'This society records $nextUnder18 members under 18. Female plus male members cannot be fewer than that; change the under 18s as well',
+        status: 400,
+      );
+    }
+    final membersBefore = (
+      society.memberCount,
+      society.femaleMembers,
+      society.maleMembers,
+      society.under18Members,
+    );
+    if (female is int && male is int) {
+      if (female < 0 || male < 0 || female + male > 1000000) {
+        throw const SocietyRecordException(
+          'Female and male members together cannot be more than 1,000,000',
+          status: 400,
+        );
+      }
+      final total = female + male;
+      if (total != society.memberCount) {
+        parts.add('Members ${society.memberCount ?? '–'} → $total');
+      }
+      if (female != society.femaleMembers) {
+        parts.add('Female members ${society.femaleMembers ?? '–'} → $female');
+      }
+      if (male != society.maleMembers) {
+        parts.add('Male members ${society.maleMembers ?? '–'} → $male');
+      }
+      society
+        ..memberCount = total
+        ..femaleMembers = female
+        ..maleMembers = male;
+    } else if (changes['memberCount'] case final int members) {
+      if (society.femaleMembers != null && members != society.memberCount) {
+        throw const SocietyRecordException(
+          'This society records female and male members. Update those instead; the total is worked out from them',
+          status: 400,
+        );
+      }
+      if (members != society.memberCount) {
+        parts.add('Members ${society.memberCount ?? '–'} → $members');
+      }
       society.memberCount = members;
+    }
+    if (under18 is int && under18 != society.under18Members) {
+      parts.add('Under 18s ${society.under18Members ?? '–'} → $under18');
+      society.under18Members = under18;
+    }
+    // Issue #143: only a changed membership figure moves Last updated.
+    if (membersBefore !=
+        (
+          society.memberCount,
+          society.femaleMembers,
+          society.maleMembers,
+          society.under18Members,
+        )) {
+      society.membershipUpdatedAt = clock();
     }
     if (changes['landline'] case final String landline) {
       final digits = landline.replaceAll(RegExp(r'[\s-]'), '');
@@ -1309,6 +1401,10 @@ class _DemoSociety {
     required this.districtName,
     this.nameLocal,
     this.memberCount,
+    this.femaleMembers,
+    this.maleMembers,
+    this.under18Members,
+    this.membershipUpdatedAt,
     this.landline,
     this.addressLine,
     this.dsDivision,
@@ -1329,6 +1425,16 @@ class _DemoSociety {
   final String districtId;
   final String districtName;
   int? memberCount;
+
+  /// Issue #141: null until the split is entered.
+  int? femaleMembers;
+  int? maleMembers;
+
+  /// Issue #143: a part of the total; null until entered.
+  int? under18Members;
+
+  /// Issue #143: when a membership figure last changed.
+  DateTime? membershipUpdatedAt;
   String? landline;
   String? addressLine;
   final String? dsDivision;

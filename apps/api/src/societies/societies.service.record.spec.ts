@@ -32,6 +32,8 @@ const record = {
   latitude: null,
   longitude: null,
   memberCount: 412,
+  femaleMembers: null as number | null,
+  maleMembers: null as number | null,
   landline: null,
   businessDescription: null,
   grade: 'B',
@@ -150,6 +152,7 @@ describe('SocietiesService V4 society record (SC-65)', () => {
       hq,
       {
         summary: 'Members 412 → 418',
+        membershipChanged: true,
         grade: { from: 'B', to: 'A', reason: 'Strong record this year' },
       },
     );
@@ -165,7 +168,7 @@ describe('SocietiesService V4 society record (SC-65)', () => {
       SUNRISE_ID,
       { landline: '037 000 0123' },
       officer,
-      { summary: 'Landline added' },
+      { summary: 'Landline added', membershipChanged: false },
     );
     await expect(
       service.updateProfile(SUNRISE_ID, { landline: '037 22' }, officer),
@@ -192,5 +195,313 @@ describe('SocietiesService V4 society record (SC-65)', () => {
         },
       ),
     ).toBe('Members 412 → 418; Landline removed; Business description added');
+  });
+});
+
+describe('female and male members on the profile (issue #141)', () => {
+  const repository = {
+    findById: vi.fn(),
+    findRecordContext: vi.fn(),
+    updateProfile: vi.fn(),
+  };
+  const lotus = findDemoPrincipal('demo-officer-lotus')!;
+  let service: SocietiesService;
+  const withSplit = {
+    ...record,
+    memberCount: 42,
+    femaleMembers: 25,
+    maleMembers: 17,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repository.findById.mockResolvedValue(record);
+    repository.findRecordContext.mockResolvedValue({
+      staff: [],
+      summary: null,
+      auditReport: null,
+      lastChange: null,
+    });
+    service = new SocietiesService(
+      repository as unknown as SocietiesRepository,
+    );
+  });
+
+  it('works out the total from female and male and saves all three', async () => {
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 25, maleMembers: 17 },
+      officer,
+    );
+    expect(repository.updateProfile).toHaveBeenCalledWith(
+      SUNRISE_ID,
+      { femaleMembers: 25, maleMembers: 17, memberCount: 42 },
+      officer,
+      {
+        summary:
+          'Members 412 → 42; Female members entered: 25; Male members entered: 17',
+        membershipChanged: true,
+      },
+    );
+  });
+
+  it('rejects a total that contradicts female and male', async () => {
+    await expect(
+      service.updateProfile(
+        SUNRISE_ID,
+        { femaleMembers: 25, maleMembers: 17, memberCount: 50 },
+        officer,
+      ),
+    ).rejects.toThrow(
+      'The total members must be the female plus the male members',
+    );
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('needs female and male together, and at most 1,000,000 in all', async () => {
+    await expect(
+      service.updateProfile(SUNRISE_ID, { femaleMembers: 25 }, officer),
+    ).rejects.toThrow('Enter both the female and the male members');
+    await expect(
+      service.updateProfile(
+        SUNRISE_ID,
+        { femaleMembers: 600_000, maleMembers: 500_000 },
+        officer,
+      ),
+    ).rejects.toThrow('cannot be more than 1,000,000');
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('records a change to female as a change to the total', async () => {
+    repository.findById.mockResolvedValue(withSplit);
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 30, maleMembers: 17 },
+      officer,
+    );
+    expect(repository.updateProfile).toHaveBeenCalledWith(
+      SUNRISE_ID,
+      { femaleMembers: 30, maleMembers: 17, memberCount: 47 },
+      officer,
+      {
+        summary: 'Members 42 → 47; Female members 25 → 30',
+        membershipChanged: true,
+      },
+    );
+  });
+
+  it('does not save again when the same split is retried', async () => {
+    repository.findById.mockResolvedValue(withSplit);
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 25, maleMembers: 17 },
+      officer,
+    );
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('accepts an old app total only while it does not contradict the split', async () => {
+    // No split yet: an app from before #141 may still change the total.
+    await service.updateProfile(SUNRISE_ID, { memberCount: 420 }, officer);
+    expect(repository.updateProfile).toHaveBeenCalledWith(
+      SUNRISE_ID,
+      { memberCount: 420 },
+      officer,
+      { summary: 'Members 412 → 420', membershipChanged: true },
+    );
+    vi.clearAllMocks();
+    repository.findById.mockResolvedValue(withSplit);
+    // Re-sending the same total (an old form saved unchanged) is fine.
+    await service.updateProfile(SUNRISE_ID, { memberCount: 42 }, officer);
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+    await expect(
+      service.updateProfile(SUNRISE_ID, { memberCount: 60 }, officer),
+    ).rejects.toThrow('Update those instead');
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('lets no one outside the society change the figures', async () => {
+    for (const outsider of [lotus, dm]) {
+      await expect(
+        service.updateProfile(
+          SUNRISE_ID,
+          { femaleMembers: 25, maleMembers: 17 },
+          outsider,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('returns the split, or null when it has not been entered', async () => {
+    await expect(service.getById(SUNRISE_ID, officer)).resolves.toMatchObject({
+      memberCount: 412,
+      femaleMembers: null,
+      maleMembers: null,
+    });
+    repository.findById.mockResolvedValue(withSplit);
+    await expect(service.getById(SUNRISE_ID, officer)).resolves.toMatchObject({
+      memberCount: 42,
+      femaleMembers: 25,
+      maleMembers: 17,
+    });
+  });
+});
+
+describe('members under 18 and the membership Last updated (issue #143)', () => {
+  const repository = {
+    findById: vi.fn(),
+    findRecordContext: vi.fn(),
+    updateProfile: vi.fn(),
+  };
+  const lotus = findDemoPrincipal('demo-officer-lotus')!;
+  let service: SocietiesService;
+  const withSplit = {
+    ...record,
+    memberCount: 42,
+    femaleMembers: 25,
+    maleMembers: 17,
+    under18Members: 10 as number | null,
+    membershipUpdatedAt: new Date('2026-11-01T08:30:00.000Z') as Date | null,
+  };
+  const saved = () => repository.updateProfile.mock.calls[0];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repository.findById.mockResolvedValue(record);
+    repository.findRecordContext.mockResolvedValue({
+      staff: [],
+      summary: null,
+      auditReport: null,
+      lastChange: null,
+    });
+    service = new SocietiesService(
+      repository as unknown as SocietiesRepository,
+    );
+  });
+
+  it('counts under 18s inside the total: 25 + 17 with 10 under 18 is 42', async () => {
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 25, maleMembers: 17, under18Members: 10 },
+      officer,
+    );
+    expect(saved()).toEqual([
+      SUNRISE_ID,
+      {
+        femaleMembers: 25,
+        maleMembers: 17,
+        under18Members: 10,
+        memberCount: 42,
+      },
+      officer,
+      {
+        summary:
+          'Members 412 → 42; Female members entered: 25; Male members entered: 17; Under 18s entered: 10',
+        membershipChanged: true,
+      },
+    ]);
+  });
+
+  it('refuses more under 18s than the total, and allows exactly the total or 0', async () => {
+    await expect(
+      service.updateProfile(
+        SUNRISE_ID,
+        { femaleMembers: 25, maleMembers: 17, under18Members: 43 },
+        officer,
+      ),
+    ).rejects.toThrow('cannot be more than the female plus the male members');
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+    for (const under18Members of [42, 0]) {
+      vi.clearAllMocks();
+      repository.findById.mockResolvedValue(record);
+      await service.updateProfile(
+        SUNRISE_ID,
+        { femaleMembers: 25, maleMembers: 17, under18Members },
+        officer,
+      );
+      expect(saved()[1]).toMatchObject({ under18Members, memberCount: 42 });
+    }
+  });
+
+  it('needs the female and male split before under 18s', async () => {
+    // An older total-only record: under 18s alone would have no total to sit in.
+    await expect(
+      service.updateProfile(SUNRISE_ID, { under18Members: 5 }, officer),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+    // With a saved split, under 18s may be changed on their own.
+    repository.findById.mockResolvedValue(withSplit);
+    await service.updateProfile(SUNRISE_ID, { under18Members: 12 }, officer);
+    expect(saved()[1]).toEqual({ under18Members: 12 });
+    expect(saved()[3]).toEqual({
+      summary: 'Under 18s 10 → 12',
+      membershipChanged: true,
+    });
+  });
+
+  it('does not let a smaller split leave the saved under 18s above the total', async () => {
+    repository.findById.mockResolvedValue(withSplit);
+    await expect(
+      service.updateProfile(
+        SUNRISE_ID,
+        { femaleMembers: 5, maleMembers: 4 },
+        officer,
+      ),
+    ).rejects.toThrow('records 10 members under 18');
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+    // Lowering both together is fine.
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 5, maleMembers: 4, under18Members: 3 },
+      officer,
+    );
+    expect(saved()[1]).toMatchObject({ memberCount: 9, under18Members: 3 });
+  });
+
+  it('moves the membership Last updated only when a figure changes', async () => {
+    repository.findById.mockResolvedValue(withSplit);
+    // Another profile field: saved, but not a membership change.
+    await service.updateProfile(
+      SUNRISE_ID,
+      { businessDescription: 'Fictional coir rope' },
+      officer,
+    );
+    expect(saved()[3]).toEqual({
+      summary: 'Business description added',
+      membershipChanged: false,
+    });
+    // The same figures again (a retry): nothing is saved at all.
+    vi.clearAllMocks();
+    repository.findById.mockResolvedValue(withSplit);
+    await service.updateProfile(
+      SUNRISE_ID,
+      { femaleMembers: 25, maleMembers: 17, under18Members: 10 },
+      officer,
+    );
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('lets no one outside the society change under 18s', async () => {
+    repository.findById.mockResolvedValue(withSplit);
+    for (const outsider of [lotus, dm]) {
+      await expect(
+        service.updateProfile(SUNRISE_ID, { under18Members: 1 }, outsider),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    expect(repository.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('returns under 18s and the membership time, or null when not entered', async () => {
+    await expect(service.getById(SUNRISE_ID, officer)).resolves.toMatchObject({
+      under18Members: null,
+      membershipUpdatedAt: null,
+    });
+    repository.findById.mockResolvedValue(withSplit);
+    await expect(service.getById(SUNRISE_ID, officer)).resolves.toMatchObject({
+      memberCount: 42,
+      under18Members: 10,
+      membershipUpdatedAt: '2026-11-01T08:30:00.000Z',
+    });
   });
 });

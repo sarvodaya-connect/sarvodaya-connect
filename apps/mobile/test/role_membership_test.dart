@@ -80,7 +80,9 @@ void main() {
     expect(find.text('79 of 106'), findsOneWidget);
     expect(find.text('By Category · Female / Male'), findsOneWidget);
     expect(find.text('Members in Each District'), findsOneWidget);
-    expect(find.text('Society Profile Member Counts'), findsOneWidget);
+    // Issue #141: the profile members first, the category counts labelled.
+    expect(find.text('Members on Society Profiles'), findsOneWidget);
+    expect(find.textContaining('Category Counts'), findsOneWidget);
     expect(find.byType(SegmentedButton<bool>), findsNothing);
   });
 
@@ -187,7 +189,10 @@ void main() {
       await _pump(tester, role: UserRole.districtManager, code: code);
       expect(tester.takeException(), isNull);
       expect(find.text('Total Members'), findsNothing);
+      // The profile members (issue #141) come first; scroll to the districts.
+      await tester.scrollUntilVisible(find.text('Kurunegala'), 300);
       expect(find.text('Kurunegala'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   }
 }

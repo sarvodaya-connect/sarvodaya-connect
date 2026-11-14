@@ -4,6 +4,7 @@ import type { Principal } from '../auth/principal.js';
 import { homeViewScope } from './home.service.js';
 import {
   composeMembership,
+  profileMembership,
   type MembershipSociety,
 } from './membership.compose.js';
 
@@ -137,10 +138,13 @@ const society = (
   district: string,
   status = 'ACTIVE',
   memberCount: number | null = null,
+  split: { female: number; male: number } | null = null,
 ): MembershipSociety => ({
   id,
   status,
-  memberCount,
+  memberCount: split ? split.female + split.male : memberCount,
+  femaleMembers: split?.female ?? null,
+  maleMembers: split?.male ?? null,
   district: {
     id: district,
     nameEn: district === D1 ? 'Fictional North' : 'Fictional South',
@@ -214,6 +218,9 @@ describe('scoped Membership figures (issue #118)', () => {
       societies: 2,
       members: 2040,
       withoutBreakdown: 2,
+      withSplit: 0,
+      female: 0,
+      male: 0,
     });
   });
 
@@ -231,5 +238,95 @@ describe('scoped Membership figures (issue #118)', () => {
       total: 0,
     });
     expect(result.profile.withoutBreakdown).toBe(1);
+  });
+});
+
+describe('profile female and male members (issue #141)', () => {
+  const S4 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4';
+  const none = new Set<string>();
+
+  it('counts a society with female 25 and male 17 once, alongside the others', () => {
+    const result = composeMembership({
+      scope: 'DISTRICT_MANAGER',
+      societies: [
+        society(S1, D1, 'ACTIVE', null, { female: 25, male: 17 }),
+        society(S2, D1, 'ACTIVE', null, { female: 10, male: 5 }),
+      ],
+      year: null,
+      counts: [],
+      districtView: null,
+    });
+    expect(result.profile).toEqual({
+      societies: 2,
+      members: 57,
+      withoutBreakdown: 2,
+      withSplit: 2,
+      female: 35,
+      male: 22,
+    });
+    // The category figures stay what was entered by category: nothing.
+    expect(result).toMatchObject({ female: 0, male: 0, total: 0 });
+  });
+
+  it('uses the latest saved values, so a change replaces the old figures', () => {
+    const before = profileMembership(
+      [society(S1, D1, 'ACTIVE', null, { female: 25, male: 17 })],
+      none,
+    );
+    const raised = profileMembership(
+      [society(S1, D1, 'ACTIVE', null, { female: 30, male: 17 })],
+      none,
+    );
+    const lowered = profileMembership(
+      [society(S1, D1, 'ACTIVE', null, { female: 20, male: 17 })],
+      none,
+    );
+    expect(before).toMatchObject({ female: 25, male: 17, members: 42 });
+    expect(raised).toMatchObject({ female: 30, male: 17, members: 47 });
+    expect(raised.members - before.members).toBe(5);
+    expect(lowered).toMatchObject({ female: 20, members: 37 });
+  });
+
+  it('keeps a total-only society in the total without guessing a split', () => {
+    const result = profileMembership(
+      [
+        society(S1, D1, 'ACTIVE', null, { female: 25, male: 17 }),
+        society(S2, D1, 'ACTIVE', 400),
+      ],
+      none,
+    );
+    expect(result).toEqual({
+      societies: 2,
+      members: 442,
+      withoutBreakdown: 2,
+      withSplit: 1,
+      female: 25,
+      male: 17,
+    });
+  });
+
+  it('treats an entered zero as entered, and leaves out inactive societies', () => {
+    const result = composeMembership({
+      scope: 'MINE',
+      societies: [
+        society(S1, D1, 'ACTIVE', null, { female: 0, male: 0 }),
+        society(S2, D1, 'ACTIVE'),
+        society(S3, D1, 'INACTIVE', null, { female: 50, male: 50 }),
+        society(S4, D1, 'ACTIVE', null, { female: 3, male: 4 }),
+      ],
+      year: 2026,
+      counts: [{ societyId: S4, category: 'YOUTH', female: 3, male: 4 }],
+      districtView: null,
+    });
+    expect(result.profile).toEqual({
+      societies: 2,
+      members: 7,
+      withoutBreakdown: 1,
+      withSplit: 2,
+      female: 3,
+      male: 4,
+    });
+    // Category figures are their own: the profile split is not added to them.
+    expect(result).toMatchObject({ female: 3, male: 4, total: 7 });
   });
 });

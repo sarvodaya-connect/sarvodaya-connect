@@ -5,9 +5,13 @@ import { redirect } from "next/navigation";
 
 import { getT } from "@/i18n/server";
 import { getDesktopViewer } from "@/lib/current-viewer";
+import { parseCount } from "@/lib/count";
 import { platformApi } from "@/lib/platform-api";
 
 export type RecordFormResult = { error?: string };
+
+/** Issue #141: the most members for each of female and male, and in all. */
+const MAX_MEMBERS = 1_000_000;
 
 const TEXT_FIELDS = ["nameEn", "societyCode", "landline", "addressLine", "dsDivision", "gnDivision", "businessDescription"] as const;
 
@@ -27,10 +31,16 @@ export async function updateSocietyRecord(
     const before = form.get(`${field}__before`);
     if (typeof value === "string" && value.trim() !== (before ?? "")) body[field] = value.trim();
   }
-  const members = form.get("memberCount");
-  if (typeof members === "string" && members !== form.get("memberCount__before")) {
-    if (!/^\d+$/.test(members.trim())) return { error: t("sr.err.members") };
-    body.memberCount = Number(members.trim());
+  // Issue #141: female and male go together; the API works out the total.
+  const female = String(form.get("femaleMembers") ?? "").trim();
+  const male = String(form.get("maleMembers") ?? "").trim();
+  if (female !== (form.get("femaleMembers__before") ?? "") || male !== (form.get("maleMembers__before") ?? "")) {
+    const femaleCount = parseCount(female, MAX_MEMBERS);
+    const maleCount = parseCount(male, MAX_MEMBERS);
+    if (femaleCount === null || maleCount === null) return { error: t("sr.err.members") };
+    if (femaleCount + maleCount > MAX_MEMBERS) return { error: t("sr.ed.splitTooMany") };
+    body.femaleMembers = femaleCount;
+    body.maleMembers = maleCount;
   }
   const latitude = String(form.get("latitude") ?? "").trim();
   const longitude = String(form.get("longitude") ?? "").trim();

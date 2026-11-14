@@ -277,10 +277,11 @@ export class NationalService {
 
   async membership() {
     const year = await this.repository.latestMembershipYear();
-    const [counts, districts, membership] = await Promise.all([
+    const [counts, districts, membership, profile] = await Promise.all([
       this.repository.societyCounts(),
       this.repository.districts(latestCompletedFinancialYear()),
       year === null ? Promise.resolve(null) : this.repository.membership(year),
+      this.repository.profileMembership(year),
     ]);
     const categories = categoryTotals(membership?.categories ?? []);
     const female = categories.reduce((sum, row) => sum + row.female, 0);
@@ -308,6 +309,7 @@ export class NationalService {
           total: districtFemale + districtMale,
         };
       }),
+      profile,
     };
   }
 

@@ -1,7 +1,7 @@
 # Database schema reference
 
 Derived from [`schema.prisma`](../apps/api/prisma/schema.prisma) on 11 November 2026.
-All 27 Prisma models are included below. Field names use their mapped PostgreSQL
+All 31 Prisma models are included below. Field names use their mapped PostgreSQL
 column names. Types are abbreviated; consult Prisma for enum values, lengths,
 defaults, composite constraints and delete actions. `nullable` means the scalar
 column is optional. Connections represent declared Prisma relations only. PK/UK field labels show
@@ -479,6 +479,89 @@ erDiagram
     ASSISTANT_SPEND_RESERVATIONS ||--o| ASSISTANT_SPEND_HOLDS : reservation
 ```
 
+## Village Economic Profile (issue #145)
+
+Businesses the society itself operates and the production reported for exact
+covered periods. See [Village Economic Profile](village-economic-profile.md)
+for the rules. Industry, product and unit are catalogue codes from
+`packages/api-contracts/src/economy.ts`, checked by the API; the database
+checks quantities, periods and Other descriptions.
+
+```mermaid
+erDiagram
+    SOCIETY_BUSINESSES {
+        uuid id PK
+        uuid society_id FK
+        varchar name
+        varchar industry
+        varchar other_industry "nullable"
+        varchar description "nullable"
+        enum status
+        timestamptz closed_at "nullable"
+        int version
+        varchar created_by_id
+        varchar created_by_name
+        varchar created_by_role "nullable"
+        varchar updated_by_name "nullable"
+        varchar updated_by_role "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    BUSINESS_OUTPUTS {
+        uuid id PK
+        uuid business_id FK
+        varchar product
+        varchar other_description "nullable"
+        varchar unit
+        timestamptz archived_at "nullable"
+        int version
+        varchar created_by_id
+        varchar created_by_name
+        varchar created_by_role "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    PRODUCTION_RECORDS {
+        uuid id PK
+        uuid output_id FK
+        enum basis
+        date period_start
+        date period_end
+        varchar season_label "nullable"
+        enum measurement
+        decimal quantity
+        varchar note "nullable"
+        varchar source "nullable"
+        int version
+        uuid client_request_id UK "nullable"
+        varchar created_by_id
+        varchar created_by_name
+        varchar created_by_role "nullable"
+        varchar updated_by_name "nullable"
+        varchar updated_by_role "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    PRODUCTION_RECORD_REVISIONS {
+        uuid id PK
+        uuid record_id FK
+        int version
+        varchar change
+        decimal quantity
+        varchar season_label "nullable"
+        varchar note "nullable"
+        varchar source "nullable"
+        varchar changed_by_id
+        varchar changed_by_name
+        varchar changed_by_role "nullable"
+        timestamptz changed_at
+    }
+    SOCIETIES ||--o{ SOCIETY_BUSINESSES : society
+    SOCIETY_BUSINESSES ||--o{ BUSINESS_OUTPUTS : business
+    BUSINESS_OUTPUTS ||--o{ PRODUCTION_RECORDS : output
+    PRODUCTION_RECORDS ||--o{ PRODUCTION_RECORD_REVISIONS : record
+```
+
 ## Composite keys, unique constraints and indexes
 
 ### `societies`
@@ -652,4 +735,33 @@ erDiagram
 
 ```prisma
 @@index([detectedAt])
+```
+
+### `society_businesses`
+
+```prisma
+@@index([societyId])
+```
+
+### `business_outputs`
+
+```prisma
+@@index([businessId])
+@@index([product])
+```
+
+Also, in the migration only: `business_outputs_one_current_product`, a unique
+index on `(business_id, product)` where `archived_at IS NULL AND product <> 'OTHER'`.
+
+### `production_records`
+
+```prisma
+@@unique([outputId, measurement, periodStart, periodEnd])
+@@index([periodStart, periodEnd])
+```
+
+### `production_record_revisions`
+
+```prisma
+@@unique([recordId, version])
 ```

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { MembershipCategoryTotal } from "@sarvodaya-connect/api-contracts";
+import type { MembershipCategoryTotal, ProfileMembership } from "@sarvodaya-connect/api-contracts";
 
 import { Stat } from "@/components/dashboard/national/parts";
 import { count, share } from "@/components/dashboard/national/format";
@@ -28,6 +28,54 @@ function Split({ female, male, t }: { female: number; male: number; t: Translato
     <span className="text-[11px]">
       {t.rich("mb.split", { female: <strong className="text-[#7a3f96]">{share(female, total)}%</strong>, male: <strong className="text-[#2f5590]">{share(male, total)}%</strong> })}
     </span>
+  );
+}
+
+/**
+ * Issue #141: the current female, male and total members on the society
+ * profiles. Kept apart from the yearly category counts below and never added
+ * to them. A society with only a total adds to the total but not to female or
+ * male, and the note says so instead of guessing a split.
+ */
+export function ProfileMembers({ profile, t }: { profile: ProfileMembership; t: Translator }) {
+  const split = profile.female + profile.male;
+  const totalOnly = profile.societies - profile.withSplit;
+  return (
+    <section aria-labelledby="profile-heading" className="mt-4">
+      <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("mb.profileEyebrow")}</p>
+      <h2 className="text-[15px] font-bold text-ink" id="profile-heading">{t("mb.profileHeading")}</h2>
+      {profile.societies === 0 ? (
+        <p className="mt-2 text-[12px] text-ink-soft">{t("mb.profileNone")}</p>
+      ) : (
+        <>
+          <ul className="mt-3 grid auto-rows-fr gap-3 sm:grid-cols-3">
+            <li><Stat label={t.plural("mb.profileTotal", profile.societies)} value={count(profile.members)} /></li>
+            <li><Stat label={t("mb.profileShare", { label: t("n.female"), percent: share(profile.female, split) })} tone="female" value={count(profile.female)} /></li>
+            <li><Stat label={t("mb.profileShare", { label: t("n.male"), percent: share(profile.male, split) })} tone="male" value={count(profile.male)} /></li>
+          </ul>
+          <p className="mt-2 text-[11px] text-ink-soft">{t.plural("mb.profileSplitOf", profile.withSplit, { societies: count(profile.societies) })}</p>
+          {totalOnly > 0 && (
+            <p className="mt-1 text-[11px] font-semibold text-ink">{t.plural("mb.profileTotalOnly", totalOnly)}</p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** The yearly category counts, labelled so they are not read as the profile figures. */
+export function CategoryHeading({ profile, t, year }: { profile: ProfileMembership; t: Translator; year: number | null }) {
+  return (
+    <div className="mt-6 border-t border-line pt-4">
+      <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{year ? t("mb.categoryEyebrowYear", { year }) : t("mb.categoryEyebrow")}</p>
+      <h2 className="text-[15px] font-bold text-ink">{t("mb.categoryHeading")}</h2>
+      <p className="mt-1 text-[11px] text-ink-soft">{t("mb.categoryNote")}</p>
+      {profile.withoutBreakdown > 0 && (
+        <p className="mt-1 text-[11px] font-semibold text-ink">
+          {year === null ? t.plural("mb.profileMissingNoYear", profile.withoutBreakdown) : t.plural("mb.profileMissing", profile.withoutBreakdown, { year })}
+        </p>
+      )}
+    </div>
   );
 }
 

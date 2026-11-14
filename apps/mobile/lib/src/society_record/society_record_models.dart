@@ -599,6 +599,10 @@ class SocietyRecord {
     required this.permissions,
     this.nameLocal,
     this.memberCount,
+    this.femaleMembers,
+    this.maleMembers,
+    this.under18Members,
+    this.membershipUpdatedAt,
     this.landline,
     this.addressLine,
     this.dsDivision,
@@ -628,6 +632,13 @@ class SocietyRecord {
       nameLocal: json['nameLocal'] as String?,
       districtName: (json['district'] as Map)['nameEn'] as String,
       memberCount: json['memberCount'] as int?,
+      femaleMembers: json['femaleMembers'] as int?,
+      maleMembers: json['maleMembers'] as int?,
+      under18Members: json['under18Members'] as int?,
+      membershipUpdatedAt: switch (json['membershipUpdatedAt']) {
+        final String at => DateTime.parse(at),
+        _ => null,
+      },
       landline: json['landline'] as String?,
       addressLine: address['addressLine'] as String?,
       dsDivision: address['dsDivision'] as String?,
@@ -680,6 +691,21 @@ class SocietyRecord {
   final String? nameLocal;
   final String districtName;
   final int? memberCount;
+
+  /// Issue #141: both null until the split is entered (an older record may
+  /// still have a total). Once entered, [memberCount] is their sum.
+  final int? femaleMembers;
+  final int? maleMembers;
+
+  bool get hasMemberSplit => femaleMembers != null && maleMembers != null;
+
+  /// Issue #143: members younger than 18, a part of [memberCount] (never
+  /// added to it). Null until entered.
+  final int? under18Members;
+
+  /// Issue #143: when the total, female, male or under 18s last changed.
+  /// Other profile and Exco edits leave it alone. Null until first saved.
+  final DateTime? membershipUpdatedAt;
   final String? landline;
   final String? addressLine;
   final String? dsDivision;

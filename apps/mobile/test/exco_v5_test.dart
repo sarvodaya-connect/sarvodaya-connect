@@ -26,7 +26,7 @@ Future<DemoStore> _openExco(WidgetTester tester, UserRole role) async {
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(Tab, 'Exco'));
+  await tester.tap(find.widgetWithText(Tab, 'Members & Exco'));
   await tester.pumpAndSettle();
   return store;
 }

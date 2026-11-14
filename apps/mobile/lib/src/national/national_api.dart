@@ -21,6 +21,9 @@ abstract interface class NationalApi {
   /// lets them count. HQ uses [fetchProgrammes].
   Future<NationalProgrammes> fetchScopedProgrammes({int? year});
   Future<FiguresNotAdded> fetchFiguresNotAdded();
+
+  /// Issue #141: HQ's profile member counts, from `/national/membership`.
+  Future<ProfileMembership> fetchMembershipProfile();
 }
 
 class HttpNationalApi implements NationalApi {
@@ -97,4 +100,10 @@ class HttpNationalApi implements NationalApi {
   @override
   Future<FiguresNotAdded> fetchFiguresNotAdded() async =>
       FiguresNotAdded.fromJson(await _get('/national/finance?pageSize=20'));
+
+  @override
+  Future<ProfileMembership> fetchMembershipProfile() async =>
+      ProfileMembership.fromJson(
+        (await _get('/national/membership'))['profile'] as Json?,
+      );
 }

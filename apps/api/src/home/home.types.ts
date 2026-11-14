@@ -159,6 +159,16 @@ export interface HomeSocietyList {
   };
 }
 
+/** Mirrors ProfileMembership in packages/api-contracts/src/national.ts (issue #141). */
+export interface ProfileMembership {
+  societies: number;
+  members: number;
+  withoutBreakdown: number;
+  withSplit: number;
+  female: number;
+  male: number;
+}
+
 /** Mirrors ScopedMembership in packages/api-contracts/src/home.ts (issue #118). */
 export interface ScopedMembership {
   scope: 'DISTRICT_MANAGER' | 'MINE' | 'DISTRICT';
@@ -182,7 +192,7 @@ export interface ScopedMembership {
     male: number;
     total: number;
   }[];
-  profile: { societies: number; members: number; withoutBreakdown: number };
+  profile: ProfileMembership;
   districtView: { available: boolean; expiresAt: string | null } | null;
 }
 

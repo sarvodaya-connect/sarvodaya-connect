@@ -266,6 +266,8 @@ export class HomeService {
           id: true,
           status: true,
           memberCount: true,
+          femaleMembers: true,
+          maleMembers: true,
           district: { select: { id: true, nameEn: true } },
         },
       });

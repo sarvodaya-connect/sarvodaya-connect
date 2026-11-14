@@ -1742,44 +1742,177 @@ class NationalMembershipScreen extends StatelessWidget {
     return _Page(
       title: l.nationalMembershipTitle,
       subtitle: l.nationalMembershipSubtitle,
-      body: _Loader<NationalOverview>(
-        load: (api) => api.fetchOverview(),
-        builder: (context, overview, _) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(
-              text: overview.membershipYear == null
-                  ? l.nationalDemoDataPlain
-                  : l.nationalDemoData('${overview.membershipYear}'),
+      body: _Loader<(NationalOverview, ProfileMembership)>(
+        load: (api) async {
+          final figures = await Future.wait([
+            api.fetchOverview(),
+            api.fetchMembershipProfile(),
+          ]);
+          return (
+            figures[0] as NationalOverview,
+            figures[1] as ProfileMembership,
+          );
+        },
+        builder: (context, data, _) {
+          final (overview, profile) = data;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              SampleLabel(
+                text: overview.membershipYear == null
+                    ? l.nationalDemoDataPlain
+                    : l.nationalDemoData('${overview.membershipYear}'),
+              ),
+              _ProfileMembers(profile),
+              _CategoryHeading(
+                year: overview.membershipYear,
+                withoutBreakdown: profile.withoutBreakdown,
+              ),
+              _Pair(
+                _Figure(
+                  l.nationalTotalMembers,
+                  l.number(overview.members),
+                  l.nationalSocietiesReported(overview.societiesReported),
+                ),
+                _Figure(
+                  l.nationalFemaleMale,
+                  '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
+                  '${l.number(overview.female)} · ${l.number(overview.male)}',
+                  colour: _female,
+                  background: const Color(0xFFF6EFF9),
+                  border: const Color(0xFFE4D3EC),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _CategoryCard([
+                for (final row in overview.categories)
+                  (category: row.category, female: row.female, male: row.male),
+              ]),
+              const SizedBox(height: 8),
+              NoticeBanner(
+                icon: Icons.info_outline,
+                title: l.nationalCountsOnlyTitle,
+                message: l.nationalCountsOnlyMessage,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Issue #141: female, male and total members on the society profiles, shared
+/// by HQ (M61) and the scoped view. Kept apart from the yearly category counts
+/// below it. A total-only society adds to the total but not to female or male,
+/// and the note says so instead of guessing a split.
+class _ProfileMembers extends StatelessWidget {
+  const _ProfileMembers(this.profile);
+
+  final ProfileMembership profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final split = profile.female + profile.male;
+    const note = TextStyle(fontSize: 12, color: AppColors.muted, height: 1.35);
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: l.memberProfileHeading,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Eyebrow(l.memberProfileEyebrow),
+          const SizedBox(height: 2),
+          Text(
+            l.memberProfileHeading,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          if (profile.societies == 0)
+            Text(l.memberProfileNone, style: note)
+          else ...[
+            _Figure(
+              l.memberProfileTotal(profile.societies),
+              l.number(profile.members),
+              l.memberProfileSplitOf(profile.withSplit, profile.societies),
             ),
+            const SizedBox(height: 8),
             _Pair(
               _Figure(
-                l.nationalTotalMembers,
-                l.number(overview.members),
-                l.nationalSocietiesReported(overview.societiesReported),
-              ),
-              _Figure(
-                l.nationalFemaleMale,
-                '${sharePercent(overview.female, overview.members)}% · ${sharePercent(overview.male, overview.members)}%',
-                '${l.number(overview.female)} · ${l.number(overview.male)}',
+                l.memberProfileFemale,
+                l.number(profile.female),
+                l.memberProfileShare(sharePercent(profile.female, split)),
                 colour: _female,
                 background: const Color(0xFFF6EFF9),
                 border: const Color(0xFFE4D3EC),
               ),
+              _Figure(
+                l.memberProfileMale,
+                l.number(profile.male),
+                l.memberProfileShare(sharePercent(profile.male, split)),
+                colour: _male,
+                background: const Color(0xFFEFF3FA),
+                border: const Color(0xFFD3DDEC),
+              ),
             ),
-            const SizedBox(height: 8),
-            _CategoryCard([
-              for (final row in overview.categories)
-                (category: row.category, female: row.female, male: row.male),
-            ]),
-            const SizedBox(height: 8),
-            NoticeBanner(
-              icon: Icons.info_outline,
-              title: l.nationalCountsOnlyTitle,
-              message: l.nationalCountsOnlyMessage,
+            if (profile.totalOnly > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                l.memberProfileTotalOnly(profile.totalOnly),
+                style: note.copyWith(
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The heading over the yearly category counts, so they are not read as the
+/// profile figures above them.
+class _CategoryHeading extends StatelessWidget {
+  const _CategoryHeading({required this.year, required this.withoutBreakdown});
+
+  final int? year;
+  final int withoutBreakdown;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    const note = TextStyle(fontSize: 12, color: AppColors.muted, height: 1.35);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          _Eyebrow(
+            year == null
+                ? l.memberCategoryEyebrow
+                : l.memberCategoryEyebrowYear('$year'),
+          ),
+          const SizedBox(height: 2),
+          Text(l.memberCategoryNote, style: note),
+          if (withoutBreakdown > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              year == null
+                  ? l.roleMembershipProfileMissingNoYear(withoutBreakdown)
+                  : l.roleMembershipProfileMissing(withoutBreakdown, '$year'),
+              style: note.copyWith(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1974,6 +2107,11 @@ class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
             message: l.roleMembershipEmptyMessage,
           )
         else ...[
+          _ProfileMembers(m.profile),
+          _CategoryHeading(
+            year: m.year,
+            withoutBreakdown: m.profile.withoutBreakdown,
+          ),
           if (m.year == null) ...[
             NoticeBanner(
               icon: Icons.info_outline,
@@ -2011,28 +2149,6 @@ class _RoleMembershipScreenState extends State<RoleMembershipScreen> {
             background: const Color(0xFFF6EFF9),
             border: const Color(0xFFE4D3EC),
           ),
-          if (m.profileSocieties > 0) ...[
-            const SizedBox(height: 8),
-            NoticeBanner(
-              icon: Icons.badge_outlined,
-              title: l.roleMembershipProfileTitle,
-              message: [
-                l.roleMembershipProfileMessage(
-                  m.profileMembers,
-                  m.profileSocieties,
-                ),
-                if (m.profileWithoutBreakdown > 0)
-                  m.year == null
-                      ? l.roleMembershipProfileMissingNoYear(
-                          m.profileWithoutBreakdown,
-                        )
-                      : l.roleMembershipProfileMissing(
-                          m.profileWithoutBreakdown,
-                          '${m.year}',
-                        ),
-              ].join(' '),
-            ),
-          ],
           const SizedBox(height: 8),
           _CategoryCard([
             for (final row in m.categories)

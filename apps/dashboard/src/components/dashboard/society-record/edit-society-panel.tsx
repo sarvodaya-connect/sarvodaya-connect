@@ -6,8 +6,10 @@ import { useActionState, useState } from "react";
 import type { SocietyGrade, SocietyRecord } from "@sarvodaya-connect/api-contracts";
 
 import type { RecordFormResult } from "@/app/(dashboard)/societies/[id]/record-actions";
+import { formatNumber } from "@/i18n/translate";
 import { useI18n } from "@/i18n/provider";
 import { actorName, gradeOption } from "@/i18n/society-record";
+import { parseCount } from "@/lib/count";
 import { mapboxToken, typedPosition } from "@/lib/mapbox";
 import { SOCIETY_GRADE_LABELS } from "@/lib/society-record-format";
 
@@ -16,10 +18,14 @@ import { SocietyLocationMap } from "../maps/society-location-map";
 const inputClass =
   "mt-1 w-full rounded-input border border-line bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring";
 
+/** Issue #141: the most members for each of female and male, and in all. */
+export const MAX_MEMBERS = 1_000_000;
+
 type Values = {
   nameEn: string;
   societyCode: string;
-  memberCount: string;
+  femaleMembers: string;
+  maleMembers: string;
   landline: string;
   addressLine: string;
   dsDivision: string;
@@ -34,7 +40,8 @@ function initialValues(record: SocietyRecord): Values {
   return {
     nameEn: record.nameEn,
     societyCode: record.societyCode,
-    memberCount: record.memberCount?.toString() ?? "",
+    femaleMembers: record.femaleMembers?.toString() ?? "",
+    maleMembers: record.maleMembers?.toString() ?? "",
     landline: record.landline ?? "",
     addressLine: record.address.addressLine ?? "",
     dsDivision: record.address.dsDivision ?? "",
@@ -44,6 +51,26 @@ function initialValues(record: SocietyRecord): Values {
     latitude: record.location?.latitude.toString() ?? "",
     longitude: record.location?.longitude.toString() ?? "",
   };
+}
+
+/**
+ * Issue #141: what the female and male boxes add up to, and what is wrong
+ * with them. Both empty on a record that never had a split keeps its old
+ * total; otherwise both are needed, as whole numbers from 0 to 1,000,000.
+ */
+function memberSplit(values: Values, before: Values, recordedTotal: number | null) {
+  const femaleText = values.femaleMembers.trim();
+  const maleText = values.maleMembers.trim();
+  const female = parseCount(femaleText, MAX_MEMBERS);
+  const male = parseCount(maleText, MAX_MEMBERS);
+  const hadSplit = before.femaleMembers !== "";
+  let error: "sr.ed.countInvalid" | "sr.ed.splitBoth" | "sr.ed.splitTooMany" | null = null;
+  if (!femaleText && !maleText) error = hadSplit ? "sr.ed.splitBoth" : null;
+  else if ((femaleText && female === null) || (maleText && male === null)) error = "sr.ed.countInvalid";
+  else if (!femaleText || !maleText) error = "sr.ed.splitBoth";
+  else if (female! + male! > MAX_MEMBERS) error = "sr.ed.splitTooMany";
+  const total = female !== null && male !== null && error === null ? female + male : null;
+  return { error, total, keepsOldTotal: !femaleText && !maleText && !hadSplit ? recordedTotal : null };
 }
 
 /**
@@ -68,7 +95,8 @@ export function EditSocietyPanel({
   const dirty = (Object.keys(before) as (keyof Values)[]).some((key) => values[key].trim() !== before[key]);
   const gradeChanged = values.grade !== before.grade;
   const reasonMissing = gradeChanged && !reason.trim();
-  const membersInvalid = values.memberCount.trim() !== "" && !/^\d+$/.test(values.memberCount.trim());
+  const split = memberSplit(values, before, record.memberCount);
+  const membersInvalid = split.error !== null;
   const required = (["nameEn", "societyCode", "addressLine"] as const).filter((key) => !values[key].trim());
   const request = record.openGradeRequest;
   const token = mapboxToken();
@@ -85,6 +113,7 @@ export function EditSocietyPanel({
         aria-invalid={options.required && !values[key].trim() ? true : undefined}
         className={`${inputClass} ${values[key].trim() !== before[key] ? "border-[#e5c96b] bg-[#fffbea]" : ""}`}
         inputMode={options.type === "number" ? "numeric" : options.inputMode}
+        id={key}
         name={key}
         onChange={set(key)}
         value={values[key]}
@@ -117,10 +146,39 @@ export function EditSocietyPanel({
           <div className="grid gap-3 sm:grid-cols-2">
             {field("nameEn", t("sr.ov.name"), { required: true })}
             {field("societyCode", t("sr.ov.sNumber"), { required: true, hint: t("sr.ed.sNumberHint") })}
-            {field("memberCount", t("sr.ov.members"), { required: true, type: "number" })}
             {field("landline", t("sr.ov.landline"), { hint: t("sr.ed.landlineHint") })}
           </div>
-          {membersInvalid && <p className="text-[11px] text-danger-text" role="alert">{t("sr.ed.membersInvalid")}</p>}
+          <fieldset className="space-y-2">
+            <legend className="text-[11px] font-semibold text-ink-soft">{t("sr.ed.members")}</legend>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {field("femaleMembers", t("sr.ed.female"), { type: "number" })}
+              {field("maleMembers", t("sr.ed.male"), { type: "number" })}
+              <div className="text-[11px] font-semibold text-ink-soft">
+                <span id="total-members-label">{t("sr.ed.total")}</span>
+                <output
+                  aria-labelledby="total-members-label"
+                  aria-live="polite"
+                  className="mt-1 block rounded-input border border-line bg-[#f6f7f4] px-3 py-2 text-[12px] font-bold text-ink"
+                  htmlFor="femaleMembers maleMembers"
+                >
+                  {split.total !== null
+                    ? formatNumber(t.locale, split.total)
+                    : split.keepsOldTotal !== null
+                      ? formatNumber(t.locale, split.keepsOldTotal)
+                      : "—"}
+                </output>
+                <span className="mt-1 block text-[10px] font-normal text-muted">{t("sr.ed.totalHelp")}</span>
+              </div>
+            </div>
+            {split.keepsOldTotal !== null && (
+              <p className="text-[11px] text-ink-soft">{t("sr.ed.splitMissing", { count: formatNumber(t.locale, split.keepsOldTotal) })}</p>
+            )}
+            {split.error && (
+              <p className="text-[11px] text-danger-text" role="alert">
+                {t(split.error)}
+              </p>
+            )}
+          </fieldset>
           {field("addressLine", t("sr.ov.address"), { required: true })}
           <div className="grid gap-3 sm:grid-cols-2">
             {field("dsDivision", t("sr.ed.ds"))}

@@ -154,6 +154,25 @@ export interface ScopedSocietyMap {
   truncated: boolean;
 }
 
+/**
+ * Issue #141: the current member counts on the profiles of the active
+ * societies in view. Separate from the yearly category counts: the two are
+ * never added together.
+ */
+export interface ProfileMembership {
+  /** Active societies with a profile member total. */
+  societies: number;
+  /** Their totals added together, including societies with no split yet. */
+  members: number;
+  /** Of those, societies without category counts for the membership year. */
+  withoutBreakdown: number;
+  /** Active societies whose female and male counts are entered. */
+  withSplit: number;
+  /** Female and male members added over the `withSplit` societies only. */
+  female: number;
+  male: number;
+}
+
 /** D08 / M61: counts only, no personal data. */
 export interface NationalMembership {
   year: number | null;
@@ -164,6 +183,8 @@ export interface NationalMembership {
   total: number;
   categories: MembershipCategoryTotal[];
   districts: { id: string; name: string; active: number; female: number; male: number; total: number }[];
+  /** Issue #141: profile member counts of the active societies. */
+  profile: ProfileMembership;
 }
 
 /** D07 / M63: done vs planned by sector, dimension and UN SDG. */
