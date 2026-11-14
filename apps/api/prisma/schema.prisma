@@ -544,6 +544,8 @@ model EmergencyIncident {
   createdById        String                     @map("created_by_id") @db.VarChar(64)
   createdByName      String?                    @map("created_by_name") @db.VarChar(150)
   createdByRole      String?                    @map("created_by_role") @db.VarChar(40)
+  // A retry with the same id returns the incident already opened (null for older rows).
+  clientMutationId   String?                    @map("client_mutation_id") @db.Uuid
   // When it started (entered by the opener); activatedAt is when it was opened here.
   startedAt          DateTime                   @default(now()) @map("started_at") @db.Timestamptz(3)
   assessmentsDueAt   DateTime?                  @map("assessments_due_at") @db.Timestamptz(3)
@@ -561,6 +563,7 @@ model EmergencyIncident {
   updatedAt          DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([districtId, status, activatedAt])
+  @@unique([createdById, clientMutationId])
   @@index([areaDistrictIds], type: Gin)
   @@index([status, activatedAt])
   @@map("emergency_incidents")

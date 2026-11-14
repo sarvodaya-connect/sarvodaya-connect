@@ -352,6 +352,73 @@ describe('V5 disaster response (PostgreSQL)', () => {
     ).expect(201);
   });
 
+  it('IR02 / M48: opening with the same client id twice returns one incident', async () => {
+    const clientMutationId = randomUUID();
+    const body = openBody(own, { clientMutationId });
+    const first = await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      body,
+    ).expect(201);
+    const again = await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      body,
+    ).expect(201);
+    expect(again.body.id).toBe(first.body.id);
+    expect(
+      await db.emergencyIncident.count({ where: { clientMutationId } }),
+    ).toBe(1);
+  });
+
+  it('IR02 / M48: a different client id opens a separate incident', async () => {
+    const a = await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      openBody(own, { clientMutationId: randomUUID() }),
+    ).expect(201);
+    const b = await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      openBody(own, { clientMutationId: randomUUID() }),
+    ).expect(201);
+    expect(b.body.id).not.toBe(a.body.id);
+  });
+
+  it('IR02 / M48: a client id reused for another report is refused', async () => {
+    const clientMutationId = randomUUID();
+    await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      openBody(own, { clientMutationId }),
+    ).expect(201);
+    await api(
+      'post',
+      '/emergencies/incidents',
+      tokens.officer,
+      openBody(own, { clientMutationId, type: 'FIRE' }),
+    ).expect(409);
+  });
+
+  it('IR02 / M48: two taps at the same moment open one incident', async () => {
+    const clientMutationId = randomUUID();
+    const body = openBody(own, { clientMutationId });
+    const [x, y] = await Promise.all([
+      api('post', '/emergencies/incidents', tokens.officer, body),
+      api('post', '/emergencies/incidents', tokens.officer, body),
+    ]);
+    expect([x.status, y.status]).toEqual([201, 201]);
+    expect(x.body.id).toBe(y.body.id);
+    expect(
+      await db.emergencyIncident.count({ where: { clientMutationId } }),
+    ).toBe(1);
+  });
+
   it('D30 / IR02: the open form lists only the societies each role may report for', async () => {
     const options = async (token: string, query = '') =>
       (

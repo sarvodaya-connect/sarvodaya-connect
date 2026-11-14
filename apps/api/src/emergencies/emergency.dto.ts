@@ -75,6 +75,8 @@ export class ReportOptionsQueryDto {
 export class OpenIncidentDto {
   @IsIn(INCIDENT_TYPES) type: (typeof INCIDENT_TYPES)[number];
   @IsUUID() reportingSocietyId: string;
+  /** A retry with the same id returns the incident already opened. */
+  @IsOptional() @IsUUID() clientMutationId?: string;
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(25)
