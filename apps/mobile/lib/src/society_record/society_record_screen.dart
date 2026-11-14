@@ -11,6 +11,8 @@ import '../theme/app_theme.dart';
 import '../widgets/street_map.dart';
 import '../widgets/state_views.dart';
 import '../economy/economic_profile_tab.dart';
+import '../economy/economy_models.dart' show EconomicProfile;
+import '../economy/economy_summary_card.dart';
 import 'annual_summary_screen.dart';
 import 'document_upload_screen.dart';
 import 'work_plan_view.dart';
@@ -65,10 +67,47 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
   SocietyRecordException? _error;
   bool _loading = true;
 
+  /// Issue #163: the economic profile behind the Overview summary, loaded
+  /// once and shared with the Village Economic Profile tab. Loaded apart from
+  /// the record, so a failure here never hides the society record.
+  EconomicProfile? _economy;
+  SocietyRecordException? _economyError;
+  bool _economyLoading = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load();
+      _loadEconomy();
+    });
+  }
+
+  Future<void> _loadEconomy() async {
+    if (_economyLoading) return;
+    setState(() {
+      _economyLoading = true;
+      _economyError = null;
+    });
+    try {
+      final profile = await DemoScope.read(context).economy
+          .fetchProfile(widget.societyId);
+      if (mounted) setState(() => _economy = profile);
+    } on SocietyRecordException catch (error) {
+      if (mounted) setState(() => _economyError = error);
+    } finally {
+      if (mounted) setState(() => _economyLoading = false);
+    }
+  }
+
+  /// The tab reports each profile it loads, so the summary stays current.
+  void _economyLoaded(EconomicProfile profile) {
+    if (mounted) {
+      setState(() {
+        _economy = profile;
+        _economyError = null;
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -208,11 +247,23 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                     child: TabBarView(
                       children: [
                         RefreshIndicator(
-                          onRefresh: _load,
-                          child: _OverviewTab(record: record, open: _open),
+                          onRefresh: () =>
+                              Future.wait([_load(), _loadEconomy()]),
+                          child: _OverviewTab(
+                            record: record,
+                            open: _open,
+                            economy: _economy,
+                            economyError: _economyError,
+                            economyLoading: _economyLoading,
+                            reloadEconomy: _loadEconomy,
+                          ),
                         ),
                         _ExcoTab(record: record, open: _open),
-                        EconomicProfileTab(societyId: record.id),
+                        EconomicProfileTab(
+                          societyId: record.id,
+                          initialProfile: _economy,
+                          onLoaded: _economyLoaded,
+                        ),
                         _WorkPlanTab(record: record),
                         _DocumentsTab(record: record, open: _open),
                         _HistoryTab(societyId: record.id),
@@ -232,11 +283,28 @@ const double recordTabHeight = 44;
 
 const _gap = SizedBox(height: 10);
 
+/// Issue #163: the Overview in the client's order. It summarises; viewing
+/// and editing in detail stay in the other tabs and flows.
+///
+/// 1. Society information  2. Members  3. Address and location
+/// 4. Office bearers  5. Grade  6. Annual financial summary
+/// 7. Village Economic Profile
 class _OverviewTab extends StatelessWidget {
-  const _OverviewTab({required this.record, required this.open});
+  const _OverviewTab({
+    required this.record,
+    required this.open,
+    required this.economy,
+    required this.economyError,
+    required this.economyLoading,
+    required this.reloadEconomy,
+  });
 
   final SocietyRecord record;
   final Future<void> Function(Widget screen) open;
+  final EconomicProfile? economy;
+  final SocietyRecordException? economyError;
+  final bool economyLoading;
+  final VoidCallback reloadEconomy;
 
   @override
   Widget build(BuildContext context) {
@@ -245,16 +313,6 @@ class _OverviewTab extends StatelessWidget {
     final viewOnly = !permissions.canEdit;
     final summary = record.annualSummary;
     final now = DemoScope.of(context).now;
-    // Issue #141: the split with the total, or the total with a note.
-    final members = record.memberCount == null
-        ? l.recNotRecorded
-        : record.hasMemberSplit
-        ? l.recMembersSplit(
-            record.memberCount!,
-            record.femaleMembers!,
-            record.maleMembers!,
-          )
-        : l.recMembersNoSplit(record.memberCount!);
     final spc = record.staffWithRole(UserRole.programmeCoordinator);
     final officer = record.staffWithRole(UserRole.societyOfficer);
     final address = [
@@ -264,42 +322,24 @@ class _OverviewTab extends StatelessWidget {
       ].whereType<String>().join(', '),
       if (record.gnDivision != null) '${record.gnDivision} GN',
     ].where((part) => part.isNotEmpty).join(' · ');
+    KeyValue staff(UserRole role) => KeyValue(
+      role == UserRole.districtManager
+          ? l.recRoleDistrictManager
+          : role == UserRole.programmeCoordinator
+          ? l.recAssignedSpc
+          : l.recordRole(role),
+      record.staffWithRole(role)?.displayName ?? l.recNotAssigned,
+      missing: record.staffWithRole(role) == null,
+    );
+    void openTab(int tab) => DefaultTabController.of(context).animateTo(tab);
 
     return ListView(
+      key: const PageStorageKey('record.overview'),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       children: [
-        _AnnualSummaryCard(record: record, open: open),
-        _gap,
-        if (!summary.complete && viewOnly == false && officer == null) ...[
-          // M06fx: a short status card under a summary that is not added yet.
-          RecordCard(
-            children: [
-              KeyValueGrid([
-                KeyValue(
-                  l.recMembers,
-                  members,
-                  missing: record.memberCount == null,
-                ),
-                KeyValue(l.recGrade, record.grade ?? l.recNotSet),
-                KeyValue(
-                  l.recRoleSocietyOfficer,
-                  l.recNotAssigned,
-                  missing: true,
-                ),
-                KeyValue(
-                  l.recLastUpdate,
-                  record.lastChangeAt == null
-                      ? l.recNoChanges
-                      : l.recordWhen(record.lastChangeAt!, now),
-                ),
-              ]),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(l.recSpcAddsFigures, style: RecordStyle.caption),
-          _gap,
-        ],
+        // 1. Society information, with the staff responsible for it.
         RecordCard(
+          key: const ValueKey('overview.society'),
           children: [
             Text(l.recSocietyName, style: RecordStyle.label),
             const SizedBox(height: 2),
@@ -318,103 +358,134 @@ class _OverviewTab extends StatelessWidget {
                 ),
               ),
               KeyValue(
-                l.recMembers,
-                members,
-                missing: record.memberCount == null,
-              ),
-              KeyValue(
-                l.recAssignedSpc,
-                spc?.displayName ?? l.recNotAssigned,
-                missing: spc == null,
-              ),
-              KeyValue(
                 l.recLandline,
                 record.landline ?? l.recNoLandline,
                 missing: record.landline == null,
               ),
-            ]),
-            if (viewOnly) ...[
-              const SizedBox(height: 12),
-              KeyValue(
-                l.recAddress,
-                address.isEmpty ? l.recNotRecorded : address,
-                missing: address.isEmpty,
-              ),
-            ],
-          ],
-        ),
-        _gap,
-        _GradeCard(record: record, open: open),
-        if (!viewOnly) ...[
-          _gap,
-          RecordCard(
-            title: l.recAddressLocation,
-            children: [
-              Text(
-                address.isEmpty ? l.recAddressNotRecorded : address,
-                style: RecordStyle.body,
-              ),
-              if (record.latitude != null && record.longitude != null) ...[
-                const SizedBox(height: 10),
-                SocietyStreetMap(
-                  height: 110,
-                  location: GeoLocation(
-                    latitude: record.latitude!,
-                    longitude: record.longitude!,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l.editCoordinates(
-                    record.latitude!.toStringAsFixed(4),
-                    record.longitude!.toStringAsFixed(4),
-                  ),
-                  style: RecordStyle.caption,
-                ),
-              ],
-            ],
-          ),
-        ],
-        _gap,
-        RecordCard(
-          title: l.recBusiness,
-          children: [
-            Text(
-              record.businessDescription ?? l.recNoneRecorded,
-              style: RecordStyle.body,
-            ),
-            if (record.businessDescription != null) ...[
-              const SizedBox(height: 6),
-              Text(l.recBusinessNote, style: RecordStyle.caption),
-            ],
-          ],
-        ),
-        if (!viewOnly) ...[
-          _gap,
-          _OfficeBearersCard(record: record),
-          _gap,
-          RecordCard(
-            title: l.recStaffTitle,
-            trailing: LockedNote(l.recAssignedByHq),
-            children: [
-              KeyValueGrid([
+              // The full staff list stays with those who could see it before.
+              if (viewOnly)
+                KeyValue(
+                  l.recAssignedSpc,
+                  spc?.displayName ?? l.recNotAssigned,
+                  missing: spc == null,
+                )
+              else
                 for (final role in const [
-                  UserRole.districtManager,
-                  UserRole.deputyDistrictManager,
                   UserRole.programmeCoordinator,
                   UserRole.societyOfficer,
+                  UserRole.districtManager,
+                  UserRole.deputyDistrictManager,
                 ])
-                  KeyValue(
-                    role == UserRole.districtManager
-                        ? l.recRoleDistrictManager
-                        : l.recordRole(role),
-                    record.staffWithRole(role)?.displayName ?? l.recNotAssigned,
-                    missing: record.staffWithRole(role) == null,
-                  ),
+                  staff(role),
+            ]),
+            if (!viewOnly) ...[
+              const SizedBox(height: 8),
+              LockedNote(l.recAssignedByHq),
+            ],
+          ],
+        ),
+        _gap,
+        // 2. Members: the same card and figures as Members & Exco.
+        KeyedSubtree(
+          key: const ValueKey('overview.members'),
+          child: MembershipCard(record: record),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const ValueKey('overview.openMembers'),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => openTab(RecordTab.membersExco),
+            child: Text(l.ovOpenMembers),
+          ),
+        ),
+        // 3. Address and location (the map as before, for editors).
+        RecordCard(
+          key: const ValueKey('overview.address'),
+          title: l.recAddressLocation,
+          children: [
+            Text(
+              address.isEmpty ? l.recAddressNotRecorded : address,
+              style: address.isEmpty
+                  ? RecordStyle.body.copyWith(color: AppColors.muted)
+                  : RecordStyle.body,
+            ),
+            if (!viewOnly &&
+                record.latitude != null &&
+                record.longitude != null) ...[
+              const SizedBox(height: 10),
+              SocietyStreetMap(
+                height: 110,
+                location: GeoLocation(
+                  latitude: record.latitude!,
+                  longitude: record.longitude!,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l.editCoordinates(
+                  record.latitude!.toStringAsFixed(4),
+                  record.longitude!.toStringAsFixed(4),
+                ),
+                style: RecordStyle.caption,
+              ),
+            ],
+          ],
+        ),
+        _gap,
+        // 4. Office bearers (the Members & Exco tab shows everyone).
+        KeyedSubtree(
+          key: const ValueKey('overview.officeBearers'),
+          child: _OfficeBearersCard(record: record),
+        ),
+        _gap,
+        // 5. Grade.
+        KeyedSubtree(
+          key: const ValueKey('overview.grade'),
+          child: _GradeCard(record: record, open: open),
+        ),
+        _gap,
+        // 6. Annual financial summary, with its year.
+        KeyedSubtree(
+          key: const ValueKey('overview.annual'),
+          child: _AnnualSummaryCard(record: record, open: open),
+        ),
+        if (!summary.complete && viewOnly == false && officer == null) ...[
+          // M06fx: a short status note under a summary not added yet.
+          const SizedBox(height: 6),
+          RecordCard(
+            children: [
+              KeyValueGrid([
+                KeyValue(
+                  l.recRoleSocietyOfficer,
+                  l.recNotAssigned,
+                  missing: true,
+                ),
+                KeyValue(
+                  l.recLastUpdate,
+                  record.lastChangeAt == null
+                      ? l.recNoChanges
+                      : l.recordWhen(record.lastChangeAt!, now),
+                ),
               ]),
             ],
           ),
+          const SizedBox(height: 6),
+          Text(l.recSpcAddsFigures, style: RecordStyle.caption),
         ],
+        _gap,
+        // 7. Village Economic Profile.
+        KeyedSubtree(
+          key: const ValueKey('overview.economy'),
+          child: EconomySummaryCard(
+            profile: economy,
+            error: economyError,
+            loading: economyLoading,
+            businessDescription: record.businessDescription,
+            onRetry: reloadEconomy,
+            onOpen: () => openTab(RecordTab.economy),
+          ),
+        ),
         if (viewOnly) ...[
           _gap,
           RecordNote(
@@ -593,7 +664,9 @@ class _OfficeBearersCard extends StatelessWidget {
           ? null
           : Flexible(
               child: InkWell(
-                onTap: () => DefaultTabController.of(context).animateTo(1),
+                onTap: () =>
+                    DefaultTabController.of(context)
+                        .animateTo(RecordTab.membersExco),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

@@ -65,3 +65,30 @@ Future<void> openScreen(WidgetTester tester, Widget screen) async {
       .push(MaterialPageRoute<void>(builder: (_) => screen));
   await tester.pumpAndSettle();
 }
+
+/// Issue #163: the Overview's Members card, the same card and figures as
+/// Members & Exco. [female] and [male] are the shown values ("25" or
+/// "Not entered" in the chosen language).
+void expectOverviewMembers(
+  WidgetTester tester,
+  String total, {
+  required String female,
+  required String male,
+}) {
+  final card = find.byKey(const ValueKey('overview.members'));
+  expect(card, findsOneWidget);
+  expect(
+    tester
+        .widget<Text>(
+          find.descendant(
+            of: card,
+            matching: find.byKey(const ValueKey('membership.total')),
+          ),
+        )
+        .data,
+    total,
+  );
+  for (final value in {female, male}) {
+    expect(find.descendant(of: card, matching: find.text(value)), findsWidgets);
+  }
+}

@@ -3489,5 +3489,22 @@
   "vepBusinessLocked": "These business details are saved and are locked here. Save again to add the products and services that are left; change the details afterwards with Edit on the business page.",
   "@vepBusinessLocked": {
     "description": "Issue #146 Village Economic Profile."
+  },
+  "ovOpenMembers": "View in Members & Exco",
+  "@ovOpenMembers": {
+    "description": "Issue #163 society Overview."
+  },
+  "ovOpenEconomy": "View profile",
+  "@ovOpenEconomy": {
+    "description": "Issue #163 society Overview."
+  },
+  "ovMoreOutputs": "{count, plural, =1{1 more product or service in the profile} other{{count} more products and services in the profile}}",
+  "@ovMoreOutputs": {
+    "description": "Issue #163 society Overview.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
