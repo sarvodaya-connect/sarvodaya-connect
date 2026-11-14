@@ -41,6 +41,8 @@ Sarvodaya Connect gives authorised Sarvodaya staff a shared place to maintain vi
 
 `main` contains merged source. An open PR, a passing build or a diagram does not establish that its changes are deployed. Database migrations, Lambda updates, Amplify builds and mobile releases have separate lifecycles.
 
+For on-demand Android internal updates from `main`, see [Google Play release automation](docs/google-play-releases.md). Google identity/Play permissions and protected GitHub signing settings require one-time configuration before publishing.
+
 ## 2. Architecture
 
 ### Current TEST environment — AWS Singapore
