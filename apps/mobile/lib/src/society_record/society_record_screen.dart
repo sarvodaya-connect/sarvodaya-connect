@@ -156,11 +156,11 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
                       indicatorWeight: 2.5,
                       dividerHeight: 0,
                       tabs: [
-                        Tab(height: 38, text: l.recTabOverview),
-                        Tab(height: 38, text: l.recTabMembersExco),
-                        Tab(height: 38, text: l.recTabWorkPlan),
-                        Tab(height: 38, text: l.recTabDocuments),
-                        Tab(height: 38, text: l.recTabHistory),
+                        Tab(height: recordTabHeight, text: l.recTabOverview),
+                        Tab(height: recordTabHeight, text: l.recTabMembersExco),
+                        Tab(height: recordTabHeight, text: l.recTabWorkPlan),
+                        Tab(height: recordTabHeight, text: l.recTabDocuments),
+                        Tab(height: recordTabHeight, text: l.recTabHistory),
                       ],
                     ),
                   ),
@@ -208,6 +208,10 @@ class _SocietyRecordScreenState extends State<SocietyRecordScreen> {
     );
   }
 }
+
+/// Height of each society record tab: a comfortable touch target (at least
+/// 44 logical pixels), as in the V6 prototype.
+const double recordTabHeight = 44;
 
 const _gap = SizedBox(height: 10);
 
