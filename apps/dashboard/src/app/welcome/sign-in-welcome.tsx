@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+
+import { FounderSignature } from "./founder-signature";
 
 const DASHBOARD_URL = "/dashboard";
 const DASHBOARD_ENTRY_PATH = "/welcome";
 
 const HOLD_MS = 5000;
-const FADE_OUT_MS = 400;
 // If the portrait is slow, start the countdown anyway rather than wait on it.
 const ARTWORK_WAIT_MS = 3000;
 
@@ -18,24 +20,18 @@ const QUOTATION_LINES = [
   "තමන්ට පාලනය කරගත හැකි කුඩා පරිමාණ",
   "ආයතන බිහිවූ තරමටයි",
 ];
-const SIGNATURE_SI = "ඒ. ටී. ආරියරත්න";
 
 const noSubscription = () => () => {};
 // `?preview` holds the screen still for design review. It only pauses the timer.
 const isStillPreview = () =>
   new URLSearchParams(window.location.search).has("preview");
 
-function goToDashboard() {
-  // replace(): do not leave the timed welcome screen in browser history.
-  window.location.replace(DASHBOARD_URL);
-}
-
 export function SignInWelcome() {
+  const router = useRouter();
   const still = useSyncExternalStore(noSubscription, isStillPreview, () => false);
   const [ready, setReady] = useState(false);
   const [portraitFailed, setPortraitFailed] = useState(false);
   const [quoteFailed, setQuoteFailed] = useState(false);
-  const [leaving, setLeaving] = useState(false);
   const portrait = useRef<HTMLImageElement>(null);
   const left = useRef(false);
 
@@ -48,25 +44,24 @@ export function SignInWelcome() {
     return () => window.clearTimeout(wait);
   }, []);
 
-  // The countdown starts only when the screen can be seen.
+  // Warm the role home during the tribute; keep this screen visible while
+  // Next transitions instead of tearing down the document with location.replace.
+  useEffect(() => {
+    if (ready && !still) router.prefetch(DASHBOARD_URL);
+  }, [ready, still, router]);
+
   useEffect(() => {
     if (!ready || still) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let fade: number | undefined;
     const hold = window.setTimeout(() => {
       if (left.current) return;
       left.current = true;
-      setLeaving(true);
-      fade = window.setTimeout(goToDashboard, reduced ? 0 : FADE_OUT_MS);
+      router.replace(DASHBOARD_URL);
     }, HOLD_MS);
-    return () => {
-      window.clearTimeout(hold);
-      window.clearTimeout(fade);
-    };
-  }, [ready, still]);
+    return () => window.clearTimeout(hold);
+  }, [ready, still, router]);
 
   return (
-    <main className={`founder-entry relative min-h-dvh overflow-hidden text-[#18120a] ${leaving ? "founder-entry-leaving" : ""}`}>
+    <main className="founder-entry relative min-h-dvh overflow-hidden text-[#18120a]">
       {/* Keyboard and screen-reader users can skip the wait; it only appears on focus. */}
       <a
         className="sr-only z-20 rounded-button bg-white px-4 py-2.5 text-sm font-semibold text-ink focus:not-sr-only focus:absolute focus:right-4 focus:top-4 focus:outline-none focus:ring-3 focus:ring-orange-ring"
@@ -74,7 +69,7 @@ export function SignInWelcome() {
         onClick={(event) => {
           event.preventDefault();
           left.current = true;
-          goToDashboard();
+          router.replace(DASHBOARD_URL);
         }}
       >
         Skip to the dashboard
@@ -129,13 +124,7 @@ export function SignInWelcome() {
             </div>
           </blockquote>
           <figcaption className="mt-[3dvh] flex flex-col items-center lg:mt-[4dvh]">
-            {/* Signed in two strokes: the name, then the underline and dot. */}
-            <div aria-label={SIGNATURE_SI} className="founder-entry-signature flex flex-col" lang="si" role="img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="" className="founder-entry-sign-name block h-auto w-full" height={208} src="/founder/signature-name.webp" width={681} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="" className="founder-entry-sign-flourish block h-auto w-full" height={122} src="/founder/signature-flourish.webp" width={681} />
-            </div>
+            <FounderSignature />
           </figcaption>
 
           <div className="founder-entry-loader mt-[3dvh] flex items-center gap-3" role="status">
