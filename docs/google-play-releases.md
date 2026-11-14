@@ -5,9 +5,10 @@ configured. Play Console shows the service account as Active with app-only viewi
 and testing-release permissions. The protected `play-internal` GitHub environment
 has the signing secrets and release variables. The workflow is merged. The first run passed analysis, tests, bundle build and upload
 certificate verification, then failed authentication because the expected OIDC subject
-used the older name-only format. Google trust now uses the immutable subject below;
-a retry is pending. End-to-end publishing remains unverified. Merging does not publish
-a release.
+used the older name-only format. Google trust now uses the immutable subject below. Run `43543599093`, attempt 2,
+succeeded on 14 Nov 2026 and published `0.1.1` (code `2`) to internal testing,
+verifying the build, signing, federation and publishing connection end to end.
+Merging does not publish a release.
 
 ## What the release owner does each time
 
