@@ -517,7 +517,9 @@ export class EconomyService {
         industry: query.industry,
         districtId: query.districtId,
         societyId: query.societyId,
-        measurement: query.measurement,
+        // An exact period counts what its summary counts: actual figures
+        // unless estimates are asked for. Ordinary history lists stay unfiltered.
+        measurement: exact ? (query.measurement ?? 'ACTUAL') : query.measurement,
         from,
         to,
         exact,
