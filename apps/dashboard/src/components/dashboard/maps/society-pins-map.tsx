@@ -1,21 +1,21 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { MapSocietyClass, SocietyMap } from "@sarvodaya-connect/api-contracts";
-import type { GeoJSONSource, Map as MapboxMap, Marker } from "mapbox-gl";
+import type { GeoJSONSource, Map as MapLibreMap, Marker } from "maplibre-gl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { loadNationalMapPins } from "@/app/(dashboard)/map/actions";
 import { useI18n } from "@/i18n/provider";
 import type { MessageKey } from "@/i18n/messages/en";
 import type { Translator } from "@/i18n/translate";
-import { GRADE_COLOURS } from "@/lib/mapbox";
+import { GRADE_COLOURS } from "@/lib/map-settings";
 
 import { MapStatus } from "./map-status";
-import { type Mapbox, useMapbox } from "./use-mapbox";
+import { type MapLibre, useMap } from "./use-map";
 
 type Pin = SocietyMap["points"][number];
 type SourceFeature = { properties: Record<string, unknown> | null; geometry: { coordinates: [number, number] } };
@@ -37,6 +37,18 @@ export function groupByPosition(points: Pin[]) {
     groups.set(key, [...(groups.get(key) ?? []), point]);
   }
   return groups;
+}
+
+/** One map point per position, with how many societies are there. */
+function pointData(groups: Map<string, Pin[]>): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: [...groups].map(([key, group]) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [group[0]!.longitude, group[0]!.latitude] },
+      properties: { key, count: group.length },
+    })),
+  };
 }
 
 const gradeText = (mapClass: MapSocietyClass, t: Translator) =>
@@ -85,34 +97,48 @@ function bubble(count: number, label: string, className: string, onClick: () => 
 }
 
 /**
- * V5 D02 Society map: every located society on a Mapbox map of Sri Lanka,
- * coloured by grade and clustered into numbered bubbles that zoom in when
- * clicked. A pin opens the society record.
+ * V5 D02 and D03 society map (issue #181): every located society on a map of
+ * Sri Lanka, coloured by grade and clustered into numbered bubbles that zoom
+ * in when clicked. A society opens its record. The background map comes from
+ * OpenFreeMap; the societies come from our API and are drawn here.
+ *
+ * Map View passes the `points` its filters chose, and the map follows them
+ * when the filters change. Without `points` (National Overview) the map loads
+ * every located society the viewer may see.
  */
-export function SocietyPinsMap({ token }: { token: string }) {
+export function SocietyPinsMap({
+  className = "h-[340px]",
+  legend = true,
+  points,
+  truncated: truncatedPoints = false,
+}: {
+  className?: string;
+  /** Map View shows its own counts beside the map. */
+  legend?: boolean;
+  points?: Pin[];
+  truncated?: boolean;
+}) {
   const { t } = useI18n();
   const router = useRouter();
-  const [pins, setPins] = useState<Pin[]>([]);
-  const [truncated, setTruncated] = useState(false);
+  const [pins, setPins] = useState<Pin[]>(points ?? []);
+  const [truncated, setTruncated] = useState(truncatedPoints);
   const [chooser, setChooser] = useState<Pin[] | null>(null);
   const chooserHeading = useRef<HTMLHeadingElement>(null);
+  const live = useRef<{ shown: Pin[]; show: (next: Pin[]) => void } | null>(null);
 
-  async function setup(mapbox: Mapbox, map: MapboxMap) {
-    const result = await loadNationalMapPins();
-    if ("error" in result) throw new Error(result.error);
-    setPins(result.points);
-    setTruncated(result.truncated);
-    const groups = groupByPosition(result.points);
+  async function setup(maplibre: MapLibre, map: MapLibreMap) {
+    let initial = points;
+    if (!initial) {
+      const result = await loadNationalMapPins();
+      if ("error" in result) throw new Error(result.error);
+      initial = result.points;
+      setTruncated(result.truncated);
+    }
+    let groups = groupByPosition(initial);
+    setPins(initial);
     map.addSource(SOURCE, {
       type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: [...groups].map(([key, group]) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [group[0]!.longitude, group[0]!.latitude] },
-          properties: { key, count: group.length },
-        })),
-      },
+      data: pointData(groups),
       cluster: true,
       clusterMaxZoom: 14,
       clusterRadius: 44,
@@ -123,6 +149,10 @@ export function SocietyPinsMap({ token }: { token: string }) {
 
     const open = (id: string) => router.push(`/societies/${id}`);
     let markers = new Map<string, Marker>();
+    const clear = () => {
+      for (const marker of markers.values()) marker.remove();
+      markers = new Map();
+    };
     const sync = () => {
       const next = new Map<string, Marker>();
       // Rendered features only: querySourceFeatures also returns clusters from tiles of the previous zoom.
@@ -137,9 +167,10 @@ export function SocietyPinsMap({ token }: { token: string }) {
           if (properties.cluster) {
             const count = Number(properties.societies);
             element = bubble(count, t("map.clusterLabel", { count }), "border-2 border-white bg-[#24492f] text-white", () => {
-              (map.getSource(SOURCE) as GeoJSONSource).getClusterExpansionZoom(Number(properties.cluster_id), (error, zoom) => {
-                if (!error && zoom !== null && zoom !== undefined) map.easeTo({ center: [lng, lat], zoom });
-              });
+              (map.getSource(SOURCE) as GeoJSONSource)
+                .getClusterExpansionZoom(Number(properties.cluster_id))
+                .then((zoom) => map.easeTo({ center: [lng, lat], zoom }))
+                .catch(() => {});
             });
           } else {
             const group = groups.get(String(properties.key)) ?? [];
@@ -151,7 +182,7 @@ export function SocietyPinsMap({ token }: { token: string }) {
                     requestAnimationFrame(() => chooserHeading.current?.focus());
                   });
           }
-          marker = new mapbox.Marker({ element }).setLngLat([lng, lat]).addTo(map);
+          marker = new maplibre.Marker({ element }).setLngLat([lng, lat]).addTo(map);
         }
         next.set(id, marker);
       }
@@ -161,15 +192,42 @@ export function SocietyPinsMap({ token }: { token: string }) {
     // "idle" follows every move and tile load once the map has finished drawing.
     map.on("idle", sync);
     sync();
+    live.current = {
+      shown: initial,
+      // New filter results: the old markers go, and the next "idle" draws the new ones.
+      show: (next) => {
+        if (next === live.current?.shown) return;
+        live.current!.shown = next;
+        groups = groupByPosition(next);
+        clear();
+        setChooser(null);
+        (map.getSource(SOURCE) as GeoJSONSource).setData(pointData(groups));
+      },
+    };
   }
 
-  const { container, phase, retry } = useMapbox(token, setup, { maxZoom: 16, minZoom: 5 });
+  const { container, phase, retry } = useMap(setup, { attributionControl: { compact: false }, maxZoom: 16, minZoom: 5 });
+
+  useEffect(() => {
+    if (!points) return;
+    setPins(points);
+    setTruncated(truncatedPoints);
+    if (phase === "ready") live.current?.show(points);
+  }, [points, truncatedPoints, phase]);
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="relative h-[340px] overflow-hidden rounded-lg bg-[#e9eef1]">
+      <div className={`relative overflow-hidden rounded-lg bg-[#e9eef1] ${className}`}>
         <div aria-label={t("map.region")} className="h-full w-full" ref={container} role="region" />
-        <MapStatus phase={phase} retry={retry} />
+        <MapStatus
+          fallback={
+            <Link className="font-semibold text-brand-forest underline underline-offset-2" href="/societies">
+              {t("n.listView")}
+            </Link>
+          }
+          phase={phase}
+          retry={retry}
+        />
       </div>
       {chooser && (
         <section aria-labelledby="map-chooser" className="mt-2 rounded-lg border border-line px-3 py-2">
@@ -193,7 +251,7 @@ export function SocietyPinsMap({ token }: { token: string }) {
           </ul>
         </section>
       )}
-      {phase === "ready" && (
+      {legend && phase === "ready" && (
         <ul aria-label={t("home.grade")} className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink">
           {LEGEND.map((item) => (
             <li className="flex items-center gap-1.5" key={item.label}>

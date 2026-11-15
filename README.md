@@ -55,7 +55,7 @@ For on-demand Android internal updates from `main`, see [Google Play release aut
 - Lambda uses private-subnet connectivity to RDS. The **EC2 NAT instance** supplies outbound access for public endpoints; it is not a NAT Gateway. Lambda-to-RDS traffic stays inside the VPC.
 - S3 is private. The API authorises file access and provides temporary upload/download links; file bytes need not pass through Lambda.
 - Cloudflare hosts the public website and its dashboard link. It is not shown as a required proxy in the application API path.
-- Mapbox provides maps where a public token is configured; fallback/drawn maps are used where supported without one.
+- The dashboard maps use MapLibre with OpenFreeMap's OpenStreetMap background, which needs no key; society data stays in our API. The phone app still uses Mapbox tiles with a public token.
 - IAM, Parameter Store, CloudWatch, CloudFormation and AWS Budgets support access, configuration and operations. Budget alerts notify; they do not impose a spending cap.
 
 The recorded TEST SarvoAI application limit is USD 3/month; the manually configured AWS budget is USD 70 with USD 50/70 alerts. These differ from local configuration defaults and historical estimates. Running RDS, the NAT instance, public IPv4, storage and other usage can incur charges while nobody is using the app. Check Billing for actual costs.
@@ -119,7 +119,7 @@ docs/              Design, configuration and operational documentation
 | NestJS / Node.js 24 | REST API and Lambda entry point |
 | PostgreSQL / Prisma | Records, permissions, metadata, migrations and AI spending records; TEST uses PostgreSQL 17 |
 | AWS | Cognito, API Gateway, Lambda, RDS, S3 and the operational/network services shown above |
-| Cloudflare / Mapbox | Public website/DNS and map presentation |
+| Cloudflare / OpenFreeMap / Mapbox | Public website/DNS; background maps (dashboard: OpenFreeMap, phone: Mapbox) |
 | GitHub Actions | Automated checks and build/readiness artifacts; no Google Play release workflow is committed as of this update |
 
 Application guides: [API](apps/api/README.md), [dashboard](apps/dashboard/README.md), [mobile](apps/mobile/README.md), [landing site](apps/landing/README.md). Use current source/configuration when an older guide differs from a later merged implementation.

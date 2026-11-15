@@ -1,15 +1,15 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-import type { Map as MapboxMap, Marker } from "mapbox-gl";
+import type { Map as MapLibreMap, Marker } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { useI18n } from "@/i18n/provider";
-import { roundCoordinate } from "@/lib/mapbox";
+import { roundCoordinate } from "@/lib/map-settings";
 
 import { MapStatus } from "./map-status";
-import { type Mapbox, useMapbox } from "./use-mapbox";
+import { type MapLibre, useMap } from "./use-map";
 
 type Position = { latitude: number; longitude: number };
 
@@ -34,16 +34,14 @@ export function SocietyLocationMap({
   name,
   onPick,
   position,
-  token,
 }: {
   className?: string;
   name: string;
   onPick?: (latitude: number, longitude: number) => void;
   position: Position | null;
-  token: string;
 }) {
   const { t } = useI18n();
-  const live = useRef<{ mapbox: Mapbox; map: MapboxMap; marker: Marker | null } | null>(null);
+  const live = useRef<{ maplibre: MapLibre; map: MapLibreMap; marker: Marker | null } | null>(null);
   const pick = useRef(onPick);
   pick.current = onPick;
   const label = onPick
@@ -64,7 +62,7 @@ export function SocietyLocationMap({
       current.marker.setLngLat([next.longitude, next.latitude]);
       return;
     }
-    const marker = new current.mapbox.Marker({ anchor: "bottom", draggable: Boolean(pick.current), element: pinElement(label) })
+    const marker = new current.maplibre.Marker({ anchor: "bottom", draggable: Boolean(pick.current), element: pinElement(label) })
       .setLngLat([next.longitude, next.latitude])
       .addTo(current.map);
     marker.on("dragend", () => {
@@ -74,17 +72,23 @@ export function SocietyLocationMap({
     current.marker = marker;
   }
 
-  const { container, phase, retry } = useMapbox(
-    token,
-    (mapbox, map) => {
-      live.current = { mapbox, map, marker: null };
+  const { container, phase, retry } = useMap(
+    (maplibre, map) => {
+      live.current = { maplibre, map, marker: null };
+      // A small map: the credit starts as its "i" button, so it does not cover the pin.
+      const credit = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
+      credit?.classList.remove("maplibregl-compact-show");
+      credit?.removeAttribute("open");
       placePin(position);
       if (pick.current) {
         map.getCanvas().style.cursor = "crosshair";
         map.on("click", (event) => pick.current?.(roundCoordinate(event.lngLat.lat), roundCoordinate(event.lngLat.lng)));
       }
     },
-    position ? { bounds: undefined, center: [position.longitude, position.latitude], zoom: 13 } : {},
+    {
+      attributionControl: { compact: true },
+      ...(position ? { bounds: undefined, center: [position.longitude, position.latitude], zoom: 13 } : {}),
+    },
   );
 
   // Typed coordinates move the pin too. Values outside Sri Lanka are left for the form to reject.

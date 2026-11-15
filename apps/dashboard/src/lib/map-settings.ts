@@ -1,19 +1,18 @@
 import type { MapSocietyClass } from "@sarvodaya-connect/api-contracts";
 
 /**
- * Mapbox settings shared by the D02 society map and the single-society map.
- * The token is Mapbox's public `pk.` kind, restricted to the dashboard's URLs
- * in the Mapbox account. It is public configuration, not a secret, and is
- * never committed: set NEXT_PUBLIC_MAPBOX_TOKEN in apps/dashboard/.env.local
- * or as an Amplify build variable. Without it the drawn maps are shown.
+ * Issue #181: map settings shared by the society maps and the single-society
+ * map. MapLibre draws them in the browser with OpenFreeMap's background map
+ * (OpenStreetMap data). No key is needed.
+ *
+ * Only the background comes from OpenFreeMap: its style, tiles, fonts and
+ * icons, all from tiles.openfreemap.org. Society names, positions and grades
+ * come from our API and are drawn in the page; they are never sent there.
+ * OpenFreeMap only learns which map area is being looked at.
  */
-export function mapboxToken(value = process.env.NEXT_PUBLIC_MAPBOX_TOKEN): string | null {
-  const token = value?.trim();
-  return token && token.startsWith("pk.") ? token : null;
-}
 
-/** To Confirm with Sarvodaya: a light base map keeps the grade colours readable. */
-export const MAP_STYLE = "mapbox://styles/mapbox/light-v11";
+/** OpenFreeMap's light "Positron" style keeps the grade colours readable. Its credit comes with the tiles. */
+export const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
 /** Sri Lanka with a small margin, [west, south] and [east, north]. The default view fits it. */
 export const SRI_LANKA_BOUNDS: [[number, number], [number, number]] = [
@@ -22,7 +21,7 @@ export const SRI_LANKA_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 /**
- * How far the user can pan. Wider than the island because Mapbox keeps the
+ * How far the user can pan. Wider than the island because the map keeps the
  * whole view inside it: a wide card showing all of Sri Lanka also shows sea
  * either side.
  */

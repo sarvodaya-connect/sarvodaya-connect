@@ -58,7 +58,6 @@ The temporary DDM access maximum is added with PR 7. PR 8 (disaster response) ad
 | `COGNITO_USER_POOL_ID` | Config | — | The same user pool as the API; required with `cognito` |
 | `COGNITO_CLIENT_ID` | Config | — | The dashboard's public app client (no client secret) |
 | `COGNITO_REGION` | Config | from the pool id | Optional check against the pool id |
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | Public config | empty | Mapbox **public** token (`pk.`) for the street maps. Built into the browser code, so it is not a secret; restrict it to the dashboard's URLs in the Mapbox account. Set it as an Amplify build environment variable (`amplify.yml` writes it to `.env.production`). Empty: the drawn maps are shown |
 
 SarvoAI on the dashboard (`/sarvoai`, the D02 Ask bar) and the phone (M80–M89) call the same `POST /api/v1/assistant/questions` endpoint. They hold no AWS settings or credentials.
 
@@ -109,16 +108,18 @@ The phone app uploads with a native HTTP client and needs no CORS rule.
 - **CORS:** the existing bucket rule (dashboard origin, `PUT` and `GET`, `Content-Type` and `x-amz-checksum-sha256`) already covers dashboard photo uploads; the phone needs none.
 - Everything else in disaster response is stateless: deadlines ("1 day 9 hours left") and response action states (Needed, Assigned, In progress, Delivered) are worked out from the database on each request. There are no timers or scheduled jobs; HQ sends assessment reminders by hand from D31.
 
-## Maps (Mapbox)
+## Maps (MapLibre and OpenFreeMap)
 
-The HQ National Dashboard's society map (D02), the society record's location card and the create and edit society forms use Mapbox street maps; the phone shows the society record's location on one and lets the user tap to set the pin.
+The dashboard's maps (issue #181) are drawn in the browser with [MapLibre GL JS](https://maplibre.org) (BSD-3-Clause), on OpenFreeMap's light "Positron" background map, which is built from OpenStreetMap data. They are Map View (D03), the HQ National Dashboard's society map (D02), the society record's location card and the create and edit society forms. The phone still uses Mapbox tiles through `flutter_map` with `--dart-define=MAPBOX_TOKEN=pk...`; moving it is a separate issue.
 
-- **Token:** one Mapbox public token (`pk.`), URL-restricted in the Mapbox account. Dashboard: `NEXT_PUBLIC_MAPBOX_TOKEN` (Amplify build environment variable). Phone: a build setting, `flutter build ... --dart-define=MAPBOX_TOKEN=pk...` (`flutter_map` with Mapbox raster tiles, so no secret download token is needed). Public configuration, not a secret, but never committed. Never use a secret (`sk.`) token: both apps ignore anything that does not start with `pk.`.
-- **What goes to Mapbox:** only map tiles are requested, straight from the browser or the phone; the API does not proxy them. Pins are drawn on the device from the API's response, so society names and positions are not sent to Mapbox.
-- **No token, offline or refused:** the dashboard and phone show their existing drawn maps; a map that fails to load on the dashboard says "The map could not load" with "Try again", and the rest of the page is unaffected.
-- **API:** `GET /national/map` (PR 5, HQ only) feeds D02 and now also returns each pin's district. `GET /societies/map` returns pins within the caller's own scope (HQ national, a DM their district, SPC, DDM and Society Officer their assigned societies plus a DDM's current temporary district), with only id, name, S number, grade, status, position and district, and a count of active societies without a position. Each is one bounded select (at most 10,000 pins, about 1 MB) using the existing `societies (district_id)` and `(status)` indexes. No migration, no caching, no new AWS resources.
-- **Cost:** the dashboard is billed as **Map Loads for Web** (free up to 50,000 a month). The phone uses Mapbox raster tiles through `flutter_map`, not the native Mapbox SDK, so it is billed as **Static Tiles API** requests, not mobile users: each phone map view loads roughly 10 to 20 tiles. Check the current free allowance at mapbox.com/pricing. Without a payment method the account is "usage limited" (5,000 web map loads and 20,000 tile requests a month), and maps stop loading above that; add a payment method before launch. Usage above the free tiers is billed by Mapbox, so set a usage alert in the Mapbox account.
-- Mapbox's logo and attribution stay visible on every map, as Mapbox requires.
+- **No key:** OpenFreeMap needs no account, key or payment, and has no usage limit, so the maps always show. There is nothing to set in Amplify. `NEXT_PUBLIC_MAPBOX_TOKEN` is no longer read and can be removed from the Amplify console.
+- **What goes to OpenFreeMap:** only the background map. The browser loads the style, map tiles, fonts and icons straight from `tiles.openfreemap.org`; the API does not proxy them. Society names, S numbers, grades and positions come from our API and are drawn in the page, so they are never sent to OpenFreeMap. Like any tile server, it can tell which part of the map is being viewed. MapLibre sends no usage data of its own.
+- **Clicking:** a society dot opens `/societies/{id}` (Ctrl or Cmd-click opens a new tab). Numbered bubbles zoom in, and societies recorded at exactly the same place open a short list to choose from.
+- **Offline or blocked:** a map that cannot load says "The map could not load", with "Try again" and a link to the society list; the rest of the page is unaffected. The drawn island maps have been removed. The forms still accept typed coordinates.
+- **Credit:** "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" stays written out on the society maps. On the small location maps it is the "i" button, which opens it.
+- **Worker file:** MapLibre draws in a web worker. The bundler copies `maplibre-gl-worker.mjs` into `/_next/static/media/`, and `use-map.ts` points MapLibre at it.
+- **API:** `GET /national/map` (PR 5, HQ only) feeds D02 and Map View with each pin's district. `GET /societies/map` returns pins within the caller's own scope (HQ national, a DM their district, SPC, DDM and Society Officer their assigned societies plus a DDM's current temporary district), with only id, name, S number, grade, status, position and district, and a count of active societies without a position. Each is one bounded select (at most 10,000 pins, about 1 MB) using the existing `societies (district_id)` and `(status)` indexes. No migration, no caching, no new AWS resources.
+- **Cost:** none for the dashboard maps. OpenFreeMap is run on donations; if Sarvodaya relies on it heavily, consider supporting it, or host the same tiles ourselves later.
 
 ## Database migrations
 
@@ -140,7 +141,7 @@ PR 5 adds no settings and no AWS resources. Its endpoints are read-mostly and si
 
 - **Grouped SQL:** the D02 figures, district cards, membership, programmes, reports and HQ tasks are each a handful of grouped queries over all societies, never a loop over societies. A report is at most one row per district, category or sector.
 - **Bounded lists:** the society directory, the "not added" list, the request tracker and Alerts are paginated (at most 100 rows a page); search returns at most 10 results a type (25 for one type).
-- **Map:** `GET /national/map` returns every society that has a position, as a few small fields each (the Mapbox maps PR adds the district and stops at 10,000 pins, saying so with `truncated`). At about 5,500 societies this is roughly 600 KB of JSON, well inside the 6 MB Lambda response limit. If the registry grows far beyond that, return the points by district or as tiles instead.
+- **Map:** `GET /national/map` returns every society that has a position, as a few small fields each (it includes the district and stops at 10,000 pins, saying so with `truncated`). At about 5,500 societies this is roughly 600 KB of JSON, well inside the 6 MB Lambda response limit. If the registry grows far beyond that, return the points by district or as tiles instead.
 - **Reports:** the dashboard previews a report as JSON, prints it as PDF in the browser and builds the CSV ("Excel") download itself, so nothing is written to disk or S3. Scheduled reports would need EventBridge and email; they are not built (To Confirm in the PR).
 - **Requests:** sending a request to every active society writes one row and at most one notification per society in a single transaction; for about 1,100 societies that is well within one Lambda invocation.
 
@@ -198,7 +199,7 @@ The template grants only:
 
 ### Dashboard on Amplify
 
-`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL`, `PLATFORM_DEMO_MODE`, `AUTH_PROVIDER`, the `COGNITO_*` values and `SHOW_UNREVIEWED_TRANSLATIONS` (TEST review only, see `docs/localization.md`) into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server (or middleware) otherwise. The only value exposed to the browser is the optional Mapbox public token (`NEXT_PUBLIC_MAPBOX_TOKEN`, see Maps), and there is no client secret. `npm run build` succeeds with only `API_BASE_URL` and `PLATFORM_DEMO_MODE` set. Sign-in then fails closed until the Cognito values are added.
+`amplify.yml` (repository root) builds `apps/dashboard` with Node 24 and writes `API_BASE_URL`, `PLATFORM_DEMO_MODE`, `AUTH_PROVIDER`, the `COGNITO_*` values and `SHOW_UNREVIEWED_TRANSLATIONS` (TEST review only, see `docs/localization.md`) into `.env.production` before `next build`, because Amplify does not pass console variables to the Next.js server (or middleware) otherwise. No value is exposed to the browser (the maps need no key, see Maps), and there is no client secret. `npm run build` succeeds with only `API_BASE_URL` and `PLATFORM_DEMO_MODE` set. Sign-in then fails closed until the Cognito values are added.
 
 ### SarvoAI on Bedrock
 
