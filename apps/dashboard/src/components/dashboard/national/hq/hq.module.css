@@ -203,6 +203,12 @@
 /* --- Reduced motion ---------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
+  /* The charts are shared with the SPC, DDM and DM homes, outside .root. */
+  .column,
+  .donutSegment,
+  .ring {
+    transition-duration: 1ms !important;
+  }
   .root *,
   .root *::before,
   .root *::after,
