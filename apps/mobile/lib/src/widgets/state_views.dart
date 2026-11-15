@@ -19,53 +19,63 @@ class LoadingSkeleton extends StatelessWidget {
       label: '${label ?? context.l10n.stateLoading}…',
       liveRegion: true,
       child: ExcludeSemantics(
-        child: ListView.separated(
+        // Never scrolls by itself. A fixed column (rather than a list) also
+        // reports its height, so a screen can place it in its own scroll view.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: cards,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _bar(width: 140, height: 14),
-                  const SizedBox(height: 14),
-                  for (var line = 0; line < 3; line++) ...[
-                    Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE6E9E3),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _bar(width: 180, height: 10),
-                              const SizedBox(height: 6),
-                              _bar(width: 110, height: 8),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ],
-              ),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < cards; index++) ...[
+                if (index > 0) const SizedBox(height: 12),
+                _card(),
+              ],
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _card() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _bar(width: 140, height: 14),
+          const SizedBox(height: 14),
+          for (var line = 0; line < 3; line++) ...[
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE6E9E3),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _bar(width: 180, height: 10),
+                      const SizedBox(height: 6),
+                      _bar(width: 110, height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    ),
+  );
 
   Widget _bar({required double width, required double height}) => Container(
     width: width,

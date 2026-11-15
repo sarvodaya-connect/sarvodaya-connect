@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/assessment_queue.dart';
+import 'package:sarvodaya_connect_mobile/src/incidents/assessment_queue_card.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/demo_incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_format.dart';
@@ -11,6 +12,7 @@ import 'package:sarvodaya_connect_mobile/src/incidents/incident_screens.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
+import 'package:sarvodaya_connect_mobile/src/widgets/state_views.dart';
 
 import 'test_helpers.dart';
 
@@ -102,6 +104,19 @@ class _DownIncidentApi extends DemoIncidentApi {
     AssessmentAnswers answers, {
     bool Function()? stillSignedIn,
   }) async => throw _offline;
+}
+
+/// Incidents never finish loading, and sending is offline.
+class _LoadingIncidentApi extends _DownIncidentApi {
+  _LoadingIncidentApi({required super.clock});
+
+  @override
+  Future<List<IncidentSummary>> active() =>
+      Completer<List<IncidentSummary>>().future;
+
+  @override
+  Future<IncidentDetail> detail(String id) =>
+      Completer<IncidentDetail>().future;
 }
 
 /// The phone's storage fills up after [writes] successful queue writes.
@@ -398,6 +413,138 @@ void main() {
     expect(find.text("Can't open this incident"), findsOneWidget);
     expect(find.text('1 assessment saved on this phone'), findsOneWidget);
     expect(find.text('Remove from this phone'), findsOneWidget);
+  });
+
+  group('many saved assessments on a small phone with large text', () {
+    // A 4-inch phone at twice the text size, with more saved assessments
+    // than fit on the screen.
+    Future<DemoStore> pumpSmall(
+      WidgetTester tester,
+      Widget home,
+      IncidentApi api,
+    ) async {
+      tester.view.physicalSize = const Size(320 * 2, 568 * 2);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final detail = await DemoIncidentApi(clock: () => demoNow)
+          .detail('incident-demo');
+      final store = DemoStore(
+        loadDelay: Duration.zero,
+        clock: () => demoNow,
+        incidentApi: api,
+      )..switchDemoRole(UserRole.societyOfficer);
+      for (var i = 0; i < 8; i++) {
+        await store.assessments.save(
+          incident: detail.incident,
+          societyId: detail.assessableSocieties.first.id,
+          societyName: 'Fictional Society ${i + 1}',
+          clientMutationId: newClientMutationId(),
+          answers: AssessmentAnswers()..impact = 'CRITICAL',
+        );
+      }
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(theme: AppTheme.light(), home: home),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return store;
+    }
+
+    final page = find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    Future<void> scrollTo(WidgetTester tester, Finder target) async {
+      await tester.scrollUntilVisible(target, 120, scrollable: page);
+      await tester.pumpAndSettle();
+      final screen = Offset.zero & tester.view.physicalSize / 2;
+      expect(screen.contains(tester.getCenter(target)), isTrue);
+    }
+
+    Future<void> expectAllReachable(
+      WidgetTester tester,
+      DemoStore store,
+      Finder content,
+    ) async {
+      expect(tester.takeException(), isNull);
+      expect(find.text('8 assessments saved on this phone'), findsOneWidget);
+      // The card alone is taller than the screen.
+      expect(
+        tester.getSize(find.byType(PendingAssessmentsCard)).height,
+        greaterThan(568),
+      );
+      await scrollTo(tester, find.textContaining('Fictional Society 8'));
+      await scrollTo(tester, find.text('Remove from this phone').last);
+      await scrollTo(tester, find.text('Retry sending'));
+      // Retry sending works from there; offline, every item is kept.
+      await tester.tap(find.text('Retry sending'));
+      await tester.pumpAndSettle();
+      expect(store.assessments.items, hasLength(8));
+      await scrollTo(tester, content);
+      expect(tester.takeException(), isNull);
+    }
+
+    testWidgets('Disaster Response, when incidents cannot load', (
+      tester,
+    ) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentsScreen(),
+        _DownIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.text('Try again'));
+      expect(find.text("Couldn't load incidents"), findsOneWidget);
+    });
+
+    testWidgets('Disaster Response, while incidents load', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentsScreen(),
+        _LoadingIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.byType(LoadingSkeleton));
+    });
+
+    testWidgets('the incident page, when it cannot load', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentScreen(incidentId: 'incident-demo'),
+        _DownIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.text('Try again'));
+      expect(find.text("Can't open this incident"), findsOneWidget);
+    });
+
+    testWidgets('the incident page, while it loads', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentScreen(incidentId: 'incident-demo'),
+        _LoadingIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.byType(LoadingSkeleton));
+    });
+
+    testWidgets('with nothing saved, the error still fills the screen', (
+      tester,
+    ) async {
+      final store = await _pump(
+        tester,
+        const IncidentsScreen(),
+        api: _DownIncidentApi(clock: () => demoNow),
+      );
+      expect(store.assessments.items, isEmpty);
+      // Centred in the space below the bar, as before.
+      final screen = tester.getSize(find.byType(Scaffold));
+      final message = tester.getCenter(find.text("Couldn't load incidents"));
+      expect((message.dy - screen.height / 2).abs(), lessThan(120));
+    });
   });
 
   testWidgets('a saved assessment that is only waiting can be removed', (

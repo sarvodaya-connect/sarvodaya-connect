@@ -480,16 +480,23 @@ void _sendSavedThen(DemoStore store, void Function() onSent) {
 
 /// Saved assessments stay in reach while the screen loads or cannot load,
 /// for example offline: their state, Retry sending and Remove.
-Widget _withSavedAssessments(Widget child, VoidCallback onSent) => Column(
-  crossAxisAlignment: CrossAxisAlignment.stretch,
-  children: [
-    Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: PendingAssessmentsCard(onSent: onSent),
-    ),
-    Expanded(child: child),
-  ],
-);
+///
+/// One scroll view holds both, so however many items are saved and however
+/// large the text, every item, Retry sending and the loading or error content
+/// below can be scrolled to. The content fills the space under the card as
+/// before, and grows to its full height rather than scrolling on its own.
+Widget _withSavedAssessments(Widget child, VoidCallback onSent) =>
+    CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: PendingAssessmentsCard(onSent: onSent),
+          ),
+        ),
+        SliverFillRemaining(hasScrollBody: false, child: child),
+      ],
+    );
 
 Future<void> openIncident(BuildContext context, String id) => Navigator.of(
   context,
