@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { signOut } from "@/app/identity-actions";
 import { SHORT_ROLE_LABELS, type DemoViewer } from "@/lib/access";
@@ -20,6 +21,7 @@ import type { Translator } from "@/i18n/translate";
 
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon } from "./icon";
+import styles from "./hq-shell.module.css";
 
 /** Hills along the bottom of the V5 header (HQTop). */
 function HeaderHills() {
@@ -61,25 +63,30 @@ function scopeFor(viewer: DemoViewer, t: Translator) {
   return viewer.scopeLabel;
 }
 
-/**
- * Prototype V5 desktop shell: 112px header with the logo column, page title,
- * search, alerts and account; 240px green sidebar with role navigation and the
- * signed-in user. Below the large breakpoint the sidebar becomes a scrolling
- * row of links under the header.
- */
-export function DashboardShell({
-  alerts,
-  children,
-  unreadCount = 0,
-  viewer,
-}: {
+type ShellProps = {
   /** V5 IR05: the role bell with its notifications. HQ keeps the link to the alerts page. */
   alerts?: React.ReactNode;
   children: React.ReactNode;
   /** The signed-in user's unread alerts, from the API. */
   unreadCount?: number;
   viewer: DemoViewer;
-}) {
+};
+
+/**
+ * HQ gets the redesigned shell; every other role keeps the V5 shell exactly as
+ * it was, until their own redesign is reviewed.
+ */
+export function DashboardShell(props: ShellProps) {
+  return props.viewer.role === "HQ_ADMIN" ? <HqShell {...props} /> : <StandardShell {...props} />;
+}
+
+/**
+ * Prototype V5 desktop shell: 112px header with the logo column, page title,
+ * search, alerts and account; 240px green sidebar with role navigation and the
+ * signed-in user. Below the large breakpoint the sidebar becomes a scrolling
+ * row of links under the header.
+ */
+function StandardShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
   const pathname = usePathname();
   const { t } = useI18n();
   const navigation = navigationFor(viewer, t);
@@ -215,6 +222,204 @@ export function DashboardShell({
         </nav>
 
         <main className="min-w-0 flex-1 px-4 pb-8 pt-[18px] md:px-7">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+/* --- HQ shell (2026 redesign) --------------------------------------------- */
+
+/** A soft line of hills along the foot of the sidebar: Sarvodaya's landscape, kept quiet. */
+function SidebarHills() {
+  return (
+    <svg aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[90px] w-full" preserveAspectRatio="none" viewBox="0 0 240 90">
+      <path d="M0 90 L0 52 Q40 30 82 46 T160 38 T240 30 L240 90 Z" fill="rgb(255 255 255 / 0.035)" />
+      <path d="M0 90 L0 70 Q60 52 120 64 T240 56 L240 90 Z" fill="rgb(255 255 255 / 0.05)" />
+    </svg>
+  );
+}
+
+function HqSidebarLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
+  const active = isActiveItem(item, pathname);
+  return (
+    <Link
+      aria-current={active ? "page" : undefined}
+      className={`group relative flex items-center gap-[11px] rounded-[10px] px-3 py-2 text-[12.5px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+        active ? "font-semibold text-brand-forest" : "text-sidebar-text hover:bg-white/[0.07] hover:text-white"
+      }`}
+      data-active={active || undefined}
+      href={item.href}
+    >
+      <Icon className={`${styles.navIcon} size-4 shrink-0`} name={item.icon} strokeWidth={2} />
+      <span className="min-w-0 flex-1 break-words">{item.label}</span>
+    </Link>
+  );
+}
+
+/** The active page's pill, which slides to the new page instead of jumping. */
+function useActivePill(pathname: string) {
+  const nav = useRef<HTMLElement>(null);
+  const [pill, setPill] = useState<{ top: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const active = nav.current?.querySelector<HTMLElement>("[data-active]");
+      setPill(active ? { top: active.offsetTop, height: active.offsetHeight } : null);
+    };
+    measure();
+    // Longer Sinhala or Tamil labels, a font loading or a resize move the item.
+    if (typeof ResizeObserver === "undefined" || !nav.current) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav.current);
+    return () => observer.disconnect();
+  }, [pathname]);
+  return { nav, pill };
+}
+
+/**
+ * The HQ shell: a full-height green sidebar with HQ's navigation and the
+ * signed-in user, and a slim sticky header with the page title, SarvoAI,
+ * search, alerts and account. Below the large breakpoint the sidebar becomes a
+ * scrolling row of links under the header. Each page eases in when the route
+ * changes; prefers-reduced-motion turns that and the sliding pill off.
+ */
+function HqShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
+  const pathname = usePathname();
+  const { t } = useI18n();
+  const navigation = navigationFor(viewer, t);
+  const { title, subtitle } = headingFor(pathname, viewer, t);
+  const scope = `${SHORT_ROLE_LABELS[viewer.role]} · ${scopeFor(viewer, t)}`;
+  const homeHref = navigation.main[0]?.href ?? "/dashboard";
+  // The translation decides what goes around the brand, and the brand stays whole.
+  const [askBefore, askAfter] = t("shell.ask").split("{brand}");
+  const { nav, pill } = useActivePill(pathname);
+
+  return (
+    <div className="min-h-screen bg-canvas text-ink lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <aside className="relative hidden h-screen flex-col overflow-hidden bg-brand-forest text-sidebar-text lg:sticky lg:top-0 lg:flex">
+        <Link
+          aria-label={t("shell.home")}
+          className="flex h-[72px] shrink-0 items-center px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+          href={homeHref}
+        >
+          <Image alt="Sarvodaya Connect" className="h-9 w-auto" height={450} priority src="/brand/sarvodaya-connect-logo-white.png" width={1180} />
+        </Link>
+        <nav aria-label={t("shell.mainNavigation")} className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4 pt-2" ref={nav}>
+          {pill && (
+            <span
+              aria-hidden="true"
+              className={`${styles.navPill} pointer-events-none absolute inset-x-3 top-0 rounded-[10px] bg-brand-mint shadow-[0_6px_16px_-10px_rgb(0_0_0/0.6)]`}
+              style={{ height: pill.height, transform: `translateY(${pill.top}px)` }}
+            />
+          )}
+          {navigation.main.map((item) => (
+            <HqSidebarLink item={item} key={item.href} pathname={pathname} />
+          ))}
+          {navigation.secondary.length > 0 && (
+            <>
+              <span aria-hidden="true" className="mx-1 my-2.5 h-px shrink-0 bg-white/12" />
+              {navigation.secondary.map((item) => (
+                <HqSidebarLink item={item} key={item.href} pathname={pathname} />
+              ))}
+            </>
+          )}
+          <span className="min-h-4 flex-1" />
+          <div className="relative z-10 flex items-center gap-2.5 rounded-[12px] bg-white/[0.08] p-2.5 ring-1 ring-white/10">
+            <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded-full bg-white text-[11px] font-bold text-brand-forest">
+              {viewer.initials}
+            </span>
+            <span className="min-w-0">
+              <strong className="block truncate text-xs text-white">{viewer.displayName}</strong>
+              <span className="block truncate text-[10.5px]">{scope}</span>
+            </span>
+          </div>
+        </nav>
+        <SidebarHills />
+      </aside>
+
+      <div className="flex min-w-0 flex-col">
+        <header className="sticky top-0 z-30 border-b border-header-line bg-[rgb(243_244_238/0.85)] backdrop-blur-md">
+          <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 md:px-7">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link aria-label={t("shell.home")} className="shrink-0 rounded-md lg:hidden" href={homeHref}>
+                <Image alt="" className="h-8 w-auto" height={180} priority src="/brand/sarvodaya-connect-wordmark.png" width={472} />
+              </Link>
+              <div className="min-w-0">
+                <h1 className="break-words text-[19px] font-bold leading-tight tracking-[-0.01em] md:text-[21px]">{title}</h1>
+                <p className="mt-0.5 break-words text-[12.5px] text-ink-soft">{subtitle}</p>
+                <p className="sr-only">{t("shell.tagline")}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* V5 HQTop: SarvoAI is HQ only (the API refuses every other role). */}
+              <Link
+                className={`${styles.press} hidden items-center gap-1.5 rounded-[10px] bg-brand-forest px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-[#174f34] sm:inline-flex`}
+                href="/sarvoai"
+              >
+                <Icon className="size-4 text-[#f3c44e]" name="sparkle" />
+                <span>{askBefore}Sarvo<span className="text-[#f0a040]">AI</span>{askAfter}</span>
+              </Link>
+              <div className="hidden w-[280px] md:block">
+                <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer, t)} />
+              </div>
+              {alerts ?? (
+                <Link
+                  aria-label={unreadCount > 0 ? t("shell.alertsNew", { count: unreadCount }) : t("shell.alerts")}
+                  className="relative grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-leaf"
+                  href="/notifications"
+                >
+                  <Icon className="size-5" name="bell" strokeWidth={2} />
+                  {unreadCount > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-1 top-1 grid h-[16px] min-w-[16px] place-items-center rounded-full bg-danger-dot px-1 text-[9px] font-bold text-white ring-2 ring-canvas"
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+              <form action={signOut}>
+                <button
+                  aria-label={t("shell.accountSignOut", { name: viewer.displayName })}
+                  className={`${styles.press} grid size-10 place-items-center rounded-full bg-brand-forest text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--brand-mint-ring)]`}
+                  type="submit"
+                >
+                  <Icon className="size-[18px]" name="user" strokeWidth={2} />
+                </button>
+              </form>
+            </div>
+            <div className="w-full md:hidden">
+              <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer, t)} />
+            </div>
+          </div>
+        </header>
+
+        <nav aria-label={t("shell.mainNavigation")} className="bg-brand-forest px-4 py-2 lg:hidden">
+          <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+            {[...navigation.main, ...navigation.secondary].map((item) => {
+              const active = isActiveItem(item, pathname);
+              return (
+                <Link
+                  aria-current={active ? "page" : undefined}
+                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs transition-colors ${
+                    active ? "bg-brand-mint font-semibold text-brand-forest" : "text-sidebar-text hover:bg-white/10"
+                  }`}
+                  href={item.href}
+                  key={item.href}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[11px] text-sidebar-text">
+            {viewer.displayName} · {scope}
+          </p>
+        </nav>
+
+        <main className={`${styles.page} min-w-0 flex-1 px-4 pb-10 pt-5 md:px-7`} key={pathname}>
+          {children}
+        </main>
       </div>
     </div>
   );
