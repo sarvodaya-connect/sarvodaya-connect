@@ -21,7 +21,7 @@ import type { Translator } from "@/i18n/translate";
 
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon } from "./icon";
-import styles from "./hq-shell.module.css";
+import styles from "./shell.module.css";
 
 /** Hills along the bottom of the V5 header (HQTop). */
 function HeaderHills() {
@@ -67,17 +67,29 @@ type ShellProps = {
   /** V5 IR05: the role bell with its notifications. HQ keeps the link to the alerts page. */
   alerts?: React.ReactNode;
   children: React.ReactNode;
+  /** Demonstration mode only: "Preview as" another desktop role. Never set in production. */
+  preview?: ShellPreview;
   /** The signed-in user's unread alerts, from the API. */
   unreadCount?: number;
   viewer: DemoViewer;
 };
 
+/** Demonstration mode only: preview the dashboard as another desktop role. */
+export type ShellPreview = {
+  action: (formData: FormData) => void | Promise<void>;
+  current: string;
+  options: { id: string; label: string }[];
+};
+
+/** The desktop roles on the redesigned shell. Platform administration keeps the V5 shell. */
+const REDESIGNED_ROLES: readonly DemoViewer["role"][] = ["HQ_ADMIN", "DISTRICT_MANAGER", "DEPUTY_DISTRICT_MANAGER", "PROGRAMME_COORDINATOR"];
+
 /**
- * HQ gets the redesigned shell; every other role keeps the V5 shell exactly as
- * it was, until their own redesign is reviewed.
+ * HQ, DM, DDM and SPC get the redesigned shell; the System Administrator keeps
+ * the V5 shell exactly as it was.
  */
 export function DashboardShell(props: ShellProps) {
-  return props.viewer.role === "HQ_ADMIN" ? <HqShell {...props} /> : <StandardShell {...props} />;
+  return REDESIGNED_ROLES.includes(props.viewer.role) ? <RedesignedShell {...props} /> : <StandardShell {...props} />;
 }
 
 /**
@@ -227,7 +239,7 @@ function StandardShell({ alerts, children, unreadCount = 0, viewer }: ShellProps
   );
 }
 
-/* --- HQ shell (2026 redesign) --------------------------------------------- */
+/* --- Redesigned shell (2026): HQ, DM, DDM and SPC ------------------------- */
 
 /** A soft line of hills along the foot of the sidebar: Sarvodaya's landscape, kept quiet. */
 function SidebarHills() {
@@ -239,7 +251,7 @@ function SidebarHills() {
   );
 }
 
-function HqSidebarLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
+function ShellSidebarLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
   const active = isActiveItem(item, pathname);
   return (
     <Link
@@ -275,14 +287,43 @@ function useActivePill(pathname: string) {
   return { nav, pill };
 }
 
+function PreviewSwitch({ id, preview }: { id: string; preview: ShellPreview }) {
+  const { t } = useI18n();
+  return (
+    <form action={preview.action} className="rounded-[10px] border border-dashed border-white/25 p-2.5">
+      <label className="block text-[10px] font-bold uppercase tracking-[0.08em] text-[#f3c44e]" htmlFor={id}>
+        {t("shell.previewAs")}
+      </label>
+      <select
+        className="mt-1 w-full rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-[12px] text-white outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        defaultValue={preview.current}
+        id={id}
+        name="viewer"
+        onChange={(event) => event.currentTarget.form?.requestSubmit()}
+      >
+        {preview.options.map((option) => (
+          <option className="text-ink" key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <noscript>
+        <button className="mt-1 text-[11px] text-white underline" type="submit">
+          {t("shell.previewGo")}
+        </button>
+      </noscript>
+    </form>
+  );
+}
+
 /**
- * The HQ shell: a full-height green sidebar with HQ's navigation and the
- * signed-in user, and a slim sticky header with the page title, SarvoAI,
- * search, alerts and account. Below the large breakpoint the sidebar becomes a
+ * The redesigned shell: a full-height green sidebar with the role's navigation
+ * and the signed-in user, and a slim sticky header with the page title,
+ * SarvoAI (HQ only), search, alerts and account. Below the large breakpoint the sidebar becomes a
  * scrolling row of links under the header. Each page eases in when the route
  * changes; prefers-reduced-motion turns that and the sliding pill off.
  */
-function HqShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
+function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }: ShellProps) {
   const pathname = usePathname();
   const { t } = useI18n();
   const navigation = navigationFor(viewer, t);
@@ -312,17 +353,22 @@ function HqShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
             />
           )}
           {navigation.main.map((item) => (
-            <HqSidebarLink item={item} key={item.href} pathname={pathname} />
+            <ShellSidebarLink item={item} key={item.href} pathname={pathname} />
           ))}
           {navigation.secondary.length > 0 && (
             <>
               <span aria-hidden="true" className="mx-1 my-2.5 h-px shrink-0 bg-white/12" />
               {navigation.secondary.map((item) => (
-                <HqSidebarLink item={item} key={item.href} pathname={pathname} />
+                <ShellSidebarLink item={item} key={item.href} pathname={pathname} />
               ))}
             </>
           )}
           <span className="min-h-4 flex-1" />
+          {preview && (
+            <div className="relative z-10 mb-2.5">
+              <PreviewSwitch id="sc-preview-as" preview={preview} />
+            </div>
+          )}
           <div className="relative z-10 flex items-center gap-2.5 rounded-[12px] bg-white/[0.08] p-2.5 ring-1 ring-white/10">
             <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded-full bg-white text-[11px] font-bold text-brand-forest">
               {viewer.initials}
@@ -350,14 +396,16 @@ function HqShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* V5 HQTop: SarvoAI is HQ only (the API refuses every other role). */}
-              <Link
-                className={`${styles.press} hidden items-center gap-1.5 rounded-[10px] bg-brand-forest px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-[#174f34] sm:inline-flex`}
-                href="/sarvoai"
-              >
-                <Icon className="size-4 text-[#f3c44e]" name="sparkle" />
-                <span>{askBefore}Sarvo<span className="text-[#f0a040]">AI</span>{askAfter}</span>
-              </Link>
+              {viewer.role === "HQ_ADMIN" && (
+                // V5 HQTop: SarvoAI is HQ only (the API refuses every other role).
+                <Link
+                  className={`${styles.press} hidden items-center gap-1.5 rounded-[10px] bg-brand-forest px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-[#174f34] sm:inline-flex`}
+                  href="/sarvoai"
+                >
+                  <Icon className="size-4 text-[#f3c44e]" name="sparkle" />
+                  <span>{askBefore}Sarvo<span className="text-[#f0a040]">AI</span>{askAfter}</span>
+                </Link>
+              )}
               <div className="hidden w-[280px] md:block">
                 <GlobalSearchForm action={searchActionFor(viewer)} placeholder={searchPlaceholderFor(viewer, t)} />
               </div>
@@ -415,6 +463,11 @@ function HqShell({ alerts, children, unreadCount = 0, viewer }: ShellProps) {
           <p className="mt-1.5 text-[11px] text-sidebar-text">
             {viewer.displayName} · {scope}
           </p>
+          {preview && (
+            <div className="mt-2 max-w-xs">
+              <PreviewSwitch id="sc-preview-as-mobile" preview={preview} />
+            </div>
+          )}
         </nav>
 
         <main className={`${styles.page} min-w-0 flex-1 px-4 pb-10 pt-5 md:px-7`} key={pathname}>

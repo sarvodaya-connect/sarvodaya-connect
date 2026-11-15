@@ -10,6 +10,7 @@ import { EmptyState, secondaryButtonClass } from "../data-states";
 import { GradeBadge } from "../grade-queue/grade-badge";
 import { Icon } from "../icon";
 import { AccessBanner } from "../ui/access-banner";
+import { TabLinks } from "../ui/nav-segments";
 import { AccessEndedBanner, PendingGradeChip, TemporaryViewBanner } from "./role-home";
 
 const field =
@@ -114,24 +115,15 @@ export function MySocieties({
       )}
 
       {isDdm && (
-        <nav aria-label={t("ms.which")} className="flex gap-1 border-b border-line">
-          {[
-            { href: "/my-societies", label: t("ms.tabMine"), count: list.tabs.mine, active: !districtScope },
+        <TabLinks
+          items={[
+            { href: "/my-societies", label: t("ms.tabMine"), count: list.tabs.mine, current: !districtScope, key: "mine" },
             ...(list.tabs.district !== null
-              ? [{ href: "/my-societies?scope=DISTRICT", label: t("ms.tabDistrict", { district }), count: list.tabs.district, active: districtScope }]
+              ? [{ href: "/my-societies?scope=DISTRICT", label: t("ms.tabDistrict", { district }), count: list.tabs.district, current: districtScope, key: "district" }]
               : []),
-          ].map((tab) => (
-            <Link
-              aria-current={tab.active ? "page" : undefined}
-              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12.5px] font-semibold ${tab.active ? "border-brand-forest text-ink" : "border-transparent text-ink-soft hover:text-ink"}`}
-              href={tab.href}
-              key={tab.href}
-            >
-              {tab.label}
-              <span className="rounded-pill bg-surface-muted px-1.5 text-[10.5px]">{tab.count}</span>
-            </Link>
-          ))}
-        </nav>
+          ]}
+          label={t("ms.which")}
+        />
       )}
 
       <form action="/my-societies" className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3" role="search">
