@@ -61,7 +61,7 @@ describe("the Assign Responsible Staff panel", () => {
     it("explains the problem and offers a retry", async () => {
       await open();
       expect(screen.getByRole("alert")).toHaveTextContent("We Couldn’t Load the Staff Choices");
-      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      await userEvent.click(screen.getByRole("button", { name: "Try Again" }));
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 

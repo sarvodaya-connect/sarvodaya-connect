@@ -51,10 +51,10 @@ export function PlatformAdminScreen() {
           onClick={() => setNotice("User invitations will be available when the identity service is connected.")}
           type="button"
         >
-          Invite user
+          Invite User
         </button>
       </div>
-      <p className="mt-1 text-[12px] text-muted">Users, roles and system records</p>
+      <p className="mt-1 text-[12px] text-muted">Users, Roles and System Records</p>
       {notice && (
         <p aria-live="polite" className="mt-3 rounded-button border border-[#d7e7d6] bg-brand-mint-soft px-4 py-3 text-[12px] text-brand-forest">
           {notice}

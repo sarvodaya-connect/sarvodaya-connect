@@ -65,7 +65,7 @@ export function ActivityReview({
           onClick={() => setSendingBack(true)}
           type="button"
         >
-          Send back
+          Send Back
         </button>
         <button
           className={`${buttonBase} bg-brand-action text-white hover:bg-brand-action-pressed`}
@@ -126,7 +126,7 @@ export function ActivityReview({
                 onClick={() => run("send-back")}
                 type="button"
               >
-                {pending === "send-back" ? "Sending back…" : "Send back"}
+                {pending === "send-back" ? "Sending Back…" : "Send Back"}
               </button>
             </div>
           </div>

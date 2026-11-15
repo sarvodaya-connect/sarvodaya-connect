@@ -73,7 +73,7 @@ export function RolePageNoAccess({
 }) {
   return (
     <NoAccessState
-      action={<Link className={secondaryButtonClass} href="/dashboard">Go to my home</Link>}
+      action={<Link className={secondaryButtonClass} href="/dashboard">Go to My Home</Link>}
       description={
         page === "sarvoai"
           ? `You are signed in as ${name} (${roleLabel}, ${scope}). This link opens an HQ tool, so nothing from it is shown here. Your own societies are on your home page.`

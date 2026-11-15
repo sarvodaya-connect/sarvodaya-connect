@@ -130,7 +130,7 @@ export function IncidentHeader({ incident, actions, now }: { incident: Emergency
           {areaLine(incident)} · {number(incident.societiesInArea)} societies in the area · opened by {openedByLine(incident)} {shortDateTime(incident.openedAt)}
           {due ? ` · ${due}` : ""}
         </p>
-        {closed && <p className="mt-0.5 text-[12px] font-semibold text-ink">Closed by {closed}</p>}
+        {closed && <p className="mt-0.5 text-[12px] font-semibold text-ink">Closed By {closed}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </section>
@@ -224,7 +224,7 @@ export function AssessmentsTable({ rows, wide, incidentId, emptyText }: { rows: 
                     {row.updates > 1 && <span className="block text-[11px] text-ink-soft">Update {row.updates}</span>}
                   </>
                 ) : row.canAssess ? (
-                  <Link className={linkClass} href={`/emergencies/${incidentId}?panel=assess&society=${row.society.id}`}>Submit assessment</Link>
+                  <Link className={linkClass} href={`/emergencies/${incidentId}?panel=assess&society=${row.society.id}`}>Submit Assessment</Link>
                 ) : (
                   "—"
                 )}
@@ -274,7 +274,7 @@ export function UrgentNeeds({ totals }: { totals: EmergencyTotals }) {
       {totals.needs.map((row, index) => (
         <li className="flex items-center justify-between text-[12.5px]" key={row.need}>
           <strong className="text-ink">{NEED_LABELS[row.need]}</strong>
-          <span className="font-semibold text-ink">{index === 0 ? `${row.societies} ${row.societies === 1 ? "society" : "societies"}` : row.societies}</span>
+          <span className="font-semibold text-ink">{index === 0 ? `${row.societies} ${row.societies === 1 ? "Society" : "Societies"}` : row.societies}</span>
         </li>
       ))}
     </ul>
@@ -305,7 +305,7 @@ export function SocietiesHelping({ actions, incidentId }: { actions: EmergencyRe
         <p className="text-[12.5px] text-ink-soft">No helping societies assigned yet.</p>
       )}
       <p className="text-[12px] text-ink-soft">{helping} helping {helping === 1 ? "society" : "societies"} · coordinated by HQ</p>
-      <Link className={`${linkClass} text-[12.5px]`} href={`/emergencies/${incidentId}?tab=actions`}>Response actions</Link>
+      <Link className={`${linkClass} text-[12.5px]`} href={`/emergencies/${incidentId}?tab=actions`}>Response Actions</Link>
     </>
   );
 }
@@ -401,7 +401,7 @@ export function ActionsBoard({ actions, incidentId, canAssign }: { actions: Emer
                       className="inline-flex h-9 w-fit items-center rounded-button bg-brand-action px-3.5 text-[12.5px] font-semibold text-white hover:bg-brand-action-pressed"
                       href={`/emergencies/${incidentId}?tab=actions&panel=assign&action=${action.id}`}
                     >
-                      {action.helpers.length ? "Add helpers" : "Assign helpers"}
+                      {action.helpers.length ? "Add Helpers" : "Assign Helpers"}
                     </Link>
                   )}
                 </article>

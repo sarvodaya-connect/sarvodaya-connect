@@ -61,7 +61,7 @@ function ScopeChips({ answer }: { answer: AssistantAnswer }) {
           {scope.financialYears.length > 2 ? `${scope.financialYears[0]} – ${scope.financialYears.at(-1)}` : scope.financialYears.join(", ")}
         </li>
       )}
-      <li className={`${chip} bg-[#e6f0e7] text-[#26744b]`}>{scope.district ? `${scope.district} District` : "All districts"}</li>
+      <li className={`${chip} bg-[#e6f0e7] text-[#26744b]`}>{scope.district ? `${scope.district} District` : "All Districts"}</li>
       {scope.currency && <li className={`${chip} bg-[#f0f1ee] text-ink-soft`}>{scope.currency}</li>}
       {scope.societiesIncluded !== undefined && (
         <li className={`${chip} bg-[#e6f0e7] text-[#26744b]`}>{scope.societiesIncluded.toLocaleString("en-GB")} societies included</li>
@@ -87,7 +87,7 @@ function HowAnswered({ answer, onClose, question, sample }: { answer: AssistantA
   const scope = answer.scope;
   const rows: [string, string][] = [
     ...(scope?.financialYears.length ? [["Year", scope.financialYears.join(", ")] as [string, string]] : []),
-    ["District", scope?.district ?? (scope ? "All districts" : "—")],
+    ["District", scope?.district ?? (scope ? "All Districts" : "—")],
     ...(scope?.currency ? [["Currency", "Sri Lankan rupees (LKR), as entered by societies"] as [string, string]] : []),
     ["Records used", answer.details.recordsUsed.length ? answer.details.recordsUsed.join("; ") : "No society records were needed"],
     ...(scope?.societiesIncluded !== undefined ? [["Included", `${scope.societiesIncluded.toLocaleString("en-GB")} societies`] as [string, string]] : []),
@@ -110,7 +110,7 @@ function HowAnswered({ answer, onClose, question, sample }: { answer: AssistantA
             <h2 className="text-[17px] font-bold text-ink" id="how-answered-title">How Was This Answered?</h2>
             <p className="mt-0.5 text-[12px] text-muted">{question}</p>
             <p className="mt-2 flex gap-1.5">
-              {sample && <Pill tone="preview">Sample data</Pill>}
+              {sample && <Pill tone="preview">Sample Data</Pill>}
               <Pill tone="inactive">HQ only</Pill>
             </p>
           </div>
@@ -209,9 +209,9 @@ function AnswerCard({
             <div className="mt-3 flex flex-wrap gap-2">
               <button className={primaryButtonClass} onClick={() => onAsk(answer.options[choice]!)} type="button">
                 <Icon className="size-4" name="check" />
-                Answer with this
+                Answer with This
               </button>
-              <button className={secondaryButtonClass} onClick={onRefine} type="button">Rewrite my question</button>
+              <button className={secondaryButtonClass} onClick={onRefine} type="button">Rewrite My Question</button>
             </div>
           </>
         ) : (
@@ -241,7 +241,7 @@ function AnswerCard({
             {tone.title && <p className="text-[14px] font-bold text-ink">{tone.title}</p>}
             <p className={`text-[13px] ${answer.kind === "INCOMPLETE" ? "font-semibold" : ""} text-ink`}>{answer.summary}</p>
             <ScopeChips answer={answer} />
-            {sample && <p className="mt-2"><Pill tone="preview">Sample data</Pill></p>}
+            {sample && <p className="mt-2"><Pill tone="preview">Sample Data</Pill></p>}
             {optionChips(answer.kind === "NO_MATCH" ? "Try instead" : answer.kind === "UNSUPPORTED" ? "You could ask" : undefined)}
             {answer.kind !== "UNSUPPORTED" && answer.details.recordsUsed.length > 0 && (
               <button className="mt-3 flex items-center gap-1 text-[12px] font-semibold text-brand-forest" onClick={onDetails} type="button">
@@ -303,7 +303,7 @@ function AnswerCard({
           <Icon className="size-3.5" name="help" />
           How was this answered?
         </button>
-        <button className="text-ink-soft hover:text-ink" onClick={onRefine} type="button">Refine question</button>
+        <button className="text-ink-soft hover:text-ink" onClick={onRefine} type="button">Refine Question</button>
         <button
           className="text-ink-soft hover:text-ink"
           onClick={() => {
@@ -311,9 +311,9 @@ function AnswerCard({
           }}
           type="button"
         >
-          {copied ? "Copied" : "Copy answer"}
+          {copied ? "Copied" : "Copy Answer"}
         </button>
-        {sample && <span className="ml-auto"><Pill tone="preview">Sample data</Pill></span>}
+        {sample && <span className="ml-auto"><Pill tone="preview">Sample Data</Pill></span>}
       </div>
     </div>
   );
@@ -375,7 +375,7 @@ function Failure({ onRetry, result }: { onRetry: () => void; result: Extract<Sar
           <div className="mt-3 flex flex-wrap gap-2">
             <button className={primaryButtonClass} onClick={onRetry} type="button">
               <Icon className="size-4" name="refresh" />
-              Try again
+              Try Again
             </button>
             <Link className={secondaryButtonClass} href="/reports">Open Reports</Link>
           </div>
@@ -502,7 +502,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
             <li className="flex items-center gap-2" key={item}><Icon className="size-3.5 text-brand-forest" name="success" />{item}</li>
           ))}
         </ul>
-        <p className="mt-3 rounded-lg bg-[#f2f4f0] p-2.5 text-[11px] text-ink-soft"><strong className="block text-ink">Never used or shown</strong>{SARVOAI_NEVER}</p>
+        <p className="mt-3 rounded-lg bg-[#f2f4f0] p-2.5 text-[11px] text-ink-soft"><strong className="block text-ink">Never Used or Shown</strong>{SARVOAI_NEVER}</p>
       </section>
       <section aria-labelledby="recent-questions" className="rounded-card border border-line bg-surface p-4">
         <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest" id="recent-questions">Your Recent Questions</p>
@@ -538,7 +538,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
                   <p className="text-[12px] text-white/80">Ask in plain words about societies, districts, Exco members, or yearly total profit and expenses.</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"><Icon className="size-3" name="lock" />HQ only</span>
+              <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"><Icon className="size-3" name="lock" />HQ Only</span>
             </div>
             <div className="mt-4 text-ink">{askBox("e.g. Which societies in Kandy have not submitted their FY 2025/26 figures?", true)}</div>
             <p className="mt-2 text-[11px] text-white/80">SarvoAI answers only from Sarvodaya Connect records your HQ account can open. If a record is missing it says so — it does not guess.</p>
@@ -561,7 +561,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
           <p className="flex gap-2 rounded-card border border-line bg-surface p-3 text-[12px] text-ink-soft">
             <Icon className="mt-0.5 size-4 shrink-0" name="help" />
             <span>
-              <strong className="block text-ink">What it can and cannot answer</strong>
+              <strong className="block text-ink">What It Can and Cannot Answer</strong>
               SarvoAI can only use the yearly <strong>total profit</strong> and <strong>total expenses</strong> each society records. It cannot answer about share capital, savings, loans, assets or cash, and it never shows member NICs or passwords. It only uses records your HQ account can already open.
             </span>
           </p>
@@ -576,7 +576,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
             </p>
             <button className={secondaryButtonClass} disabled={Boolean(working)} onClick={() => setTurns([])} type="button">
               <span aria-hidden className="text-[15px] leading-none">+</span>
-              New question
+              New Question
             </button>
           </header>
           <ol aria-live="polite" className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
@@ -587,7 +587,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
                     <p className="max-w-[560px] rounded-card bg-brand-forest px-4 py-2.5 text-[13px] text-white">{turn.question}</p>
                     <span aria-hidden className="grid size-7 place-items-center rounded-full bg-[#eef0eb] text-[10px] font-bold text-ink-soft">{viewerInitials}</span>
                   </div>
-                  <button className="mr-9 text-[11px] text-muted hover:text-ink" onClick={() => edit(turn.question)} type="button">Edit question</button>
+                  <button className="mr-9 text-[11px] text-muted hover:text-ink" onClick={() => edit(turn.question)} type="button">Edit Question</button>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mark />
@@ -598,7 +598,7 @@ export function SarvoAiChat({ demo, initialQuestion, viewerId, viewerInitials }:
                       <div className="rounded-card border border-line px-4 py-3" role="status">
                         <p className="flex items-center gap-2 text-[12px] font-semibold text-brand-forest">
                           <span aria-hidden className="size-3.5 animate-spin rounded-full border-2 border-brand-forest border-t-transparent" />
-                          Working on it…
+                          Working on It…
                         </p>
                         <p className="mt-1 text-[12px] text-ink-soft">Understanding the question and reading the society records your HQ account can open.</p>
                       </div>

@@ -39,7 +39,7 @@ describe("ErrorState", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("We Couldn’t Load This Page");
     expect(screen.getByText("digest-123")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
@@ -49,7 +49,7 @@ describe("ErrorState", () => {
     render(<ErrorState onRetry={onRetry} />);
 
     await user.tab();
-    expect(screen.getByRole("button", { name: "Try again" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Try Again" })).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
@@ -78,7 +78,7 @@ describe("NoResultsState", () => {
     await user.click(screen.getByRole("button", { name: "Remove Status filter" }));
     expect(onRemoveFilter).toHaveBeenCalledWith("status");
 
-    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+    await user.click(screen.getByRole("button", { name: "Clear All Filters" }));
     expect(onClearAll).toHaveBeenCalledTimes(1);
   });
 });
@@ -89,14 +89,14 @@ describe("NoAccessState", () => {
 
     expect(screen.getByRole("heading", { name: "You Don’t Have Access to This Page" })).toBeInTheDocument();
     expect(screen.getByText("Your role cannot open it. Ask HQ if you think you need it.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Back to overview" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Back to Overview" })).toHaveAttribute("href", "/dashboard");
   });
 
   it("can be the page heading with a custom way back", () => {
     render(<NoAccessState action={<button type="button">Back to my societies</button>} heading="h1" />);
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Back to my societies" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to My Societies" })).toBeInTheDocument();
   });
 });
 
@@ -105,7 +105,7 @@ describe("SuccessState", () => {
     render(<SuccessState action={<button type="button">Back to queue</button>} description="Everyone has been told." title="Grade Decision Saved" />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Grade Decision Saved");
-    expect(screen.getByRole("button", { name: "Back to queue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to Queue" })).toBeInTheDocument();
   });
 });
 
@@ -116,7 +116,7 @@ describe("ConflictState", () => {
     render(<ConflictState onReload={onReload} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("Your changes have not been saved");
-    await user.click(screen.getByRole("button", { name: "Reload record" }));
+    await user.click(screen.getByRole("button", { name: "Reload Record" }));
     expect(onReload).toHaveBeenCalledOnce();
   });
 });

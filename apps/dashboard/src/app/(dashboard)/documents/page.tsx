@@ -62,7 +62,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
           <h1 className="text-[22px] font-bold text-ink">Documents</h1>
           <p className="text-[12px] text-ink-soft">The 4 Registrar documents come first</p>
         </div>
-        {isDemoMode() && <Pill tone="preview">Sample data · demonstration mode</Pill>}
+        {isDemoMode() && <Pill tone="preview">Sample Data · Demonstration Mode</Pill>}
       </div>
 
       <section aria-labelledby="registrar-heading" className="mt-4 rounded-card border border-line bg-surface p-4">

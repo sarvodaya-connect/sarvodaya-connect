@@ -125,11 +125,11 @@ describe("SP01 SPC home", () => {
     expect(alert).toHaveTextContent(
       "Active incident INC-2026-09 · Floods — North Western. Opened by N. Wijesinghe (Society Officer) yesterday · assessments due Tue 27 Oct, 6:00 p.m.",
     );
-    expect(within(alert).getByRole("link", { name: "Open incident" })).toHaveAttribute("href", "/emergencies/i1");
+    expect(within(alert).getByRole("link", { name: "Open Incident" })).toHaveAttribute("href", "/emergencies/i1");
     // SP01 card 3: both buttons work.
     const card = screen.getByRole("region", { name: "Incidents" });
-    expect(within(card).getByRole("link", { name: /Open incident/ })).toHaveAttribute("href", "/emergencies/i1");
-    expect(within(card).getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+    expect(within(card).getByRole("link", { name: /Open Incident/ })).toHaveAttribute("href", "/emergencies/i1");
+    expect(within(card).getByRole("link", { name: /Report an Incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
   });
 
   it("lets SPCs, DDMs and DMs open the disaster response pages", () => {
@@ -203,15 +203,15 @@ describe("DM01 DM district overview", () => {
     expect(staff.getByText("P. Dissanayake (DDM)")).toBeInTheDocument();
     expect(staff.getByText("S. Karunaratne (SPC)")).toBeInTheDocument();
 
-    const attention = within(screen.getByRole("region", { name: "Societies to Follow Up With Your Staff" }));
+    const attention = within(screen.getByRole("region", { name: "Societies to Follow Up with Your Staff" }));
     expect(attention.getByText("M. Herath")).toBeInTheDocument();
-    expect(attention.getByText("View only")).toBeInTheDocument();
+    expect(attention.getByText("View Only")).toBeInTheDocument();
     expect(attention.queryByText("Editable")).not.toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Active grant" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Active Grant" })).toBeInTheDocument();
     // V5 PR 7: the DM can see the grant's history or end it early from DM01.
-    expect(screen.getByRole("link", { name: "See details" })).toHaveAttribute("href", "/district-access?grant=g1");
-    expect(screen.getByRole("button", { name: "End now" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See Details" })).toHaveAttribute("href", "/district-access?grant=g1");
+    expect(screen.getByRole("button", { name: "End Now" })).toBeInTheDocument();
     expect(screen.getByText(/View only · all 106 societies · ends Sat 31 Oct, 6:00 p.m. · 5 days left/)).toBeInTheDocument();
     noBars(container);
   });
@@ -277,13 +277,13 @@ describe("SP02 / DM02 society lists", () => {
     expect(table.getByRole("columnheader", { name: "Society Officer" })).toBeInTheDocument();
     expect(table.queryByRole("columnheader", { name: "SPC" })).not.toBeInTheDocument();
     expect(table.getByText("B → A with HQ")).toBeInTheDocument();
-    expect(table.getByText("Not assigned")).toBeInTheDocument();
-    expect(table.getByText("Not recorded")).toBeInTheDocument();
+    expect(table.getByText("Not Assigned")).toBeInTheDocument();
+    expect(table.getByText("Not Recorded")).toBeInTheDocument();
     expect(table.getByText("02 Jun")).toHaveClass("text-danger-text");
     expect(table.getAllByText("Editable")).toHaveLength(2);
     expect(screen.getByText("Showing 1–2 of 2 assigned societies")).toBeInTheDocument();
     expect(screen.getByText("Why can't I see other societies?")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Clear filters" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Clear Filters" })).not.toBeInTheDocument();
   });
 
   it("DM02: the DM's list is view only, with SPC and DDM columns and their filters", () => {
@@ -295,7 +295,7 @@ describe("SP02 / DM02 society lists", () => {
     const table = within(screen.getByRole("table"));
     expect(table.getByRole("columnheader", { name: "DDM" })).toBeInTheDocument();
     expect(table.queryByRole("columnheader", { name: "Your Access" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/my-societies");
+    expect(screen.getByRole("link", { name: "Clear Filters" })).toHaveAttribute("href", "/my-societies");
   });
 
   it("says when filters match nothing, and pages through long lists", () => {

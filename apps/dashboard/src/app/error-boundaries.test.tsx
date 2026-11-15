@@ -24,7 +24,7 @@ describe.each([
     render(<Boundary error={error} reset={reset} />);
 
     expect(screen.queryByText(/db-internal-01/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(reset).toHaveBeenCalledTimes(1);
   });
 });

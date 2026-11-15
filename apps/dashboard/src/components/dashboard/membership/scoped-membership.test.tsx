@@ -99,7 +99,7 @@ describe("scoped Membership (issue #118)", () => {
 
   it("offers a DDM the district tab only while temporary access is valid", () => {
     const { unmount } = render(<ScopedMembershipView demo={false} membership={membership({ scope: "MINE", districtView: { available: false, expiresAt: null } })} t={ENGLISH} viewer={viewer("DEPUTY_DISTRICT_MANAGER")} />);
-    expect(screen.queryByRole("link", { name: "District · view only" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "District · View Only" })).not.toBeInTheDocument();
     unmount();
     render(
       <ScopedMembershipView
@@ -109,7 +109,7 @@ describe("scoped Membership (issue #118)", () => {
         viewer={viewer("DEPUTY_DISTRICT_MANAGER")}
       />,
     );
-    expect(screen.getByRole("link", { name: "District · view only" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "District · View Only" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Fictional North" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
   });
 

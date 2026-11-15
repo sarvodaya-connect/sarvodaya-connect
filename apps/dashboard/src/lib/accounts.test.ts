@@ -39,11 +39,11 @@ describe("V5 D16 account rows", () => {
   it("says when HQ set the password, never the password itself", () => {
     expect(passwordLabel(account({}))).toBe("Set by HQ · 18 Oct");
     expect(passwordLabel(account({ passwordSetCount: 2 }))).toBe("Set again by HQ · 18 Oct");
-    expect(passwordLabel(account({ passwordSetAt: null, passwordSetCount: 0 }))).toBe("Not set yet");
+    expect(passwordLabel(account({ passwordSetAt: null, passwordSetCount: 0 }))).toBe("Not Set Yet");
   });
 
   it("labels older accounts that still need a password", () => {
-    expect(statusLabel(account({ status: "PENDING" }))).toEqual({ label: "Needs a password", tone: "pending" });
+    expect(statusLabel(account({ status: "PENDING" }))).toEqual({ label: "Needs a Password", tone: "pending" });
   });
 });
 

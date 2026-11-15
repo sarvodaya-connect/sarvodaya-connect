@@ -11,7 +11,7 @@ export default function NotFound() {
         <EmptyState
           action={
             <Link className={primaryButtonClass} href="/dashboard">
-              Go to my home
+              Go to My Home
             </Link>
           }
           description="The page you requested does not exist or may have moved."

@@ -73,17 +73,17 @@ describe("V5 SP07 activity review", () => {
     await userEvent.click(screen.getByRole("button", { name: "SDG 6: Clean Water and Sanitation" }));
     await userEvent.click(screen.getByRole("button", { name: /Approve with 1 SDG/ }));
     expect(screen.getByRole("button", { name: /Approving…/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Send back" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send Back" })).toBeDisabled();
     await act(async () => finish({ error: "This activity is no longer waiting for approval" }));
     expect(screen.getByRole("alert")).toHaveTextContent("This activity is no longer waiting for approval");
   });
 
   it("sends back with an optional note to the Society Officer", async () => {
     const { sendBack } = renderReview();
-    await userEvent.click(screen.getByRole("button", { name: "Send back" }));
+    await userEvent.click(screen.getByRole("button", { name: "Send Back" }));
     const dialog = screen.getByRole("dialog", { name: "Send Back to N. Wijesinghe?" });
     await userEvent.type(within(dialog).getByLabelText("What should change? (optional)"), "Split by ward");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Send back" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Send Back" }));
     expect(sendBack).toHaveBeenCalledWith("Split by ward");
   });
 });

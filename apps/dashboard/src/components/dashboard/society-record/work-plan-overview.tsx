@@ -23,7 +23,7 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
         <div className="flex min-w-[280px] flex-1 items-start gap-2.5 rounded-card border border-dashed border-[#ead9a7] bg-warn-bg px-4 py-3 text-[11px] text-warn-text">
           <Icon className="mt-0.5 size-4 shrink-0" name="clipboard" />
           <div>
-            <p className="font-bold">Activity planning only</p>
+            <p className="font-bold">Activity Planning Only</p>
             <p>
               Allocated costs are planning figures for each activity. They are not payments or accounts — no loans, savings or
               transactions are recorded.
@@ -35,7 +35,7 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
             className="inline-flex items-center gap-2 rounded-button bg-brand-action px-4 py-2.5 text-[12px] font-semibold text-white hover:bg-brand-action-pressed"
             href={`/societies/${societyId}/work-plan/new?year=${plan.year}`}
           >
-            + Add activity
+            + Add Activity
           </Link>
         )}
       </div>
@@ -94,7 +94,7 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
             <span className="text-muted">
               {plan.lastChange ? `Last changed by ${actorLabel(plan.lastChange.by)} · ${formatDate(plan.lastChange.at)}` : ""}
             </span>
-            <span className="font-bold text-ink">Total allocated for planning: {formatLkr(plan.totalAllocated)}</span>
+            <span className="font-bold text-ink">Total Allocated for Planning: {formatLkr(plan.totalAllocated)}</span>
           </div>
         </div>
       )}

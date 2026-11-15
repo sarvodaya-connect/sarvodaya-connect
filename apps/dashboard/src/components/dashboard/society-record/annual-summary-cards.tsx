@@ -96,7 +96,7 @@ export function AnnualSummaryCards({
               </>
             ) : (
               <>
-                <p className="mt-0.5 text-[17px] font-bold text-danger-text">Not uploaded</p>
+                <p className="mt-0.5 text-[17px] font-bold text-danger-text">Not Uploaded</p>
                 <p className="text-[10px] text-muted">No file to open yet</p>
               </>
             )}
@@ -154,7 +154,7 @@ function AmountCard({
       <p className="text-[11px] text-muted">{label}</p>
       {missing ? (
         <>
-          <p className="mt-1 text-[17px] font-bold text-[#9aa39d]">Not added yet</p>
+          <p className="mt-1 text-[17px] font-bold text-[#9aa39d]">Not Added Yet</p>
           <p className="text-[10px] text-muted">Waiting for the Society Officer or SPC</p>
         </>
       ) : (

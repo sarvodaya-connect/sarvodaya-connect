@@ -96,7 +96,7 @@ describe("D07 Programmes & Activities", () => {
     expect(ranked[0]).toHaveTextContent("#1SDG 4 · Quality Education2completed");
     // A goal with no completed activity is a real zero, not missing data.
     expect(ranked[2]).toHaveTextContent("—SDG 1 · No Poverty0None completed");
-    expect(screen.getByRole("link", { name: "Open society work plan" })).toHaveAttribute("href", "/societies/29000000-0000-4000-8000-000000000101/work-plan");
+    expect(screen.getByRole("link", { name: "Open Society Work Plan" })).toHaveAttribute("href", "/societies/29000000-0000-4000-8000-000000000101/work-plan");
   });
 
   it("says whose societies a DM, DDM and SPC see", () => {

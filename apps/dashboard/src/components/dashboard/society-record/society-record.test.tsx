@@ -130,8 +130,8 @@ describe("D05 annual financial summary", () => {
         summary={{ societyId: SOCIETY_ID, financialYear: year, totalProfit: null, totalExpenses: null, auditReport: null }}
       />,
     );
-    expect(screen.getAllByText("Not added yet")).toHaveLength(2);
-    expect(screen.getByText("Not uploaded")).toBeInTheDocument();
+    expect(screen.getAllByText("Not Added Yet")).toHaveLength(2);
+    expect(screen.getByText("Not Uploaded")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
       "The FY 2025/26 figures and audit report have not been added.",
     );
@@ -167,43 +167,43 @@ describe("D05e HQ edit society information", () => {
   it("keeps Save disabled until a direct grade change has a reason", async () => {
     const user = userEvent.setup();
     render(<EditSocietyPanel action={vi.fn().mockResolvedValue({})} hqName="D. Gunawardena" record={record} />);
-    const save = screen.getByRole("button", { name: "Save changes" });
+    const save = screen.getByRole("button", { name: "Save Changes" });
     expect(save).toBeDisabled();
 
     await user.selectOptions(screen.getByRole("combobox", { name: /Grade/ }), "A");
-    expect(screen.getByText("● Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByText("● Unsaved Changes")).toBeInTheDocument();
     expect(screen.getByText("Enter a reason. It is shown in the grade history.")).toBeInTheDocument();
     expect(screen.getByText(/Changing the grade here will close it as approved/)).toBeInTheDocument();
     expect(screen.getByText("B → A changed directly by D. Gunawardena (HQ)")).toBeInTheDocument();
     expect(save).toBeDisabled();
 
-    await user.type(screen.getByRole("textbox", { name: /Reason for the grade change/ }), "Audit complete and Exco reformed");
+    await user.type(screen.getByRole("textbox", { name: /Reason for the Grade Change/ }), "Audit complete and Exco reformed");
     expect(save).toBeEnabled();
   });
 
   it("works out the total from female and male as they are typed (issue #141)", async () => {
     const user = userEvent.setup();
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={record} />);
-    const total = screen.getByRole("status", { name: "Total members" });
+    const total = screen.getByRole("status", { name: "Total Members" });
     // An older record keeps its total and says the split is missing.
     expect(total).toHaveTextContent("418");
     expect(screen.getByText(/Only a total of 418 members is on record/)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Total members" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Total Members" })).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole("textbox", { name: "Female members" }), "25");
+    await user.type(screen.getByRole("textbox", { name: "Female Members" }), "25");
     expect(screen.getByRole("alert")).toHaveTextContent("Enter both the female and the male members.");
-    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: "Male members" }), "17");
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: "Male Members" }), "17");
     expect(total).toHaveTextContent("42");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeEnabled();
   });
 
   it("updates the total when a count changes, and refuses counts that are not whole numbers", async () => {
     const user = userEvent.setup();
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={{ ...record, memberCount: 42, femaleMembers: 25, maleMembers: 17 }} />);
-    const female = screen.getByRole("textbox", { name: "Female members" });
-    const total = screen.getByRole("status", { name: "Total members" });
+    const female = screen.getByRole("textbox", { name: "Female Members" });
+    const total = screen.getByRole("status", { name: "Total Members" });
     expect(total).toHaveTextContent("42");
     expect(screen.queryByText(/Only a total of/)).not.toBeInTheDocument();
     await user.clear(female);
@@ -214,7 +214,7 @@ describe("D05e HQ edit society information", () => {
       await user.type(female, typed);
       expect(screen.getByRole("alert")).toHaveTextContent("Enter a whole number from 0 to 1,000,000");
       expect(total).toHaveTextContent("—");
-      expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Save Changes" })).toBeDisabled();
     }
     // Once entered, the split cannot be cleared back to a bare total.
     await user.clear(female);
@@ -227,15 +227,15 @@ describe("D05e HQ edit society information", () => {
     const user = userEvent.setup();
     const action = vi.fn().mockResolvedValue({ error: "The society could not be saved. Nothing was changed." });
     render(<EditSocietyPanel action={action} hqName="HQ" record={record} />);
-    await user.type(screen.getByRole("textbox", { name: "Female members" }), "25");
-    await user.type(screen.getByRole("textbox", { name: "Male members" }), "17");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.type(screen.getByRole("textbox", { name: "Female Members" }), "25");
+    await user.type(screen.getByRole("textbox", { name: "Male Members" }), "17");
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
     expect(await screen.findByText("The society could not be saved. Nothing was changed.")).toBeInTheDocument();
     const form = action.mock.calls[0]![1] as FormData;
     expect([form.get("femaleMembers"), form.get("maleMembers"), form.get("memberCount")]).toEqual(["25", "17", null]);
-    expect(screen.getByRole("textbox", { name: "Female members" })).toHaveValue("25");
-    expect(screen.getByRole("textbox", { name: "Male members" })).toHaveValue("17");
-    expect(screen.getByRole("status", { name: "Total members" })).toHaveTextContent("42");
+    expect(screen.getByRole("textbox", { name: "Female Members" })).toHaveValue("25");
+    expect(screen.getByRole("textbox", { name: "Male Members" })).toHaveValue("17");
+    expect(screen.getByRole("status", { name: "Total Members" })).toHaveTextContent("42");
   });
 
   it("fills the latitude and longitude fields from a click on the street map", async () => {
@@ -249,7 +249,7 @@ describe("D05e HQ edit society information", () => {
     expect(screen.getByRole("textbox", { name: "Longitude" })).toHaveValue("80.2354");
     // The pin follows, and the change can be saved through the existing profile update.
     await waitFor(() => expect(fakeMapbox.markers[0]!.lngLat).toEqual([80.2354, 7.6123]));
-    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeEnabled();
   });
 
   it("keeps typed coordinates, with no map, when Mapbox is not set up", () => {
@@ -316,10 +316,10 @@ describe("Exco completion comes from the API (excoStatus)", () => {
   it("labels the record from the API's status, never from the seat count", () => {
     expect(excoProgress(noTreasurer).label).toBe("Exco incomplete · no Treasurer");
     expect(excoProgress(record.excoStatus).label).toBe("Exco incomplete · 2 of 25");
-    expect(excoProgress({ ...noTreasurer, filledSeats: 0, problems: [] }).label).toBe("Exco not entered yet");
+    expect(excoProgress({ ...noTreasurer, filledSeats: 0, problems: [] }).label).toBe("Exco Not Entered Yet");
     // Without a status from the API, 25 members are still not called complete.
     expect(excoProgress(undefined, fullCommittee()).complete).toBe(false);
-    expect(excoProgress({ ...noTreasurer, complete: true, missingOffices: [], problems: [] }).label).toBe("Exco complete");
+    expect(excoProgress({ ...noTreasurer, complete: true, missingOffices: [], problems: [] }).label).toBe("Exco Complete");
   });
 });
 
@@ -361,7 +361,7 @@ describe("D05w work plan", () => {
 
   it("lists activities by month with the planning-only notice and total", () => {
     render(<WorkPlanOverview plan={plan} societyId={SOCIETY_ID} />);
-    expect(screen.getByText("Activity planning only")).toBeInTheDocument();
+    expect(screen.getByText("Activity Planning Only")).toBeInTheDocument();
     expect(screen.getByText("Total allocated for planning: LKR 80,000")).toBeInTheDocument();
     expect(screen.getByText("Last changed by S. Karunaratne (SPC) · 18 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText("12–14 Sep")).toBeInTheDocument();
@@ -374,7 +374,7 @@ describe("D05w work plan", () => {
     expect(screen.getByText("Clean Water and Sanitation")).toBeInTheDocument();
     expect(screen.getByText("Life on Land")).toBeInTheDocument();
     expect(screen.getByText(/1 approved by the SPC · 1 waiting/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "+ Add activity" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "+ Add Activity" })).toHaveAttribute(
       "href",
       `/societies/${SOCIETY_ID}/work-plan/new?year=2027`,
     );
@@ -382,7 +382,7 @@ describe("D05w work plan", () => {
 
   it("hides Add activity from people who only view", () => {
     render(<WorkPlanOverview plan={{ ...plan, permissions: { canAddActivities: false } }} societyId={SOCIETY_ID} />);
-    expect(screen.queryByRole("link", { name: "+ Add activity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "+ Add Activity" })).not.toBeInTheDocument();
   });
 
   it("shows an empty plan plainly", () => {
@@ -453,9 +453,9 @@ describe("D05 HQ grade-change decisions", () => {
     render(<GradeRequestList decide={decide} requests={[pending]} />);
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
     expect(decide).not.toHaveBeenCalled();
-    expect(screen.getByRole("textbox", { name: /HQ comment/ })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: /HQ Comment/ })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Enter a reason for rejecting. The requester will see it.")).toBeInTheDocument();
-    await userEvent.type(screen.getByRole("textbox", { name: /HQ comment/ }), "Grade A needs a full year of reports.");
+    await userEvent.type(screen.getByRole("textbox", { name: /HQ Comment/ }), "Grade A needs a full year of reports.");
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
     expect(decide).toHaveBeenCalledWith("request", "REJECT", "Grade A needs a full year of reports.");
   });
