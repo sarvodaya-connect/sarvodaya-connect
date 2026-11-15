@@ -48,6 +48,20 @@ To approve a language once reviewed, add it to `REVIEWED_LOCALES` in `apps/dashb
 
 English Title Case (issue #100) is an English rule. Don't apply it to Sinhala or Tamil.
 
+### Dashboard English Casing
+
+Use Title Case for application-owned headings, subheadings, navigation, tabs,
+field labels, table headings, buttons and short status labels. Capitalize main
+words; keep connecting words such as “and”, “of”, “to” and “the” lowercase
+unless they begin the label. For example: “Active Societies”, “Date of Birth”
+and “Back to Societies”.
+
+Paragraphs, full sentences, explanatory copy and validation messages retain
+sentence case. Preserve brands and acronyms such as SarvoAI, HQ, NIC and SDGs.
+Edit English display wording at its source rather than applying a global CSS
+transform or changing interpolated names, stored values, submitted option
+values or other languages.
+
 ## Known limits of this phase
 
 - **Most screens are still English.** The audit lists them.

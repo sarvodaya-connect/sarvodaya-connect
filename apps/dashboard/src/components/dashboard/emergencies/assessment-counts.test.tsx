@@ -45,12 +45,12 @@ describe("typed counts (issue #132)", () => {
 
   it("types, steps, refuses invalid input, keeps the value across Back/Next and sends it", async () => {
     const { send, user } = wizard();
-    await user.click(screen.getByRole("button", { name: "Next question" }));
-    const families = () => screen.getByRole("textbox", { name: "Families affected" }) as HTMLInputElement;
+    await user.click(screen.getByRole("button", { name: "Next Question" }));
+    const families = () => screen.getByRole("textbox", { name: "Families Affected" }) as HTMLInputElement;
 
     await user.clear(families());
     await user.type(families(), "250");
-    await user.click(screen.getByRole("button", { name: "More: Families affected" }));
+    await user.click(screen.getByRole("button", { name: "More: Families Affected" }));
     expect(families().value).toBe("251");
 
     // Not silently fixed: the text stays and the box explains.
@@ -59,22 +59,22 @@ describe("typed counts (issue #132)", () => {
     expect(families().value).toBe("25o");
     expect(screen.getByRole("alert")).toHaveTextContent("Enter a whole number from 0 to 1,000,000.");
     expect(families()).toHaveAttribute("aria-invalid", "true");
-    await user.click(screen.getByRole("button", { name: "Next question" }));
+    await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(screen.getByText("One of the numbers is not a whole number in range. Fix it before going on.")).toBeInTheDocument();
     expect(families()).toBeInTheDocument();
 
     // Back keeps the last valid number: "25", typed just before the "o".
     await user.click(screen.getByRole("button", { name: "Back" }));
-    await user.click(screen.getByRole("button", { name: "Next question" }));
+    await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(families().value).toBe("25");
 
     // Empty is not reset to zero while editing.
     await user.clear(families());
     expect(families().value).toBe("");
     await user.type(families(), "1,200");
-    while (!screen.queryByRole("button", { name: "Check answers" })) await user.click(screen.getByRole("button", { name: "Next question" }));
-    await user.click(screen.getByRole("button", { name: "Check answers" }));
-    await user.click(screen.getByRole("button", { name: "Send assessment" }));
+    while (!screen.queryByRole("button", { name: "Check Answers" })) await user.click(screen.getByRole("button", { name: "Next Question" }));
+    await user.click(screen.getByRole("button", { name: "Check Answers" }));
+    await user.click(screen.getByRole("button", { name: "Send Assessment" }));
     expect(send).toHaveBeenCalledWith("incident-1", expect.objectContaining({ families: 1200, people: 0 }));
   });
 });

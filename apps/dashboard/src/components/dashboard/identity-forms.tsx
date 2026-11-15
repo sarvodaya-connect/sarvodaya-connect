@@ -28,10 +28,10 @@ function Required() {
 /** Password box with a show/hide eye (V5 D01, D16i, D16t). */
 function PasswordInput({
   autoComplete,
-  hideLabel = "Hide password",
+  hideLabel = "Hide Password",
   invalid,
   name,
-  showLabel = "Show password",
+  showLabel = "Show Password",
   ...props
 }: {
   autoComplete: string;
@@ -209,7 +209,7 @@ function RoleScopeFields({
               required
               value={districtId}
             >
-              <option value="">Choose a district</option>
+              <option value="">Choose a District</option>
               {options.districts.map((district) => (
                 <option key={district.id} value={district.id}>
                   {district.nameEn}{role === "DISTRICT_MANAGER" ? " District" : ""}
@@ -230,7 +230,7 @@ function RoleScopeFields({
             name="societyIds"
             required
           >
-            <option value="">{districtId ? "Choose the society" : "Choose a district first"}</option>
+            <option value="">{districtId ? "Choose the Society" : "Choose a District First"}</option>
             {societies.map((society) => (
               <option key={society.id} value={society.id}>{society.nameEn} · {society.societyCode}</option>
             ))}
@@ -287,7 +287,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
     <>
       <button className={primaryButtonClass} onClick={() => dialog.current?.showModal()} type="button">
         <Icon className="size-4" name="user" strokeWidth={2} />
-        Create account
+        Create Account
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -315,7 +315,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             </button>
           </div>
           <label className={labelClass}>
-            Full name<Required />
+            Full Name<Required />
             <input
               className={`${inputClass} mt-1.5`}
               maxLength={150}
@@ -345,11 +345,11 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <span className="mt-1 block text-[11px] font-normal text-ink-soft" id={`${titleId}-username`}>Suggested from the name. Must be unique.</span>
           </label>
           <label className={labelClass}>
-            Mobile number<Required />
+            Mobile Number<Required />
             <input autoComplete="off" className={`${inputClass} mt-1.5`} inputMode="tel" maxLength={30} minLength={7} name="phone" required />
           </label>
           <label className={labelClass}>
-            Email (optional)
+            Email (Optional)
             <input autoComplete="off" className={`${inputClass} mt-1.5`} name="email" type="email" />
           </label>
           <RoleScopeFields key={formVersion} options={options} />
@@ -361,7 +361,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <span className="mt-1 block text-[11px] font-semibold">This is the person&apos;s permanent password.</span>
           </label>
           <label className={labelClass}>
-            Repeat password<Required />
+            Repeat Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
             </span>
@@ -382,7 +382,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <button className={secondaryButtonClass} onClick={close} type="button">Cancel</button>
             <button className={primaryButtonClass} disabled={pending} type="submit">
               <Icon className="size-4" name="user" strokeWidth={2} />
-              {pending ? "Creating…" : "Create account"}
+              {pending ? "Creating…" : "Create Account"}
             </button>
           </div>
         </form>
@@ -415,7 +415,7 @@ export function SetPasswordDialog({
         onClick={() => dialog.current?.showModal()}
         type="button"
       >
-        Set new password
+        Set New Password
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -444,13 +444,13 @@ export function SetPasswordDialog({
             </p>
           </div>
           <label className={labelClass}>
-            New password<Required />
+            New Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="password" />
             </span>
           </label>
           <label className={labelClass}>
-            Repeat new password<Required />
+            Repeat New Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
             </span>
@@ -471,7 +471,7 @@ export function SetPasswordDialog({
             {!state.success && (
               <button className={primaryButtonClass} disabled={pending} type="submit">
                 <Icon className="size-4" name="key" strokeWidth={2} />
-                {pending ? "Setting…" : "Set password"}
+                {pending ? "Setting…" : "Set Password"}
               </button>
             )}
           </div>
@@ -512,7 +512,7 @@ export function ChangeRoleDialog({
         onClick={() => dialog.current?.showModal()}
         type="button"
       >
-        Change role
+        Change Role
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -553,7 +553,7 @@ export function ChangeRoleDialog({
             </button>
             {!state.success && (
               <button className={primaryButtonClass} disabled={pending} type="submit">
-                {pending ? "Saving…" : "Save role"}
+                {pending ? "Saving…" : "Save Role"}
               </button>
             )}
           </div>
@@ -606,7 +606,7 @@ export function DisableAccountDialog({ account }: { account: Pick<ManagedAccount
                 disabled={pending}
                 type="submit"
               >
-                {pending ? "Disabling…" : "Disable account"}
+                {pending ? "Disabling…" : "Disable Account"}
               </button>
             )}
           </div>

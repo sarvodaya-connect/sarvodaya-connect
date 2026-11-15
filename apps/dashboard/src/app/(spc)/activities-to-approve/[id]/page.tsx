@@ -34,11 +34,11 @@ function Field({ label, value }: { label: string; value?: string | number | null
 }
 
 const PEOPLE: { key: keyof ActivityDetail; label: string; note: string }[] = [
-  { key: "femaleParticipants", label: "Female participants", note: "Members and volunteers" },
-  { key: "maleParticipants", label: "Male participants", note: "Members and volunteers" },
+  { key: "femaleParticipants", label: "Female Participants", note: "Members and volunteers" },
+  { key: "maleParticipants", label: "Male Participants", note: "Members and volunteers" },
   { key: "youthParticipants", label: "Youth (15–25)", note: "Included above" },
-  { key: "householdsBenefited", label: "Households benefited", note: "Families using the result" },
-  { key: "womenHeadedHouseholds", label: "Women-headed households", note: "Of the households above" },
+  { key: "householdsBenefited", label: "Households Benefited", note: "Families using the result" },
+  { key: "womenHeadedHouseholds", label: "Women-Headed Households", note: "Of the households above" },
 ];
 
 function ActivityDetails({ activity }: { activity: ActivityDetail }) {
@@ -50,7 +50,7 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
           <h2 className="text-[15px] font-bold text-ink" id="details-heading">Activity Details</h2>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-[#eef1ec] px-2.5 py-0.5 text-[10px] font-semibold text-ink-soft">
-          <Icon className="size-3" name="lock" /> View only
+          <Icon className="size-3" name="lock" /> View Only
         </span>
       </div>
       <p className="mt-3 text-[13px] text-ink">{activity.description}</p>
@@ -58,13 +58,13 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
         <Field label="When" value={whenLabel(activity)} />
         <Field label="Sector" value={activity.sector} />
         <Field label="Dimension" value={activity.dimension ? DIMENSION_LABELS[activity.dimension] : undefined} />
-        <Field label="Allocated cost" value={`${formatLkr(activity.allocatedCost)} · planning`} />
+        <Field label="Allocated Cost" value={`${formatLkr(activity.allocatedCost)} · planning`} />
         <Field label="Partners" value={activity.partners} />
-        <Field label="Volunteer hours" value={activity.volunteerHours} />
+        <Field label="Volunteer Hours" value={activity.volunteerHours} />
       </dl>
       {activity.resourcesNeeded && (
         <dl className="mt-4">
-          <Field label="Resources needed" value={activity.resourcesNeeded} />
+          <Field label="Resources Needed" value={activity.resourcesNeeded} />
         </dl>
       )}
       <h3 className="mt-5 border-t border-line-soft pt-4 text-[13px] font-bold text-ink">Participants and Beneficiaries</h3>
@@ -99,7 +99,7 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
 
   const breadcrumb = (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[11px] text-ink-soft">
-      <Link className="text-brand-forest underline underline-offset-2" href="/activities-to-approve">Activities to approve</Link>
+      <Link className="text-brand-forest underline underline-offset-2" href="/activities-to-approve">Activities to Approve</Link>
       <span aria-hidden>›</span>
       <span aria-current="page">{activity.name}</span>
     </nav>
@@ -130,7 +130,7 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
         ) : (
           <section className="mt-4 rounded-card border border-line bg-surface">
             <NoAccessState
-              action={<Link className={secondaryButtonClass} href="/activities-to-approve">Back to activities</Link>}
+              action={<Link className={secondaryButtonClass} href="/activities-to-approve">Back to Activities</Link>}
               description="Only the society’s SPC approves its activities."
               title="You Can’t Approve This Activity"
             />

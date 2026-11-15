@@ -48,7 +48,7 @@ describe("V5 D01 sign-in", () => {
     expect(screen.getByText(/Forgot your password\? Ask HQ to set a new one\./)).toBeInTheDocument();
     const password = screen.getByLabelText(/^Password/);
     expect(password).toHaveAttribute("type", "password");
-    await user.click(screen.getByRole("button", { name: "Show password" }));
+    await user.click(screen.getByRole("button", { name: "Show Password" }));
     expect(password).toHaveAttribute("type", "text");
   });
 
@@ -74,9 +74,9 @@ describe("V5 D16i create an account", () => {
   it("suggests a username and asks for the right scope for each role", async () => {
     const user = userEvent.setup();
     render(<CreateAccountDrawer options={options} />);
-    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await user.click(screen.getByRole("button", { name: "Create Account" }));
 
-    await user.type(screen.getByLabelText(/Full name/), "P. Jayaweera");
+    await user.type(screen.getByLabelText(/Full Name/), "P. Jayaweera");
     expect(screen.getByLabelText(/Username/)).toHaveValue("p.jayaweera");
     expect(screen.getByText("A Society Officer has exactly one society.")).toBeInTheDocument();
     expect(screen.getByLabelText(/^Society/)).toBeDisabled();
@@ -95,14 +95,14 @@ describe("V5 D16i create an account", () => {
   it("does not send the form when the two passwords differ", async () => {
     const user = userEvent.setup();
     render(<CreateAccountDrawer options={options} />);
-    await user.click(screen.getByRole("button", { name: "Create account" }));
-    await user.type(screen.getByLabelText(/Full name/), "P. Jayaweera");
-    await user.type(screen.getByLabelText(/Mobile number/), "+94000000311");
+    await user.click(screen.getByRole("button", { name: "Create Account" }));
+    await user.type(screen.getByLabelText(/Full Name/), "P. Jayaweera");
+    await user.type(screen.getByLabelText(/Mobile Number/), "+94000000311");
     await user.selectOptions(screen.getByLabelText(/^District/), "d1");
     await user.selectOptions(screen.getByLabelText(/^Society/), "s1");
     await user.type(screen.getByLabelText(/^Password/), "first-pass-123");
-    await user.type(screen.getByLabelText(/Repeat password/), "other-pass-123");
-    await user.click(screen.getAllByRole("button", { name: "Create account" })[1]!);
+    await user.type(screen.getByLabelText(/Repeat Password/), "other-pass-123");
+    await user.click(screen.getAllByRole("button", { name: "Create Account" })[1]!);
 
     expect(screen.getByText("The passwords do not match.")).toBeInTheDocument();
     expect(actions.createAccount).not.toHaveBeenCalled();
@@ -148,7 +148,7 @@ describe("change role and disable (added to D16)", () => {
 
     await user.selectOptions(screen.getByLabelText(/^Role/), "DISTRICT_MANAGER");
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    await user.click(screen.getByRole("button", { name: "Save role" }));
+    await user.click(screen.getByRole("button", { name: "Save Role" }));
     const sent = (actions.updateAccount.mock.calls[0] as unknown as [unknown, FormData])[1];
     expect(sent.get("role")).toBe("DISTRICT_MANAGER");
     expect(sent.get("username")).toBe("s.karunaratne");
@@ -164,7 +164,7 @@ describe("change role and disable (added to D16)", () => {
     expect(screen.getByRole("heading", { name: "Disable S. Karunaratne?" })).toBeInTheDocument();
     expect(screen.getByText(/To let them back in, set a new password for them\./)).toBeInTheDocument();
     expect(actions.disableAccount).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Disable account" }));
+    await user.click(screen.getByRole("button", { name: "Disable Account" }));
     expect(actions.disableAccount).toHaveBeenCalledOnce();
   });
 });

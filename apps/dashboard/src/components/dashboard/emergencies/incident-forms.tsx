@@ -105,9 +105,9 @@ export function OpenIncidentForm({
 
   const societyField = (
     <label className={labelClass}>
-      {variant === "hq" ? "Reporting society" : "Society reporting"} <Required />
+      {variant === "hq" ? "Reporting Society" : "Society Reporting"} <Required />
       <select className={field} name="reportingSocietyId" onChange={(event) => chooseSociety(event.target.value)} required value={societyId}>
-        <option value="">Choose a society</option>
+        <option value="">Choose a Society</option>
         {societies.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name} · {s.code}
@@ -118,7 +118,7 @@ export function OpenIncidentForm({
   );
   const typeField = (
     <label className={labelClass}>
-      {variant === "hq" ? "Type" : "What happened"} <Required />
+      {variant === "hq" ? "Type" : "What Happened"} <Required />
       <select className={field} defaultValue="FLOOD" name="type" required>
         {INCIDENT_TYPES.map((type) => (
           <option key={type} value={type}>{INCIDENT_TYPE_LABELS[type]}</option>
@@ -146,7 +146,7 @@ export function OpenIncidentForm({
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className={labelClass}>
-              Incident name <Required />
+              Incident Name <Required />
               <input className={field} maxLength={160} name="title" placeholder="Floods — North Western" required type="text" />
             </label>
             {typeField}
@@ -161,7 +161,7 @@ export function OpenIncidentForm({
               <input className={field} defaultValue={localInputValue(start)} name="startedAt" required type="datetime-local" />
             </label>
             <label className={labelClass}>
-              Assessments due <Required />
+              Assessments Due <Required />
               <input className={field} defaultValue={localInputValue(new Date(start.getTime() + 48 * 3_600_000))} name="assessmentsDueAt" required type="datetime-local" />
             </label>
           </div>
@@ -173,7 +173,7 @@ export function OpenIncidentForm({
             <span className={hint}>Question sets to be confirmed with Sarvodaya.</span>
           </div>
           <label className={labelClass}>
-            Message to societies (optional)
+            Message to Societies (Optional)
             <input className={field} maxLength={1000} name="message" placeholder="Please send your assessment as soon as it is safe to do so." type="text" />
           </label>
           <p className="flex gap-2.5 rounded-xl border border-[var(--banner-view-line)] bg-info-bg px-3.5 py-2.5 text-[12px] text-info-text">
@@ -192,7 +192,7 @@ export function OpenIncidentForm({
           </div>
           {areaField}
           <label className={labelClass}>
-            Short description <Required />
+            Short Description <Required />
             <input className={field} maxLength={1000} name="description" placeholder="What has happened and where" required type="text" />
           </label>
           <label className={labelClass}>
@@ -214,7 +214,7 @@ export function OpenIncidentForm({
         <Link className={secondaryButtonClass} href={closeHref}>Cancel</Link>
         <button className={dangerButton} disabled={pending || !societyId || !areaIds.length} type="submit">
           <Icon className="size-4" name="alert" strokeWidth={2} />
-          {pending ? "Opening…" : "Open incident"}
+          {pending ? "Opening…" : "Open Incident"}
         </button>
       </div>
     </form>
@@ -380,20 +380,20 @@ export function AssessmentWizard({
           </div>
         ),
       },
-      { title: "How Many Families Are Affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families affected" onChange={(v) => set("families", v)} onValidity={(ok) => markCount("families", ok)} value={answers.families} /> },
-      { title: "How Many People Are Affected?", help: "Everyone in the affected families.", body: <Stepper label="People affected" onChange={(v) => set("people", v)} onValidity={(ok) => markCount("people", ok)} value={answers.people} /> },
+      { title: "How Many Families Are Affected?", help: "Count families in the society's village only. Give your best estimate.", body: <Stepper label="Families Affected" onChange={(v) => set("families", v)} onValidity={(ok) => markCount("families", ok)} value={answers.families} /> },
+      { title: "How Many People Are Affected?", help: "Everyone in the affected families.", body: <Stepper label="People Affected" onChange={(v) => set("people", v)} onValidity={(ok) => markCount("people", ok)} value={answers.people} /> },
       { title: "How Many People Are Injured?", help: "Numbers only. Never names.", body: <Stepper label="Injured" onChange={(v) => set("injured", v)} onValidity={(ok) => markCount("injured", ok)} value={answers.injured} /> },
       {
         title: "How Many Houses Were Damaged?",
         help: "Count houses in the society's village only. Give your best estimate.",
         body: (
           <div className="grid gap-2">
-            <Stepper detail="Cannot be lived in" label="Fully damaged" onChange={(v) => set("housesFully", v)} onValidity={(ok) => markCount("housesFully", ok)} value={answers.housesFully} />
-            <Stepper detail="Can be lived in after repair" label="Partly damaged" onChange={(v) => set("housesPartly", v)} onValidity={(ok) => markCount("housesPartly", ok)} value={answers.housesPartly} />
+            <Stepper detail="Cannot be lived in" label="Fully Damaged" onChange={(v) => set("housesFully", v)} onValidity={(ok) => markCount("housesFully", ok)} value={answers.housesFully} />
+            <Stepper detail="Can be lived in after repair" label="Partly Damaged" onChange={(v) => set("housesPartly", v)} onValidity={(ok) => markCount("housesPartly", ok)} value={answers.housesPartly} />
           </div>
         ),
       },
-      { title: "How Many People Are in Safety Centres?", help: "People who had to leave their homes.", body: <Stepper label="In safety centres" onChange={(v) => set("displaced", v)} onValidity={(ok) => markCount("displaced", ok)} value={answers.displaced} /> },
+      { title: "How Many People Are in Safety Centres?", help: "People who had to leave their homes.", body: <Stepper label="In Safety Centres" onChange={(v) => set("displaced", v)} onValidity={(ok) => markCount("displaced", ok)} value={answers.displaced} /> },
       {
         title: "Can Vehicles Reach the Village?",
         help: "Road access now.",
@@ -511,7 +511,7 @@ export function AssessmentWizard({
       <label className={labelClass}>
         Society <Required />
         <select className={field} disabled={step > 0} onChange={(event) => setSocietyId(event.target.value)} value={societyId}>
-          <option value="">Choose a society</option>
+          <option value="">Choose a Society</option>
           {societies.map((s) => (
             <option key={s.id} value={s.id}>{s.name} · {s.code}</option>
           ))}
@@ -526,11 +526,11 @@ export function AssessmentWizard({
             {[
               ["What happened", INCIDENT_TYPE_LABELS[incident.type]],
               ["Society", STATE_LABELS[answers.impact]],
-              ["Families affected", answers.families],
-              ["People affected", answers.people],
+              ["Families Affected", answers.families],
+              ["People Affected", answers.people],
               ["Houses fully / partly damaged", `${answers.housesFully} / ${answers.housesPartly}`],
               ["Injured", answers.injured],
-              ["In safety centres", answers.displaced],
+              ["In Safety Centres", answers.displaced],
               ["Road access", ROAD_LABELS[answers.roadAccess]],
               ["Most urgent needs", answers.needs.map((n) => NEED_LABELS[n]).join(", ") || "None"],
               ["Photos", photos.length],
@@ -557,7 +557,7 @@ export function AssessmentWizard({
           <p className="-mt-2 text-[12px] text-ink-soft">{question!.help}</p>
           {question!.body}
           <label className={labelClass}>
-            Note (optional)
+            Note (Optional)
             <input className={field} maxLength={1000} onChange={(event) => set("note", event.target.value)} placeholder="For example, water is going down on the main road." type="text" value={answers.note} />
           </label>
         </>
@@ -588,7 +588,7 @@ export function AssessmentWizard({
           </button>
         )}
         {reviewing ? (
-          <button className={primaryButtonClass} disabled={!!status} onClick={sendNow} type="button">Send assessment</button>
+          <button className={primaryButtonClass} disabled={!!status} onClick={sendNow} type="button">Send Assessment</button>
         ) : (
           <button
             className={primaryButtonClass}
@@ -603,7 +603,7 @@ export function AssessmentWizard({
             }}
             type="button"
           >
-            {step === questions.length - 1 ? "Check answers" : "Next question"}
+            {step === questions.length - 1 ? "Check Answers" : "Next Question"}
           </button>
         )}
       </div>
@@ -682,11 +682,11 @@ export function AssignHelpersForm({
         )}
       </fieldset>
       <label className={labelClass}>
-        Deliver by <Required />
+        Deliver By <Required />
         <input className={field} defaultValue={localInputValue(due)} name="dueAt" required type="datetime-local" />
       </label>
       <label className={labelClass}>
-        Note to the helping societies (optional)
+        Note to the Helping Societies (Optional)
         <input className={field} maxLength={1000} name="note" placeholder="For example, which road is open" type="text" />
       </label>
       <p className="flex gap-2.5 rounded-xl border border-[#c6e2cd] bg-success-bg px-3.5 py-2.5 text-[12px] text-success-text">
@@ -721,9 +721,9 @@ export function AddNeedForm({
     <form className="flex flex-col gap-4" onSubmit={submitWithoutReset(submit)}>
       <input name="incidentId" type="hidden" value={incidentId} />
       <label className={labelClass}>
-        For society <Required />
+        For Society <Required />
         <select className={field} defaultValue="" name="societyId" required>
-          <option value="">Choose a society</option>
+          <option value="">Choose a Society</option>
           {societies.map((s) => (
             <option key={s.id} value={s.id}>{s.name} · {s.districtName}</option>
           ))}
@@ -763,13 +763,13 @@ export function AddNeedForm({
         </label>
       </div>
       <label className={labelClass}>
-        Needed by (optional)
+        Needed by (Optional)
         <input className={field} name="dueAt" type="datetime-local" />
       </label>
       <FormError message={state.error} />
       <div className="flex gap-2.5">
         <Link className={secondaryButtonClass} href={`/emergencies/${incidentId}?tab=actions`}>Cancel</Link>
-        <button className={primaryButtonClass} disabled={pending} type="submit">{pending ? "Adding…" : "Add need"}</button>
+        <button className={primaryButtonClass} disabled={pending} type="submit">{pending ? "Adding…" : "Add Need"}</button>
       </div>
     </form>
   );

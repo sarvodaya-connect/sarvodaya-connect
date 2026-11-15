@@ -83,7 +83,7 @@ describe("V5 D02 society map (Mapbox)", () => {
   it("shows loading text, never a bar, until the pins arrive", () => {
     loadNationalMapPins.mockReturnValue(new Promise(() => {}));
     render(<SocietyPinsMap token={TOKEN} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Loading the map…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading the Map…");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe("V5 D02 society map (Mapbox)", () => {
 
     fakeMapbox.features = placeFeatures(pins.slice(0, 1));
     loadNationalMapPins.mockResolvedValueOnce({ counts: {}, points: pins.slice(0, 1), truncated: false });
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(await screen.findByRole("link", { name: "Pahala Kosgama SSS, grade B, open record" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe("V5 D02 society map (Mapbox)", () => {
 describe("Single society location map", () => {
   it("shows a fixed pin on the record", async () => {
     render(<SocietyLocationMap name="Pahala Kosgama SSS" position={{ latitude: 7.5, longitude: 80.4 }} token={TOKEN} />);
-    const marker = await screen.findByRole("img", { name: "Pahala Kosgama SSS map location" });
+    const marker = await screen.findByRole("img", { name: "Pahala Kosgama SSS Map Location" });
     await waitFor(() => expect(fakeMapbox.maps[0]!.options.center).toEqual([80.4, 7.5]));
     expect(marker).toBeInTheDocument();
   });
@@ -188,7 +188,7 @@ describe("Single society location map", () => {
 
   it("does not let the record's pin be dragged", async () => {
     render(<SocietyLocationMap name="Pahala Kosgama SSS" position={{ latitude: 7.5, longitude: 80.4 }} token={TOKEN} />);
-    await screen.findByRole("img", { name: "Pahala Kosgama SSS map location" });
+    await screen.findByRole("img", { name: "Pahala Kosgama SSS Map Location" });
     expect(fakeMapbox.markers[0]!.draggable).toBe(false);
   });
 });

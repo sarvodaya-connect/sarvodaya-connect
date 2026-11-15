@@ -17,7 +17,7 @@ export default async function NewActivityPage({ params }: PageProps<"/societies/
     return (
       <section className="mt-4 rounded-card border border-line bg-surface">
         <NoAccessState
-          action={<Link className={secondaryButtonClass} href={`/societies/${id}/work-plan`}>Back to the work plan</Link>}
+          action={<Link className={secondaryButtonClass} href={`/societies/${id}/work-plan`}>Back to the Work Plan</Link>}
           description="You can view this work plan but cannot add activities to it."
           title="You Can’t Add Activities Here"
         />

@@ -24,7 +24,7 @@ describe("temporary district view brought back with the Back button", () => {
       </RecheckOnReturn>,
     );
     expect(screen.queryByText("Example Bluebird Society")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Checking your access…");
+    expect(screen.getByRole("status")).toHaveTextContent("Checking Your Access…");
     expect(refresh).toHaveBeenCalledTimes(1);
 
     // The server's answer is a new render: shown as it comes.

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { ACTIVITY_DIMENSIONS, SARVODAYA_SECTORS } from "@/lib/v5-constants";
+import { useI18n } from "@/i18n/provider";
+import type { MessageKey } from "@/i18n/messages/en";
 
 import type { RecordFormResult } from "@/app/(dashboard)/societies/[id]/record-actions";
 import { DIMENSION_LABELS, MONTH_NAMES } from "@/lib/activity-format";
@@ -17,11 +19,11 @@ const label = "block text-[12px] font-semibold text-ink";
 const required = <span className="text-danger-text">*</span>;
 
 const PEOPLE = [
-  ["femaleParticipants", "Female participants", "Members and volunteers"],
-  ["maleParticipants", "Male participants", "Members and volunteers"],
+  ["femaleParticipants", "Female Participants", "Members and volunteers"],
+  ["maleParticipants", "Male Participants", "Members and volunteers"],
   ["youthParticipants", "Youth (15–25)", "Included above"],
-  ["householdsBenefited", "Households benefited", "Families using the result"],
-  ["womenHeadedHouseholds", "Women-headed households", "Of the households above"],
+  ["householdsBenefited", "Households Benefited", "Families using the result"],
+  ["womenHeadedHouseholds", "Women-Headed Households", "Of the households above"],
 ] as const;
 
 /**
@@ -40,6 +42,7 @@ export function ActivityForm({
   years: number[];
 }) {
   const [state, submit, pending] = useActionState(action, {});
+  const { t } = useI18n();
   const back = `/societies/${societyId}/work-plan`;
   return (
     <form className="mt-4 space-y-4" onSubmit={submitWithoutReset(submit)}>
@@ -47,7 +50,7 @@ export function ActivityForm({
         <h3 className="text-[14px] font-bold text-ink">1 · Details and Sector</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <label className={label}>
-            Activity name {required}
+            Activity Name {required}
             <input className={field} maxLength={150} name="name" required />
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -69,13 +72,13 @@ export function ActivityForm({
             <textarea className={field} maxLength={1000} minLength={10} name="description" required rows={3} />
           </label>
           <label className={label}>
-            Dates (optional)
+            Dates (Optional)
             <input className={field} maxLength={60} name="datesLabel" placeholder="12–14 Sep" />
           </label>
           <label className={label}>
             Sector {required}
             <select className={field} name="sector" required>
-              {SARVODAYA_SECTORS.map((sector, index) => <option key={sector} value={sector}>{index + 1} · {sector}</option>)}
+              {SARVODAYA_SECTORS.map((sector, index) => <option key={sector} value={sector}>{index + 1} · {t(`sector.${index + 1}` as MessageKey)}</option>)}
             </select>
             <span className="mt-1 block text-[11px] font-normal text-muted">One of the 10 Sarvodaya sectors.</span>
           </label>
@@ -111,20 +114,20 @@ export function ActivityForm({
         <h3 className="text-[14px] font-bold text-ink">3 · Resources and Partners</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <label className={label}>
-            Allocated cost (LKR) {required}
+            Allocated Cost (LKR) {required}
             <input className={field} inputMode="decimal" name="allocatedCost" required />
             <span className="mt-1 block text-[11px] font-normal text-muted">Planning amount only — not a payment or spending record.</span>
           </label>
           <label className={label}>
-            Volunteer hours (optional)
+            Volunteer Hours (Optional)
             <input className={field} inputMode="numeric" min={0} name="volunteerHours" type="number" />
           </label>
           <label className={label}>
-            Partners (optional)
+            Partners (Optional)
             <input className={field} maxLength={500} name="partners" />
           </label>
           <label className={label}>
-            Resources needed (optional)
+            Resources Needed (Optional)
             <input className={field} maxLength={500} name="resourcesNeeded" />
           </label>
         </div>

@@ -34,7 +34,7 @@ export async function OpenIncidentPanel({ viewer, closeHref, search }: { viewer:
         <form action="" className="mb-4 flex items-end gap-2" method="get">
           <input name="panel" type="hidden" value="open" />
           <label className="flex-1 text-[12px] font-semibold text-ink">
-            Find the reporting society
+            Find the Reporting Society
             <input
               className="mt-1 w-full rounded-input border border-line bg-surface px-3 py-2.5 text-[12.5px] text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring"
               defaultValue={search}
@@ -64,7 +64,7 @@ export async function OpenIncidentPanel({ viewer, closeHref, search }: { viewer:
       {body}
     </Drawer>
   ) : (
-    <Modal closeHref={closeHref} subtitle="Opens a disaster incident" title="Report an Incident">
+    <Modal closeHref={closeHref} subtitle="Opens a Disaster Incident" title="Report an Incident">
       {body}
     </Modal>
   );

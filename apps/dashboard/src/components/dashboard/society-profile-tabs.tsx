@@ -29,7 +29,7 @@ function formatDate(value?: string) {
 const villageFigures = [
   { value: "680", label: "Families" },
   { value: "2,540", label: "Population" },
-  { value: "16%", label: "Women-headed households" },
+  { value: "16%", label: "Women-Headed Households" },
   { value: "29%", label: "On Aswesuma" },
 ];
 
@@ -120,7 +120,7 @@ export function SocietyProfileTabs({
           <Card title="Basic Information">
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-3 xl:grid-cols-5">
               <Info label="Founded" value={society.establishedOn?.slice(0, 4)} />
-              <Info label="Registration no." value={society.societyCode} />
+              <Info label="Registration No." value={society.societyCode} />
               <Info label="GPS" value={society.location ? `${society.location.latitude}° N, ${society.location.longitude}° E` : undefined} />
               <Info label="Phone" value={primaryContact?.phone} />
               <Info label="President" value={president} />
@@ -146,7 +146,7 @@ export function SocietyProfileTabs({
                 </div>
               </div>
               <button className="rounded-button bg-brand-action px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed" type="button">
-                Log a call
+                Log a Call
               </button>
             </section>
           )}
@@ -182,8 +182,8 @@ export function SocietyProfileTabs({
         <div className="mt-4">
           <Card title="Audits">
             <ul className="divide-y divide-line-soft text-[12px]">
-              <li className="flex items-center justify-between py-2.5"><span className="text-ink">FY 2025/26 audit report</span><Pill tone="overdue">Overdue</Pill></li>
-              <li className="flex items-center justify-between py-2.5"><span className="text-ink">FY 2024/25 audit report</span><Pill tone="approved">Approved</Pill></li>
+              <li className="flex items-center justify-between py-2.5"><span className="text-ink">FY 2025/26 Audit Report</span><Pill tone="overdue">Overdue</Pill></li>
+              <li className="flex items-center justify-between py-2.5"><span className="text-ink">FY 2024/25 Audit Report</span><Pill tone="approved">Approved</Pill></li>
             </ul>
           </Card>
         </div>
@@ -303,7 +303,7 @@ export function SocietyProfileTabs({
           <article className="rounded-tile border border-line bg-surface px-5 py-4">
             <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">Outstanding Payments</p>
             <strong className="mt-2 block text-[26px] font-bold text-ink">LKR 0</strong>
-            <p className="mt-1 text-[11px] text-muted">Up to date</p>
+            <p className="mt-1 text-[11px] text-muted">Up to Date</p>
           </article>
           <article className="rounded-tile border border-line bg-surface px-5 py-4">
             <p className="text-[11px] font-semibold tracking-[0.14em] text-muted">SDF Shareholding</p>

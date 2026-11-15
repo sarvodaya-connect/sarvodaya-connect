@@ -41,11 +41,11 @@ export default async function DisasterResponsePage({ searchParams }: PageProps<"
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-bold text-ink">Disaster Response</h1>
-          <p className="text-[12.5px] text-ink-soft">Incidents, rapid assessments, response actions and situation reports · kept separate from society records</p>
+          <p className="text-[12.5px] text-ink-soft">Incidents, Rapid Assessments, Response Actions and Situation Reports · Kept Separate from Society Records</p>
         </div>
         <Link className={primaryButtonClass} href={`/emergencies?${status === "CLOSED" ? "status=CLOSED&" : ""}panel=open`}>
           <Icon className="size-4" name="alert" strokeWidth={2} />
-          {viewer.role === "HQ_ADMIN" ? "Open an incident" : "Report an incident"}
+          {viewer.role === "HQ_ADMIN" ? "Open an Incident" : "Report an Incident"}
         </Link>
       </div>
 
@@ -68,12 +68,12 @@ export default async function DisasterResponsePage({ searchParams }: PageProps<"
           <h2 className="text-[15px] font-bold text-ink">We Couldn’t Load the Incidents</h2>
           <p className="mt-1 text-[12.5px] text-ink-soft">{error}</p>
           <Link className="mt-3 inline-block text-[12.5px] font-semibold text-brand-forest underline underline-offset-2" href={`/emergencies${status === "CLOSED" ? "?status=CLOSED" : ""}`}>
-            Try again
+            Try Again
           </Link>
         </section>
       ) : !list?.data.length ? (
         <section className="rounded-card border border-line bg-surface p-8 text-center" role="status">
-          <h2 className="text-[15px] font-bold text-ink">{status === "ACTIVE" ? "No active incidents" : "No closed incidents"}</h2>
+          <h2 className="text-[15px] font-bold text-ink">{status === "ACTIVE" ? "No Active Incidents" : "No Closed Incidents"}</h2>
           <p className="mt-1 text-[12.5px] text-ink-soft">
             {status === "ACTIVE" ? "Incidents covering your societies appear here as soon as someone opens one." : "Closed incidents covering your societies appear here."}
           </p>

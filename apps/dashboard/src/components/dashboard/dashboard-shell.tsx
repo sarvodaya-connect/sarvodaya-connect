@@ -119,7 +119,7 @@ function StandardShell({ alerts, children, unreadCount = 0, viewer }: ShellProps
         >
           <Image
             alt="Sarvodaya Connect"
-            className="h-11 w-auto"
+            className="h-auto w-[192px] max-w-full"
             height={180}
             priority
             src="/brand/sarvodaya-connect-wordmark.png"
@@ -339,10 +339,10 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
       <aside className="relative hidden h-screen flex-col overflow-hidden bg-brand-forest text-sidebar-text lg:sticky lg:top-0 lg:flex">
         <Link
           aria-label={t("shell.home")}
-          className="flex h-[72px] shrink-0 items-center px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+          className="flex h-[112px] shrink-0 items-center justify-center px-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
           href={homeHref}
         >
-          <Image alt="Sarvodaya Connect" className="h-9 w-auto" height={450} priority src="/brand/sarvodaya-connect-logo-white.png" width={1180} />
+          <Image alt="Sarvodaya Connect" className="h-auto w-[208px] max-w-full" height={450} priority src="/brand/sarvodaya-connect-logo-white.png" width={1180} />
         </Link>
         <nav aria-label={t("shell.mainNavigation")} className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4 pt-2" ref={nav}>
           {pill && (
@@ -387,7 +387,7 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
           <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 md:px-7">
             <div className="flex min-w-0 items-center gap-3">
               <Link aria-label={t("shell.home")} className="shrink-0 rounded-md lg:hidden" href={homeHref}>
-                <Image alt="" className="h-8 w-auto" height={180} priority src="/brand/sarvodaya-connect-wordmark.png" width={472} />
+                <Image alt="" className="h-10 w-auto" height={180} priority src="/brand/sarvodaya-connect-wordmark.png" width={472} />
               </Link>
               <div className="min-w-0">
                 <h1 className="break-words text-[19px] font-bold leading-tight tracking-[-0.01em] md:text-[21px]">{title}</h1>

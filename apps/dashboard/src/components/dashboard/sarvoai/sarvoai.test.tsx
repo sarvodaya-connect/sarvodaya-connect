@@ -52,7 +52,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     renderChat();
     await ask(user, "What was the average profit for societies in Kurunegala in FY 2025/26?");
 
-    expect(screen.getByRole("status")).toHaveTextContent("Working on it…");
+    expect(screen.getByRole("status")).toHaveTextContent("Working on It…");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
 
@@ -62,7 +62,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(screen.getByText("10 excluded · figures not added")).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Records Behind This Answer" })).toBeInTheDocument();
     expect(screen.getByText("-38,600")).toBeInTheDocument();
-    expect(screen.queryByText("Sample data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sample Data")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "How was this answered?" }));
     const dialog = screen.getByRole("dialog", { name: "How Was This Answered?" });
@@ -118,7 +118,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     const choices = await screen.findAllByRole("radio");
     expect(choices).toHaveLength(3);
     await user.click(screen.getByRole("radio", { name: "More than LKR 100,000 combined over the five years" }));
-    await user.click(screen.getByRole("button", { name: "Answer with this" }));
+    await user.click(screen.getByRole("button", { name: "Answer with This" }));
     expect(await screen.findByText("187 societies.")).toBeInTheDocument();
     expect(askSarvoAi.mock.calls[1]![0]).toBe("More than LKR 100,000 combined over the five years");
   });
@@ -138,7 +138,7 @@ describe("V5 D40–D49f SarvoAI", () => {
   it("labels demonstration answers as sample data", async () => {
     askSarvoAi.mockResolvedValue({ ok: true, sample: true, answer: demoAnswer("Who is the president of Pahala Kosgama SSS?") });
     renderChat("Who is the president of Pahala Kosgama SSS?");
-    expect(await screen.findByText("Sample data")).toBeInTheDocument();
+    expect(await screen.findByText("Sample Data")).toBeInTheDocument();
   });
 
   it("keeps the question and offers to try again when SarvoAI is unavailable (D49)", async () => {
@@ -148,7 +148,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     renderChat("Average profit in Kurunegala?");
     expect(await screen.findByText("SarvoAI Isn’t Available Right Now")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Reports" })).toHaveAttribute("href", "/reports");
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(await screen.findByText("Back again.")).toBeInTheDocument();
     expect(askSarvoAi).toHaveBeenCalledTimes(2);
   });
@@ -175,7 +175,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     expect(await screen.findByText("SarvoAI Has Reached This Month’s Limit")).toBeInTheDocument();
     expect(screen.getByText(message)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Reports" })).toHaveAttribute("href", "/reports");
-    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try Again" })).not.toBeInTheDocument();
     expect(screen.queryByText("SarvoAI Isn’t Available Right Now")).not.toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe("V5 D40–D49f SarvoAI", () => {
     const user = userEvent.setup();
     renderChat("Average profit?");
     await screen.findByText("Done.");
-    await user.click(screen.getByRole("button", { name: /New question/ }));
+    await user.click(screen.getByRole("button", { name: /New Question/ }));
     await waitFor(() => expect(screen.getByText("Collective Wisdom. Intelligent Impact.")).toBeInTheDocument());
   });
 });
@@ -209,7 +209,7 @@ describe("V5 D49f SarvoAI no access", () => {
     render(<RolePageNoAccess name="K. Perera" page="sarvoai" roleLabel="DDM" scope="Kurunegala" />);
     expect(screen.getByRole("heading", { name: "SarvoAI Is for HQ Only" })).toBeInTheDocument();
     expect(screen.getByText(/This link opens an HQ tool, so nothing from it is shown here/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to my home" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Go to My Home" })).toHaveAttribute("href", "/dashboard");
   });
 });
 
