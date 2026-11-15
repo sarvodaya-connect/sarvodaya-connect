@@ -1221,10 +1221,11 @@ export const en = {
   "count.invalid": "Enter a whole number from 0 to {max}.",
   "count.fixBeforeNext": "One of the numbers is not a whole number in range. Fix it before going on.",
   // HQ National Overview redesign.
+  "hq.periodNote": "Grades, active societies and incidents are as of today. Membership is the latest year counted ({membershipYear}). Yearly figures, audits and activities are for {year}.",
   "hq.keyFigures": "Key figures",
   "hq.kpi.activeSocieties": "Active societies",
   "hq.kpi.ofRegistered": "of {registered} registered · {percent}%",
-  "hq.kpi.membersYear": "{year} counts · {reported} of {active} active societies reported",
+  "hq.kpi.membersYear": "Latest counts ({year}), whichever year is chosen · {reported} of {active} active societies reported",
   "hq.kpi.membersNone": "No membership counts entered yet",
   "hq.kpi.activitiesOf": "of {planned} planned · {percent}% · {year}",
   "hq.kpi.activitiesNone": "No planned activities yet for {year}",

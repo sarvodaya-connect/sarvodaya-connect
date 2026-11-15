@@ -17,7 +17,10 @@
 }
 /* The page's top-level sections settle in order: at most six steps of 40 ms. */
 .page > * {
-  animation: page-in 340ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* "backwards", not "both": once settled, no transform stays on the page, so a
+     fixed-position overlay inside it (such as SarvoAI's "How Was This
+     Answered?") is still sized to the viewport and drawn above the header. */
+  animation: page-in 340ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 .page > :nth-child(2) {
   animation-delay: 40ms;

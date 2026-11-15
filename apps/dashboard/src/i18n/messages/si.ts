@@ -1223,10 +1223,11 @@ export const si: Record<MessageKey, string> = {
   "count.invalid": "0 සිට {max} දක්වා පූර්ණ සංඛ්‍යාවක් ඇතුළත් කරන්න.",
   "count.fixBeforeNext": "එක් සංඛ්‍යාවක් පරාසය තුළ පූර්ණ සංඛ්‍යාවක් නොවේ. ඉදිරියට යාමට පෙර එය නිවැරදි කරන්න.",
   // HQ National Overview redesign (Sinhala and Tamil: unreviewed drafts, see docs/localization.md).
+  "hq.periodNote": "ශ්‍රේණි, ක්‍රියාකාරී සමිති සහ සිදුවීම් අද වන විට ඇති පරිදිය. සාමාජිකත්වය ගණන් කළ නවතම වර්ෂයයි ({membershipYear}). වාර්ෂික සංඛ්‍යා, විගණන සහ ක්‍රියාකාරකම් {year} සඳහාය.",
   "hq.keyFigures": "ප්‍රධාන සංඛ්‍යා",
   "hq.kpi.activeSocieties": "ක්‍රියාකාරී සමිති",
   "hq.kpi.ofRegistered": "ලියාපදිංචි {registered} න් · {percent}%",
-  "hq.kpi.membersYear": "{year} ගණන් · ක්‍රියාකාරී සමිති {active} න් {reported} ක් වාර්තා කළා",
+  "hq.kpi.membersYear": "නවතම ගණන් ({year}), කුමන වර්ෂය තේරුවත් · ක්‍රියාකාරී සමිති {active} න් {reported} ක් වාර්තා කළා",
   "hq.kpi.membersNone": "තවම සාමාජික ගණන් ඇතුළත් කර නැත",
   "hq.kpi.activitiesOf": "සැලසුම් කළ {planned} න් · {percent}% · {year}",
   "hq.kpi.activitiesNone": "{year} සඳහා තවම සැලසුම් කළ ක්‍රියාකාරකම් නැත",

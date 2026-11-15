@@ -182,6 +182,25 @@ describe("V5 D02 National Dashboard", () => {
     expect(screen.queryByText("LKR 0")).not.toBeInTheDocument();
   });
 
+  it("keeps a total that was entered when no society has entered both figures", () => {
+    render(
+      <NationalOverviewView
+        demo={false}
+        overview={{ ...overview, finance: { ...overview.finance, totalProfit: "412500", totalExpenses: "0", societiesWithBoth: 0, notSubmitted: 1076 } }}
+        years={[2025]}
+      />,
+    );
+    expect(screen.getByText("LKR 412,500")).toBeInTheDocument();
+    expect(screen.getAllByText("Not added yet")).toHaveLength(1);
+  });
+
+  it("says membership is the latest year counted, whichever year is chosen", () => {
+    render(<NationalOverviewView demo={false} overview={overview} years={[2025, 2024]} />);
+    const figures = screen.getByRole("list", { name: "Key figures" });
+    expect(within(figures).getByRole("link", { name: /Total Membership/ })).toHaveTextContent("Latest counts (2026), whichever year is chosen");
+    expect(screen.getByText(/Membership is the latest year counted \(2026\)\. Yearly figures, audits and activities are for FY 2025\/26\./)).toBeInTheDocument();
+  });
+
   it("switches the membership chart and opens the table", async () => {
     const user = userEvent.setup();
     render(<NationalOverviewView demo={false} overview={overview} years={[2025]} />);
@@ -211,16 +230,19 @@ describe("V5 D02 National Dashboard", () => {
           districts: [
             { id: "d2", name: "Matale", active: 0, latitude: null, longitude: null },
             { id: "d1", name: "Kurunegala", active: 98, latitude: 7.5, longitude: 80.4 },
+            // Half a position is no position: the map leaves it out too.
+            { id: "d3", name: "Ampara", active: 4, latitude: 7.3, longitude: null },
           ],
         }}
         years={[2025]}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "2 districts" }));
+    await user.click(screen.getByRole("button", { name: "3 districts" }));
     const panel = screen.getByRole("dialog", { name: "Active societies in each district" });
     const links = within(panel).getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/societies"));
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/societies?districtId=d1", "/societies?districtId=d2"]);
-    expect(within(panel).getByText("No map position yet")).toBeInTheDocument();
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/societies?districtId=d3", "/societies?districtId=d1", "/societies?districtId=d2"]);
+    expect(within(panel).getAllByText("No map position yet")).toHaveLength(2);
+    expect(within(panel).getByRole("link", { name: /Ampara/ })).toHaveTextContent("No map position yet");
   });
 
   it("formats yearly totals", () => {

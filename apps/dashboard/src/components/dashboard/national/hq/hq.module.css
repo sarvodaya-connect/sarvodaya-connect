@@ -36,7 +36,7 @@
   }
 }
 .enter {
-  animation: rise 380ms var(--hq-ease) both;
+  animation: rise 380ms var(--hq-ease) backwards;
   /* At most six steps of 35 ms: nobody waits for the page. */
   animation-delay: calc(min(var(--i, 0), 6) * 35ms);
 }
@@ -144,7 +144,7 @@
   }
 }
 .viewIn {
-  animation: settle 220ms var(--hq-ease) both;
+  animation: settle 220ms var(--hq-ease) backwards;
 }
 
 .tooltip {

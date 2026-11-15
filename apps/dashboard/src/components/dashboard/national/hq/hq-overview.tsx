@@ -651,11 +651,13 @@ function Programmes({ index, overview }: { index: number; overview: NationalOver
 function Finance({ demo, index, overview }: { demo: boolean; index: number; overview: NationalOverview }) {
   const { t } = useI18n();
   const { finance, financialYear } = overview;
-  // No society has both figures yet: the totals are missing, not zero.
-  const none = finance.societiesWithBoth === 0;
+  // The API adds up each column on its own and sends "0" when nothing is
+  // entered. A total is missing only when it is 0 and no society has entered
+  // both figures; a society may have entered just one, which still counts.
+  const shown = (total: string) => (finance.societiesWithBoth === 0 && Number(total) === 0 ? t("hq.notAddedYet") : lkrShort(total));
   const totals = [
-    { key: "profit", label: t("n.totalProfit"), value: none ? t("hq.notAddedYet") : lkrShort(finance.totalProfit), tone: "bg-[#eef6ef] text-brand-forest" },
-    { key: "expenses", label: t("n.totalExpenses"), value: none ? t("hq.notAddedYet") : lkrShort(finance.totalExpenses), tone: "bg-[#fdf3ea] text-[#9a4f12]" },
+    { key: "profit", label: t("n.totalProfit"), value: shown(finance.totalProfit), tone: "bg-[#eef6ef] text-brand-forest" },
+    { key: "expenses", label: t("n.totalExpenses"), value: shown(finance.totalExpenses), tone: "bg-[#fdf3ea] text-[#9a4f12]" },
   ];
   return (
     <Card
@@ -921,7 +923,9 @@ export function HqOverview({ demo, overview, years }: { demo: boolean; overview:
       <div className={styles.content}>
         <div className="space-y-4">
           <KeyFigures overview={overview} />
-          <p className="text-[11px] text-muted">{t("n.periodNote", { year: financialYear.label })}</p>
+          <p className="text-[11px] text-muted">{overview.membership.year === null
+            ? t("n.periodNote", { year: financialYear.label })
+            : t("hq.periodNote", { year: financialYear.label, membershipYear: overview.membership.year })}</p>
 
           <div className="grid gap-4 xl:grid-cols-12">
             <div className="grid gap-4 md:grid-cols-2 xl:col-span-8">

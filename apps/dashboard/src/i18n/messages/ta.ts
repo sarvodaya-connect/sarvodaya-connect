@@ -1223,10 +1223,11 @@ export const ta: Record<MessageKey, string> = {
   "count.invalid": "0 முதல் {max} வரையிலான முழு எண்ணை உள்ளிடவும்.",
   "count.fixBeforeNext": "எண்களில் ஒன்று வரம்புக்குள் உள்ள முழு எண் அல்ல. தொடர்வதற்கு முன் அதைச் சரிசெய்யவும்.",
   // HQ National Overview redesign (Sinhala and Tamil: unreviewed drafts, see docs/localization.md).
+  "hq.periodNote": "தரங்கள், செயலில் உள்ள சங்கங்கள், சம்பவங்கள் இன்றைய நிலவரம். உறுப்பினர் எண்ணிக்கை கணக்கிடப்பட்ட சமீபத்திய ஆண்டு ({membershipYear}). ஆண்டு எண்ணிக்கைகள், தணிக்கைகள், செயல்பாடுகள் {year} ஆண்டுக்கானவை.",
   "hq.keyFigures": "முக்கிய எண்ணிக்கைகள்",
   "hq.kpi.activeSocieties": "செயலில் உள்ள சங்கங்கள்",
   "hq.kpi.ofRegistered": "பதிவுசெய்த {registered} இல் · {percent}%",
-  "hq.kpi.membersYear": "{year} எண்ணிக்கைகள் · செயலில் உள்ள {active} சங்கங்களில் {reported} அறிவித்தன",
+  "hq.kpi.membersYear": "சமீபத்திய எண்ணிக்கைகள் ({year}), எந்த ஆண்டைத் தேர்ந்தாலும் · செயலில் உள்ள {active} சங்கங்களில் {reported} அறிவித்தன",
   "hq.kpi.membersNone": "இன்னும் உறுப்பினர் எண்ணிக்கைகள் உள்ளிடப்படவில்லை",
   "hq.kpi.activitiesOf": "திட்டமிட்ட {planned} இல் · {percent}% · {year}",
   "hq.kpi.activitiesNone": "{year} க்கு இன்னும் திட்டமிட்ட செயல்பாடுகள் இல்லை",
