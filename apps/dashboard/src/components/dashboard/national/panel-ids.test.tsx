@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { NationalOverview } from "@sarvodaya-connect/api-contracts";
 
+// The HQ period switch moves between years with the app router.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary: vi.fn(), loadNationalMapPins: vi.fn() }));
 
 import { LOCALES, type Locale } from "@/i18n/config";
@@ -104,6 +106,6 @@ describe("Panel heading ids", () => {
     ["ta", ta],
   ] as const)("label each National Overview card with its own heading in %s", (locale, messages) => {
     const { container } = inLocale(locale, messages, <NationalOverviewView demo={false} overview={overview} years={[2025]} />);
-    expectOwnHeadings(container, [messages["n.byGradeToday"], messages["n.femaleMale"], messages["n.totalsYear"]]);
+    expectOwnHeadings(container, [messages["n.byGradeToday"], messages["hq.membersIn"].replace("{year}", "2026"), messages["n.totalsYear"]]);
   });
 });
