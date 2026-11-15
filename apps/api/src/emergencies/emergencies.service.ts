@@ -16,7 +16,7 @@ import {
   ALLOWED_CONTENT_TYPES,
   maxUploadBytes,
 } from '../documents/upload-rules.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import type { EmergencyEvidence, Prisma } from '../generated/prisma/client.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -1039,6 +1039,10 @@ export class EmergenciesService {
     input: CreateEvidenceDto,
     principal: Principal,
   ) {
+    const confirmed = await this.completedUpload(input, principal, {
+      assessmentId,
+    });
+    if (confirmed) return confirmed;
     const assessment = await executeDatabaseOperation(() =>
       this.prisma.emergencyAssessment.findUnique({
         where: { id: assessmentId },
@@ -1080,6 +1084,10 @@ export class EmergenciesService {
     input: CreateEvidenceDto,
     principal: Principal,
   ) {
+    const confirmed = await this.completedUpload(input, principal, {
+      helperId,
+    });
+    if (confirmed) return confirmed;
     const helper = await this.findHelper(helperId, principal);
     this.assertActive(helper.action.incident);
     if (!this.canUpdateHelper(principal, helper.helperSociety)) {
@@ -1105,9 +1113,10 @@ export class EmergenciesService {
     if (!evidence || evidence.uploadedById !== principal.id) {
       throw new NotFoundException('Photo not found');
     }
-    if (evidence.uploadedAt) {
-      throw new ConflictException('This photo has already been uploaded');
-    }
+    // Issue #125: completing again (a retry after a lost answer, or two
+    // retries at once) confirms the photo. The stored file is not checked or
+    // touched again.
+    if (evidence.uploadedAt) return { id: evidenceId, uploaded: true };
     const stored = await this.withStorage(() =>
       this.storage.getObjectInfo(evidence.storageKey),
     );
@@ -1182,80 +1191,191 @@ export class EmergenciesService {
         `The file is larger than ${Math.round(maxBytes / 1_000_000)} MB. Choose a smaller PDF or photo.`,
       );
     }
-    // Issue #125: a retry of an upload that was cut off is the same file
-    // again. It reuses that unfinished record, with a new upload link, so
-    // retries never use up the photo limit.
-    const pending = input.checksumSha256
-      ? await executeDatabaseOperation(() =>
-          this.prisma.emergencyEvidence.findFirst({
-            where: {
-              assessmentId: target.assessmentId ?? null,
-              helperId: target.helperId ?? null,
-              uploadedById: principal.id,
-              uploadedAt: null,
-              contentType: input.contentType,
-              sizeBytes: input.sizeBytes,
-              checksumSha256: input.checksumSha256,
-            },
-            orderBy: { createdAt: 'desc' },
-          }),
-        )
-      : null;
-    if (pending) {
-      const upload = await this.withStorage(() =>
-        this.storage.createUploadRequest({
-          key: pending.storageKey,
-          contentType: input.contentType,
-          sizeBytes: input.sizeBytes,
-          checksumSha256: input.checksumSha256!,
-        }),
-      );
-      return {
-        evidence: {
-          id: pending.id,
-          contentType: input.contentType,
-          sizeBytes: input.sizeBytes,
-        },
-        upload,
-      };
+    // Issue #125: a retry carries the phone's id for the photo. The record
+    // with that id is resumed with a new upload link, or confirmed when it
+    // was already completed, so a retry never uses up another place.
+    if (input.clientUploadId) {
+      const existing = await this.uploadById(principal, input.clientUploadId);
+      if (existing) return this.resumeUpload(existing, input, target);
+    } else {
+      // Released clients send no id. A retry of an upload that was cut off
+      // is the same file again: it reuses that unfinished record, with a new
+      // upload link.
+      const pending = input.checksumSha256
+        ? await executeDatabaseOperation(() =>
+            this.prisma.emergencyEvidence.findFirst({
+              where: {
+                assessmentId: target.assessmentId ?? null,
+                helperId: target.helperId ?? null,
+                uploadedById: principal.id,
+                uploadedAt: null,
+                contentType: input.contentType,
+                sizeBytes: input.sizeBytes,
+                checksumSha256: input.checksumSha256,
+              },
+              orderBy: { createdAt: 'desc' },
+            }),
+          )
+        : null;
+      if (pending) return this.resumeUpload(pending, input, target);
     }
     if (target.count >= MAX_EVIDENCE_PER_RECORD) {
       throw new BadRequestException(target.limitMessage);
     }
+    let created;
+    try {
+      created = await this.recordEvidence(input, principal, target);
+    } catch (error) {
+      // Two retries of the same photo arrived together and the other one
+      // was recorded first: resume or confirm that one.
+      const cause = (error as { cause?: unknown }).cause ?? error;
+      if (input.clientUploadId && isUniqueViolation(cause)) {
+        const raced = await this.uploadById(principal, input.clientUploadId);
+        if (raced) return this.resumeUpload(raced, input, target);
+      }
+      throw error;
+    }
+    return this.uploadFor(created);
+  }
+
+  /**
+   * One new evidence record. The assessment or delivery is locked while its
+   * photos are counted, so photos sent at the same moment cannot pass the
+   * limit between the count and the insert.
+   */
+  private recordEvidence(
+    input: CreateEvidenceDto,
+    principal: Principal,
+    target: {
+      incidentId: string;
+      societyId: string;
+      assessmentId?: string;
+      helperId?: string;
+      kind: 'assessments' | 'deliveries';
+      limitMessage: string;
+    },
+  ) {
     const id = randomUUID();
     // Keys hold only ids generated here, never names or other personal data.
     const storageKey = `incidents/${target.incidentId}/${target.kind}/${id}${ALLOWED_CONTENT_TYPES[input.contentType][0]}`;
-    await executeDatabaseOperation(() =>
-      this.prisma.emergencyEvidence.create({
-        data: {
-          id,
-          incidentId: target.incidentId,
-          societyId: target.societyId,
-          assessmentId: target.assessmentId ?? null,
-          helperId: target.helperId ?? null,
-          storageKey,
-          contentType: input.contentType,
-          sizeBytes: input.sizeBytes,
-          checksumSha256: input.checksumSha256 ?? null,
-          uploadedById: principal.id,
+    return executeDatabaseOperation(() =>
+      this.prisma.$transaction(async (tx) => {
+        if (target.assessmentId) {
+          await tx.$queryRaw`SELECT 1 FROM "emergency_assessments" WHERE "id" = ${target.assessmentId}::uuid FOR UPDATE`;
+        } else {
+          await tx.$queryRaw`SELECT 1 FROM "emergency_action_helpers" WHERE "id" = ${target.helperId}::uuid FOR UPDATE`;
+        }
+        const count = await tx.emergencyEvidence.count({
+          where: target.assessmentId
+            ? { assessmentId: target.assessmentId }
+            : { helperId: target.helperId },
+        });
+        if (count >= MAX_EVIDENCE_PER_RECORD) {
+          throw new BadRequestException(target.limitMessage);
+        }
+        return tx.emergencyEvidence.create({
+          data: {
+            id,
+            incidentId: target.incidentId,
+            societyId: target.societyId,
+            assessmentId: target.assessmentId ?? null,
+            helperId: target.helperId ?? null,
+            storageKey,
+            contentType: input.contentType,
+            sizeBytes: input.sizeBytes,
+            checksumSha256: input.checksumSha256 ?? null,
+            clientUploadId: input.clientUploadId ?? null,
+            uploadedById: principal.id,
+          },
+        });
+      }),
+    );
+  }
+
+  /** This user's evidence record with the phone's id for one photo. */
+  private uploadById(principal: Principal, clientUploadId: string) {
+    return executeDatabaseOperation(() =>
+      this.prisma.emergencyEvidence.findUnique({
+        where: {
+          uploadedById_clientUploadId: {
+            uploadedById: principal.id,
+            clientUploadId,
+          },
         },
       }),
     );
+  }
+
+  /**
+   * Issue #125: a retry of a photo this user already uploaded and completed
+   * is confirmed before the incident's state and the user's current access
+   * are checked, as an assessment replay is. The lookup is limited to the
+   * user's own photos. A photo not completed yet goes through every check.
+   */
+  private async completedUpload(
+    input: CreateEvidenceDto,
+    principal: Principal,
+    target: { assessmentId?: string; helperId?: string },
+  ) {
+    if (!input.clientUploadId) return null;
+    const existing = await this.uploadById(principal, input.clientUploadId);
+    if (!existing?.uploadedAt) return null;
+    return this.resumeUpload(existing, input, target);
+  }
+
+  /**
+   * The same photo again: confirmed when it was completed (no new upload
+   * link, so the stored file is never replaced), otherwise a new upload link
+   * for the same record and key.
+   */
+  private async resumeUpload(
+    existing: EmergencyEvidence,
+    input: CreateEvidenceDto,
+    target: { assessmentId?: string; helperId?: string },
+  ) {
+    if (
+      existing.assessmentId !== (target.assessmentId ?? null) ||
+      existing.helperId !== (target.helperId ?? null) ||
+      existing.contentType !== input.contentType ||
+      existing.sizeBytes !== input.sizeBytes ||
+      existing.checksumSha256 !== (input.checksumSha256 ?? null)
+    ) {
+      throw new ConflictException(
+        'This photo ID was already used for a different photo',
+      );
+    }
+    if (existing.uploadedAt) {
+      return {
+        evidence: {
+          id: existing.id,
+          contentType: existing.contentType,
+          sizeBytes: existing.sizeBytes,
+          uploaded: true as const,
+        },
+        upload: null,
+      };
+    }
+    return this.uploadFor(existing);
+  }
+
+  /** A pre-signed upload for an unfinished evidence record. */
+  private async uploadFor(evidence: EmergencyEvidence) {
     const upload = await this.withStorage(() =>
       this.storage.createUploadRequest({
-        key: storageKey,
-        contentType: input.contentType,
-        sizeBytes: input.sizeBytes,
-        ...(input.checksumSha256
-          ? { checksumSha256: input.checksumSha256 }
+        key: evidence.storageKey,
+        contentType: evidence.contentType,
+        sizeBytes: evidence.sizeBytes,
+        ...(evidence.checksumSha256
+          ? { checksumSha256: evidence.checksumSha256 }
           : {}),
       }),
     );
     return {
       evidence: {
-        id,
-        contentType: input.contentType,
-        sizeBytes: input.sizeBytes,
+        id: evidence.id,
+        contentType: evidence.contentType,
+        sizeBytes: evidence.sizeBytes,
+        uploaded: false as const,
       },
       upload,
     };

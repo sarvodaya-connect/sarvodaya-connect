@@ -246,10 +246,33 @@ export interface OpenIncidentInput {
   assessmentsDueAt?: IsoDateTime;
 }
 
+/** POST /emergencies/assessments/:id/evidence (and helpers/:id/evidence). */
+export interface EmergencyEvidenceInput {
+  contentType: string;
+  sizeBytes: number;
+  checksumSha256?: string;
+  /**
+   * Issue #125: the client's id for this one photo, the same on every retry.
+   * With it, a retry resumes that photo's record, or confirms it when it was
+   * already uploaded, instead of using up another of the 10 places.
+   */
+  clientUploadId?: string;
+}
+
 /** A short-lived pre-signed upload for a photo or PDF (up to 10 MB by default). */
 export interface EmergencyEvidenceUpload {
-  evidence: { id: string; contentType: string; sizeBytes: number };
+  evidence: { id: string; contentType: string; sizeBytes: number; uploaded?: false };
   upload: { method: "PUT"; url: string; headers: Record<string, string>; expiresAt: IsoDateTime };
+}
+
+/**
+ * Issue #125: the answer to a retry with a `clientUploadId` whose photo was
+ * already uploaded and completed. There is nothing to upload or complete.
+ * Only sent when the request carried a `clientUploadId`.
+ */
+export interface EmergencyEvidenceAlreadyUploaded {
+  evidence: { id: string; contentType: string; sizeBytes: number; uploaded: true };
+  upload: null;
 }
 
 export interface EmergencySituationReportItem {

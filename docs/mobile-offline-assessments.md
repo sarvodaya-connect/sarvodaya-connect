@@ -22,6 +22,8 @@ Sending never holds up a screen:
 - Disaster Response, the incident page and the home's incident card load at the same time as saved assessments are sent, and reload once when something was sent.
 - A photo upload that does not finish within 2 minutes counts as no connection, and the assessment is retried later.
 - The "saved on this phone" card stays visible while a screen is loading and when it cannot load (for example offline), with each item's state, **Retry sending** and **Remove from this phone**.
+  - The card and the loading or error content below it share one scrolling page. However many items are saved, and on a small phone with large text, every item, its **Remove** button, **Retry sending** and the content below can be scrolled to.
+  - With few items the content fills the space under the card as before. Loading the screen never waits for sending.
 
 ## What each answer from the server does
 
@@ -43,9 +45,26 @@ Sending never holds up a screen:
   - A retry, even after a lost response, returns the same assessment with `replayed: true`.
   - Two copies of the same send arriving together are also confirmed: the one that loses the race reads back the assessment the other recorded, instead of failing with a database error.
   - The repeat is checked before the incident's state and the user's current access, so an assessment already received is confirmed even if the incident has since closed or the user lost access. A new assessment in that situation is still refused.
-- **Photos:** a photo whose upload was cut off is uploaded again on the next try.
-  - The retry reuses the unfinished upload record for the same file (same uploader, assessment, type, size and SHA-256), with a new upload link. Retries therefore never use up the 10-photo limit.
-  - If the confirmation of a finished upload is lost, the retry creates a second record for the same photo. The endpoint has no mutation id to prevent this.
+- **Photos:** each saved photo has its own id (`clientUploadId`, a UUID), made when the assessment is saved and kept with the photo in the encrypted queue, so it survives the app being closed. Every retry of that photo sends the same id.
+  - The API keeps one evidence record per uploader and id (a unique index on `uploaded_by_id, client_upload_id`).
+  - **Upload cut off:** the retry gets a new upload link for the same record and storage key.
+  - **Uploaded and completed, but the answer was lost:** the retry is confirmed with `evidence.uploaded: true` and `upload: null`. The phone marks the photo sent without uploading or completing it again, so the stored file is never replaced.
+  - **Retries at the same moment** (a second tap, or two rounds): the unique index lets only one record be created; the other request resumes or confirms that record.
+  - **Completing again** returns success for the uploader's own photo, instead of 409, without checking or touching storage.
+  - **The 10-photo limit** counts records, and a retry never adds one. While a new photo is counted and recorded, its assessment (or delivery) is locked, so photos sent together cannot pass the limit. An actual eleventh photo is refused.
+  - **Boundaries:** the lookup is limited to the signed-in uploader's own photos. The same id on another assessment or for a different file (type, size or SHA-256) is refused with 409. A completed photo is confirmed before the incident's state and the user's current access are checked, as an assessment is. A photo not yet uploaded goes through every check again.
+  - **Items saved by an earlier build** have no photo id. One is given and saved on the phone before that photo is sent.
+  - **Released apps** that send no id work as before: an unfinished upload of the same file (same uploader, assessment, type, size and SHA-256) is reused.
+
+## Deploying
+
+The photo id needs a database migration and an API change, in this order:
+
+1. **Migration** `20261115090000_emergency_evidence_client_upload_id`: adds the nullable `client_upload_id` column and its unique index. Existing rows and released apps are unaffected.
+2. **API:** accepts `clientUploadId` and answers retries as above. Released apps and the dashboard send no id and see the same answers as before, apart from a repeated completion now succeeding instead of returning 409.
+3. **Phone app** with this queue. It must not reach users before the API: the API refuses fields it does not know, so an older API would refuse every photo with an id (the item would be kept as blocked until the API is updated).
+
+The dashboard needs no change.
 
 ## Where the data is kept
 

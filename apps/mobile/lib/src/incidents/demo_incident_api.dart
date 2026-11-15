@@ -235,6 +235,7 @@ class DemoIncidentApi implements IncidentApi {
     String assessmentId,
     PickedDocument photo, {
     bool Function()? stillSignedIn,
+    String? clientUploadId,
   }) async {
     _requireSignedIn(stillSignedIn);
     _requireOnline();

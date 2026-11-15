@@ -680,9 +680,13 @@ model EmergencyEvidence {
   sizeBytes      Int                    @map("size_bytes")
   checksumSha256 String?                @map("checksum_sha256") @db.VarChar(44)
   uploadedById   String                 @map("uploaded_by_id") @db.VarChar(64)
+  // Issue #125: the phone's id for one photo, kept for every retry. One
+  // record per uploader and id, so a retry confirms or resumes that photo.
+  clientUploadId String?                @map("client_upload_id") @db.Uuid
   uploadedAt     DateTime?              @map("uploaded_at") @db.Timestamptz(3)
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
 
+  @@unique([uploadedById, clientUploadId])
   @@index([assessmentId])
   @@index([helperId])
   @@map("emergency_evidence")

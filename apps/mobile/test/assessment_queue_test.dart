@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,14 @@ class _FakeApi extends DemoIncidentApi {
   Future<void> Function()? beforePhoto;
   int photoCalls = 0;
 
+  /// Evidence records per assessment, as the API keeps them: one per
+  /// clientUploadId, true once completed, and at most 10 per assessment.
+  final evidence = <String, Map<String, bool>>{};
+  final uploadIds = <String?>[];
+
+  /// The next photo is uploaded and completed, then its answer is lost.
+  bool loseCompletion = false;
+
   @override
   Future<String> sendAssessment(
     String incidentId,
@@ -71,8 +80,10 @@ class _FakeApi extends DemoIncidentApi {
     String assessmentId,
     PickedDocument photo, {
     bool Function()? stillSignedIn,
+    String? clientUploadId,
   }) async {
     photoCalls++;
+    uploadIds.add(clientUploadId);
     await beforePhoto?.call();
     if (stillSignedIn != null && !stillSignedIn()) {
       throw const IncidentException('Sign in again', status: 401);
@@ -80,7 +91,28 @@ class _FakeApi extends DemoIncidentApi {
     if (photoOffline) {
       throw const IncidentException('offline', offline: true);
     }
-    photos[assessmentId] = (photos[assessmentId] ?? 0) + 1;
+    final records = evidence.putIfAbsent(assessmentId, () => {});
+    // Without an id, as from a released app, every request is a new record.
+    final key = clientUploadId ?? 'no-id-${records.length}';
+    if (!records.containsKey(key)) {
+      if (records.length >= 10) {
+        throw const IncidentException(
+          'An assessment can have at most 10 photos',
+          status: 400,
+        );
+      }
+      records[key] = false;
+    }
+    // Already completed: the API confirms it and nothing is uploaded again.
+    if (records[key]!) return;
+    // Let other requests run between creating the record and completing it.
+    await Future<void>.delayed(Duration.zero);
+    records[key] = true;
+    photos[assessmentId] = records.values.where((done) => done).length;
+    if (loseCompletion) {
+      loseCompletion = false;
+      throw const IncidentException('offline', offline: true);
+    }
   }
 }
 
@@ -252,6 +284,123 @@ void main() {
           .whereType<File>()
           .where((f) => f.path.contains('photo-')),
       isEmpty,
+    );
+  });
+
+  group('photo identity across retries', () {
+    test('a photo whose completion answer was lost is confirmed, even after a relaunch: 10 photos, 10 records', () async {
+      final q = queue();
+      final saved = await save(q, photos: 10);
+      final ids = [for (final p in saved.photos) p.uploadId];
+      expect(ids.toSet(), hasLength(10));
+      expect(ids, everyElement(isNotNull));
+
+      // Photo 4 is uploaded and completed, but the answer never arrives.
+      var calls = 0;
+      api.beforePhoto = () async {
+        if (++calls == 4) api.loseCompletion = true;
+      };
+      await q.sync();
+      final item = q.items.single;
+      expect(item.problem, QueueProblem.offline);
+      expect(item.photosLeft, 7);
+      expect(api.evidence[item.assessmentId], hasLength(4));
+
+      // The app is closed and opened again: the ids come back from storage.
+      api.beforePhoto = null;
+      final relaunched = queue();
+      final kept = await relaunched.load();
+      expect([for (final p in kept.single.photos) p.uploadId], ids);
+      await relaunched.sync();
+
+      expect(relaunched.items, isEmpty);
+      final records = api.evidence[item.assessmentId]!;
+      expect(records, hasLength(10));
+      expect(records.values, everyElement(isTrue));
+      expect(records.keys.toSet(), ids.toSet());
+      // Photo 4 was sent again with the same id and confirmed.
+      expect(api.uploadIds.where((id) => id == ids[3]), hasLength(2));
+      expect(api.sendCalls, 1);
+
+      // An actual eleventh photo is still refused by the API.
+      await expectLater(
+        api.addPhoto(
+          item.assessmentId!,
+          PickedDocument(
+            name: 'photo-11.jpg',
+            bytes: List.filled(64, 11),
+            contentType: 'image/jpeg',
+          ),
+          clientUploadId: newClientMutationId(),
+        ),
+        throwsA(
+          isA<IncidentException>().having((e) => e.status, 'status', 400),
+        ),
+      );
+      expect(records, hasLength(10));
+    });
+
+    test('retries running at the same moment do not add records', () async {
+      final first = queue();
+      final saved = await save(first, photos: 10);
+      // The first photo is completed, but its answer is lost.
+      api.loseCompletion = true;
+      api.photoOffline = false;
+      var calls = 0;
+      api.beforePhoto = () async {
+        if (++calls == 2) api.photoOffline = true;
+      };
+      await first.sync();
+      api
+        ..beforePhoto = null
+        ..photoOffline = false;
+      final assessmentId = first.items.single.assessmentId!;
+      expect(api.evidence[assessmentId], hasLength(1));
+
+      // Two copies of the queue over the same storage retry at once, and a
+      // second tap joins the first round.
+      final second = queue();
+      await second.load();
+      await Future.wait([first.sync(), first.sync(), second.sync()]);
+
+      final records = api.evidence[assessmentId]!;
+      expect(records, hasLength(10));
+      expect(records.values, everyElement(isTrue));
+      expect(records.keys.toSet(), {for (final p in saved.photos) p.uploadId});
+    });
+
+    test(
+      'a photo saved before ids existed gets one, kept before it is sent',
+      () async {
+        final q = queue();
+        final storage = EncryptedFileQueueStorage(
+          keys: keys,
+          root: () async => root,
+        );
+        await save(q, photos: 1);
+        // Rewrite the saved queue as an earlier build of the app left it.
+        final raw = jsonDecode((await storage.readQueue('account-a'))!) as List;
+        for (final item in raw) {
+          for (final photo in (item as Map)['photos'] as List) {
+            (photo as Map).remove('uploadId');
+          }
+        }
+        await storage.writeQueue('account-a', jsonEncode(raw));
+
+        final relaunched = queue();
+        expect((await relaunched.load()).single.photos.single.uploadId, isNull);
+        String? keptBeforeSending;
+        api.beforePhoto = () async {
+          final now = jsonDecode((await storage.readQueue('account-a'))!);
+          keptBeforeSending =
+              ((now as List).single['photos'] as List).single['uploadId']
+                  as String?;
+        };
+        await relaunched.sync();
+        expect(relaunched.items, isEmpty);
+        expect(keptBeforeSending, isNotNull);
+        expect(api.uploadIds, [keptBeforeSending]);
+      },
     );
   });
 

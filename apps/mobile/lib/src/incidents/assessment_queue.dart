@@ -85,6 +85,7 @@ class QueuedPhoto {
     required this.name,
     required this.contentType,
     required this.sizeBytes,
+    this.uploadId,
     this.sent = false,
   });
 
@@ -93,6 +94,7 @@ class QueuedPhoto {
     name: json['name'] as String,
     contentType: json['contentType'] as String,
     sizeBytes: json['sizeBytes'] as int,
+    uploadId: json['uploadId'] as String?,
     sent: json['sent'] == true,
   );
 
@@ -101,21 +103,33 @@ class QueuedPhoto {
   final String name;
   final String contentType;
   final int sizeBytes;
+
+  /// The API's `clientUploadId` for this photo, the same on every retry, so a
+  /// retry after a lost answer confirms the photo instead of adding another.
+  /// Null only for items saved before it existed; one is given and saved
+  /// before such a photo is sent.
+  final String? uploadId;
   final bool sent;
 
-  QueuedPhoto markSent() => QueuedPhoto(
+  QueuedPhoto _with({String? uploadId, bool? sent}) => QueuedPhoto(
     ref: ref,
     name: name,
     contentType: contentType,
     sizeBytes: sizeBytes,
-    sent: true,
+    uploadId: uploadId ?? this.uploadId,
+    sent: sent ?? this.sent,
   );
+
+  QueuedPhoto markSent() => _with(sent: true);
+
+  QueuedPhoto withUploadId(String id) => _with(uploadId: id);
 
   Map<String, dynamic> toJson() => {
     'ref': ref,
     'name': name,
     'contentType': contentType,
     'sizeBytes': sizeBytes,
+    'uploadId': ?uploadId,
     'sent': sent,
   };
 }
@@ -680,6 +694,7 @@ class AssessmentQueue extends ChangeNotifier {
           name: photo.name,
           contentType: photo.contentType,
           sizeBytes: photo.sizeBytes,
+          uploadId: newClientMutationId(),
         ),
     ];
     final item = QueuedAssessment(
@@ -743,12 +758,24 @@ class AssessmentQueue extends ChangeNotifier {
           item = item.copyWith(assessmentId: assessmentId);
           await _replace(account, item);
         }
-        for (final photo in item.photos.where((p) => !p.sent).toList()) {
+        for (var photo in item.photos.where((p) => !p.sent).toList()) {
           if (!stillSignedIn()) {
             throw const IncidentException(
               'Sign in again to send this.',
               status: 401,
             );
+          }
+          // Saved before photos had an id: give it one, and keep it on the
+          // phone before anything is sent, so every retry uses the same one.
+          if (photo.uploadId == null) {
+            final named = photo.withUploadId(newClientMutationId());
+            item = item.copyWith(
+              photos: [
+                for (final p in item.photos) p.ref == photo.ref ? named : p,
+              ],
+            );
+            await _replace(account, item);
+            photo = named;
           }
           final List<int> bytes;
           try {
@@ -764,6 +791,7 @@ class AssessmentQueue extends ChangeNotifier {
               contentType: photo.contentType,
             ),
             stillSignedIn: stillSignedIn,
+            clientUploadId: photo.uploadId,
           );
           item = item.copyWith(
             photos: [

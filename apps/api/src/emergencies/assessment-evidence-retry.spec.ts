@@ -1,16 +1,18 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Principal } from '../auth/principal.js';
 import { EmergenciesService } from './emergencies.service.js';
 
 /**
- * Issue #125: the phone retries a photo whose upload was cut off. The retry
- * reuses the unfinished record, so it never uses up the 10-photo limit.
- * Everything here is fictional.
+ * Issue #125: the phone retries photos after a cut-off upload or a lost
+ * answer. A retry resumes or confirms the same photo, so it never uses up
+ * the 10-photo limit. Everything here is fictional. The PostgreSQL test in
+ * test/db/emergencies.db-spec.ts runs the same journey against a database.
  */
 const ASSESSMENT = '44444444-4444-4444-8444-444444444444';
 const CHECKSUM = 'q1ZbvdrUw0pqtkBvKz7ZbVt7Rr2n0r1JjJ2wQqv0ZKk=';
+const PHOTO_ID = '55555555-5555-4555-8555-555555555555';
 
 const officer: Principal = {
   id: 'so-1',
@@ -26,13 +28,99 @@ const photo = {
   checksumSha256: CHECKSUM,
 };
 
-function service({
-  evidenceCount,
-  pending,
-}: {
-  evidenceCount: number;
-  pending: unknown;
-}) {
+type Row = {
+  id: string;
+  assessmentId: string | null;
+  helperId: string | null;
+  storageKey: string;
+  contentType: string;
+  sizeBytes: number;
+  checksumSha256: string | null;
+  clientUploadId: string | null;
+  uploadedById: string;
+  uploadedAt: Date | null;
+  createdAt: Date;
+};
+
+const row = (extra: Partial<Row> = {}): Row => ({
+  id: `evidence-${Math.random().toString(16).slice(2)}`,
+  assessmentId: ASSESSMENT,
+  helperId: null,
+  storageKey: `incidents/i/assessments/${Math.random()}.jpg`,
+  contentType: photo.contentType,
+  sizeBytes: photo.sizeBytes,
+  checksumSha256: CHECKSUM,
+  clientUploadId: null,
+  uploadedById: officer.id,
+  uploadedAt: null,
+  createdAt: new Date(),
+  ...extra,
+});
+
+/** An evidence table with the unique (uploader, clientUploadId) index. */
+function service(rows: Row[] = []) {
+  const matches = (r: Row, where: Record<string, unknown>) =>
+    Object.entries(where).every(
+      ([key, value]) => (r as Record<string, unknown>)[key] === value,
+    );
+  const evidence = {
+    findFirst: vi.fn(
+      async ({ where }: { where: Record<string, unknown> }) =>
+        rows.filter((r) => matches(r, where)).at(-1) ?? null,
+    ),
+    findUnique: vi.fn(
+      async ({
+        where,
+      }: {
+        where: {
+          id?: string;
+          uploadedById_clientUploadId?: {
+            uploadedById: string;
+            clientUploadId: string;
+          };
+        };
+      }) => {
+        const key = where.uploadedById_clientUploadId;
+        return (
+          rows.find((r) =>
+            key
+              ? r.uploadedById === key.uploadedById &&
+                r.clientUploadId === key.clientUploadId
+              : r.id === where.id,
+          ) ?? null
+        );
+      },
+    ),
+    count: vi.fn(
+      async ({ where }: { where: Record<string, unknown> }) =>
+        rows.filter((r) => matches(r, where)).length,
+    ),
+    create: vi.fn(async ({ data }: { data: Partial<Row> }) => {
+      if (
+        data.clientUploadId &&
+        rows.some(
+          (r) =>
+            r.uploadedById === data.uploadedById &&
+            r.clientUploadId === data.clientUploadId,
+        )
+      ) {
+        throw Object.assign(new Error('Unique constraint failed'), {
+          code: 'P2002',
+        });
+      }
+      const created = row({ ...data, uploadedAt: null });
+      rows.push(created);
+      return created;
+    }),
+    update: vi.fn(
+      async ({ where, data }: { where: { id: string }; data: Partial<Row> }) =>
+        Object.assign(
+          rows.find((r) => r.id === where.id)!,
+          data,
+        ),
+    ),
+  };
+  const tx = { $queryRaw: vi.fn(async () => []), emergencyEvidence: evidence };
   const prisma = {
     emergencyAssessment: {
       findUnique: vi.fn(async () => ({
@@ -42,13 +130,13 @@ function service({
         createdById: officer.id,
         incident: { id: 'incident-1' },
         society: { id: 'society-1', districtId: 'district-1' },
-        _count: { evidence: evidenceCount },
+        _count: {
+          evidence: rows.filter((r) => r.assessmentId === ASSESSMENT).length,
+        },
       })),
     },
-    emergencyEvidence: {
-      findFirst: vi.fn(async () => pending),
-      create: vi.fn(async () => ({})),
-    },
+    emergencyEvidence: evidence,
+    $transaction: vi.fn(async (run: (db: typeof tx) => unknown) => run(tx)),
   };
   const storage = {
     createUploadRequest: vi.fn(async ({ key }: { key: string }) => ({
@@ -56,6 +144,7 @@ function service({
       url: `https://storage.invalid/${key}`,
       headers: {},
     })),
+    getObjectInfo: vi.fn(async () => ({ sizeBytes: photo.sizeBytes })),
   };
   const svc = new EmergenciesService(
     prisma as never,
@@ -65,25 +154,24 @@ function service({
     { get: () => undefined } as never,
   );
   const internals = svc as unknown as Record<string, unknown>;
+  const assertActive = vi.fn();
   internals.canSee = vi.fn(async () => true);
-  internals.assertActive = vi.fn();
-  return { svc, prisma, storage };
+  internals.assertActive = assertActive;
+  return { svc, prisma, storage, rows, assertActive };
 }
 
-describe('retrying a photo upload (issue #125)', () => {
+describe('retrying a photo upload without an id (released clients)', () => {
   it('reuses the unfinished record, even at the photo limit', async () => {
-    const { svc, prisma, storage } = service({
-      evidenceCount: 10,
-      pending: {
-        id: 'evidence-9',
-        storageKey: 'incidents/i/assessments/e9.jpg',
-      },
-    });
+    const pending = row({ id: 'evidence-9', storageKey: 'k/e9.jpg' });
+    const others = Array.from({ length: 9 }, () =>
+      row({ uploadedAt: new Date(), checksumSha256: null }),
+    );
+    const { svc, prisma, storage } = service([...others, pending]);
     await expect(
       svc.assessmentEvidence(ASSESSMENT, photo, officer),
     ).resolves.toMatchObject({
       evidence: { id: 'evidence-9', sizeBytes: 2048 },
-      upload: { url: 'https://storage.invalid/incidents/i/assessments/e9.jpg' },
+      upload: { url: 'https://storage.invalid/k/e9.jpg' },
     });
     expect(prisma.emergencyEvidence.findFirst).toHaveBeenCalledWith({
       where: {
@@ -102,7 +190,10 @@ describe('retrying a photo upload (issue #125)', () => {
   });
 
   it('still refuses a new photo past the limit', async () => {
-    const { svc, prisma } = service({ evidenceCount: 10, pending: null });
+    const full = Array.from({ length: 10 }, () =>
+      row({ uploadedAt: new Date() }),
+    );
+    const { svc, prisma } = service(full);
     await expect(
       svc.assessmentEvidence(ASSESSMENT, photo, officer),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -110,9 +201,100 @@ describe('retrying a photo upload (issue #125)', () => {
   });
 
   it('creates a new record for a new photo under the limit', async () => {
-    const { svc, prisma } = service({ evidenceCount: 3, pending: null });
+    const { svc, prisma, rows } = service();
     const result = await svc.assessmentEvidence(ASSESSMENT, photo, officer);
     expect(prisma.emergencyEvidence.create).toHaveBeenCalledOnce();
-    expect(result.evidence.id).not.toBe('evidence-9');
+    expect(result.upload).not.toBeNull();
+    expect(rows[0]?.clientUploadId).toBeNull();
+  });
+});
+
+describe('retrying a photo with its clientUploadId', () => {
+  const withId = { ...photo, clientUploadId: PHOTO_ID };
+
+  it('confirms a photo already completed, without a new upload link, even at the limit', async () => {
+    const done = row({ clientUploadId: PHOTO_ID, uploadedAt: new Date() });
+    const others = Array.from({ length: 9 }, () =>
+      row({ uploadedAt: new Date() }),
+    );
+    const { svc, prisma, storage, assertActive } = service([...others, done]);
+    await expect(
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+    ).resolves.toEqual({
+      evidence: {
+        id: done.id,
+        contentType: 'image/jpeg',
+        sizeBytes: 2048,
+        uploaded: true,
+      },
+      upload: null,
+    });
+    // Nothing new, and the stored file is never offered for replacement.
+    expect(prisma.emergencyEvidence.create).not.toHaveBeenCalled();
+    expect(storage.createUploadRequest).not.toHaveBeenCalled();
+    // Confirmed before the incident's state is checked, like an assessment replay.
+    expect(assertActive).not.toHaveBeenCalled();
+  });
+
+  it('resumes the same unfinished record with a new link', async () => {
+    const pending = row({ clientUploadId: PHOTO_ID, storageKey: 'k/p.jpg' });
+    const { svc, prisma, storage } = service([pending]);
+    await expect(
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+    ).resolves.toMatchObject({
+      evidence: { id: pending.id, uploaded: false },
+      upload: { url: 'https://storage.invalid/k/p.jpg' },
+    });
+    expect(prisma.emergencyEvidence.create).not.toHaveBeenCalled();
+    expect(storage.createUploadRequest).toHaveBeenCalledOnce();
+  });
+
+  it('refuses the same id for a different photo', async () => {
+    const done = row({ clientUploadId: PHOTO_ID, uploadedAt: new Date() });
+    const { svc } = service([done]);
+    await expect(
+      svc.assessmentEvidence(
+        ASSESSMENT,
+        { ...withId, sizeBytes: 4096 },
+        officer,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("never finds another person's photo with the same id", async () => {
+    const theirs = row({
+      clientUploadId: PHOTO_ID,
+      uploadedById: 'someone-else',
+      uploadedAt: new Date(),
+    });
+    const { svc, rows } = service([theirs]);
+    const result = await svc.assessmentEvidence(ASSESSMENT, withId, officer);
+    expect(result.evidence.id).not.toBe(theirs.id);
+    expect(result.upload).not.toBeNull();
+    expect(rows).toHaveLength(2);
+  });
+
+  it('two retries arriving together leave one record', async () => {
+    const { svc, rows } = service();
+    // Both look up the id before either has recorded it.
+    const results = await Promise.all([
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(results.map((r) => r.evidence.id)).toEqual([
+      rows[0]!.id,
+      rows[0]!.id,
+    ]);
+  });
+
+  it('completing a photo twice confirms it, without checking storage again', async () => {
+    const done = row({ clientUploadId: PHOTO_ID, uploadedAt: new Date() });
+    const { svc, storage } = service([done]);
+    await expect(svc.completeEvidence(done.id, officer)).resolves.toEqual({
+      id: done.id,
+      uploaded: true,
+    });
+    expect(storage.getObjectInfo).not.toHaveBeenCalled();
   });
 });

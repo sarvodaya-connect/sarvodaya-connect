@@ -505,10 +505,15 @@ abstract class IncidentApi {
     AssessmentAnswers answers, {
     bool Function()? stillSignedIn,
   });
+
+  /// [clientUploadId] is the phone's id for this one photo, the same on
+  /// every retry (issue #125). With it, a retry resumes the same photo, or is
+  /// confirmed when the photo already arrived, instead of adding another.
   Future<void> addPhoto(
     String assessmentId,
     PickedDocument photo, {
     bool Function()? stillSignedIn,
+    String? clientUploadId,
   });
   Future<void> updateDelivery(
     String helperId, {
@@ -628,6 +633,7 @@ class HttpIncidentApi implements IncidentApi {
     String path,
     PickedDocument file, {
     bool Function()? stillSignedIn,
+    String? clientUploadId,
   }) async {
     final created = await _call(
       path,
@@ -636,10 +642,14 @@ class HttpIncidentApi implements IncidentApi {
         'contentType': file.contentType,
         'sizeBytes': file.sizeBytes,
         'checksumSha256': sha256Base64(file.bytes),
+        'clientUploadId': ?clientUploadId,
       },
       stillSignedIn: stillSignedIn,
     ) as Map<String, dynamic>;
     final evidence = created['evidence'] as Map<String, dynamic>;
+    // Issue #125: this photo already arrived and was completed, and only the
+    // answer was lost. Nothing to upload or complete again.
+    if (created['upload'] == null && evidence['uploaded'] == true) return;
     final upload = created['upload'] as Map<String, dynamic>;
     final request = http.Request(
       upload['method'] as String? ?? 'PUT',
@@ -671,12 +681,21 @@ class HttpIncidentApi implements IncidentApi {
         offline: true,
       );
     }
-    await _call(
-      '/emergencies/evidence/${evidence['id']}/complete',
-      method: 'POST',
-      body: const {},
-      stillSignedIn: stillSignedIn,
-    );
+    try {
+      await _call(
+        '/emergencies/evidence/${evidence['id']}/complete',
+        method: 'POST',
+        body: const {},
+        stillSignedIn: stillSignedIn,
+      );
+    } on IncidentException catch (error) {
+      // An API from before issue #125 answers a second completion of this
+      // same record with 409; the photo is there.
+      final done =
+          error.status == 409 &&
+          error.message.toLowerCase().contains('already been uploaded');
+      if (!done) rethrow;
+    }
   }
 
   @override
@@ -684,10 +703,12 @@ class HttpIncidentApi implements IncidentApi {
     String assessmentId,
     PickedDocument photo, {
     bool Function()? stillSignedIn,
+    String? clientUploadId,
   }) => _upload(
     '/emergencies/assessments/$assessmentId/evidence',
     photo,
     stillSignedIn: stillSignedIn,
+    clientUploadId: clientUploadId,
   );
 
   @override
