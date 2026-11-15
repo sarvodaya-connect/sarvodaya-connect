@@ -31,8 +31,8 @@ describe("V5 dashboard shell", () => {
     expect(screen.getByRole("heading", { level: 1, name: "National Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Shramadana Societies Across Sri Lanka")).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText("Search societies by name, S number or district…")).not.toHaveLength(0);
-    expect(screen.getByRole("link", { name: "Alerts, 3 new" })).toHaveAttribute("href", "/notifications");
-    expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alerts, 3 New" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("button", { name: "Account: K. Fernando · Sign Out" })).toBeInTheDocument();
 
     const nav = within(desktopNav());
     expect(nav.getByRole("link", { name: "National Overview" })).toHaveAttribute("aria-current", "page");
@@ -70,7 +70,7 @@ describe("V5 dashboard shell", () => {
     renderShell(getViewer("district-manager"));
 
     expect(screen.getByRole("heading", { level: 1, name: "District Overview" })).toBeInTheDocument();
-    expect(screen.getByText("Kurunegala District · view only")).toBeInTheDocument();
+    expect(screen.getByText("Kurunegala District · View Only")).toBeInTheDocument();
   });
 });
 
@@ -86,8 +86,8 @@ describe("Redesigned shell", () => {
 
     expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo-white");
     expect(screen.getByRole("link", { name: /SarvoAI/ })).toHaveAttribute("href", "/sarvoai");
-    expect(screen.getByRole("link", { name: "Alerts, 2 new" })).toHaveAttribute("href", "/notifications");
-    expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alerts, 2 New" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("button", { name: "Account: K. Fernando · Sign Out" })).toBeInTheDocument();
     // The tagline stays for screen readers in the slimmer header.
     expect(screen.getByText(TAGLINE)).toHaveClass("sr-only");
   });
@@ -105,7 +105,7 @@ describe("Redesigned shell", () => {
 
   it.each([
     ["SPC", getViewer("programme-coordinator"), "SPC · 3 assigned societies"],
-    ["DDM", deputy, "DDM · 1 society"],
+    ["DDM", deputy, "DDM · 1 Society"],
     ["DM", getViewer("district-manager"), "DM · Kurunegala District"],
   ])("gives the %s the redesigned shell, without HQ-only SarvoAI", (_role, viewer, scope) => {
     renderShell(viewer);

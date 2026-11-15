@@ -38,7 +38,7 @@ describe("V5 D16 account rows", () => {
 
   it("says when HQ set the password, never the password itself", () => {
     expect(passwordLabel(account({}))).toBe("Set by HQ · 18 Oct");
-    expect(passwordLabel(account({ passwordSetCount: 2 }))).toBe("Set again by HQ · 18 Oct");
+    expect(passwordLabel(account({ passwordSetCount: 2 }))).toBe("Set Again by HQ · 18 Oct");
     expect(passwordLabel(account({ passwordSetAt: null, passwordSetCount: 0 }))).toBe("Not Set Yet");
   });
 

@@ -152,7 +152,7 @@ describe("D05 society record overview", () => {
     expect(screen.getByText("S-104233")).toBeInTheDocument();
     expect(screen.getByText("418 · female/male not entered yet")).toBeInTheDocument();
     expect(screen.getByText("Grade B · Developing")).toBeInTheDocument();
-    expect(screen.getByText(/Request B → A · waiting/)).toBeInTheDocument();
+    expect(screen.getByText(/Request B → A · Waiting/)).toBeInTheDocument();
     expect(screen.getByText(/Information only — no sales, stock or accounts/)).toBeInTheDocument();
     expect(screen.getByText("Waiting")).toBeInTheDocument();
     const offices = screen.getAllByRole("row").map((row) => row.textContent);
@@ -314,8 +314,8 @@ describe("Exco completion comes from the API (excoStatus)", () => {
   });
 
   it("labels the record from the API's status, never from the seat count", () => {
-    expect(excoProgress(noTreasurer).label).toBe("Exco incomplete · no Treasurer");
-    expect(excoProgress(record.excoStatus).label).toBe("Exco incomplete · 2 of 25");
+    expect(excoProgress(noTreasurer).label).toBe("Exco Incomplete · No Treasurer");
+    expect(excoProgress(record.excoStatus).label).toBe("Exco Incomplete · 2 of 25");
     expect(excoProgress({ ...noTreasurer, filledSeats: 0, problems: [] }).label).toBe("Exco Not Entered Yet");
     // Without a status from the API, 25 members are still not called complete.
     expect(excoProgress(undefined, fullCommittee()).complete).toBe(false);
@@ -330,7 +330,7 @@ describe("D05x Exco", () => {
     const reveal = vi.fn().mockResolvedValue({ nic: "198400000012" });
     render(<ExcoTable accessNote="HQ has national access" members={record.committee} revealNic={reveal} status={record.excoStatus} />);
     expect(screen.getByText("2 of 25 Exco Seats Filled")).toBeInTheDocument();
-    expect(screen.getByText("Incomplete · 23 to fill")).toBeInTheDocument();
+    expect(screen.getByText("Incomplete · 23 to Fill")).toBeInTheDocument();
     expect(screen.getByText("•••• •••• 0047")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Show" })[0]!);
@@ -362,7 +362,7 @@ describe("D05w work plan", () => {
   it("lists activities by month with the planning-only notice and total", () => {
     render(<WorkPlanOverview plan={plan} societyId={SOCIETY_ID} />);
     expect(screen.getByText("Activity Planning Only")).toBeInTheDocument();
-    expect(screen.getByText("Total allocated for planning: LKR 80,000")).toBeInTheDocument();
+    expect(screen.getByText("Total Allocated for Planning: LKR 80,000")).toBeInTheDocument();
     expect(screen.getByText("Last changed by S. Karunaratne (SPC) · 18 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText("12–14 Sep")).toBeInTheDocument();
   });

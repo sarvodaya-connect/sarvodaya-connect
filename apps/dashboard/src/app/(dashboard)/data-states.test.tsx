@@ -17,7 +17,7 @@ describe("Dashboard route states", () => {
   it("shows a loading status while the page loads", () => {
     render(<DashboardLoading />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard data…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading Dashboard Data…");
   });
 
   it("shows a safe error message, a reference and recovery actions", async () => {

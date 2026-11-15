@@ -74,19 +74,19 @@ describe("SP01 SPC home", () => {
   it("shows the five figures, what needs attention and the latest changes", () => {
     const { container } = render(<RoleHome home={home()} now={now} viewer={getViewer("programme-coordinator")} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Good morning, P. Wickramasinghe" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Good Morning, P. Wickramasinghe" })).toBeInTheDocument();
     expect(screen.getByText("Society Program Coordinator (SPC) · Monday 26 Oct 2026")).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Your access: 12 assigned societies · view and edit. Grade changes are decided by HQ.");
     expect(screen.getByText("A 2 · B 4 · C 6")).toBeInTheDocument();
     expect(screen.getByText("Pahala Kosgama SSS · 2 days")).toBeInTheDocument();
     expect(screen.getByText("Hettipola SSS, Wariyapola SSS")).toBeInTheDocument();
-    expect(screen.getByText("Societies With a 2027 Plan")).toBeInTheDocument();
+    expect(screen.getByText("Societies with a 2027 Plan")).toBeInTheDocument();
 
     const attention = within(screen.getByRole("region", { name: "Needs Attention" }));
     expect(attention.getAllByRole("link", { name: "Pahala Kosgama SSS" })[0]).toHaveAttribute("href", "/societies/s1");
     expect(attention.getByText("Activity to approve: Youth leadership camp")).toBeInTheDocument();
     expect(attention.getAllByText("Editable")).toHaveLength(3);
-    expect(attention.getByRole("link", { name: "All 12 societies" })).toHaveAttribute("href", "/my-societies");
+    expect(attention.getByRole("link", { name: "All 12 Societies" })).toHaveAttribute("href", "/my-societies");
 
     expect(screen.getByText("Membership · Members 412 → 418 · Pahala Kosgama SSS")).toBeInTheDocument();
     expect(screen.getByText("N. Wijesinghe (Society Officer) · Today")).toBeInTheDocument();
@@ -164,7 +164,7 @@ describe("DD01 DDM home", () => {
       />,
     );
     expect(screen.getByText("106")).toBeInTheDocument();
-    expect(screen.getByText("View only · until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
+    expect(screen.getByText("View Only · Until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
   });
 });
 
@@ -371,7 +371,7 @@ describe("PR 2: regional dashboards redesign", () => {
     expect(figures.getByRole("link", { name: /Not Updated 90\+ Days/ })).toHaveAttribute("href", "/my-societies?needsUpdate=true");
     const actions = within(screen.getByRole("navigation", { name: "Quick Actions" }));
     expect(actions.getByRole("link", { name: "Review Activities" })).toHaveAttribute("href", "/activities-to-approve");
-    expect(actions.getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+    expect(actions.getByRole("link", { name: /Report an Incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
     // HQ-only SarvoAI never reaches a regional home.
     expect(screen.queryByText(/SarvoAI/)).not.toBeInTheDocument();
     noBars(container);

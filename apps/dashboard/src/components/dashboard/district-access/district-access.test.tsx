@@ -70,7 +70,7 @@ describe("DM04 temporary DDM access", () => {
     expect(within(rows[0]!).getByText("Active")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("Ended on Its Own")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("04 Aug → 08 Aug 2026")).toBeInTheDocument();
-    expect(within(rows[2]!).getByText("Ended early by R. Fernando")).toBeInTheDocument();
+    expect(within(rows[2]!).getByText("Ended Early by R. Fernando")).toBeInTheDocument();
     expect(within(rows[2]!).getByRole("link", { name: "Details" })).toHaveAttribute("href", "/district-access?grant=g3");
     expect(container.querySelector('[style*="width"]')).toBeNull();
   });
@@ -245,7 +245,7 @@ describe("DD04 district societies, view only", () => {
     expect(screen.getByText("All 106 Kurunegala societies · view only until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
     const tabs = within(screen.getByRole("navigation", { name: "Which Societies" }));
     expect(tabs.getByRole("link", { name: /My Societies · Edit/ })).toHaveAttribute("href", "/my-societies");
-    expect(tabs.getByRole("link", { name: /Kurunegala district · view only/ })).toHaveAttribute("aria-current", "page");
+    expect(tabs.getByRole("link", { name: /Kurunegala District · View Only/ })).toHaveAttribute("aria-current", "page");
     const rows = screen.getAllByRole("row").slice(1);
     expect(within(rows[0]!).getByText("View Only")).toBeInTheDocument();
     expect(within(rows[1]!).getByText("Editable")).toBeInTheDocument();
@@ -278,7 +278,7 @@ describe("DD04 district societies, view only", () => {
 describe("DD06, ST04 and pages for another role", () => {
   it("DD06: a district society opens view only and says it was recorded", () => {
     render(<TemporaryRecordNotice now={now} until="2026-10-31T12:30:00Z" viewerName="P. Dissanayake" />);
-    expect(screen.getByRole("note")).toHaveTextContent("View only · temporary district-wide view ends Sat 31 Oct, 6:00 p.m.");
+    expect(screen.getByRole("note")).toHaveTextContent("View Only · temporary district-wide view ends Sat 31 Oct, 6:00 p.m.");
     expect(screen.getByText("Opening this record was added to the access history (P. Dissanayake · 27 Oct, 9:00 a.m.).")).toBeInTheDocument();
   });
 

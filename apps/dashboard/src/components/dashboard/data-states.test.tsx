@@ -75,7 +75,7 @@ describe("NoResultsState", () => {
     expect(screen.getByRole("heading", { name: "No Societies Match" })).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
 
-    await user.click(screen.getByRole("button", { name: "Remove Status filter" }));
+    await user.click(screen.getByRole("button", { name: "Remove Status Filter" }));
     expect(onRemoveFilter).toHaveBeenCalledWith("status");
 
     await user.click(screen.getByRole("button", { name: "Clear All Filters" }));
@@ -96,7 +96,7 @@ describe("NoAccessState", () => {
     render(<NoAccessState action={<button type="button">Back to my societies</button>} heading="h1" />);
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Back to My Societies" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to my societies" })).toBeInTheDocument();
   });
 });
 
@@ -105,7 +105,7 @@ describe("SuccessState", () => {
     render(<SuccessState action={<button type="button">Back to queue</button>} description="Everyone has been told." title="Grade Decision Saved" />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Grade Decision Saved");
-    expect(screen.getByRole("button", { name: "Back to Queue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to queue" })).toBeInTheDocument();
   });
 });
 

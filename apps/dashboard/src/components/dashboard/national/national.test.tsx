@@ -106,16 +106,16 @@ describe("V5 D02 National Dashboard", () => {
     render(<NationalOverviewView demo={false} overview={overview} years={[2025]} />);
     const attention = screen.getByRole("region", { name: "Needs Attention" });
     const row = (name: RegExp) => within(attention).getByRole("link", { name });
-    expect(row(/Grade requests to review/)).toHaveAttribute("href", "/reviews");
-    expect(row(/Audit reports missing for FY 2025\/26/)).toHaveAttribute("href", "/compliance?year=2025");
-    expect(row(/Audit reports missing/)).toHaveTextContent("264");
-    expect(row(/Yearly figures not added/)).toHaveAttribute("href", "/societies?view=figures-not-added");
+    expect(row(/Grade Requests to Review/)).toHaveAttribute("href", "/reviews");
+    expect(row(/Audit Reports Missing for FY 2025\/26/)).toHaveAttribute("href", "/compliance?year=2025");
+    expect(row(/Audit Reports Missing/)).toHaveTextContent("264");
+    expect(row(/Yearly Figures Not Added/)).toHaveAttribute("href", "/societies?view=figures-not-added");
     expect(row(/Records Not Updated in 90\+ Days/)).toHaveAttribute("href", "/societies?view=not-updated");
     expect(row(/without a map position/i)).toHaveAttribute("href", "/reports?type=data-quality");
     // Nothing to act on is left out rather than shown as 0.
     expect(within(attention).queryByText("Active Societies Not Graded Yet")).not.toBeInTheDocument();
     // The lines overlap and count different things, so the badge counts lines, not a sum (532).
-    expect(within(attention).getByText("5 lists")).toBeInTheDocument();
+    expect(within(attention).getByText("5 Lists")).toBeInTheDocument();
     expect(within(attention).queryByText("532")).not.toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe("V5 D02 National Dashboard", () => {
     expect(live).toHaveTextContent("4 assessments still to do, across live incidents");
     const attention = within(screen.getByRole("region", { name: "Needs Attention" })).getAllByRole("link");
     expect(attention[0]).toHaveAttribute("href", "/emergencies");
-    expect(attention[0]).toHaveTextContent(/added up across live incidents/);
+    expect(attention[0]).toHaveTextContent(/Added Up Across Live Incidents/);
   });
 
   it("links every key figure to its page, for the chosen year", () => {

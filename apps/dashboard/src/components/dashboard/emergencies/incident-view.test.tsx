@@ -139,7 +139,7 @@ describe("V5 PR 8 incident views", () => {
     const [, critical, missing] = screen.getAllByRole("row");
     expect(within(critical!).getByText("Critical")).toBeInTheDocument();
     expect(within(critical!).getByText("146 / 520")).toBeInTheDocument();
-    expect(within(critical!).getByText("Temporary shelter, drinking water")).toBeInTheDocument();
+    expect(within(critical!).getByText("Temporary Shelter, Drinking Water")).toBeInTheDocument();
     expect(within(critical!).getByText("Update 2")).toBeInTheDocument();
     expect(within(missing!).getByRole("link", { name: "Submit Assessment" })).toHaveAttribute("href", "/emergencies/inc-1?panel=assess&society=b");
   });
@@ -166,7 +166,7 @@ describe("V5 PR 8 incident views", () => {
 
 describe("incident wording", () => {
   it("reads naturally", () => {
-    expect(needsLine(["DRINKING_WATER", "DRY_RATIONS", "MEDICAL_HELP"])).toBe("Drinking water, dry rations");
+    expect(needsLine(["DRINKING_WATER", "DRY_RATIONS", "MEDICAL_HELP"])).toBe("Drinking Water, Dry Rations");
     expect(needsLine([])).toBe("—");
     expect(openedByLine({ openedBy: { name: "K. Mendis", role: "HQ_ADMIN" }, reportingSociety: null })).toBe("K. Mendis (HQ)");
     expect(dueLine({ ...incident, assessmentsDueAt: "2026-10-31T12:30:00Z" }, now)).toBe("assessments due 31 Oct, 6:00 p.m. · 5 days left");

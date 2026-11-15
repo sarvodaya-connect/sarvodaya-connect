@@ -50,7 +50,7 @@ describe("typed counts (issue #132)", () => {
 
     await user.clear(families());
     await user.type(families(), "250");
-    await user.click(screen.getByRole("button", { name: "More: Families affected" }));
+    await user.click(screen.getByRole("button", { name: "More: Families Affected" }));
     expect(families().value).toBe("251");
 
     // Not silently fixed: the text stays and the box explains.

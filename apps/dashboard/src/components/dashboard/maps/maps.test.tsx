@@ -166,7 +166,7 @@ describe("V5 D02 society map (Mapbox)", () => {
 describe("Single society location map", () => {
   it("shows a fixed pin on the record", async () => {
     render(<SocietyLocationMap name="Pahala Kosgama SSS" position={{ latitude: 7.5, longitude: 80.4 }} token={TOKEN} />);
-    const marker = await screen.findByRole("img", { name: "Pahala Kosgama SSS map location" });
+    const marker = await screen.findByRole("img", { name: "Pahala Kosgama SSS Map Location" });
     await waitFor(() => expect(fakeMapbox.maps[0]!.options.center).toEqual([80.4, 7.5]));
     expect(marker).toBeInTheDocument();
   });
@@ -188,7 +188,7 @@ describe("Single society location map", () => {
 
   it("does not let the record's pin be dragged", async () => {
     render(<SocietyLocationMap name="Pahala Kosgama SSS" position={{ latitude: 7.5, longitude: 80.4 }} token={TOKEN} />);
-    await screen.findByRole("img", { name: "Pahala Kosgama SSS map location" });
+    await screen.findByRole("img", { name: "Pahala Kosgama SSS Map Location" });
     expect(fakeMapbox.markers[0]!.draggable).toBe(false);
   });
 });

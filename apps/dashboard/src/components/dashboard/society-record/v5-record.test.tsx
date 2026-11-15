@@ -188,12 +188,12 @@ describe("D22r decision", () => {
     const decide = vi.fn(async () => ({}));
     render(<GradeReviewDecision decide={decide} request={request} />);
 
-    expect(screen.getByRole("button", { name: /Approve grade A/ })).toBeEnabled();
-    await user.click(screen.getByRole("radio", { name: /Reject · keep grade B/ }));
-    expect(screen.getByRole("button", { name: /Reject and keep B/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Approve Grade A/ })).toBeEnabled();
+    await user.click(screen.getByRole("radio", { name: /Reject · Keep Grade B/ }));
+    expect(screen.getByRole("button", { name: /Reject and Keep B/ })).toBeDisabled();
     expect(screen.getByText("Enter a reason for rejecting. The requester will see it.")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox"), "Audit report missing");
-    await user.click(screen.getByRole("button", { name: /Reject and keep B/ }));
+    await user.click(screen.getByRole("button", { name: /Reject and Keep B/ }));
     expect(decide).toHaveBeenCalledWith("REJECT", "Audit report missing");
   });
 });
@@ -215,11 +215,11 @@ describe("D05n create a society", () => {
     expect(action).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText(/Society Name/), "Fictional Wellawa Society");
-    await user.type(screen.getByLabelText(/^S number/), "S-777001");
+    await user.type(screen.getByLabelText(/^S Number/), "S-777001");
     await user.selectOptions(screen.getByLabelText(/^District/), "d1");
-    await user.type(screen.getByLabelText(/^DS division/), "Fictional DS");
+    await user.type(screen.getByLabelText(/^DS Division/), "Fictional DS");
     await user.type(screen.getByLabelText(/^Address/), "Fictional Road");
-    await user.type(screen.getByLabelText(/^Number of members/), "164");
+    await user.type(screen.getByLabelText(/^Number of Members/), "164");
     await user.click(screen.getByRole("button", { name: "Save and Assign Staff" }));
 
     expect(action).toHaveBeenCalledTimes(1);
@@ -258,7 +258,7 @@ describe("D24 log helpers", () => {
     const row = csv.split("\r\n")[1]!;
     expect(row).toContain(`"'=HYPERLINK(""x"")"`);
     expect(row).toContain('"Pahala, Kosgama"');
-    expect(row).toContain('"Society edit"');
+    expect(row).toContain('"Society Edit"');
     expect(row).toContain('"Said ""hello"""');
   });
 });

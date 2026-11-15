@@ -63,10 +63,10 @@ export const HELPER_STATUS_LABELS: Record<EmergencyHelperStatus, string> = {
   DELIVERED: "Delivered",
 };
 
-/** "Water, dry rations" for the Top needs column. */
+/** Short need labels for the Top Needs column. */
 export function needsLine(needs: EmergencyNeed[]) {
   if (!needs.length) return "—";
-  const words = needs.slice(0, 2).map((need, index) => (index === 0 ? NEED_LABELS[need] : NEED_LABELS[need].toLowerCase()));
+  const words = needs.slice(0, 2).map((need) => NEED_LABELS[need]);
   return words.join(", ");
 }
 

@@ -90,12 +90,12 @@ describe("D07 Programmes & Activities", () => {
     expect(screen.getByRole("link", { name: "National Overview" })).toHaveAttribute("href", "/dashboard");
     const sectors = within(screen.getByRole("list", { name: "Sarvodaya 10-Sector Approach" })).getAllByRole("listitem");
     expect(sectors).toHaveLength(10);
-    expect(sectors[0]).toHaveTextContent("Community education2 / 2 planned1 society");
+    expect(sectors[0]).toHaveTextContent("Community Education2 / 2 planned1 society");
     const ranked = within(screen.getByRole("region", { name: "SDGs Ranked by Completed Activities" })).getAllByRole("listitem");
     expect(ranked).toHaveLength(17);
     expect(ranked[0]).toHaveTextContent("#1SDG 4 · Quality Education2completed");
     // A goal with no completed activity is a real zero, not missing data.
-    expect(ranked[2]).toHaveTextContent("—SDG 1 · No Poverty0None completed");
+    expect(ranked[2]).toHaveTextContent("—SDG 1 · No Poverty0None Completed");
     expect(screen.getByRole("link", { name: "Open Society Work Plan" })).toHaveAttribute("href", "/societies/29000000-0000-4000-8000-000000000101/work-plan");
   });
 
@@ -114,7 +114,7 @@ describe("D07 Programmes & Activities", () => {
   it("gives a DM a breadcrumb home to the District Overview, and an SPC Home", () => {
     show(scoped({ kind: "DISTRICT", societies: 2, districts: [{ id: "d1", name: "Kurunegala" }] }), "DISTRICT_MANAGER");
     expect(screen.getByRole("link", { name: "District Overview" })).toHaveAttribute("href", "/dashboard");
-    expect(screen.getByTestId("programme-scope")).toHaveTextContent("Counted overKurunegala · 2 societies");
+    expect(screen.getByTestId("programme-scope")).toHaveTextContent("Counted OverKurunegala · 2 societies");
   });
 
   it("tells a genuine zero year apart from missing figures", () => {

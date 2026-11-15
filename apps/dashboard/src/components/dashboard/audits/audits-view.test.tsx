@@ -55,7 +55,7 @@ describe("Audits & AGM (issue #119)", () => {
     expect(screen.getByText("3 of 4")).toBeInTheDocument();
     expect(screen.getByText("Due 30 Sept 2026")).toBeInTheDocument();
     expect(screen.getByText("1 of 4 active societies have all four · 25%")).toBeInTheDocument();
-    expect(screen.getByText("Signed File · Only DM and HQ Can Open")).toBeInTheDocument();
+    expect(screen.getByText("Signed file · only DM and HQ can open")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audit Report Past the Due Date" })).toBeInTheDocument();
     const row = within(screen.getByRole("table")).getByRole("link", { name: "Fictional North Four" });
     expect(row).toHaveAttribute("href", "/societies/s4/documents?year=2025");
@@ -66,7 +66,7 @@ describe("Audits & AGM (issue #119)", () => {
 
   it("says the due date has not passed yet", () => {
     render(<AuditsView breadcrumb={{ href: "/dashboard", label: "Home" }} demo={false} figures={figures({ followUp: { ...figures().followUp, pastDue: false } })} href={href} t={ENGLISH} years={[2025]} />);
-    expect(screen.getByText("Due date 30 Sept 2026 not passed")).toBeInTheDocument();
+    expect(screen.getByText("Due Date 30 Sept 2026 Not Passed")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audit Report Not Uploaded Yet" })).toBeInTheDocument();
   });
 

@@ -79,14 +79,14 @@ describe("which languages people can choose", () => {
 
 describe("messages", () => {
   it("fills in values", () => {
-    expect(createTranslator(en, "en")("shell.alertsNew", { count: 3 })).toBe("Alerts, 3 new");
+    expect(createTranslator(en, "en")("shell.alertsNew", { count: 3 })).toBe("Alerts, 3 New");
     expect(createTranslator(ta, "ta")("shell.accountSignOut", { name: "Fictional Name" })).toContain("Fictional Name");
   });
 
   it("uses each language's plural forms", () => {
     const english = createTranslator(en, "en");
-    expect(english.plural("scope.societies", 1)).toBe("1 society");
-    expect(english.plural("scope.societies", 12)).toBe("12 societies");
+    expect(english.plural("scope.societies", 1)).toBe("1 Society");
+    expect(english.plural("scope.societies", 12)).toBe("12 Societies");
     expect(createTranslator(ta, "ta").plural("scope.societies", 12)).toBe("12 சங்கங்கள்");
     expect(createTranslator(si, "si").plural("scope.societies", 12)).toBe("සමිති 12");
   });
@@ -101,7 +101,7 @@ const viewers: DemoViewer[] = [
   { id: "1", displayName: "Fictional HQ", initials: "FH", role: "HQ_ADMIN", roleLabel: "HQ", scopeLabel: "National", districtIds: "ALL" },
   { id: "2", displayName: "Fictional DM", initials: "FD", role: "DISTRICT_MANAGER", roleLabel: "DM", scopeLabel: "Fictional", districtIds: ["d"], societyIds: [] },
   { id: "3", displayName: "Fictional DDM", initials: "FD", role: "DEPUTY_DISTRICT_MANAGER", roleLabel: "DDM", scopeLabel: "Fictional", districtIds: ["d"], societyIds: ["s"] },
-  { id: "4", displayName: "Fictional SPC", initials: "FS", role: "PROGRAMME_COORDINATOR", roleLabel: "SPC", scopeLabel: "2 societies", districtIds: [], societyIds: ["s", "t"] },
+  { id: "4", displayName: "Fictional SPC", initials: "FS", role: "PROGRAMME_COORDINATOR", roleLabel: "SPC", scopeLabel: "2 Societies", districtIds: [], societyIds: ["s", "t"] },
 ];
 
 describe.each(viewers)("the dashboard shell for $role", (viewer) => {
