@@ -17,6 +17,7 @@ function renderShell(viewer: DemoViewer, unread = 0) {
   );
 }
 
+const TAGLINE = "People | Communities | A Just and Compassionate Society";
 const desktopNav = () => screen.getAllByRole("navigation", { name: "Main Navigation" })[0]!;
 
 describe("V5 dashboard shell", () => {
@@ -70,5 +71,49 @@ describe("V5 dashboard shell", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "District Overview" })).toBeInTheDocument();
     expect(screen.getByText("Kurunegala District · view only")).toBeInTheDocument();
+  });
+});
+
+describe("HQ shell redesign", () => {
+  beforeEach(() => {
+    pathname.current = "/dashboard";
+  });
+
+  const logo = () => screen.getByRole("img", { name: "Sarvodaya Connect" });
+
+  it("gives HQ the redesigned shell with SarvoAI, search, alerts and account", () => {
+    renderShell(getViewer("hq-admin"), 2);
+
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo-white");
+    expect(screen.getByRole("link", { name: /SarvoAI/ })).toHaveAttribute("href", "/sarvoai");
+    expect(screen.getByRole("link", { name: "Alerts, 2 new" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();
+    // The tagline stays for screen readers in the slimmer header.
+    expect(screen.getByText(TAGLINE)).toHaveClass("sr-only");
+  });
+
+  const deputy: DemoViewer = {
+    id: "deputy-district-manager",
+    displayName: "Sample Deputy",
+    initials: "SD",
+    role: "DEPUTY_DISTRICT_MANAGER",
+    roleLabel: "Deputy District Manager",
+    scopeLabel: "1 society",
+    districtIds: [],
+    societyIds: ["society-sample"],
+  };
+
+  it.each([
+    ["SPC", getViewer("programme-coordinator")],
+    ["DDM", deputy],
+    ["DM", getViewer("district-manager")],
+    ["System Admin", getViewer("system-admin")],
+  ])("keeps the V5 shell for %s", (_role, viewer) => {
+    renderShell(viewer);
+
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-wordmark");
+    expect(screen.getByText(TAGLINE)).not.toHaveClass("sr-only");
+    expect(screen.queryByRole("link", { name: /SarvoAI/ })).not.toBeInTheDocument();
+    expect(document.querySelector("main")?.className).toBe("min-w-0 flex-1 px-4 pb-8 pt-[18px] md:px-7");
   });
 });

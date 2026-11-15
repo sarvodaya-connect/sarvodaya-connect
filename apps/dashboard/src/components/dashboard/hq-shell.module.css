@@ -1,0 +1,77 @@
+/*
+ * The HQ shell only (see HqShell in dashboard-shell.tsx). A CSS module, so the
+ * other roles' shell and pages are unchanged. Motion is short, uses transform
+ * and opacity, and is switched off under prefers-reduced-motion.
+ */
+
+/* Each page eases in when the route changes (the shell keys <main> by path). */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The page's top-level sections settle in order: at most six steps of 40 ms. */
+.page > * {
+  animation: page-in 340ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.page > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.page > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.page > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.page > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.page > :nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+
+/* The sidebar's active-page pill slides between pages. */
+.navPill {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    height 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.navIcon {
+  transition: transform 150ms ease;
+}
+@media (hover: hover) {
+  a:hover > .navIcon {
+    transform: scale(1.1);
+  }
+}
+
+/* Header buttons answer the pointer and press in. */
+.press {
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+.press:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > * {
+    animation: none;
+  }
+  .navPill,
+  .navIcon,
+  .press {
+    transition: none;
+  }
+  a:hover > .navIcon,
+  .press:active {
+    transform: none;
+  }
+}

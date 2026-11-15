@@ -1,0 +1,225 @@
+/*
+ * HQ National Overview only. A CSS module, so none of this reaches the other
+ * roles' homes or the shared shell.
+ *
+ * Motion is short and uses transform and opacity. Entry plays once when the
+ * page mounts; switching the reporting period keeps the same components, so
+ * it never replays. Everything collapses to an instant change under
+ * prefers-reduced-motion.
+ */
+
+.root {
+  --hq-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --hq-shadow: 0 1px 2px rgb(28 42 33 / 0.05), 0 1px 1px rgb(28 42 33 / 0.03);
+  --hq-shadow-lift: 0 10px 24px -12px rgb(28 42 33 / 0.28), 0 2px 6px rgb(28 42 33 / 0.06);
+  font-variant-numeric: tabular-nums;
+}
+
+/* While a new reporting period loads, the figures dim instead of jumping. */
+.content {
+  transition: opacity 180ms ease;
+}
+.root[data-pending="true"] .content {
+  opacity: 0.55;
+}
+
+/* --- Entry ------------------------------------------------------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.enter {
+  animation: rise 380ms var(--hq-ease) both;
+  /* At most six steps of 35 ms: nobody waits for the page. */
+  animation-delay: calc(min(var(--i, 0), 6) * 35ms);
+}
+
+/* --- Cards ------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--hq-shadow);
+}
+
+/* Cards that are links or buttons lift a little; static ones stay still. */
+.lift {
+  transition:
+    transform 160ms var(--hq-ease),
+    box-shadow 160ms var(--hq-ease),
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+@media (hover: hover) {
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--hq-shadow-lift);
+    border-color: #cbd8c8;
+  }
+  .lift:hover .chevron {
+    transform: translateX(3px);
+  }
+}
+.lift:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: var(--hq-shadow);
+  transition-duration: 90ms;
+}
+.chevron {
+  transition: transform 160ms var(--hq-ease);
+}
+
+.focusRing:focus-visible {
+  outline: 2px solid var(--brand-leaf);
+  outline-offset: 2px;
+}
+
+/* --- Segmented control (reporting period, chart views) ---------------- */
+
+.segmented {
+  position: relative;
+  isolation: isolate;
+}
+.segmentThumb {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(28 42 33 / 0.14);
+  transition:
+    transform 240ms var(--hq-ease),
+    width 240ms var(--hq-ease);
+}
+.segmentThumbDark {
+  background: var(--brand-forest);
+  box-shadow: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  animation: spin 800ms linear infinite;
+}
+
+/* --- Charts ------------------------------------------------------------ */
+
+.column {
+  transform-origin: bottom;
+  transform: scaleY(var(--v, 0));
+  transition: transform 520ms var(--hq-ease);
+}
+.donutSegment {
+  transition:
+    stroke-dasharray 640ms var(--hq-ease),
+    stroke-dashoffset 640ms var(--hq-ease),
+    opacity 160ms ease,
+    stroke-width 160ms ease;
+}
+.ring {
+  transition: stroke-dasharray 640ms var(--hq-ease);
+}
+
+/* A chart's view changing: the new view settles in. */
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.viewIn {
+  animation: settle 220ms var(--hq-ease) both;
+}
+
+.tooltip {
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms var(--hq-ease);
+  pointer-events: none;
+}
+.columnGroup:hover .tooltip,
+.columnGroup:focus-visible .tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* --- Disclosure -------------------------------------------------------- */
+
+.disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms var(--hq-ease);
+}
+.disclosure[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.disclosure > div {
+  overflow: hidden;
+}
+
+/* --- Side panel -------------------------------------------------------- */
+
+.sheet {
+  margin: 0 0 0 auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(420px, 100vw);
+  border: 0;
+  padding: 0;
+  background: var(--surface);
+  box-shadow: -18px 0 40px -24px rgb(28 42 33 / 0.45);
+  transform: translateX(100%);
+  transition: transform 240ms var(--hq-ease);
+}
+.sheet[data-shown="true"] {
+  transform: none;
+}
+.sheet::backdrop {
+  background: rgb(28 42 33 / 0);
+  transition: background-color 240ms ease;
+}
+.sheet[data-shown="true"]::backdrop {
+  background: rgb(28 42 33 / 0.32);
+}
+
+/* --- Reduced motion ---------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .root *,
+  .root *::before,
+  .root *::after,
+  .sheet,
+  .sheet::backdrop {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .lift:hover,
+  .lift:active {
+    transform: none;
+  }
+  /* A loading spinner still says something is happening, slowly. */
+  .spinner {
+    animation-duration: 1600ms !important;
+    animation-iteration-count: infinite !important;
+  }
+}
