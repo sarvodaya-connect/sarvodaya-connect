@@ -235,6 +235,11 @@ export class ProductionSummaryQueryDto {
   @IsIn(ECONOMY_PRODUCT_CODES)
   product?: string;
 
+  /** The business's industry (issue #147). */
+  @IsOptional()
+  @IsIn(ECONOMY_INDUSTRIES)
+  industry?: EconomyIndustry;
+
   @IsOptional() @IsUUID() districtId?: string;
 
   @IsOptional() @IsUUID() societyId?: string;
@@ -242,6 +247,25 @@ export class ProductionSummaryQueryDto {
 
 /** GET /economic-profile/production-records: a list, never a total. */
 export class ProductionListQueryDto extends PageQueryDto {
+  /**
+   * Issue #147: with `startsOn` and `endsOn`, only records for exactly that
+   * period, the same rows a summary counts. `from`/`to` instead list every
+   * record whose period touches the range.
+   */
+  @IsOptional() @IsIn(PRODUCTION_BASES) basis?: ProductionBasisValue;
+
+  @IsOptional()
+  @Matches(DATE, { message: 'startsOn must be YYYY-MM-DD' })
+  startsOn?: string;
+
+  @IsOptional()
+  @Matches(DATE, { message: 'endsOn must be YYYY-MM-DD' })
+  endsOn?: string;
+
+  @IsOptional()
+  @IsIn(ECONOMY_INDUSTRIES)
+  industry?: EconomyIndustry;
+
   @IsOptional()
   @Matches(DATE, { message: 'from must be YYYY-MM-DD' })
   from?: string;
@@ -261,4 +285,9 @@ export class ProductionListQueryDto extends PageQueryDto {
   @IsOptional() @IsUUID() districtId?: string;
 
   @IsOptional() @IsUUID() societyId?: string;
+}
+
+/** GET /economic-profile/scope (issue #147): the filter choices. */
+export class EconomyScopeQueryDto {
+  @IsOptional() @IsUUID() districtId?: string;
 }

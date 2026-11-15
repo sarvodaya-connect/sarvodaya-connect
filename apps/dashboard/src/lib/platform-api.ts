@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+import { currentPreview } from "./demo-preview";
 import { isRetryableStatus, READ_SLOTS_PER_RENDER, readWithRetry, type ReadResult, ReadSlots, ReadUnreachableError } from "./platform-read";
 import { SESSION_COOKIE } from "./session-cookies";
 export { SESSION_COOKIE };
@@ -27,8 +28,9 @@ export async function platformApi(path: string, init: RequestInit = {}) {
   if (headers.has("Authorization")) {
     /* keep it */
   } else if (token) headers.set("Authorization", `Bearer ${token}`);
-  // Demonstration mode only: pages for another role name their demo user.
-  else if (isDemoMode() && !headers.has("X-Demo-User")) headers.set("X-Demo-User", "demo-hq-admin");
+  // Demonstration mode only: pages for another role name their demo user; otherwise
+  // the role chosen in "Preview as" (HQ by default) asks with its fictional identity.
+  else if (isDemoMode() && !headers.has("X-Demo-User")) headers.set("X-Demo-User", (await currentPreview()).principal);
   const base = process.env.API_BASE_URL ?? "http://localhost:3001/api/v1";
   const url = `${base.replace(/\/$/, "")}${path}`;
   const request: RequestInit = { ...init, headers, cache: "no-store" };

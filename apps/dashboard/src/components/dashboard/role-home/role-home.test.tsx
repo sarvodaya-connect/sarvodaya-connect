@@ -346,3 +346,121 @@ describe.each([
     }
   });
 });
+
+describe("PR 2: regional dashboards redesign", () => {
+  const grant = {
+    id: "g1",
+    deputyName: "P. Dissanayake",
+    districtName: "Kurunegala",
+    startsAt: "2026-10-25T00:00:00Z",
+    expiresAt: "2026-10-31T12:30:00Z",
+    grantedByName: "R. Fernando",
+    grantedAt: "2026-10-25T00:00:00Z",
+    societiesOpened: 0,
+    districtSocietyCount: 106,
+  } satisfies HomeSummary["temporaryAccess"][number];
+  const ddm = { ...getViewer("programme-coordinator"), role: "DEPUTY_DISTRICT_MANAGER" as const, displayName: "P. Dissanayake" };
+
+  it("SPC: leads with activities to approve and links each figure to its list", () => {
+    const { container } = render(<RoleHome home={home({ activitiesWaiting: 4 })} now={now} viewer={getViewer("programme-coordinator")} />);
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
+    const approve = figures.getByRole("link", { name: /Activities to Approve/ });
+    expect(approve).toHaveAttribute("href", "/activities-to-approve");
+    expect(approve).toHaveTextContent("4");
+    expect(figures.getByRole("link", { name: /Grade Requests with HQ/ })).toHaveAttribute("href", "/my-societies?gradeRequest=PENDING");
+    expect(figures.getByRole("link", { name: /Not Updated 90\+ Days/ })).toHaveAttribute("href", "/my-societies?needsUpdate=true");
+    const actions = within(screen.getByRole("navigation", { name: "Quick Actions" }));
+    expect(actions.getByRole("link", { name: "Review Activities" })).toHaveAttribute("href", "/activities-to-approve");
+    expect(actions.getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+    // HQ-only SarvoAI never reaches a regional home.
+    expect(screen.queryByText(/SarvoAI/)).not.toBeInTheDocument();
+    noBars(container);
+  });
+
+  it("shows this year's reporting as counts out of the right total, and '—' when nothing is in scope", () => {
+    const { rerender } = render(<RoleHome home={home()} now={now} viewer={getViewer("programme-coordinator")} />);
+    const reporting = within(screen.getByRole("region", { name: "Reporting This Year" }));
+    // 12 active, 3 without a yearly summary; 8 of 12 societies with a 2027 plan.
+    expect(reporting.getByText("Yearly Summaries · FY 2025/26")).toBeInTheDocument();
+    expect(reporting.getByText("9 of 12 active societies")).toBeInTheDocument();
+    expect(reporting.getByText("3 missing")).toBeInTheDocument();
+    expect(reporting.getByText("8 of 12 societies")).toBeInTheDocument();
+    expect(reporting.getByText("4 without a plan")).toBeInTheDocument();
+    rerender(
+      <RoleHome
+        home={home({ societies: { total: 0, active: 0, notActive: 0, grades: { A: 0, B: 0, C: 0 }, members: null }, yearlySummaryMissing: 0, societiesWithPlan: 0 })}
+        now={now}
+        viewer={getViewer("programme-coordinator")}
+      />,
+    );
+    const empty = within(screen.getByRole("region", { name: "Reporting This Year" }));
+    expect(empty.getAllByText("—")).toHaveLength(2);
+    expect(empty.queryByText("0%")).not.toBeInTheDocument();
+  });
+
+  it("DDM: keeps assigned editing apart from the temporary view, with its scope, expiry and who gave it", () => {
+    render(<RoleHome home={home({ role: "DEPUTY_DISTRICT_MANAGER", districtViewCount: 106, temporaryAccess: [grant] })} now={now} viewer={ddm} />);
+    const access = within(screen.getByRole("region", { name: "Your Access" }));
+    expect(access.getByRole("heading", { name: "Your Assigned Societies" })).toBeInTheDocument();
+    expect(access.getByText("12 societies · view and edit")).toBeInTheDocument();
+    expect(access.getByText("Editable")).toBeInTheDocument();
+    expect(access.getByText("Active · View Only")).toBeInTheDocument();
+    expect(access.getByText("All 106 Kurunegala societies, view only.")).toBeInTheDocument();
+    expect(access.getByText("Ends Sat 31 Oct, 6:00 p.m. · 5 days left")).toBeInTheDocument();
+    expect(access.getByText("R. Fernando")).toBeInTheDocument();
+    expect(access.getByRole("link", { name: "Browse District Societies" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
+    expect(figures.getByRole("link", { name: /District Societies/ })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
+  });
+
+  it("DDM: once the view ends, nothing links into the district any more", () => {
+    render(
+      <RoleHome
+        home={home({
+          role: "DEPUTY_DISTRICT_MANAGER",
+          recentlyEnded: { districtName: "Kurunegala", endedAt: "2026-10-26T01:00:00Z", endedEarly: true, startsAt: "2026-10-20T00:00:00Z", expiresAt: "2026-10-31T12:30:00Z", grantedByName: "R. Fernando" },
+        })}
+        now={now}
+        viewer={ddm}
+      />,
+    );
+    const access = within(screen.getByRole("region", { name: "Your Access" }));
+    expect(access.getByText("Ended")).toBeInTheDocument();
+    expect(access.getByText(/^Ended Early on /)).toBeInTheDocument();
+    expect(access.getByText(/Links to other district societies now show No access\./)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Browse District Societies" })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/my-societies?scope=DISTRICT"]')).toBeNull();
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
+    expect(figures.queryByRole("link", { name: /District Societies/ })).not.toBeInTheDocument();
+    expect(figures.getByText("—")).toBeInTheDocument();
+  });
+
+  it("DM: district status with ungraded societies, reporting coverage and grants, all view only", () => {
+    render(
+      <RoleHome
+        home={home({
+          role: "DISTRICT_MANAGER",
+          viewOnly: true,
+          societies: { total: 106, active: 98, notActive: 8, grades: { A: 14, B: 18, C: 60 }, members: 9412 },
+          yearlySummaryMissing: 18,
+          societiesWithPlan: 70,
+          temporaryAccess: [grant],
+        })}
+        now={now}
+        viewer={getViewer("district-manager")}
+      />,
+    );
+    const grades = within(screen.getByRole("region", { name: "Grades in Kurunegala" }));
+    expect(grades.getByRole("img", { name: "Active societies by grade: A 14, B 18, C 60, not graded 6" })).toBeInTheDocument();
+    expect(grades.getByText("Not Graded Yet")).toBeInTheDocument();
+    expect(grades.getByText("View Only")).toBeInTheDocument();
+    const reporting = within(screen.getByRole("region", { name: "Reporting This Year" }));
+    expect(reporting.getByText("80 of 98 active societies")).toBeInTheDocument();
+    expect(reporting.getByText("70 of 106 societies")).toBeInTheDocument();
+    const actions = within(screen.getByRole("navigation", { name: "Quick Actions" }));
+    expect(actions.getByRole("link", { name: "Temporary DDM Access" })).toHaveAttribute("href", "/district-access");
+    expect(actions.queryByRole("link", { name: "Review Activities" })).not.toBeInTheDocument();
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
+    expect(figures.getByRole("link", { name: /Members/ })).toHaveAttribute("href", "/membership");
+  });
+});

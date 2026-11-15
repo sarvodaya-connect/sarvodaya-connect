@@ -33,6 +33,8 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
           { href: "/reviews", icon: "document", label: t("nav.reviewQueue") },
           { href: "/activities", icon: "leaf", label: t("nav.programmes") },
           { href: "/membership", icon: "personAdd", label: t("nav.membership") },
+          // Issue #147: reported production, scoped by the API.
+          { href: "/economic-profile", icon: "chart", label: t("nav.economicProfile") },
           ...(canViewCompliance(viewer)
             ? [{ href: "/compliance", icon: "shield", label: t("nav.audits") } satisfies NavigationItem]
             : []),
@@ -58,6 +60,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
           { href: "/compliance", icon: "shield", label: t("nav.audits") },
           { href: "/activities-to-approve", icon: "check", label: t("nav.activitiesToApprove") },
           { href: "/activities", icon: "leaf", label: t("nav.programmes") },
+          { href: "/economic-profile", icon: "chart", label: t("nav.economicProfile") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],
         secondary: [],
@@ -70,6 +73,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
           { href: "/membership", icon: "personAdd", label: t("nav.membership") },
           { href: "/compliance", icon: "shield", label: t("nav.audits") },
           { href: "/activities", icon: "leaf", label: t("nav.programmes") },
+          { href: "/economic-profile", icon: "chart", label: t("nav.economicProfile") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],
         secondary: [],
@@ -82,6 +86,7 @@ export function navigationFor(viewer: DemoViewer, t: Translator = ENGLISH): Navi
           { href: "/membership", icon: "personAdd", label: t("nav.membership") },
           { href: "/compliance", icon: "shield", label: t("nav.audits") },
           { href: "/activities", icon: "leaf", label: t("nav.programmes") },
+          { href: "/economic-profile", icon: "chart", label: t("nav.economicProfile") },
           { href: "/district-access", icon: "key", label: t("nav.temporaryDdmAccess") },
           { href: "/emergencies", icon: "alert", label: t("nav.disasterResponse") },
         ],
@@ -115,6 +120,7 @@ const PAGE_TITLES: [prefix: string, title: MessageKey, subtitle?: MessageKey][] 
   ["/societies/", "page.societyRecord"],
   ["/societies", "nav.societies", "sub.societies"],
   ["/membership", "nav.membership", "sub.membership"],
+  ["/economic-profile", "nav.economicProfile", "sub.economicProfile"],
   ["/activities-to-approve", "nav.activitiesToApprove", "sub.assignedSocieties"],
   ["/activities", "page.programmesActivities", "sub.tenSector"],
   ["/emergencies/", "nav.disasterResponse", "sub.liveIncident"],

@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+
+import { RecheckOnReturn } from "@/components/dashboard/district-access/recheck-on-return";
 import { TemporaryRecordNotice } from "@/components/dashboard/district-access/record-access-notice";
 import { RecordHeader } from "@/components/dashboard/society-record/record-header";
 import { getT } from "@/i18n/server";
@@ -20,7 +23,8 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
     getGradeRequests(id).catch(() => null),
   ]);
   const base = `/societies/${id}`;
-  return (
+  const temporary = record.permissions.viewOnlyReason === "TEMPORARY_DISTRICT_ACCESS";
+  const page = (
     <>
       <RecordHeader
         isHq={viewer.role === "HQ_ADMIN"}
@@ -28,7 +32,9 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
         t={t}
         tabs={[
           { href: base, label: t("sr.tab.overview") },
-          { count: record.committee.filter((member) => member.isActive).length, href: `${base}/exco`, label: "Exco" },
+          { count: record.committee.filter((member) => member.isActive).length, href: `${base}/exco`, label: t("sr.tab.membersExco") },
+          // Issue #147: read-only on the dashboard; entered on the phone. Same tab order as the phone app.
+          { href: `${base}/economy`, label: t("sr.tab.economy") },
           {
             count: plan?.activities.length,
             href: `${base}/work-plan`,
@@ -39,10 +45,11 @@ export default async function SocietyRecordLayout({ children, params }: LayoutPr
           { href: `${base}/history`, label: t("sr.tab.history") },
         ]}
       />
-      {record.permissions.viewOnlyReason === "TEMPORARY_DISTRICT_ACCESS" && (
-        <TemporaryRecordNotice t={t} until={record.permissions.viewOnlyUntil} viewerName={viewer.displayName} />
-      )}
+      {temporary && <TemporaryRecordNotice t={t} until={record.permissions.viewOnlyUntil} viewerName={viewer.displayName} />}
       {children}
     </>
   );
+  // DD06: a record open only through temporary access is checked again when
+  // the browser's Back button brings back a saved copy (see RecheckOnReturn).
+  return temporary ? <RecheckOnReturn token={randomUUID()}>{page}</RecheckOnReturn> : page;
 }

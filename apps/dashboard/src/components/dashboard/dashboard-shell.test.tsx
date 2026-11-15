@@ -74,7 +74,7 @@ describe("V5 dashboard shell", () => {
   });
 });
 
-describe("HQ shell redesign", () => {
+describe("Redesigned shell", () => {
   beforeEach(() => {
     pathname.current = "/dashboard";
   });
@@ -104,16 +104,36 @@ describe("HQ shell redesign", () => {
   };
 
   it.each([
-    ["SPC", getViewer("programme-coordinator")],
-    ["DDM", deputy],
-    ["DM", getViewer("district-manager")],
-    ["System Admin", getViewer("system-admin")],
-  ])("keeps the V5 shell for %s", (_role, viewer) => {
+    ["SPC", getViewer("programme-coordinator"), "SPC · 3 assigned societies"],
+    ["DDM", deputy, "DDM · 1 society"],
+    ["DM", getViewer("district-manager"), "DM · Kurunegala District"],
+  ])("gives the %s the redesigned shell, without HQ-only SarvoAI", (_role, viewer, scope) => {
     renderShell(viewer);
+
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo-white");
+    expect(screen.getByText(TAGLINE)).toHaveClass("sr-only");
+    expect(screen.queryByRole("link", { name: /SarvoAI/ })).not.toBeInTheDocument();
+    expect(within(desktopNav()).getByText(scope)).toBeInTheDocument();
+    expect(within(desktopNav()).queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the V5 shell for the System Administrator", () => {
+    renderShell(getViewer("system-admin"));
 
     expect(logo().getAttribute("src")).toContain("sarvodaya-connect-wordmark");
     expect(screen.getByText(TAGLINE)).not.toHaveClass("sr-only");
-    expect(screen.queryByRole("link", { name: /SarvoAI/ })).not.toBeInTheDocument();
     expect(document.querySelector("main")?.className).toBe("min-w-0 flex-1 px-4 pb-8 pt-[18px] md:px-7");
+  });
+
+  it("shows the demonstration Preview as switch only when the layout passes one", () => {
+    const { unmount } = renderShell(getViewer("programme-coordinator"));
+    expect(screen.queryByLabelText("Preview as (Demo)")).not.toBeInTheDocument();
+    unmount();
+    render(
+      <DashboardShell preview={{ action: vi.fn(), current: "programme-coordinator", options: [{ id: "hq-admin", label: "HQ" }, { id: "programme-coordinator", label: "SPC" }] }} viewer={getViewer("programme-coordinator")}>
+        <p>Page body</p>
+      </DashboardShell>,
+    );
+    expect(screen.getAllByLabelText("Preview as (Demo)")[0]).toHaveValue("programme-coordinator");
   });
 });
