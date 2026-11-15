@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { demoViewers, type DemoViewer } from "./access";
+import { type DemoViewer } from "./access";
+import { currentPreview, previewChoice } from "./demo-preview";
 import { isDemoMode, isTransientPlatformError, platformApi } from "./platform-api";
 
 /** Roles with a desktop dashboard. Society Officers use the phone app. */
@@ -31,7 +32,12 @@ async function signedInUser(): Promise<SignedInUser> {
 
 /** HQ pages. SPCs, DDMs and DMs are sent to their own home; everyone else to the phone app. */
 export async function getCurrentViewer(): Promise<DemoViewer> {
-  if (isDemoMode()) return demoViewers[0]!;
+  if (isDemoMode()) {
+    // Previewing another role: the same redirect a signed-in user of that role gets.
+    const { viewer } = await currentPreview();
+    if (viewer.role !== "HQ_ADMIN") redirect("/dashboard");
+    return viewer;
+  }
   const user = await signedInUser();
   if (!user.roles.includes("HQ_ADMIN")) {
     redirect(DESKTOP_ROLES.some((role) => user.roles.includes(role)) ? "/dashboard" : "/?access=mobile");
@@ -52,7 +58,13 @@ export async function getCurrentViewer(): Promise<DemoViewer> {
  * the SPC's assigned societies; HQ is sent back to the national overview.
  */
 export async function getSpcViewer(): Promise<DemoViewer> {
-  if (isDemoMode()) return demoViewers.find((viewer) => viewer.role === "PROGRAMME_COORDINATOR")!;
+  if (isDemoMode()) {
+    const { viewer } = await currentPreview();
+    // HQ previews keep the SPC pages as before; other roles go home, as when signed in.
+    if (viewer.role === "HQ_ADMIN") return previewChoice("programme-coordinator").viewer;
+    if (viewer.role !== "PROGRAMME_COORDINATOR") redirect("/dashboard");
+    return viewer;
+  }
   const user = await signedInUser();
   if (!user.roles.includes("PROGRAMME_COORDINATOR")) {
     redirect(user.roles.includes("HQ_ADMIN") ? "/dashboard" : "/?access=mobile");
@@ -82,7 +94,7 @@ const ROLE_LABEL: Record<Exclude<DesktopRole, "HQ_ADMIN">, string> = {
  * request returns to the user's own societies or district.
  */
 export async function getDesktopViewer(): Promise<DemoViewer> {
-  if (isDemoMode()) return demoViewers[0]!;
+  if (isDemoMode()) return (await currentPreview()).viewer;
   const user = await signedInUser();
   const role = DESKTOP_ROLES.find((candidate) => user.roles.includes(candidate));
   if (!role) redirect("/?access=mobile");

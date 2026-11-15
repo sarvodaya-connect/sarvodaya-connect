@@ -4,7 +4,9 @@ import { getDesktopViewer } from "@/lib/current-viewer";
 import { getUnreadAlertCount } from "@/lib/national-api";
 import { isDemoMode, platformApi } from "@/lib/platform-api";
 
+import { switchDemoViewer } from "./actions";
 import { openNotification } from "./emergencies/actions";
+import { currentPreview, PREVIEW_CHOICES } from "@/lib/demo-preview";
 
 type AlertPage = { data: RoleAlert[]; meta: { unreadCount: number } };
 
@@ -25,6 +27,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         roleAlerts === undefined ? undefined : (
           <RoleAlerts alerts={roleAlerts?.data ?? null} open={openNotification} unreadCount={roleAlerts?.meta.unreadCount ?? 0} />
         )
+      }
+      preview={
+        // Demonstration mode only: look at the dashboard as each desktop role.
+        isDemoMode()
+          ? {
+              action: switchDemoViewer,
+              current: (await currentPreview()).id,
+              options: PREVIEW_CHOICES.map((choice) => ({ id: choice.id, label: choice.viewer.roleLabel })),
+            }
+          : undefined
       }
       unreadCount={unreadCount}
       viewer={viewer}
