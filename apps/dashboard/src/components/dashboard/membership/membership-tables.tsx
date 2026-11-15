@@ -37,7 +37,20 @@ function Split({ female, male, t }: { female: number; male: number; t: Translato
  * to them. A society with only a total adds to the total but not to female or
  * male, and the note says so instead of guessing a split.
  */
-export function ProfileMembers({ profile, t }: { profile: ProfileMembership; t: Translator }) {
+export function ProfileMembers({ profile, t }: { profile: ProfileMembership | null | undefined; t: Translator }) {
+  // Older deployed APIs omit this additive summary. Keep the yearly figures
+  // usable without presenting unavailable profile counts as reported zeroes.
+  if (profile == null) {
+    return (
+      <section aria-labelledby="profile-heading" className="mt-4">
+        <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{t("mb.profileEyebrow")}</p>
+        <h2 className="text-[15px] font-bold text-ink" id="profile-heading">{t("mb.profileHeading")}</h2>
+        <p className="mt-2 rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink-soft" role="status">
+          {t("mb.profileUnavailable")}
+        </p>
+      </section>
+    );
+  }
   const split = profile.female + profile.male;
   const totalOnly = profile.societies - profile.withSplit;
   return (
@@ -64,13 +77,13 @@ export function ProfileMembers({ profile, t }: { profile: ProfileMembership; t: 
 }
 
 /** The yearly category counts, labelled so they are not read as the profile figures. */
-export function CategoryHeading({ profile, t, year }: { profile: ProfileMembership; t: Translator; year: number | null }) {
+export function CategoryHeading({ profile, t, year }: { profile: ProfileMembership | null | undefined; t: Translator; year: number | null }) {
   return (
     <div className="mt-6 border-t border-line pt-4">
       <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">{year ? t("mb.categoryEyebrowYear", { year }) : t("mb.categoryEyebrow")}</p>
       <h2 className="text-[15px] font-bold text-ink">{t("mb.categoryHeading")}</h2>
       <p className="mt-1 text-[11px] text-ink-soft">{t("mb.categoryNote")}</p>
-      {profile.withoutBreakdown > 0 && (
+      {profile != null && profile.withoutBreakdown > 0 && (
         <p className="mt-1 text-[11px] font-semibold text-ink">
           {year === null ? t.plural("mb.profileMissingNoYear", profile.withoutBreakdown) : t.plural("mb.profileMissing", profile.withoutBreakdown, { year })}
         </p>
