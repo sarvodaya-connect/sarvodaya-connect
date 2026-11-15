@@ -1181,6 +1181,7 @@ export const en = {
   "mb.profileTotalOnly.other": "{count} societies have a total but no female/male split yet, so female and male add up to less than the total.",
   "mb.profileShare": "{label} · {percent}% where female and male are entered",
   "mb.profileNone": "No active society has entered its members on its profile yet.",
+  "mb.profileUnavailable": "Current society-profile membership figures are unavailable. The yearly category figures are shown separately below.",
   "mb.categoryEyebrow": "Category counts",
   "mb.categoryEyebrowYear": "Category counts · {year}",
   "mb.categoryHeading": "Members by Category and District",

@@ -1183,6 +1183,7 @@ export const si: Record<MessageKey, string> = {
   "mb.profileTotalOnly.other": "සමිති {count}ක මුළු ගණනක් ඇති නමුත් ස්ත්‍රී/පුරුෂ බෙදීමක් තවම නැත. එබැවින් ස්ත්‍රී සහ පුරුෂ එකතුව මුළු ගණනට වඩා අඩුය.",
   "mb.profileShare": "{label} · ස්ත්‍රී/පුරුෂ ඇතුළත් කළ ඒවායින් {percent}%",
   "mb.profileNone": "කිසිදු ක්‍රියාකාරී සමිතියක් තම පැතිකඩෙහි සාමාජිකයන් තවම ඇතුළත් කර නැත.",
+  "mb.profileUnavailable": "සමිති පැතිකඩවල වර්තමාන සාමාජික ගණන් ලබාගත නොහැක. වාර්ෂික ප්‍රවර්ග ගණන් පහතින් වෙනම දැක්වේ.",
   "mb.categoryEyebrow": "ප්‍රවර්ග ගණන්",
   "mb.categoryEyebrowYear": "ප්‍රවර්ග ගණන් · {year}",
   "mb.categoryHeading": "ප්‍රවර්ගය සහ දිස්ත්‍රික්කය අනුව සාමාජිකයන්",
