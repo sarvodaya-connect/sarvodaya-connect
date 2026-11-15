@@ -15,6 +15,9 @@ import { CurrentGrant, GrantDetail, GrantHistoryTable } from "./district-access-
 import { RolePageNoAccess, SocietyNoAccess } from "./no-access-views";
 import { TemporaryRecordNotice } from "./record-access-notice";
 
+// The DDM's tabs move between pages with the app router.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/" }));
+
 vi.mock("@/app/(dashboard)/district-access/actions", () => ({ endDistrictAccess: vi.fn(), giveDistrictAccess: vi.fn() }));
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (

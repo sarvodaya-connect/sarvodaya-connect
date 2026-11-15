@@ -1,0 +1,116 @@
+/*
+ * SPC, DDM and DM homes (role-home.tsx). A CSS module in the HQ design
+ * language (national/hq/hq.module.css), so nothing reaches other pages.
+ *
+ * Motion is short and uses transform and opacity. Blocks settle in once when
+ * the page opens, in at most six 35 ms steps; nothing waits on an animation,
+ * and everything is instant under prefers-reduced-motion.
+ */
+
+.root {
+  --rh-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --rh-shadow: 0 1px 2px rgb(28 42 33 / 0.05), 0 1px 1px rgb(28 42 33 / 0.03);
+  --rh-shadow-lift: 0 10px 24px -12px rgb(28 42 33 / 0.28), 0 2px 6px rgb(28 42 33 / 0.06);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* "backwards": no transform is kept afterwards, so fixed overlays stay viewport-sized. */
+.enter {
+  animation: rise 380ms var(--rh-ease) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * 35ms);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.settle {
+  animation: settle 260ms var(--rh-ease) backwards;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--rh-shadow);
+}
+
+.tile {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--rh-shadow);
+}
+
+/* Tiles that open a list lift a little and press in; static ones stay still. */
+.lift {
+  transition:
+    transform 160ms var(--rh-ease),
+    box-shadow 160ms var(--rh-ease),
+    border-color 160ms ease;
+}
+@media (hover: hover) {
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--rh-shadow-lift);
+    border-color: #cbd8c8;
+  }
+}
+.lift:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: var(--rh-shadow);
+  transition-duration: 90ms;
+}
+
+.press {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+.focusRing:focus-visible {
+  outline: 2px solid var(--brand-leaf);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .settle {
+    animation: none;
+  }
+  .lift,
+  .press {
+    transition: none;
+  }
+  .lift:hover,
+  .lift:active,
+  .press:active {
+    transform: none;
+  }
+}

@@ -1,7 +1,8 @@
 /*
- * The HQ shell only (see HqShell in dashboard-shell.tsx). A CSS module, so the
- * other roles' shell and pages are unchanged. Motion is short, uses transform
- * and opacity, and is switched off under prefers-reduced-motion.
+ * The redesigned shell for HQ, DM, DDM and SPC (see RedesignedShell in
+ * dashboard-shell.tsx). A CSS module, so platform administration's shell is
+ * unchanged. Motion is short, uses transform and opacity, and is switched off
+ * under prefers-reduced-motion.
  */
 
 /* Each page eases in when the route changes (the shell keys <main> by path). */
