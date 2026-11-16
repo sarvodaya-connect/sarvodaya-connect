@@ -1,6 +1,6 @@
 import { findDemoPrincipal } from '../auth/demo-principals.js';
 const hq = findDemoPrincipal('demo-hq-admin')!;
-import { ServiceUnavailableException } from '@nestjs/common';
+import { InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -102,9 +102,24 @@ describe('SocietiesRepository', () => {
     );
   });
 
-  it('does not expose database details when a query fails', async () => {
+  it('answers an unexpected query failure with a 500 and no details', async () => {
     findUnique.mockRejectedValue(
       new Error('password authentication failed for private-user'),
+    );
+
+    const call = repository.findById('29000000-0000-4000-8000-000000000101');
+
+    await expect(call).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(call).rejects.toThrow('Internal server error');
+    await expect(call).rejects.not.toThrow('private-user');
+  });
+
+  it('answers a connection failure with a 503 and no details', async () => {
+    findUnique.mockRejectedValue(
+      Object.assign(
+        new Error('connect failed for postgresql://private-user@db/x'),
+        { code: 'P1001' },
+      ),
     );
 
     const call = repository.findById('29000000-0000-4000-8000-000000000101');
