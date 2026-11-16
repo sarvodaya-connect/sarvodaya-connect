@@ -1,6 +1,15 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
+/** Class name and Prisma code of the original error: never its message, values or query. */
+function describeCause(cause: unknown): string {
+  if (!(cause instanceof Error)) return '';
+  const name = /^[A-Za-z0-9_]{1,64}$/.test(cause.name) ? cause.name : 'unknown';
+  const code = (cause as { code?: unknown }).code;
+  const prisma = typeof code === 'string' && /^P\d{4}$/.test(code) ? ` ${code}` : '';
+  return `; cause ${name}${prisma}`;
+}
+
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger('ApiExceptionFilter');
@@ -25,13 +34,15 @@ export class ApiExceptionFilter implements ExceptionFilter {
               ? 'CONFLICT'
               : status === 429
                 ? 'LIMIT_REACHED'
-                : 'INTERNAL_ERROR';
+                : status === 503
+                  ? 'SERVICE_UNAVAILABLE'
+                  : 'INTERNAL_ERROR';
     const message = Array.isArray(messages) ? 'Request validation failed' : typeof messages === 'string' ? messages : status === 500 ? 'Internal server error' : 'Request failed';
     const details = Array.isArray(messages) ? messages.map((m: unknown) => ({ field: typeof m === 'string' ? m.split(' ')[0] : 'request', messages: [String(m)] })) : undefined;
     const header = request.headers['x-request-id'];
     const requestId = typeof header === 'string' && header.length <= 128 ? header : randomUUID();
     // Unexpected failures are logged with the error name, route and request id only: never the request body or headers.
-    if (status >= 500) this.logger.error(`${request.method} ${request.route?.path ?? 'unmatched route'} failed with ${status} (${exception instanceof Error ? exception.name : 'unknown error'}); requestId ${requestId}`);
+    if (status >= 500) this.logger.error(`${request.method} ${request.route?.path ?? 'unmatched route'} failed with ${status} (${exception instanceof Error ? exception.name : 'unknown error'})${exception instanceof Error ? describeCause(exception.cause) : ''}; requestId ${requestId}`);
     response.status(status).json({ error: { code, message, requestId, ...(details ? { details } : {}) } });
   }
 }
