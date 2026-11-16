@@ -1,11 +1,17 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { useI18n } from "@/i18n/provider";
 
-import type { MapPhase } from "./use-mapbox";
+import type { MapPhase } from "./use-map";
 
-/** Loading text (never a bar) and the D02e error with "Try again", laid over a map. */
-export function MapStatus({ phase, retry }: { phase: MapPhase; retry: () => void }) {
+/**
+ * Loading text (never a bar) and the D02e error with "Try again", laid over a
+ * map. `fallback` offers another way on, such as the society list, so nobody
+ * is stuck when the map cannot load.
+ */
+export function MapStatus({ fallback, phase, retry }: { fallback?: ReactNode; phase: MapPhase; retry: () => void }) {
   const { t } = useI18n();
   if (phase === "loading")
     return (
@@ -26,6 +32,7 @@ export function MapStatus({ phase, retry }: { phase: MapPhase; retry: () => void
           >
             {t("n.tryAgain")}
           </button>
+          {fallback && <p className="mt-2 text-[12px]">{fallback}</p>}
         </div>
       </div>
     );

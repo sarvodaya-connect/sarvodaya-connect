@@ -92,10 +92,11 @@ separately. Their infrastructure-as-code and the complete change set must be
 reviewed before anything is executed. No console-only provisioning is authorised
 by this document.
 
-Cloudflare Pages and production DNS remain unchanged. The current app uses Mapbox,
-although the older architecture drawing labels MapTiler. Keep Mapbox; public tokens
-must have the correct restrictions and scopes, and private provider keys must not
-enter client bundles. Firebase Cloud Messaging remains external. Do not create
+Cloudflare Pages and production DNS remain unchanged. The dashboard's maps use
+MapLibre with OpenFreeMap (no key, issue #181); the phone still uses Mapbox, although
+the older architecture drawing labels MapTiler. Mapbox public tokens must have the
+correct restrictions and scopes, and private provider keys must not enter client
+bundles. Firebase Cloud Messaging remains external. Do not create
 SQS without an implemented background-task producer and consumer.
 
 ## Test API configuration

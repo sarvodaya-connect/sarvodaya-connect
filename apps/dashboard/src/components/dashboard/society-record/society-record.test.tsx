@@ -1,12 +1,12 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AnnualFinancialSummary, SocietyRecord, WorkPlanOverview as WorkPlan } from "@sarvodaya-connect/api-contracts";
 
 import { excoProgress, formatLkr, isSocietyRecordId, waitingLabel } from "@/lib/society-record-format";
 
-import { fakeMapbox } from "../maps/fake-mapbox.test-helper";
+import { fakeMapLibre } from "../maps/fake-maplibre.test-helper";
 
 import { AnnualSummaryCards } from "./annual-summary-cards";
 import { EditSocietyPanel } from "./edit-society-panel";
@@ -15,8 +15,8 @@ import { GradeRequestList, HistoryList } from "./record-lists";
 import { RecordOverview } from "./record-overview";
 import { WorkPlanOverview } from "./work-plan-overview";
 
-vi.mock("mapbox-gl", () => import("../maps/fake-mapbox.test-helper"));
-vi.mock("mapbox-gl/dist/mapbox-gl.css", () => ({}));
+vi.mock("maplibre-gl", () => import("../maps/fake-maplibre.test-helper"));
+vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 const SOCIETY_ID = "29000000-0000-4000-8000-000000000101";
 const year = { startYear: 2025, label: "FY 2025/26", startsOn: "2025-04-01", endsOn: "2026-03-31" };
@@ -239,27 +239,29 @@ describe("D05e HQ edit society information", () => {
   });
 
   it("fills the latitude and longitude fields from a click on the street map", async () => {
-    fakeMapbox.reset();
-    vi.stubEnv("NEXT_PUBLIC_MAPBOX_TOKEN", "pk.test-only");
-    onTestFinished(() => { vi.unstubAllEnvs(); });
+    fakeMapLibre.reset();
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={{ ...record, location: { latitude: 7.5, longitude: 80.4 } }} />);
     await screen.findByRole("img", { name: /Map pin for Pahala Kosgama SSS/ });
-    act(() => fakeMapbox.maps[0]!.emit("click", { lngLat: { lat: 7.6123, lng: 80.2354 } }));
+    act(() => fakeMapLibre.maps[0]!.emit("click", { lngLat: { lat: 7.6123, lng: 80.2354 } }));
     expect(screen.getByRole("textbox", { name: "Latitude" })).toHaveValue("7.6123");
     expect(screen.getByRole("textbox", { name: "Longitude" })).toHaveValue("80.2354");
     // The pin follows, and the change can be saved through the existing profile update.
-    await waitFor(() => expect(fakeMapbox.markers[0]!.lngLat).toEqual([80.2354, 7.6123]));
+    await waitFor(() => expect(fakeMapLibre.markers[0]!.lngLat).toEqual([80.2354, 7.6123]));
     expect(screen.getByRole("button", { name: "Save Changes" })).toBeEnabled();
   });
 
-  it("keeps typed coordinates, with no map, when Mapbox is not set up", () => {
-    fakeMapbox.reset();
-    vi.stubEnv("NEXT_PUBLIC_MAPBOX_TOKEN", "");
+  it("offers the map with no key, and still accepts typed coordinates", async () => {
+    fakeMapLibre.reset();
+    const user = userEvent.setup();
     render(<EditSocietyPanel action={vi.fn()} hqName="HQ" record={record} />);
-    vi.unstubAllEnvs();
     expect(screen.getByRole("textbox", { name: "Latitude" })).toHaveValue("");
-    expect(screen.getByText("Type the coordinates.")).toBeInTheDocument();
-    expect(fakeMapbox.maps).toHaveLength(0);
+    expect(screen.getByText("Click the map or drag the pin, or type the coordinates.")).toBeInTheDocument();
+    await waitFor(() => expect(fakeMapLibre.maps).toHaveLength(1));
+    // No pin until a position is chosen; typing one places it.
+    expect(fakeMapLibre.markers).toHaveLength(0);
+    await user.type(screen.getByRole("textbox", { name: "Latitude" }), "7.6123");
+    await user.type(screen.getByRole("textbox", { name: "Longitude" }), "80.2354");
+    await waitFor(() => expect(fakeMapLibre.markers[0]!.lngLat).toEqual([80.2354, 7.6123]));
   });
 });
 

@@ -38,8 +38,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/societies/x", useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("mapbox-gl", () => import("../maps/fake-mapbox.test-helper"));
-vi.mock("mapbox-gl/dist/mapbox-gl.css", () => ({}));
+vi.mock("maplibre-gl", () => import("../maps/fake-maplibre.test-helper"));
+vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 const SOCIETY_ID = "29000000-0000-4000-8000-000000000101";
 

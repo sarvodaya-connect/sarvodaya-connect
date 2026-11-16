@@ -10,7 +10,7 @@ import { formatNumber } from "@/i18n/translate";
 import { useI18n } from "@/i18n/provider";
 import { actorName, gradeOption } from "@/i18n/society-record";
 import { parseCount } from "@/lib/count";
-import { mapboxToken, typedPosition } from "@/lib/mapbox";
+import { typedPosition } from "@/lib/map-settings";
 import { SOCIETY_GRADE_LABELS } from "@/lib/society-record-format";
 
 import { SocietyLocationMap } from "../maps/society-location-map";
@@ -99,7 +99,6 @@ export function EditSocietyPanel({
   const membersInvalid = split.error !== null;
   const required = (["nameEn", "societyCode", "addressLine"] as const).filter((key) => !values[key].trim());
   const request = record.openGradeRequest;
-  const token = mapboxToken();
   const position = typedPosition(values.latitude, values.longitude);
   const locationChanged = values.latitude.trim() !== before.latitude || values.longitude.trim() !== before.longitude;
   const locationInvalid = locationChanged && !position;
@@ -188,15 +187,12 @@ export function EditSocietyPanel({
 
           <fieldset className="space-y-2">
             <legend className="text-[11px] font-semibold text-ink-soft">{t("sr.ed.mapLocation")}</legend>
-            {token && (
-              <SocietyLocationMap
-                className="h-48"
-                name={record.nameEn}
-                onPick={(latitude, longitude) => setValues((current) => ({ ...current, latitude: String(latitude), longitude: String(longitude) }))}
-                position={position}
-                token={token}
-              />
-            )}
+            <SocietyLocationMap
+              className="h-48"
+              name={record.nameEn}
+              onPick={(latitude, longitude) => setValues((current) => ({ ...current, latitude: String(latitude), longitude: String(longitude) }))}
+              position={position}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               {field("latitude", t("sr.latitude"), { inputMode: "decimal" })}
               {field("longitude", t("sr.longitude"), { inputMode: "decimal" })}
@@ -204,7 +200,7 @@ export function EditSocietyPanel({
             {locationInvalid ? (
               <p className="text-[11px] text-danger-text" role="alert">{t("sr.ed.locationInvalid")}</p>
             ) : (
-              <p className="text-[10px] text-muted">{token ? t("sr.mapHelpPick") : t("sr.mapHelpType")}</p>
+              <p className="text-[10px] text-muted">{t("sr.mapHelpPick")}</p>
             )}
           </fieldset>
 

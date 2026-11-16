@@ -10,13 +10,11 @@ import { SocietyPinsMap } from "@/components/dashboard/maps/society-pins-map";
 import { useI18n } from "@/i18n/provider";
 import type { MessageKey } from "@/i18n/messages/en";
 import { formatDate } from "@/i18n/translate";
-import { mapboxToken } from "@/lib/mapbox";
 import { sdgIconPath, sdgName } from "@/lib/sdg";
 
 import { count, GRADE_STYLE, lkrShort, share } from "../format";
 import { useMembershipLabels } from "../membership-labels";
 import { SampleBadge } from "../parts";
-import { IslandOutline, MAP_HEIGHT, MAP_WIDTH, project } from "../sri-lanka";
 import { Columns, Donut, Ring } from "./charts";
 import { PeriodSwitch, ViewToggle } from "./controls";
 import { DistrictPanel } from "./district-panel";
@@ -371,38 +369,11 @@ function SocietyStatus({ index, overview }: { index: number; overview: NationalO
 // ---------------------------------------------------------------------------
 // Map
 
-function DrawnDistrictMap({ overview }: { overview: NationalOverview }) {
-  const { t } = useI18n();
-  const placed = overview.districts.filter((district) => district.active > 0 && district.latitude !== null && district.longitude !== null);
-  return (
-    <>
-      <div className="flex flex-1 items-center justify-center rounded-xl bg-[linear-gradient(180deg,#eef3f4,#e4ecee)] p-3">
-        <svg aria-labelledby="district-map-title" className="h-auto max-h-[300px] w-full" role="img" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
-          <title id="district-map-title">{t("n.activeInEachDistrict")}</title>
-          <IslandOutline />
-          {placed.map((district) => {
-            const { x, y } = project(district.latitude!, district.longitude!);
-            return (
-              <a aria-label={t("n.districtActive", { name: district.name, count: district.active })} className="group" href={`/societies?districtId=${district.id}`} key={district.id}>
-                <circle className="transition-[r] duration-150 group-hover:[r:14] group-focus:[r:14]" cx={x} cy={y} fill="#24573b" r={11} stroke="white" strokeWidth={1.5} />
-                <text fill="white" fontSize="8" fontWeight="700" pointerEvents="none" textAnchor="middle" x={x} y={y + 3}>{district.active}</text>
-              </a>
-            );
-          })}
-        </svg>
-      </div>
-      <p className="mt-2 text-[11px] text-muted">{t("n.mapExplain")}</p>
-      <p className="mt-1 text-[11px] text-muted">{t("n.drawnMap")}</p>
-    </>
-  );
-}
-
 function SocietyMapCard({ index, onOpenDistricts, overview }: { index: number; onOpenDistricts: (trigger: HTMLButtonElement) => void; overview: NationalOverview }) {
   const { t } = useI18n();
-  const token = mapboxToken();
   return (
-    <Card action={<CardLink href="/map" label={t("nav.mapView")} />} eyebrow={t("n.societyMap")} index={index} title={token ? t("n.societiesByGrade") : t("n.activeByDistrict")}>
-      {token ? <SocietyPinsMap token={token} /> : <DrawnDistrictMap overview={overview} />}
+    <Card action={<CardLink href="/map" label={t("nav.mapView")} />} eyebrow={t("n.societyMap")} index={index} title={t("n.societiesByGrade")}>
+      <SocietyPinsMap />
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           aria-haspopup="dialog"

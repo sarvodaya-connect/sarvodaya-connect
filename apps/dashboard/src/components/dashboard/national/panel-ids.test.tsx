@@ -5,7 +5,9 @@ import type { NationalOverview } from "@sarvodaya-connect/api-contracts";
 
 // The HQ period switch moves between years with the app router.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
-vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary: vi.fn(), loadNationalMapPins: vi.fn() }));
+vi.mock("@/app/(dashboard)/map/actions", () => ({ loadNationalMapPins: vi.fn(async () => ({ counts: {}, points: [], truncated: false })) }));
+vi.mock("maplibre-gl", () => import("../maps/fake-maplibre.test-helper"));
+vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 import { LOCALES, type Locale } from "@/i18n/config";
 import { si } from "@/i18n/messages/si";

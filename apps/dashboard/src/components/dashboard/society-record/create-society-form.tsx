@@ -7,7 +7,7 @@ import type { CreateSocietyResult } from "@/app/(dashboard)/societies/[id]/recor
 import { useI18n } from "@/i18n/provider";
 import { gradeOption } from "@/i18n/society-record";
 import type { Translator } from "@/i18n/translate";
-import { mapboxToken, typedPosition } from "@/lib/mapbox";
+import { typedPosition } from "@/lib/map-settings";
 import { submitWithoutReset } from "@/lib/use-form-submit";
 
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
@@ -81,7 +81,6 @@ export function CreateSocietyForm({
   const [details, setDetails] = useState<Details>(EMPTY);
   const [touched, setTouched] = useState(false);
   const [state, submit, pending] = useActionState(action, {});
-  const token = mapboxToken();
   const problems = detailProblems(details, t);
   const codeError =
     state.field === "societyCode" && details.societyCode.trim() && state.error?.includes(details.societyCode.trim().toUpperCase())
@@ -194,27 +193,20 @@ export function CreateSocietyForm({
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
           <h3 className="text-[16px] font-bold text-ink">{t("sr.ed.mapLocation")}</h3>
-          {token ? (
-            <div className="mt-3">
-              <SocietyLocationMap
-                className="h-56"
-                name={details.nameEn.trim()}
-                onPick={(latitude, longitude) => setDetails((all) => ({ ...all, latitude: String(latitude), longitude: String(longitude) }))}
-                position={typedPosition(details.latitude, details.longitude)}
-                token={token}
-              />
-            </div>
-          ) : (
-            <div aria-hidden="true" className="mt-3 grid h-40 place-items-center rounded-lg bg-[#dce8d6] text-brand-forest">
-              <Icon className="size-8" name="map" strokeWidth={2} />
-            </div>
-          )}
+          <div className="mt-3">
+            <SocietyLocationMap
+              className="h-56"
+              name={details.nameEn.trim()}
+              onPick={(latitude, longitude) => setDetails((all) => ({ ...all, latitude: String(latitude), longitude: String(longitude) }))}
+              position={typedPosition(details.latitude, details.longitude)}
+            />
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {field("latitude", t("sr.latitude"), { inputMode: "decimal" })}
             {field("longitude", t("sr.longitude"), { inputMode: "decimal" })}
           </div>
           <p className="mt-2 text-[11.5px] text-ink-soft">
-            {t("sr.cr.mapLater", { help: token ? t("sr.mapHelpPick") : t("sr.mapHelpType") })}
+            {t("sr.cr.mapLater", { help: t("sr.mapHelpPick") })}
           </p>
         </section>
       </div>
