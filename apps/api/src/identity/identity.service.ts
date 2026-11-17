@@ -362,6 +362,7 @@ export class IdentityService {
             status: 'PENDING',
           },
         });
+    const startedAt = new Date();
     const subject = await this.cognitoSignIn(pending, input.password);
     const account = await this.db.$transaction(async (tx) => {
       const created = await tx.platformAccount.update({
@@ -372,6 +373,10 @@ export class IdentityService {
           passwordSetAt: new Date(),
           passwordSetCount: 1,
           status: 'ACTIVE',
+          // The Cognito user may be an older one reused under this username
+          // (for example, one only disabled when its account was deleted).
+          // Tokens issued before this account existed must not sign in as it.
+          sessionsRevokedAt: startedAt,
         },
       });
       await tx.platformAuditEvent.create({
@@ -399,6 +404,7 @@ export class IdentityService {
   private async cognitoSignIn(
     account: { id: string; username: string; providerSubject: string | null },
     password: string,
+    tx: Pick<PrismaService, 'platformAccount'> = this.db,
   ): Promise<string> {
     let subject: string;
     try {
@@ -419,7 +425,7 @@ export class IdentityService {
     } catch (error) {
       throw cognitoFailure(error);
     }
-    const linked = await this.db.platformAccount.findUnique({
+    const linked = await tx.platformAccount.findUnique({
       where: { providerSubject: subject },
       select: { id: true },
     });
@@ -511,36 +517,54 @@ export class IdentityService {
     if (!account || account.status === 'DELETED')
       throw new NotFoundException('Account not found');
     this.validatePassword(input.password, account.username);
-    // Cognito: permanent, so the person signs in with it straight away (V5 D16).
-    // This also finishes an account whose creation stopped part-way (PENDING).
-    const subject = this.cognito
-      ? await this.cognitoSignIn(account, input.password)
-      : undefined;
-    await this.db.$transaction(async (tx) => {
-      await tx.platformAccount.update({
-        where: { id },
-        data: {
-          ...(subject ? { providerSubject: subject } : {}),
-          passwordHash: this.cognito ? null : passwordHash(input.password),
-          sessionsRevokedAt: new Date(),
-          passwordSetAt: new Date(),
-          passwordSetCount: { increment: 1 },
-          failedLoginCount: 0,
-          lockedUntil: null,
-          status: 'ACTIVE',
-        },
-      });
-      await tx.accountSession.deleteMany({ where: { accountId: id } });
-      await tx.platformAuditEvent.create({
-        data: {
-          actorId: principal.id,
-          action: 'ACCOUNT_PASSWORD_CHANGED',
-          targetId: id,
-          districtId: account.districtId,
-          detail: 'HQ set a replacement password; existing sessions revoked',
-        },
-      });
-    });
+    await this.db.$transaction(
+      async (tx) => {
+        // Same row lock as deleteAccount: a deletion that commits first is seen
+        // here, so a password reset can never bring a deleted account back.
+        await tx.$queryRaw`SELECT id FROM platform_accounts WHERE id = ${id}::uuid FOR UPDATE`;
+        const current = await tx.platformAccount.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            username: true,
+            providerSubject: true,
+            status: true,
+          },
+        });
+        if (!current || current.status === 'DELETED')
+          throw new NotFoundException('Account not found');
+        // Cognito: permanent, so the person signs in with it straight away (V5 D16).
+        // This also finishes an account whose creation stopped part-way (PENDING).
+        const subject = this.cognito
+          ? await this.cognitoSignIn(current, input.password, tx)
+          : undefined;
+        await tx.platformAccount.update({
+          where: { id },
+          data: {
+            ...(subject ? { providerSubject: subject } : {}),
+            passwordHash: this.cognito ? null : passwordHash(input.password),
+            sessionsRevokedAt: new Date(),
+            passwordSetAt: new Date(),
+            passwordSetCount: { increment: 1 },
+            failedLoginCount: 0,
+            lockedUntil: null,
+            status: 'ACTIVE',
+          },
+        });
+        await tx.accountSession.deleteMany({ where: { accountId: id } });
+        await tx.platformAuditEvent.create({
+          data: {
+            actorId: principal.id,
+            action: 'ACCOUNT_PASSWORD_CHANGED',
+            targetId: id,
+            districtId: account.districtId,
+            detail: 'HQ set a replacement password; existing sessions revoked',
+          },
+        });
+      },
+      // Cognito is called inside the transaction; give it time to answer.
+      { maxWait: 10_000, timeout: 30_000 },
+    );
     await this.cognitoFollowUp(id, account.username);
     return { status: 'ACTIVE' };
   }

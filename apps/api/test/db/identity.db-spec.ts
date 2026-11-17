@@ -408,7 +408,7 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     await request(app.getHttpServer()).get('/api/v1/identity/me').set('Authorization', `Bearer ${spc.token}`).expect(401);
     await post('/identity/login', { username: spc.username, password: 'test-password-123' }, '').expect(401);
     // A new password cannot bring a deleted account back.
-    await post(`/identity/accounts/${spc.id}/password`, { password: 'welcome-back-123' }).expect(404);
+    await post(`/identity/accounts/${spc.id}/password`, { password: `fictional-${randomUUID()}-1` }).expect(404);
     const list = await request(app.getHttpServer()).get('/api/v1/identity/accounts').set('Authorization', `Bearer ${hqToken}`).expect(200);
     expect(list.body.data.map((row: { id: string }) => row.id)).not.toContain(spc.id);
     const row = await db.platformAccount.findUniqueOrThrow({ where: { id: spc.id } });

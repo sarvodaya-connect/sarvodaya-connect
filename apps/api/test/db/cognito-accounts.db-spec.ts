@@ -198,7 +198,8 @@ describe('HQ accounts with Amazon Cognito (PostgreSQL)', () => {
     expect(JSON.stringify(audit)).not.toContain(PASSWORD);
 
     // The new person signs in: role and scope come from the database.
-    const me = await call('get', '/identity/me', tokenFor(cognitoUser.sub)).expect(200);
+    // A sign-in after the account was created; earlier tokens for this Cognito user are refused.
+    const me = await call('get', '/identity/me', tokenFor(cognitoUser.sub, now())).expect(200);
     expect(me.body).toMatchObject({ id: row.id, roles: ['PROGRAMME_COORDINATOR'], societyIds: [societyId], districtIds: [districtId] });
   });
 
@@ -445,6 +446,42 @@ describe('HQ accounts with Amazon Cognito (PostgreSQL)', () => {
       expect((await db.platformAccount.findUniqueOrThrow({ where: { id } })).status).toBe('DELETED');
       const audit = await db.platformAuditEvent.findFirstOrThrow({ where: { targetId: id, action: 'ACCOUNT_DELETED' } });
       expect(audit.detail).toContain('AdminDeleteUser');
+    });
+
+    it('a new account that reuses a disabled Cognito user never accepts the deleted person\'s earlier sign-in', async () => {
+      const { id, sub } = await account('reuse');
+      // The deleted person keeps a token that has not expired yet.
+      const heldToken = tokenFor(sub, now() - 30);
+      cognito.failNext.deleteUser = 'NOT_PERMITTED';
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(201);
+      expect(cognito.users.get(username('reuse'))).toMatchObject({ sub, enabled: false });
+
+      // HQ gives the username to someone new: the same Cognito user is enabled again for them.
+      const again = await call('post', '/identity/accounts', tokenFor(hqSub)).send(spc('reuse')).expect(201);
+      created.push(again.body.account.id);
+      expect(await db.platformAccount.findUniqueOrThrow({ where: { id: again.body.account.id } })).toMatchObject({ providerSubject: sub, status: 'ACTIVE' });
+
+      await call('get', '/identity/me', heldToken).expect(401);
+      const fresh = await call('get', '/identity/me', tokenFor(sub, now() + 1)).expect(200);
+      expect(fresh.body.id).toBe(again.body.account.id);
+    });
+
+    it('a password reset waiting on a deletion sees it, and never brings the account back', async () => {
+      const identity = app.get(IdentityService);
+      const { id } = await account('race');
+      let reset: Promise<unknown> = Promise.resolve();
+      // Stand in for a deletion that holds the account's row lock while it runs.
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM platform_accounts WHERE id = ${id}::uuid FOR UPDATE`;
+        reset = identity.setPassword(id, { password: PASSWORD }, hqPrincipal(hqId));
+        reset.catch(() => undefined);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await tx.platformAccount.update({ where: { id }, data: { status: 'DELETED', username: `deleted-${id}`, providerSubject: null } });
+      });
+      await expect(reset).rejects.toThrow('Account not found');
+      expect((await db.platformAccount.findUniqueOrThrow({ where: { id } })).status).toBe('DELETED');
+      expect(cognito.users.get(username('race'))?.password).not.toBe(PASSWORD);
+      expect(cognito.calls).not.toContain('setPassword');
     });
 
     it("never deletes a Cognito user that belongs to someone else's account", async () => {
