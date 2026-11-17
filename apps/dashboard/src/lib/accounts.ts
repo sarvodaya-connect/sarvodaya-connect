@@ -93,3 +93,6 @@ export function statusLabel(account: AccountSummary): { label: string; tone: "ac
   // Accounts made before V5 that never had a password set by HQ.
   return { label: "Needs a Password", tone: "pending" };
 }
+
+/** The word HQ types to confirm Delete Account, exactly as shown (the API checks it too). */
+export const DELETE_CONFIRMATION = "delete";

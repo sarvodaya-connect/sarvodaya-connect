@@ -21,6 +21,7 @@ import {
   AuditQueryDto,
   GrantDistrictAccessDto,
   CreateAccountDto,
+  DeleteAccountDto,
   LoginDto,
   SetAccountPasswordDto,
   UpdateAccountDto,
@@ -96,6 +97,17 @@ export class IdentityController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.identity.disableAccount(id, principal);
+  }
+  @Header('Cache-Control', 'no-store')
+  @Post('accounts/:id/delete')
+  @UseGuards(AuthenticationGuard)
+  delete(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    // Checked by the validation pipe: only { confirmation: "delete" } is accepted.
+    @Body() _input: DeleteAccountDto,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.identity.deleteAccount(id, principal);
   }
   @Header('Cache-Control', 'no-store')
   @Get('district-deputies')

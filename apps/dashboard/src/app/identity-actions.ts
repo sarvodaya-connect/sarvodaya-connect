@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { authMode, cognitoConfig, cognitoRevoke, cognitoSignIn, CognitoSignInError } from "@/lib/cognito";
+import { DELETE_CONFIRMATION } from "@/lib/accounts";
 import { PlatformApiError, platformApi } from "@/lib/platform-api";
 import { DESKTOP_ROLES, getCurrentViewer, ROLE_COOKIE } from "@/lib/current-viewer";
 import { REFRESH_COOKIE, SESSION_COOKIE, sessionCookie, SIGN_IN_SECONDS } from "@/lib/session-cookies";
@@ -209,6 +210,39 @@ export async function updateAccount(
   return { success: "Role and scope changed. The person has been signed out and signs in again to see the change." };
 }
 /** D16: HQ disables an account. The API signs the person out straight away. */
+/**
+ * Deletes an account for good. The API checks HQ access, the typed word, that
+ * HQ is not deleting itself or the last active HQ administrator, and removes
+ * the sign-in. The list is refreshed when the dialog closes, so the result
+ * stays on screen until then.
+ */
+export async function deleteAccount(
+  _previous: FormResult,
+  form: FormData,
+): Promise<FormResult> {
+  const viewer = await getCurrentViewer();
+  if (viewer.role !== "HQ_ADMIN") return { error: "HQ access required" };
+  const id = String(form.get("id"));
+  if (!/^[a-f0-9-]{36}$/i.test(id)) return { error: "Invalid account" };
+  if (form.get("confirmation") !== DELETE_CONFIRMATION) return { error: `Type ${DELETE_CONFIRMATION} to confirm.` };
+  if (id === viewer.id) return { error: "You cannot delete your own account" };
+  let result: { signIn?: "DELETED" | "DISABLED" | "NONE" };
+  try {
+    result = await platformApi(`/identity/accounts/${id}/delete`, {
+      method: "POST",
+      body: JSON.stringify({ confirmation: DELETE_CONFIRMATION }),
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not delete the account. Nothing was changed." };
+  }
+  return {
+    success:
+      result.signIn === "DISABLED"
+        ? "Account deleted. The person was signed out and their sign-in was switched off; it will be removed from the sign-in service once the API's new permission is deployed."
+        : "Account deleted. The person was signed out everywhere and can never sign in with this account again.",
+  };
+}
+
 export async function disableAccount(
   _previous: FormResult,
   form: FormData,

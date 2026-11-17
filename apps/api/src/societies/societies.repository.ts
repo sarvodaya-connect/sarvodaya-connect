@@ -156,6 +156,7 @@ export class SocietiesRepository {
         }),
         this.prisma.platformAccount.findMany({
           where: {
+            status: { not: 'DELETED' },
             OR: [
               { societyIds: { has: society.id } },
               { role: 'DISTRICT_MANAGER', districtId: society.districtId },

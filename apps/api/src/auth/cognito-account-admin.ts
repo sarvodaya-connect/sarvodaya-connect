@@ -1,5 +1,6 @@
 import {
   AdminCreateUserCommand,
+  AdminDeleteUserCommand,
   AdminDisableUserCommand,
   AdminEnableUserCommand,
   AdminGetUserCommand,
@@ -29,6 +30,8 @@ export interface CognitoAccountAdmin {
   disable(username: string): Promise<void>;
   /** Revokes the user's refresh tokens, so no new access tokens are issued. */
   signOut(username: string): Promise<void>;
+  /** Deletes the user from the pool. A user that is already gone counts as deleted. */
+  deleteUser(username: string): Promise<void>;
 }
 
 export const COGNITO_ACCOUNT_ADMIN = Symbol('COGNITO_ACCOUNT_ADMIN');
@@ -37,7 +40,11 @@ export const COGNITO_ACCOUNT_ADMIN = Symbol('COGNITO_ACCOUNT_ADMIN');
 export class CognitoAdminError extends Error {
   constructor(
     readonly reason:
-      'INVALID_PASSWORD' | 'USERNAME_EXISTS' | 'NOT_FOUND' | 'UNAVAILABLE',
+      | 'INVALID_PASSWORD'
+      | 'USERNAME_EXISTS'
+      | 'NOT_FOUND'
+      | 'NOT_PERMITTED'
+      | 'UNAVAILABLE',
   ) {
     super(`Cognito account administration failed: ${reason}`);
     this.name = 'CognitoAdminError';
@@ -52,6 +59,9 @@ function translated(error: unknown): CognitoAdminError {
     return new CognitoAdminError('USERNAME_EXISTS');
   if (name === 'UserNotFoundException')
     return new CognitoAdminError('NOT_FOUND');
+  // The API's IAM role does not allow this call (for example before a deploy adds it).
+  if (name === 'AccessDeniedException')
+    return new CognitoAdminError('NOT_PERMITTED');
   return new CognitoAdminError('UNAVAILABLE');
 }
 
@@ -139,6 +149,20 @@ export class AwsCognitoAccountAdmin implements CognitoAccountAdmin {
     );
   }
 
+  async deleteUser(username: string) {
+    try {
+      await this.client.send(
+        new AdminDeleteUserCommand({
+          UserPoolId: this.userPoolId,
+          Username: username,
+        }),
+      );
+    } catch (error) {
+      const failure = translated(error);
+      if (failure.reason !== 'NOT_FOUND') throw failure;
+    }
+  }
+
   async signOut(username: string) {
     await this.send(() =>
       this.client.send(
@@ -171,4 +195,5 @@ export const NO_COGNITO_ADMIN: CognitoAccountAdmin = {
   enable: notSelected,
   disable: notSelected,
   signOut: notSelected,
+  deleteUser: notSelected,
 };

@@ -14,6 +14,8 @@ import { AppModule } from '../../src/app.module.js';
 import { COGNITO_ACCOUNT_ADMIN, CognitoAdminError, type CognitoAccountAdmin } from '../../src/auth/cognito-account-admin.js';
 import { COGNITO_TOKEN_VERIFIER, type VerifiedCognitoUser } from '../../src/auth/cognito-authentication.provider.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
+import type { Principal } from '../../src/auth/principal.js';
+import { IdentityService } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 
 const url = process.env.DATABASE_URL;
@@ -66,6 +68,10 @@ class FakeCognito implements CognitoAccountAdmin {
   async signOut(username: string) {
     this.fail('signOut');
     this.user(username).signOuts += 1;
+  }
+  async deleteUser(username: string) {
+    this.fail('deleteUser');
+    this.users.delete(username);
   }
 }
 
@@ -152,7 +158,10 @@ describe('HQ accounts with Amazon Cognito (PostgreSQL)', () => {
       const ids = [hqId, officerId, ...created];
       const byName = await db.platformAccount.findMany({ where: { username: { startsWith: 'cog.', endsWith: `.${suffix}` } }, select: { id: true } });
       ids.push(...byName.map((row) => row.id));
+      // Deleted accounts were renamed deleted-<id>; they are found by id.
+      ids.push(...(await db.platformAccount.findMany({ where: { displayName: { endsWith: ` ${suffix}` } }, select: { id: true } })).map((row) => row.id));
       await db.platformAuditEvent.deleteMany({ where: { OR: [{ actorId: { in: ids } }, { targetId: { in: ids } }] } });
+      await db.districtAccessGrant.deleteMany({ where: { districtId } });
       await db.platformAccount.deleteMany({ where: { id: { in: ids } } });
       await db.society.deleteMany({ where: { id: societyId } });
       await db.district.deleteMany({ where: { id: districtId } });
@@ -189,7 +198,8 @@ describe('HQ accounts with Amazon Cognito (PostgreSQL)', () => {
     expect(JSON.stringify(audit)).not.toContain(PASSWORD);
 
     // The new person signs in: role and scope come from the database.
-    const me = await call('get', '/identity/me', tokenFor(cognitoUser.sub)).expect(200);
+    // A sign-in after the account was created; earlier tokens for this Cognito user are refused.
+    const me = await call('get', '/identity/me', tokenFor(cognitoUser.sub, now())).expect(200);
     expect(me.body).toMatchObject({ id: row.id, roles: ['PROGRAMME_COORDINATOR'], societyIds: [societyId], districtIds: [districtId] });
   });
 
@@ -291,6 +301,198 @@ describe('HQ accounts with Amazon Cognito (PostgreSQL)', () => {
     await call('get', '/identity/me', token).expect(401);
     expect(cognito.users.get(officerName)).toMatchObject({ enabled: false });
     expect(cognito.calls).toEqual(['disable', 'signOut']);
+  });
+
+  describe('Delete Account', () => {
+    const hqPrincipal = (id: string): Principal => ({ id, displayName: `Fictional HQ ${suffix}`, roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] });
+    /** A fresh Cognito-linked account for one test. */
+    const account = async (name: string, role = 'PROGRAMME_COORDINATOR') => {
+      const id = randomUUID();
+      const sub = `fake-sub-${name}-${suffix}`;
+      const hq = role === 'HQ_ADMIN';
+      await db.platformAccount.create({
+        data: {
+          id,
+          username: username(name),
+          displayName: `Fictional ${name} ${suffix}`,
+          phone: '+94000000002',
+          email: `${name}.${suffix}@example.invalid`,
+          role,
+          districtId: hq ? null : districtId,
+          societyIds: hq ? [] : [societyId],
+          status: 'ACTIVE',
+          providerSubject: sub,
+          passwordSetAt: new Date(),
+          passwordSetCount: 1,
+        },
+      });
+      cognito.users.set(username(name), { sub, password: 'fictional-pass-999', enabled: true, signOuts: 0 });
+      created.push(id);
+      return { id, sub };
+    };
+    /** Runs `body` with this file's HQ accounts as the only active HQ administrators; restores the others after. */
+    const onlyTheseHq = async (body: () => Promise<void>) => {
+      const others = await db.platformAccount.findMany({ where: { role: 'HQ_ADMIN', status: 'ACTIVE', NOT: { displayName: { endsWith: ` ${suffix}` } } }, select: { id: true } });
+      const ids = others.map((row) => row.id);
+      await db.platformAccount.updateMany({ where: { id: { in: ids } }, data: { status: 'PARKED_FOR_TEST' } });
+      try {
+        await body();
+      } finally {
+        await db.platformAccount.updateMany({ where: { id: { in: ids } }, data: { status: 'ACTIVE' } });
+      }
+    };
+
+    it('deletes the sign-in and personal details, ends sessions, keeps the name for history and leaves the society alone', async () => {
+      const { id, sub } = await account('leaver');
+      const session = tokenFor(sub, now() - 30);
+      await call('get', '/identity/me', session).expect(200);
+      await db.districtAccessGrant.create({ data: { deputyId: id, districtId, grantedById: hqId, startsAt: new Date(Date.now() - 60_000), expiresAt: new Date(Date.now() + 3_600_000), reason: 'Fictional cover' } });
+      const societyBefore = await db.society.findUniqueOrThrow({ where: { id: societyId } });
+
+      const response = await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(201);
+      expect(response.body).toEqual({ status: 'DELETED', signIn: 'DELETED' });
+
+      expect(cognito.users.has(username('leaver'))).toBe(false);
+      await call('get', '/identity/me', session).expect(401);
+      const row = await db.platformAccount.findUniqueOrThrow({ where: { id } });
+      expect(row).toMatchObject({
+        status: 'DELETED',
+        username: `deleted-${id}`,
+        displayName: `Fictional leaver ${suffix}`,
+        role: 'PROGRAMME_COORDINATOR',
+        districtId,
+        phone: '',
+        email: null,
+        passwordHash: null,
+        providerSubject: null,
+        societyIds: [],
+      });
+      expect(await db.districtAccessGrant.count({ where: { deputyId: id, revokedAt: null } })).toBe(0);
+      expect(await db.society.findUniqueOrThrow({ where: { id: societyId } })).toEqual(societyBefore);
+      const audit = await db.platformAuditEvent.findMany({ where: { targetId: id, action: 'ACCOUNT_DELETED' } });
+      expect(audit).toHaveLength(1);
+      expect(audit[0]).toMatchObject({ actorId: hqId, detail: expect.stringContaining('sign-in deleted') });
+
+      // Gone from Administration, still named in the change log.
+      const list = await call('get', '/identity/accounts', tokenFor(hqSub)).expect(200);
+      expect(list.body.data.map((a: { id: string }) => a.id)).not.toContain(id);
+      const log = await call('get', `/identity/audit?q=${encodeURIComponent(`Fictional leaver ${suffix}`)}`, tokenFor(hqSub)).expect(200);
+      expect(JSON.stringify(log.body)).toContain(`Fictional leaver ${suffix}`);
+
+      // The username can be given to someone new; it is a different account.
+      cognito.calls = [];
+      const again = await call('post', '/identity/accounts', tokenFor(hqSub)).send(spc('leaver')).expect(201);
+      expect(again.body.account.id).not.toBe(id);
+      created.push(again.body.account.id);
+
+      // Deleting it again finds nothing.
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(404);
+    });
+
+    it('needs the typed confirmation, HQ access, and never deletes HQ itself', async () => {
+      const { id } = await account('kept');
+      const spcActor = await account('spc-actor');
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({}).expect(400);
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'Delete' }).expect(400);
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(spcActor.sub)).send({ confirmation: 'delete' }).expect(403);
+      await call('post', `/identity/accounts/${id}/delete`).send({ confirmation: 'delete' }).expect(401);
+      const self = await call('post', `/identity/accounts/${hqId}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(400);
+      expect(self.body.error.message).toContain('your own account');
+      expect((await db.platformAccount.findUniqueOrThrow({ where: { id } })).status).toBe('ACTIVE');
+      expect((await db.platformAccount.findUniqueOrThrow({ where: { id: hqId } })).status).toBe('ACTIVE');
+      expect(cognito.calls).not.toContain('deleteUser');
+    });
+
+    it('never deletes the last active HQ administrator, and two administrators deleting each other cannot both succeed', async () => {
+      const identity = app.get(IdentityService);
+      const first = await account('hq-a', 'HQ_ADMIN');
+      const second = await account('hq-b', 'HQ_ADMIN');
+      await onlyTheseHq(async () => {
+        await db.platformAccount.update({ where: { id: hqId }, data: { status: 'PARKED_FOR_TEST' } });
+        try {
+          // hq-a and hq-b are the only active HQ administrators, and each deletes the other at once.
+          const results = await Promise.allSettled([identity.deleteAccount(second.id, hqPrincipal(first.id)), identity.deleteAccount(first.id, hqPrincipal(second.id))]);
+          expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+          const refused = results.find((result) => result.status === 'rejected') as PromiseRejectedResult;
+          expect(String(refused.reason.message)).toMatch(/last active HQ administrator|Account not found/);
+          const statuses = (await db.platformAccount.findMany({ where: { id: { in: [first.id, second.id] } }, select: { status: true } })).map((row) => row.status).sort();
+          expect(statuses).toEqual(['ACTIVE', 'DELETED']);
+          // The one left is the last: a stand-in HQ (not an account) cannot delete it.
+          const survivor = (await db.platformAccount.findFirstOrThrow({ where: { id: { in: [first.id, second.id] }, status: 'ACTIVE' } })).id;
+          await expect(identity.deleteAccount(survivor, hqPrincipal('demo-hq-admin'))).rejects.toThrow('last active HQ administrator');
+          expect((await db.platformAccount.findUniqueOrThrow({ where: { id: survivor } })).status).toBe('ACTIVE');
+        } finally {
+          await db.platformAccount.update({ where: { id: hqId }, data: { status: 'ACTIVE' } });
+        }
+      });
+    });
+
+    it('if Cognito cannot be reached, nothing is deleted', async () => {
+      const { id, sub } = await account('offline');
+      cognito.failNext.deleteUser = 'UNAVAILABLE';
+      const response = await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(503);
+      expect(response.body.error.message).toContain('could not be reached');
+      expect(await db.platformAccount.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: 'ACTIVE', username: username('offline'), providerSubject: sub });
+      expect(cognito.users.has(username('offline'))).toBe(true);
+      expect(await db.platformAuditEvent.count({ where: { targetId: id, action: 'ACCOUNT_DELETED' } })).toBe(0);
+    });
+
+    it('before the IAM role may delete users, the sign-in is disabled and signed out instead, and the log says so', async () => {
+      const { id } = await account('noperm');
+      cognito.failNext.deleteUser = 'NOT_PERMITTED';
+      const response = await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(201);
+      expect(response.body).toEqual({ status: 'DELETED', signIn: 'DISABLED' });
+      expect(cognito.users.get(username('noperm'))).toMatchObject({ enabled: false, signOuts: 1 });
+      expect((await db.platformAccount.findUniqueOrThrow({ where: { id } })).status).toBe('DELETED');
+      const audit = await db.platformAuditEvent.findFirstOrThrow({ where: { targetId: id, action: 'ACCOUNT_DELETED' } });
+      expect(audit.detail).toContain('AdminDeleteUser');
+    });
+
+    it('a new account that reuses a disabled Cognito user never accepts the deleted person\'s earlier sign-in', async () => {
+      const { id, sub } = await account('reuse');
+      // The deleted person keeps a token that has not expired yet.
+      const heldToken = tokenFor(sub, now() - 30);
+      cognito.failNext.deleteUser = 'NOT_PERMITTED';
+      await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(201);
+      expect(cognito.users.get(username('reuse'))).toMatchObject({ sub, enabled: false });
+
+      // HQ gives the username to someone new: the same Cognito user is enabled again for them.
+      const again = await call('post', '/identity/accounts', tokenFor(hqSub)).send(spc('reuse')).expect(201);
+      created.push(again.body.account.id);
+      expect(await db.platformAccount.findUniqueOrThrow({ where: { id: again.body.account.id } })).toMatchObject({ providerSubject: sub, status: 'ACTIVE' });
+
+      await call('get', '/identity/me', heldToken).expect(401);
+      const fresh = await call('get', '/identity/me', tokenFor(sub, now() + 1)).expect(200);
+      expect(fresh.body.id).toBe(again.body.account.id);
+    });
+
+    it('a password reset waiting on a deletion sees it, and never brings the account back', async () => {
+      const identity = app.get(IdentityService);
+      const { id } = await account('race');
+      let reset: Promise<unknown> = Promise.resolve();
+      // Stand in for a deletion that holds the account's row lock while it runs.
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM platform_accounts WHERE id = ${id}::uuid FOR UPDATE`;
+        reset = identity.setPassword(id, { password: PASSWORD }, hqPrincipal(hqId));
+        reset.catch(() => undefined);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await tx.platformAccount.update({ where: { id }, data: { status: 'DELETED', username: `deleted-${id}`, providerSubject: null } });
+      });
+      await expect(reset).rejects.toThrow('Account not found');
+      expect((await db.platformAccount.findUniqueOrThrow({ where: { id } })).status).toBe('DELETED');
+      expect(cognito.users.get(username('race'))?.password).not.toBe(PASSWORD);
+      expect(cognito.calls).not.toContain('setPassword');
+    });
+
+    it("never deletes a Cognito user that belongs to someone else's account", async () => {
+      const { id } = await account('mixup');
+      // The pool's user with this username is linked to the officer, not to this account.
+      cognito.users.set(username('mixup'), { sub: officerSub, password: 'officer-own-pass-1', enabled: true, signOuts: 0 });
+      const response = await call('post', `/identity/accounts/${id}/delete`, tokenFor(hqSub)).send({ confirmation: 'delete' }).expect(201);
+      expect(response.body.signIn).toBe('NONE');
+      expect(cognito.users.get(username('mixup'))).toMatchObject({ sub: officerSub, enabled: true });
+      expect(cognito.calls).not.toContain('deleteUser');
+    });
   });
 
   it('local passwords stay off: the local sign-in is refused', async () => {

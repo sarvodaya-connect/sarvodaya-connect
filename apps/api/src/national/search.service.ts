@@ -90,7 +90,7 @@ export class SearchService {
       society: scope,
     };
     const accountWhere: Prisma.PlatformAccountWhereInput = isHq
-      ? { displayName: contains(q) }
+      ? { displayName: contains(q), status: { not: 'DELETED' } }
       : { id: { in: [] } };
     const documentWhere: Prisma.SocietyDocumentWhereInput = {
       uploadedAt: { not: null },
