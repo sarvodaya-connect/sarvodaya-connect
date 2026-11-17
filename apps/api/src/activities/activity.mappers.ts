@@ -2,6 +2,10 @@ import {
   actorReference,
   toAmount,
 } from '../societies/society-record.mappers.js';
+import {
+  ACTIVITY_CATEGORY_VALUES,
+  ACTIVITY_DIMENSION_VALUES,
+} from './activities.dto.js';
 
 type DecimalValue = Parameters<typeof toAmount>[0];
 
@@ -33,6 +37,55 @@ export interface ActivityRecord {
   reviewedAt: Date | null;
   reviewComment: string | null;
   sdgs: { sdg: number }[];
+  classifiedAt: Date | null;
+  goalDimensions: { dimension: string }[];
+  goalCategories: { category: string }[];
+}
+
+const inOrder = <T extends string>(order: readonly T[], values: string[]) =>
+  order.filter((code) => values.includes(code));
+
+/**
+ * Issue #169: the ActivityClassification contract. The state comes from the
+ * stored approval and `classified_at`, never from the Society Officer's
+ * sector or dimension.
+ */
+export function toClassification(row: {
+  status: string;
+  sdgs: { sdg: number }[];
+  classifiedAt: Date | null;
+  reviewedByName: string | null;
+  goalDimensions: { dimension: string }[];
+  goalCategories: { category: string }[];
+}) {
+  const sdgs = row.sdgs.map((entry) => entry.sdg);
+  if (row.status !== 'APPROVED') {
+    return { state: 'PENDING', dimensions: [], categories: [], sdgs };
+  }
+  if (!row.classifiedAt) {
+    return { state: 'NOT_CLASSIFIED', dimensions: [], categories: [], sdgs };
+  }
+  return {
+    state: 'CLASSIFIED',
+    dimensions: inOrder(
+      ACTIVITY_DIMENSION_VALUES,
+      row.goalDimensions.map((entry) => entry.dimension),
+    ),
+    categories: inOrder(
+      ACTIVITY_CATEGORY_VALUES,
+      row.goalCategories.map((entry) => entry.category),
+    ),
+    sdgs,
+    classifiedAt: row.classifiedAt.toISOString(),
+    ...(row.reviewedByName
+      ? {
+          classifiedBy: actorReference(
+            row.reviewedByName,
+            'PROGRAMME_COORDINATOR',
+          ),
+        }
+      : {}),
+  };
 }
 
 const optional = <K extends string, V>(key: K, value: V | null | undefined) =>
@@ -52,6 +105,7 @@ export function toWorkPlanActivity(row: ActivityRecord) {
     status: row.status,
     ...optional('dimension', row.dimension),
     sdgs: row.sdgs.map((entry) => entry.sdg),
+    classification: toClassification(row),
     ...optional('femaleParticipants', row.femaleParticipants),
     ...optional('maleParticipants', row.maleParticipants),
     ...optional('youthParticipants', row.youthParticipants),
@@ -108,6 +162,7 @@ export function toQueueItem(
     totalParticipants: totalParticipants(row),
     ...optional('householdsBenefited', row.householdsBenefited),
     sdgs: row.sdgs.map((entry) => entry.sdg),
+    classification: toClassification(row),
     ...(row.status === 'APPROVED'
       ? optional('approvedAt', row.reviewedAt?.toISOString())
       : {}),

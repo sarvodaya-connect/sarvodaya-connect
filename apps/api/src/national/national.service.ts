@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import type { Principal } from '../auth/principal.js';
-import { ACTIVITY_DIMENSION_VALUES } from '../activities/activities.dto.js';
+import {
+  ACTIVITY_CATEGORY_VALUES,
+  ACTIVITY_DIMENSION_VALUES,
+} from '../activities/activities.dto.js';
+import { toClassification } from '../activities/activity.mappers.js';
 import { auditReportDueDate } from '../documents/registrar-documents.service.js';
 import { RegistrarDocumentsRepository } from '../documents/registrar-documents.repository.js';
 import { REGISTRAR_DOCUMENT_TYPES } from '../documents/upload-rules.js';
@@ -77,6 +81,35 @@ function dimensionTotals(
       completed: row?.completed ?? 0,
     };
   });
+}
+
+type Counted = { planned: number; completed: number };
+const counts = (row?: Counted) => ({
+  planned: row?.planned ?? 0,
+  completed: row?.completed ?? 0,
+});
+
+/**
+ * Issue #169: the DevelopmentGoalTotals contract. Every dimension and category
+ * is listed in catalogue order, with 0 when nothing has it.
+ */
+export function developmentGoalTotals(rows: {
+  classification: ({ classified: boolean } & Counted)[];
+  dimensions: ({ dimension: string } & Counted)[];
+  categories: ({ category: string } & Counted)[];
+}) {
+  return {
+    classified: counts(rows.classification.find((row) => row.classified)),
+    notClassified: counts(rows.classification.find((row) => !row.classified)),
+    byDimension: ACTIVITY_DIMENSION_VALUES.map((dimension) => ({
+      dimension,
+      ...counts(rows.dimensions.find((row) => row.dimension === dimension)),
+    })),
+    byCategory: ACTIVITY_CATEGORY_VALUES.map((category) => ({
+      category,
+      ...counts(rows.categories.find((row) => row.category === category)),
+    })),
+  };
 }
 
 /** All 17 goals: most completed first, equal counts by SDG number. */
@@ -356,8 +389,9 @@ export class NationalService {
     now: Date,
     within?: SocietyScope,
   ) {
-    const [activities, recent] = await Promise.all([
+    const [activities, goals, recent] = await Promise.all([
       this.repository.activities(startYear, now, within),
+      this.repository.developmentGoals(startYear, now, within),
       this.repository.recentApprovedActivities(
         startYear,
         RECENT_ACTIVITIES,
@@ -389,6 +423,7 @@ export class NationalService {
         })),
       byDimension: dimensionTotals(activities.dimensions),
       sdgs: rankSdgs(activities.sdgs),
+      developmentGoals: developmentGoalTotals(goals),
       recent: recent.map((activity) => ({
         id: activity.id,
         name: activity.name,
@@ -406,6 +441,7 @@ export class NationalService {
         householdsBenefited: activity.householdsBenefited ?? 0,
         createdBy: activity.createdByName,
         sdgs: activity.sdgs.map((row) => row.sdg),
+        classification: toClassification(activity),
       })),
     };
   }

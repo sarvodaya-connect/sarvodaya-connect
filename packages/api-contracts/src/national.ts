@@ -7,7 +7,12 @@
  * approved records. No list here carries a NIC, and financial data is only
  * the yearly total profit and total expenses.
  */
-import type { ActivityDimension, RegistrarDocumentType } from "./activities.js";
+import type {
+  ActivityCategory,
+  ActivityClassification,
+  ActivityDimension,
+  RegistrarDocumentType,
+} from "./activities.js";
 import type { SocietyStatus } from "./registry.js";
 
 export interface FinancialYearPeriod {
@@ -42,6 +47,28 @@ export interface DimensionCount {
   dimension: ActivityDimension;
   planned: number;
   completed: number;
+}
+
+/**
+ * Issue #169: approved activities by the SPC's Development Goals, over the same
+ * activities, year and scope as the rest of the programmes figures. Only
+ * approved activities are counted; `completed` counts those whose month has
+ * ended, as everywhere else.
+ *
+ * - An activity with several dimensions (or categories) counts once in each,
+ *   so the rows can add up to more than the activities. Never add them up to
+ *   get a number of activities; use `classified`.
+ * - `classified` + `notClassified` = the approved activities (`planned` /
+ *   `completed` of the report). NOT_CLASSIFIED activities are never placed in a
+ *   dimension or category, and the Society Officer's sector is not used.
+ */
+export interface DevelopmentGoalTotals {
+  classified: { planned: number; completed: number };
+  notClassified: { planned: number; completed: number };
+  /** All three dimensions, in catalogue order. */
+  byDimension: DimensionCount[];
+  /** All ten categories, in catalogue order. */
+  byCategory: { category: ActivityCategory; planned: number; completed: number }[];
 }
 
 export interface NationalIncident {
@@ -197,6 +224,8 @@ export interface NationalProgrammes {
   byDimension: DimensionCount[];
   /** All 17 goals, ranked by completed activities; goals with none come last. */
   sdgs: SdgCount[];
+  /** Issue #169: the same activities by the SPC's Development Goals. */
+  developmentGoals: DevelopmentGoalTotals;
   recent: {
     id: string;
     name: string;
@@ -215,6 +244,8 @@ export interface NationalProgrammes {
     householdsBenefited: number;
     createdBy: string | null;
     sdgs: number[];
+    /** Issue #169: the SPC's Development Goals. */
+    classification: ActivityClassification;
   }[];
 }
 

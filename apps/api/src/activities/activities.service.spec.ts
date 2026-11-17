@@ -12,7 +12,12 @@ import { findDemoPrincipal } from '../auth/demo-principals.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import { ApproveActivityDto } from './activities.dto.js';
 import type { ActivitiesRepository } from './activities.repository.js';
-import { ActivitiesService, plannableYears } from './activities.service.js';
+import {
+  ActivitiesService,
+  developmentGoals,
+  plannableYears,
+} from './activities.service.js';
+import { toClassification } from './activity.mappers.js';
 
 const NORTH = '29000000-0000-4000-8000-000000000001';
 const CENTRAL = '29000000-0000-4000-8000-000000000002';
@@ -73,6 +78,9 @@ function row(overrides: Record<string, unknown> = {}) {
     reviewedAt: null,
     reviewComment: null,
     sdgs: [] as { sdg: number }[],
+    classifiedAt: null as Date | null,
+    goalDimensions: [] as { dimension: string }[],
+    goalCategories: [] as { category: string }[],
     society: SUNRISE,
     ...overrides,
   };
@@ -198,11 +206,19 @@ describe('ActivitiesService (V5 PR 4)', () => {
         ACTIVITY_ID,
         expect.objectContaining({ id: SUNRISE.id }),
         [4, 16],
+        // An older app sends UN SDGs only: recorded without Development Goals.
+        null,
         spc,
       );
       expect(result).toMatchObject({
         status: 'APPROVED',
         sdgs: [4, 16],
+        classification: {
+          state: 'NOT_CLASSIFIED',
+          dimensions: [],
+          categories: [],
+          sdgs: [4, 16],
+        },
         review: { by: { displayName: spc.displayName } },
         permissions: { canReview: false, canEdit: false },
       });
@@ -302,6 +318,183 @@ describe('ActivitiesService (V5 PR 4)', () => {
         sdgs: [6],
         approvedAt: '2026-10-25T04:00:00.000Z',
       });
+    });
+  });
+
+  describe('Development Goals (issue #169)', () => {
+    const approved = new Date('2026-11-16T04:00:00.000Z');
+
+    it('approves with several dimensions, categories and UN SDGs, in catalogue order', async () => {
+      repository.findActivity.mockResolvedValue(row());
+      repository.approve.mockResolvedValue(
+        row({
+          status: 'APPROVED',
+          sdgs: [{ sdg: 4 }, { sdg: 5 }],
+          reviewedByName: spc.displayName,
+          reviewedAt: approved,
+          classifiedAt: approved,
+          goalDimensions: [
+            { dimension: 'GOVERNANCE' },
+            { dimension: 'SOCIAL' },
+          ],
+          goalCategories: [
+            { category: 'ENVIRONMENT' },
+            { category: 'COMMUNITY_EDUCATION' },
+          ],
+        }),
+      );
+      const result = await service.approve(
+        ACTIVITY_ID,
+        {
+          sdgs: [5, 4],
+          dimensions: ['GOVERNANCE', 'SOCIAL'],
+          categories: ['ENVIRONMENT', 'COMMUNITY_EDUCATION'],
+        },
+        spc,
+      );
+      expect(repository.approve).toHaveBeenCalledWith(
+        ACTIVITY_ID,
+        expect.objectContaining({ id: SUNRISE.id }),
+        [4, 5],
+        {
+          dimensions: ['SOCIAL', 'GOVERNANCE'],
+          categories: ['COMMUNITY_EDUCATION', 'ENVIRONMENT'],
+        },
+        spc,
+      );
+      expect(result.classification).toEqual({
+        state: 'CLASSIFIED',
+        dimensions: ['SOCIAL', 'GOVERNANCE'],
+        categories: ['COMMUNITY_EDUCATION', 'ENVIRONMENT'],
+        sdgs: [4, 5],
+        classifiedAt: approved.toISOString(),
+        classifiedBy: {
+          displayName: spc.displayName,
+          role: 'PROGRAMME_COORDINATOR',
+        },
+      });
+    });
+
+    it.each([
+      [{ dimensions: ['SOCIAL'] }, 'Choose at least one Sarvodaya category'],
+      [{ categories: ['CULTURE'] }, 'Choose at least one Sarvodaya dimension'],
+      [
+        { dimensions: ['SOCIAL'], categories: [] },
+        'Choose at least one Sarvodaya category',
+      ],
+    ])(
+      'refuses half a classification %j before anything is saved',
+      async (goals, message) => {
+        repository.findActivity.mockResolvedValue(row());
+        await expect(
+          service.approve(ACTIVITY_ID, { sdgs: [4], ...goals } as never, spc),
+        ).rejects.toThrow(message);
+        expect(repository.approve).not.toHaveBeenCalled();
+      },
+    );
+
+    it('checks the SPC and scope before the classification', async () => {
+      repository.findActivity.mockResolvedValue(row());
+      const goals = {
+        sdgs: [4],
+        dimensions: ['SOCIAL'],
+        categories: ['CULTURE'],
+      };
+      for (const principal of [officer, ddm, dm, hq])
+        await expect(
+          service.approve(ACTIVITY_ID, goals as never, principal),
+        ).rejects.toThrow(ForbiddenException);
+      repository.findActivity.mockResolvedValue(
+        row({ societyId: LOTUS.id, society: LOTUS }),
+      );
+      await expect(
+        service.approve(ACTIVITY_ID, goals as never, spc),
+      ).rejects.toThrow(NotFoundException);
+      expect(repository.approve).not.toHaveBeenCalled();
+    });
+
+    it('returns null when neither list is sent, and orders what is sent', () => {
+      expect(developmentGoals({})).toBeNull();
+      expect(
+        developmentGoals({
+          dimensions: ['ECONOMIC', 'SOCIAL'],
+          categories: ['AGRICULTURE', 'CULTURE'],
+        }),
+      ).toEqual({
+        dimensions: ['SOCIAL', 'ECONOMIC'],
+        categories: ['CULTURE', 'AGRICULTURE'],
+      });
+    });
+
+    it.each([
+      [{ dimensions: [] }, 'Choose at least one Sarvodaya dimension'],
+      [{ categories: [] }, 'Choose at least one Sarvodaya category'],
+      [
+        { dimensions: ['SOCIAL', 'SOCIAL'] },
+        'Choose each Sarvodaya dimension only once',
+      ],
+      [
+        { categories: ['CULTURE', 'CULTURE'] },
+        'Choose each Sarvodaya category only once',
+      ],
+      [{ dimensions: ['SPIRITUAL'] }, 'Each dimension must be one of'],
+      [{ categories: ['Culture'] }, 'Each category must be one of the ten'],
+      [{ categories: 'CULTURE' }, 'categories must be a list'],
+    ])('refuses %j in the request', async (goals, message) => {
+      const errors = await validate(
+        plainToInstance(ApproveActivityDto, { sdgs: [4], ...goals }),
+      );
+      expect(JSON.stringify(errors)).toContain(message);
+    });
+
+    it('accepts every dimension and category once', async () => {
+      expect(
+        await validate(
+          plainToInstance(ApproveActivityDto, {
+            sdgs: [1],
+            dimensions: ['SOCIAL', 'ECONOMIC', 'GOVERNANCE'],
+            categories: [
+              'COMMUNITY_EDUCATION',
+              'CHILD_WELLBEING',
+              'CULTURE',
+              'ECONOMY',
+              'GOVERNANCE',
+              'HEALTH_NUTRITION',
+              'HOUSING_INFRASTRUCTURE',
+              'SPIRITUAL_DEVELOPMENT',
+              'AGRICULTURE',
+              'ENVIRONMENT',
+            ],
+          }),
+        ),
+      ).toEqual([]);
+    });
+
+    it('never reads the Society Officer sector or dimension as the SPC classification', () => {
+      const legacy = row({
+        status: 'APPROVED',
+        sector: 'Economy',
+        dimension: 'ECONOMIC',
+        sdgs: [{ sdg: 8 }],
+        reviewedByName: spc.displayName,
+        reviewedAt: approved,
+      });
+      expect(toClassification(legacy)).toEqual({
+        state: 'NOT_CLASSIFIED',
+        dimensions: [],
+        categories: [],
+        sdgs: [8],
+      });
+      // Planned before review existed: approved, no reviewer, no UN SDGs.
+      expect(
+        toClassification(row({ status: 'APPROVED', sdgs: [] })),
+      ).toMatchObject({ state: 'NOT_CLASSIFIED', sdgs: [] });
+      for (const status of ['WAITING_FOR_SPC', 'SENT_BACK'])
+        expect(toClassification(row({ status }))).toMatchObject({
+          state: 'PENDING',
+          dimensions: [],
+          categories: [],
+        });
     });
   });
 

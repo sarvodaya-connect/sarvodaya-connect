@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
+  IsArray,
   IsIn,
   IsInt,
   IsNumber,
@@ -32,6 +33,25 @@ export const ACTIVITY_DIMENSION_VALUES = [
   'GOVERNANCE',
 ] as const;
 export type ActivityDimensionValue = (typeof ACTIVITY_DIMENSION_VALUES)[number];
+
+/**
+ * Issue #169: the ten Sarvodaya categories, in the V6 order. The same codes as
+ * ACTIVITY_CATEGORIES in packages/api-contracts (activity.catalogue.spec.ts
+ * checks they never differ).
+ */
+export const ACTIVITY_CATEGORY_VALUES = [
+  'COMMUNITY_EDUCATION',
+  'CHILD_WELLBEING',
+  'CULTURE',
+  'ECONOMY',
+  'GOVERNANCE',
+  'HEALTH_NUTRITION',
+  'HOUSING_INFRASTRUCTURE',
+  'SPIRITUAL_DEVELOPMENT',
+  'AGRICULTURE',
+  'ENVIRONMENT',
+] as const;
+export type ActivityCategoryValue = (typeof ACTIVITY_CATEGORY_VALUES)[number];
 
 /** Largest count of people or households accepted for one activity. */
 const MAX_PEOPLE = 100_000;
@@ -107,7 +127,14 @@ export class ActivityInputDto {
   @OptionalCount() volunteerHours?: number;
 }
 
-/** SP07 / M51: at least one UN SDG, numbers 1–17, each once. */
+/**
+ * SP07 / M51: at least one UN SDG, numbers 1–17, each once.
+ *
+ * Issue #169: V6 clients also send the SPC's Sarvodaya dimensions and
+ * categories. When either is sent, each list needs at least one known code,
+ * each once (the service also requires both together). Older apps send UN SDGs
+ * only; their approval is recorded as NOT_CLASSIFIED.
+ */
 export class ApproveActivityDto {
   @ArrayMinSize(1, { message: 'Choose at least one UN SDG to approve' })
   @ArrayMaxSize(17)
@@ -117,6 +144,28 @@ export class ApproveActivityDto {
   @Min(1, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   @Max(17, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   sdgs!: number[];
+
+  @IsOptional()
+  @IsArray({ message: 'dimensions must be a list of Sarvodaya dimensions' })
+  @ArrayMinSize(1, { message: 'Choose at least one Sarvodaya dimension' })
+  @ArrayMaxSize(ACTIVITY_DIMENSION_VALUES.length)
+  @ArrayUnique({ message: 'Choose each Sarvodaya dimension only once' })
+  @IsIn(ACTIVITY_DIMENSION_VALUES, {
+    each: true,
+    message: `Each dimension must be one of ${ACTIVITY_DIMENSION_VALUES.join(', ')}`,
+  })
+  dimensions?: ActivityDimensionValue[];
+
+  @IsOptional()
+  @IsArray({ message: 'categories must be a list of Sarvodaya categories' })
+  @ArrayMinSize(1, { message: 'Choose at least one Sarvodaya category' })
+  @ArrayMaxSize(ACTIVITY_CATEGORY_VALUES.length)
+  @ArrayUnique({ message: 'Choose each Sarvodaya category only once' })
+  @IsIn(ACTIVITY_CATEGORY_VALUES, {
+    each: true,
+    message: 'Each category must be one of the ten Sarvodaya categories',
+  })
+  categories?: ActivityCategoryValue[];
 }
 
 /** M51b: what the Society Officer should change. */

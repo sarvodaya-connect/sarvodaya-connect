@@ -270,6 +270,54 @@ export class NationalRepository {
   }
 
   /**
+   * Issue #169: the same approved activities as `activities`, by the SPC's
+   * Development Goals. Classified and not classified are counted per activity;
+   * the dimension and category rows count an activity once in each it has.
+   * Activities without a classification are never placed in a row.
+   */
+  async developmentGoals(
+    startYear: number,
+    now = new Date(),
+    within?: SocietyScope,
+  ) {
+    const scope = within
+      ? Prisma.sql`${approvedInYear(startYear)} AND ${activityInScope(within)}`
+      : approvedInYear(startYear);
+    const done = completed(now);
+    const [classification, dimensions, categories] = await this.run(() =>
+      Promise.all([
+        this.prisma.$queryRaw<
+          { classified: boolean; planned: number; completed: number }[]
+        >`
+          SELECT (a.classified_at IS NOT NULL) AS classified,
+            COUNT(*)::int AS planned,
+            COUNT(*) FILTER (WHERE ${done})::int AS completed
+          FROM work_plan_activities a WHERE ${scope}
+          GROUP BY 1`,
+        this.prisma.$queryRaw<
+          { dimension: string; planned: number; completed: number }[]
+        >`
+          SELECT d.dimension::text AS dimension, COUNT(*)::int AS planned,
+            COUNT(*) FILTER (WHERE ${done})::int AS completed
+          FROM work_plan_activity_dimensions d
+          JOIN work_plan_activities a ON a.id = d.activity_id
+          WHERE ${scope} AND a.classified_at IS NOT NULL
+          GROUP BY d.dimension`,
+        this.prisma.$queryRaw<
+          { category: string; planned: number; completed: number }[]
+        >`
+          SELECT c.category::text AS category, COUNT(*)::int AS planned,
+            COUNT(*) FILTER (WHERE ${done})::int AS completed
+          FROM work_plan_activity_categories c
+          JOIN work_plan_activities a ON a.id = c.activity_id
+          WHERE ${scope} AND a.classified_at IS NOT NULL
+          GROUP BY c.category`,
+      ]),
+    );
+    return { classification, dimensions, categories };
+  }
+
+  /**
    * The latest approved activities in the financial year, by the same April to
    * March rule as `approvedInYear`, so the list never shows an activity the
    * year's totals leave out.
@@ -292,6 +340,8 @@ export class NationalRepository {
         },
         include: {
           sdgs: { orderBy: { sdg: 'asc' } },
+          goalDimensions: { select: { dimension: true } },
+          goalCategories: { select: { category: true } },
           society: { select: { id: true, nameEn: true } },
         },
         orderBy: [{ reviewedAt: 'desc' }, { id: 'asc' }],

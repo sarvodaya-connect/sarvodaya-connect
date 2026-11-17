@@ -1,4 +1,10 @@
-import type { ActivityDimension, ActivityParticipants, ActivityReview, ActivityStatus } from "./activities.js";
+import type {
+  ActivityClassification,
+  ActivityDimension,
+  ActivityParticipants,
+  ActivityReview,
+  ActivityStatus,
+} from "./activities.js";
 import type { IsoDate, IsoDateTime } from "./common.js";
 import type { UserRole } from "./identity.js";
 import type { SocietyDetails } from "./registry.js";
@@ -263,8 +269,11 @@ export interface WorkPlanActivity extends ActivityParticipants {
   allocatedCost: number;
   /** V5 PR 4. Activities planned before review existed are APPROVED. */
   status: ActivityStatus;
+  /** The Society Officer's planning field, kept as entered (not the SPC's classification). */
   dimension?: ActivityDimension;
   sdgs: number[];
+  /** Issue #169: the SPC's Development Goals, recorded at approval. */
+  classification: ActivityClassification;
   partners?: string;
   resourcesNeeded?: string;
   volunteerHours?: number;

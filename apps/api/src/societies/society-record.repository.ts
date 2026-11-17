@@ -5,6 +5,7 @@ import type { Principal } from '../auth/principal.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ACTIVITY_GOALS_INCLUDE } from '../activities/activities.repository.js';
 
 type Grade = 'A' | 'B' | 'C';
 
@@ -306,7 +307,8 @@ export class SocietyRecordRepository {
     return executeDatabaseOperation(() =>
       this.prisma.workPlanActivity.findMany({
         where: { societyId, year },
-        include: { sdgs: { select: { sdg: true }, orderBy: { sdg: 'asc' } } },
+        // Issue #169: with the SPC's Development Goals.
+        include: ACTIVITY_GOALS_INCLUDE,
         orderBy: [{ month: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       }),
     );

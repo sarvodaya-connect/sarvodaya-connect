@@ -178,6 +178,7 @@ erDiagram
         varchar reviewed_by_name "nullable"
         timestamptz reviewed_at "nullable"
         varchar review_comment "nullable"
+        timestamptz classified_at "nullable"
         varchar updated_by_name "nullable"
         varchar updated_by_role "nullable"
         timestamptz created_at
@@ -186,6 +187,14 @@ erDiagram
     WORK_PLAN_ACTIVITY_SDGS {
         uuid activity_id FK
         int sdg
+    }
+    WORK_PLAN_ACTIVITY_DIMENSIONS {
+        uuid activity_id FK
+        enum dimension
+    }
+    WORK_PLAN_ACTIVITY_CATEGORIES {
+        uuid activity_id FK
+        enum category
     }
     DISTRICTS ||--o{ SOCIETIES : district
     SOCIETIES ||--o{ SOCIETY_CONTACTS : society
@@ -196,6 +205,8 @@ erDiagram
     SOCIETIES ||--o{ GRADE_CHANGE_REQUESTS : society
     SOCIETIES ||--o{ WORK_PLAN_ACTIVITIES : society
     WORK_PLAN_ACTIVITIES ||--o{ WORK_PLAN_ACTIVITY_SDGS : activity
+    WORK_PLAN_ACTIVITIES ||--o{ WORK_PLAN_ACTIVITY_DIMENSIONS : activity
+    WORK_PLAN_ACTIVITIES ||--o{ WORK_PLAN_ACTIVITY_CATEGORIES : activity
 ```
 
 ## Accounts and access
@@ -630,6 +641,15 @@ erDiagram
 @@id([activityId, sdg])
 @@index([sdg])
 ```
+
+### `work_plan_activity_dimensions` and `work_plan_activity_categories` (issue #169)
+
+```prisma
+@@id([activityId, dimension])   // and @@id([activityId, category])
+@@index([dimension])            // and @@index([category])
+```
+
+`work_plan_activities.classified_at` is set with the approval only when the SPC records Development Goals, and a CHECK keeps it to approved activities. See [Development Goals](development-goals.md).
 
 ### `notifications`
 

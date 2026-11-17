@@ -164,7 +164,24 @@ describe('Issue #117 scoped programme figures', () => {
       societies: 2,
       districts: [{ id: NORTH, nameEn: 'Fictional North' }],
     });
-    return { activities, recentApprovedActivities, scopeSummary };
+    // Issue #169: 4 approved, 3 classified; one has two dimensions.
+    const developmentGoals = vi.fn().mockResolvedValue({
+      classification: [
+        { classified: true, planned: 3, completed: 2 },
+        { classified: false, planned: 1, completed: 0 },
+      ],
+      dimensions: [
+        { dimension: 'SOCIAL', planned: 3, completed: 2 },
+        { dimension: 'ECONOMIC', planned: 1, completed: 1 },
+      ],
+      categories: [{ category: 'CULTURE', planned: 2, completed: 1 }],
+    });
+    return {
+      activities,
+      developmentGoals,
+      recentApprovedActivities,
+      scopeSummary,
+    };
   };
   const service = (repo: ReturnType<typeof repository>) =>
     new NationalService(repo as unknown as NationalRepository, {} as never);
@@ -175,6 +192,7 @@ describe('Issue #117 scoped programme figures', () => {
     const result = await service(repo).scopedProgrammes(active, 2025, now);
     const within = { districtIds: [NORTH], societyIds: [SUNRISE] };
     expect(repo.activities).toHaveBeenCalledWith(2025, now, within);
+    expect(repo.developmentGoals).toHaveBeenCalledWith(2025, now, within);
     expect(repo.recentApprovedActivities).toHaveBeenCalledWith(2025, 6, within);
     expect(repo.scopeSummary).toHaveBeenCalledWith(within);
     expect(result).toMatchObject({
@@ -196,6 +214,36 @@ describe('Issue #117 scoped programme figures', () => {
     ]);
     expect(result.sdgs).toHaveLength(17);
     expect(result.sectors.map((row) => row.sector)).not.toContain(null);
+    // Issue #169: every dimension and category listed; classified +
+    // not classified = the approved activities.
+    expect(result.developmentGoals.classified).toEqual({
+      planned: 3,
+      completed: 2,
+    });
+    expect(result.developmentGoals.notClassified).toEqual({
+      planned: 1,
+      completed: 0,
+    });
+    expect(
+      result.developmentGoals.classified.planned +
+        result.developmentGoals.notClassified.planned,
+    ).toBe(result.planned);
+    expect(result.developmentGoals.byDimension).toEqual([
+      { dimension: 'SOCIAL', planned: 3, completed: 2 },
+      { dimension: 'ECONOMIC', planned: 1, completed: 1 },
+      { dimension: 'GOVERNANCE', planned: 0, completed: 0 },
+    ]);
+    expect(result.developmentGoals.byCategory).toHaveLength(10);
+    expect(result.developmentGoals.byCategory[2]).toEqual({
+      category: 'CULTURE',
+      planned: 2,
+      completed: 1,
+    });
+    expect(result.developmentGoals.byCategory[0]).toEqual({
+      category: 'COMMUNITY_EDUCATION',
+      planned: 0,
+      completed: 0,
+    });
   });
 
   it('asks for an empty scope as such when nothing is assigned, rather than everything', async () => {

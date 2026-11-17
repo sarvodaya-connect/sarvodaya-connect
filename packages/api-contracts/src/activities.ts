@@ -38,7 +38,83 @@ export type ActivityStatus = (typeof ACTIVITY_STATUSES)[number];
 export const ACTIVITY_DIMENSIONS = ["SOCIAL", "ECONOMIC", "GOVERNANCE"] as const;
 export type ActivityDimension = (typeof ACTIVITY_DIMENSIONS)[number];
 
-/** The 10 Sarvodaya sectors (V5 M09a "One of the 10 Sarvodaya sectors"). To be confirmed with Sarvodaya. */
+/** English titles of the three Sarvodaya dimensions. Clients translate the codes. */
+export const ACTIVITY_DIMENSION_TITLES: Record<ActivityDimension, string> = {
+  SOCIAL: "Social",
+  ECONOMIC: "Economic",
+  GOVERNANCE: "Governance",
+};
+
+/**
+ * Issue #169 (V6 Development Goals): the ten Sarvodaya categories, in the
+ * design's order. The SPC chooses one or more when approving, independently of
+ * the dimensions (no category-to-dimension mapping is inferred or enforced).
+ * The code is what is stored and sent; it never changes once released.
+ */
+export const ACTIVITY_CATEGORIES = [
+  { code: "COMMUNITY_EDUCATION", title: "Community education" },
+  { code: "CHILD_WELLBEING", title: "Child wellbeing" },
+  { code: "CULTURE", title: "Culture" },
+  { code: "ECONOMY", title: "Economy" },
+  { code: "GOVERNANCE", title: "Governance" },
+  { code: "HEALTH_NUTRITION", title: "Health and nutrition" },
+  { code: "HOUSING_INFRASTRUCTURE", title: "Housing and infrastructure" },
+  { code: "SPIRITUAL_DEVELOPMENT", title: "Spiritual development" },
+  { code: "AGRICULTURE", title: "Agriculture" },
+  { code: "ENVIRONMENT", title: "Environment" },
+] as const;
+export type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number]["code"];
+export const ACTIVITY_CATEGORY_CODES = ACTIVITY_CATEGORIES.map(
+  (category) => category.code,
+) as readonly ActivityCategory[];
+
+export function activityCategoryTitle(code: string): string {
+  return ACTIVITY_CATEGORIES.find((category) => category.code === code)?.title ?? code;
+}
+
+/**
+ * Issue #169: whether an activity has the SPC's Development Goals.
+ * - PENDING: not approved yet (waiting or sent back); nothing is decided.
+ * - CLASSIFIED: approved with one or more dimensions, categories and UN SDGs,
+ *   all recorded together with the approval.
+ * - NOT_CLASSIFIED: approved without dimensions and categories, either before
+ *   Development Goals existed or by an older app that sends UN SDGs only. Its
+ *   UN SDGs, if any, are kept. The Society Officer's `sector` and `dimension`
+ *   are never treated as the SPC's classification.
+ */
+export const ACTIVITY_CLASSIFICATION_STATES = ["PENDING", "CLASSIFIED", "NOT_CLASSIFIED"] as const;
+export type ActivityClassificationState = (typeof ACTIVITY_CLASSIFICATION_STATES)[number];
+
+export interface ActivityClassification {
+  state: ActivityClassificationState;
+  /** SPC-selected, in catalogue order; empty unless CLASSIFIED. */
+  dimensions: ActivityDimension[];
+  /** SPC-selected, in catalogue order; empty unless CLASSIFIED. */
+  categories: ActivityCategory[];
+  /** The UN SDG numbers, as in `sdgs`. */
+  sdgs: number[];
+  /** When and by whom the classification was recorded (the approval). CLASSIFIED only. */
+  classifiedAt?: IsoDateTime;
+  classifiedBy?: ActorReference;
+}
+
+/**
+ * SP07 / M51: the SPC's approval. `sdgs` is required as before. V6 clients
+ * also send `dimensions` and `categories`: if either is sent, both must hold at
+ * least one valid code, each once. An approval with neither (an older app) is
+ * recorded as NOT_CLASSIFIED, never rejected and never given invented values.
+ */
+export interface ApproveActivityInput {
+  sdgs: number[];
+  dimensions?: ActivityDimension[];
+  categories?: ActivityCategory[];
+}
+
+/**
+ * The 10 Sarvodaya sectors (V5 M09a "One of the 10 Sarvodaya sectors"): the
+ * Society Officer's planning field, kept as typed for history. Issue #169 keeps
+ * it separate from the SPC's `ActivityClassification`.
+ */
 export const SARVODAYA_SECTORS = [
   "Community education",
   "Child wellbeing",
@@ -87,6 +163,8 @@ export interface ActivitySummary {
   status: ActivityStatus;
   /** UN SDG numbers chosen by the SPC (empty until approved). */
   sdgs: number[];
+  /** Issue #169: the SPC's Development Goals. */
+  classification: ActivityClassification;
   submittedAt?: IsoDateTime;
   createdBy?: ActorReference;
   review?: ActivityReview;
@@ -105,6 +183,8 @@ export interface ActivityQueueItem {
   totalParticipants: number;
   householdsBenefited?: number;
   sdgs: number[];
+  /** Issue #169: the SPC's Development Goals. */
+  classification: ActivityClassification;
   approvedAt?: IsoDateTime;
 }
 

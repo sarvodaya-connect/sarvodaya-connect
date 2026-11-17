@@ -14,8 +14,13 @@ import type {
   SendBackActivityDto,
 } from './activities.dto.js';
 import {
+  ACTIVITY_CATEGORY_VALUES,
+  ACTIVITY_DIMENSION_VALUES,
+} from './activities.dto.js';
+import {
   ActivitiesRepository,
   type ActivityRow,
+  type DevelopmentGoals,
 } from './activities.repository.js';
 import { toQueueItem, toWorkPlanActivity } from './activity.mappers.js';
 import {
@@ -26,6 +31,37 @@ import {
 } from './activity.policy.js';
 
 const SRI_LANKA_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+/**
+ * Issue #169: the SPC's Development Goals from an approval, in catalogue order.
+ * The DTO has already refused empty lists, unknown codes and duplicates. Null
+ * when neither list was sent (an older app: recorded as NOT_CLASSIFIED). One
+ * without the other is refused, so a half classification is never saved.
+ */
+export function developmentGoals(
+  input: Pick<ApproveActivityDto, 'dimensions' | 'categories'>,
+): DevelopmentGoals | null {
+  const { dimensions, categories } = input;
+  if (dimensions == null && categories == null) return null;
+  if (dimensions == null || dimensions.length === 0) {
+    throw new BadRequestException(
+      'Choose at least one Sarvodaya dimension as well as the categories',
+    );
+  }
+  if (categories == null || categories.length === 0) {
+    throw new BadRequestException(
+      'Choose at least one Sarvodaya category as well as the dimensions',
+    );
+  }
+  return {
+    dimensions: ACTIVITY_DIMENSION_VALUES.filter((code) =>
+      dimensions.includes(code),
+    ),
+    categories: ACTIVITY_CATEGORY_VALUES.filter((code) =>
+      categories.includes(code),
+    ),
+  };
+}
 
 /** Work plans can be made for last year, this year and the next two (Sri Lanka time). */
 export function plannableYears(now = new Date()) {
@@ -198,10 +234,12 @@ export class ActivitiesService {
     const existing = await this.visibleActivity(activityId, principal);
     assertCanReviewActivities(principal, existing.society);
     const sdgs = [...input.sdgs].sort((a, b) => a - b);
+    const goals = developmentGoals(input);
     const activity = await this.repository.approve(
       activityId,
       { ...existing.society, name: existing.society.nameEn },
       sdgs,
+      goals,
       principal,
     );
     await this.notify(

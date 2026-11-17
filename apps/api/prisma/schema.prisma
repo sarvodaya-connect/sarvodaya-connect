@@ -330,43 +330,66 @@ enum ActivityDimension {
   @@map("activity_dimension")
 }
 
+// Issue #169: the ten Sarvodaya categories the SPC chooses at approval, in the
+// V6 design's order. Codes never change once released.
+enum ActivityCategory {
+  COMMUNITY_EDUCATION
+  CHILD_WELLBEING
+  CULTURE
+  ECONOMY
+  GOVERNANCE
+  HEALTH_NUTRITION
+  HOUSING_INFRASTRUCTURE
+  SPIRITUAL_DEVELOPMENT
+  AGRICULTURE
+  ENVIRONMENT
+
+  @@map("activity_category")
+}
+
 // D05w / M09 work plan and M09a–M09d activities (V5 PR 4). Allocated costs
 // are planning figures, not payments or spending.
 model WorkPlanActivity {
-  id                    String                @id @default(uuid()) @db.Uuid
-  societyId             String                @map("society_id") @db.Uuid
-  society               Society               @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  id                    String                      @id @default(uuid()) @db.Uuid
+  societyId             String                      @map("society_id") @db.Uuid
+  society               Society                     @relation(fields: [societyId], references: [id], onDelete: Cascade)
   year                  Int
   month                 Int
-  name                  String                @db.VarChar(150)
-  description           String                @db.VarChar(1000)
-  sector                String?               @db.VarChar(100)
-  datesLabel            String?               @map("dates_label") @db.VarChar(60)
-  allocatedCost         Decimal               @map("allocated_cost") @db.Decimal(14, 2)
+  name                  String                      @db.VarChar(150)
+  description           String                      @db.VarChar(1000)
+  sector                String?                     @db.VarChar(100)
+  datesLabel            String?                     @map("dates_label") @db.VarChar(60)
+  allocatedCost         Decimal                     @map("allocated_cost") @db.Decimal(14, 2)
   dimension             ActivityDimension?
   // Activities from before V5 PR 4 were planned without review, so they stay approved.
-  status                ActivityStatus        @default(APPROVED)
-  femaleParticipants    Int?                  @map("female_participants")
-  maleParticipants      Int?                  @map("male_participants")
-  youthParticipants     Int?                  @map("youth_participants")
-  householdsBenefited   Int?                  @map("households_benefited")
-  womenHeadedHouseholds Int?                  @map("women_headed_households")
-  partners              String?               @db.VarChar(500)
-  resourcesNeeded       String?               @map("resources_needed") @db.VarChar(500)
-  volunteerHours        Int?                  @map("volunteer_hours")
-  createdById           String?               @map("created_by_id") @db.VarChar(64)
-  createdByName         String?               @map("created_by_name") @db.VarChar(150)
-  createdByRole         String?               @map("created_by_role") @db.VarChar(40)
-  submittedAt           DateTime?             @map("submitted_at") @db.Timestamptz(3)
-  reviewedById          String?               @map("reviewed_by_id") @db.VarChar(64)
-  reviewedByName        String?               @map("reviewed_by_name") @db.VarChar(150)
-  reviewedAt            DateTime?             @map("reviewed_at") @db.Timestamptz(3)
-  reviewComment         String?               @map("review_comment") @db.VarChar(500)
+  status                ActivityStatus              @default(APPROVED)
+  femaleParticipants    Int?                        @map("female_participants")
+  maleParticipants      Int?                        @map("male_participants")
+  youthParticipants     Int?                        @map("youth_participants")
+  householdsBenefited   Int?                        @map("households_benefited")
+  womenHeadedHouseholds Int?                        @map("women_headed_households")
+  partners              String?                     @db.VarChar(500)
+  resourcesNeeded       String?                     @map("resources_needed") @db.VarChar(500)
+  volunteerHours        Int?                        @map("volunteer_hours")
+  createdById           String?                     @map("created_by_id") @db.VarChar(64)
+  createdByName         String?                     @map("created_by_name") @db.VarChar(150)
+  createdByRole         String?                     @map("created_by_role") @db.VarChar(40)
+  submittedAt           DateTime?                   @map("submitted_at") @db.Timestamptz(3)
+  reviewedById          String?                     @map("reviewed_by_id") @db.VarChar(64)
+  reviewedByName        String?                     @map("reviewed_by_name") @db.VarChar(150)
+  reviewedAt            DateTime?                   @map("reviewed_at") @db.Timestamptz(3)
+  reviewComment         String?                     @map("review_comment") @db.VarChar(500)
   sdgs                  WorkPlanActivitySdg[]
-  updatedByName         String?               @map("updated_by_name") @db.VarChar(150)
-  updatedByRole         String?               @map("updated_by_role") @db.VarChar(40)
-  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // Issue #169: set, with the approval, only when the SPC records Development
+  // Goals (dimensions and categories). Null on every older activity: those are
+  // NOT_CLASSIFIED, and `sector`/`dimension` above are never read as the SPC's.
+  classifiedAt          DateTime?                   @map("classified_at") @db.Timestamptz(3)
+  goalDimensions        WorkPlanActivityDimension[]
+  goalCategories        WorkPlanActivityCategory[]
+  updatedByName         String?                     @map("updated_by_name") @db.VarChar(150)
+  updatedByRole         String?                     @map("updated_by_role") @db.VarChar(40)
+  createdAt             DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([societyId, year, month])
   // SP06 / M50: the SPC's waiting queue and recently approved list.
@@ -384,6 +407,28 @@ model WorkPlanActivitySdg {
   @@id([activityId, sdg])
   @@index([sdg])
   @@map("work_plan_activity_sdgs")
+}
+
+// Issue #169: the Sarvodaya dimensions the SPC chose when approving.
+model WorkPlanActivityDimension {
+  activityId String            @map("activity_id") @db.Uuid
+  activity   WorkPlanActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  dimension  ActivityDimension
+
+  @@id([activityId, dimension])
+  @@index([dimension])
+  @@map("work_plan_activity_dimensions")
+}
+
+// Issue #169: the Sarvodaya categories the SPC chose when approving.
+model WorkPlanActivityCategory {
+  activityId String           @map("activity_id") @db.Uuid
+  activity   WorkPlanActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  category   ActivityCategory
+
+  @@id([activityId, category])
+  @@index([category])
+  @@map("work_plan_activity_categories")
 }
 
 // SC-49: notifications for dashboard and mobile users. Categories follow the

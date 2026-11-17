@@ -121,3 +121,25 @@ test("Village Economic Profile catalogue is consistent (issue #145)", async () =
   assert.deepEqual(economy.PRODUCTION_BASES, ["WEEKLY", "MONTHLY", "SEASONAL"]);
   assert.deepEqual(economy.BUSINESS_STATUSES, ["OPERATING", "SEASONAL", "TEMPORARILY_STOPPED", "CLOSED"]);
 });
+
+test("issue #169: Development Goals catalogue and states", async () => {
+  const contracts = await import("../dist/index.js");
+  assert.deepEqual(contracts.ACTIVITY_DIMENSIONS, ["SOCIAL", "ECONOMIC", "GOVERNANCE"]);
+  assert.deepEqual(contracts.ACTIVITY_CATEGORY_CODES, [
+    "COMMUNITY_EDUCATION",
+    "CHILD_WELLBEING",
+    "CULTURE",
+    "ECONOMY",
+    "GOVERNANCE",
+    "HEALTH_NUTRITION",
+    "HOUSING_INFRASTRUCTURE",
+    "SPIRITUAL_DEVELOPMENT",
+    "AGRICULTURE",
+    "ENVIRONMENT",
+  ]);
+  assert.equal(contracts.activityCategoryTitle("HEALTH_NUTRITION"), "Health and nutrition");
+  assert.equal(contracts.ACTIVITY_DIMENSION_TITLES.GOVERNANCE, "Governance");
+  assert.deepEqual(contracts.ACTIVITY_CLASSIFICATION_STATES, ["PENDING", "CLASSIFIED", "NOT_CLASSIFIED"]);
+  // The Society Officer's planning sectors stay available, unchanged.
+  assert.equal(contracts.SARVODAYA_SECTORS.length, 10);
+});
