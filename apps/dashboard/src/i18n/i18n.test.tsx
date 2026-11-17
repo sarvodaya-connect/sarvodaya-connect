@@ -10,7 +10,7 @@ vi.mock("@/app/identity-actions", () => ({ signOut: vi.fn() }));
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import type { DemoViewer } from "@/lib/access";
-import { headingFor, navigationFor } from "@/lib/navigation";
+import { navigationFor } from "@/lib/navigation";
 
 import { availableLocales, DEFAULT_LOCALE, LOCALES, type Locale, REVIEWED_LOCALES, resolveLocale } from "./config";
 import { en, type MessageKey } from "./messages/en";
@@ -24,7 +24,7 @@ const keys = Object.keys(en) as MessageKey[];
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 
 /** Same in every language on purpose: brand names, acronyms and pure placeholders. */
-const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "shell.sarvoai", "prog.sdgNumber", "eco.period.range", "eco.period.season", "eco.history.by"]);
+const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "prog.sdgNumber", "eco.period.range", "eco.period.season", "eco.history.by"]);
 
 describe.each(["si", "ta"] as const)("the %s catalog", (locale) => {
   const catalog = CATALOGS[locale];
@@ -112,13 +112,13 @@ describe.each(viewers)("the dashboard shell for $role", (viewer) => {
       </I18nProvider>,
     );
 
-  it.each(["si", "ta"] as const)("shows its navigation and heading in %s", (locale) => {
+  it.each(["si", "ta"] as const)("shows its navigation in %s, and leaves the heading to the page", (locale) => {
     open(locale);
     const t = createTranslator(CATALOGS[locale], locale);
     for (const item of [...navigationFor(viewer, t).main, ...navigationFor(viewer, t).secondary]) {
       expect(screen.getAllByRole("link", { name: item.label }).length).toBeGreaterThan(0);
     }
-    expect(screen.getByRole("heading", { level: 1, name: headingFor("/dashboard", viewer, t).title })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     for (const item of navigationFor(viewer).main) {
       if (item.label !== "SarvoAI") expect(screen.queryByRole("link", { name: item.label })).not.toBeInTheDocument();
     }

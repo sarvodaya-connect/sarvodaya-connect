@@ -135,9 +135,12 @@ export function ErrorState({
   retryLabel = t("n.tryAgain"),
   secondaryAction,
   title = t("st.errorTitle"),
+  heading = "h2",
 }: {
   t?: Translator;
   description?: string;
+  /** "h1" when the error takes the place of the whole page (a route's error boundary). */
+  heading?: "h1" | "h2";
   onRetry: () => void;
   reference?: string;
   referenceLabel?: string;
@@ -156,6 +159,7 @@ export function ErrorState({
           {secondaryAction}
         </>
       }
+      heading={heading}
       icon="error"
       role="alert"
       title={title}

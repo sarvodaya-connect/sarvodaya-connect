@@ -10,7 +10,7 @@ import { ta } from "@/i18n/messages/ta";
 import { createTranslator, type Messages } from "@/i18n/translate";
 import type { Locale } from "@/i18n/config";
 import { getViewer } from "@/lib/access";
-import { headingFor, navigationFor } from "@/lib/navigation";
+import { navigationFor } from "@/lib/navigation";
 import { canOpen } from "@/lib/role-routes";
 
 import { ProgrammesView, scopeLine } from "./programmes-view";
@@ -151,7 +151,6 @@ describe("Programmes navigation for each role (issue #117)", () => {
     for (const viewer of [getViewer("district-manager"), coordinator, { ...coordinator, role: "DEPUTY_DISTRICT_MANAGER" as const }]) {
       expect(navigationFor(viewer).main.map((item) => item.href)).toContain("/activities");
       expect(canOpen(viewer.role, "/activities")).toBe(true);
-      expect(headingFor("/activities", viewer).title).toBe("Programmes & Activities");
     }
     // Still HQ's alone: the reports and national drill-downs.
     expect(canOpen("DISTRICT_MANAGER", "/reports")).toBe(false);

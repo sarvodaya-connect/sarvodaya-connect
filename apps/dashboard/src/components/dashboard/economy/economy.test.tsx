@@ -17,7 +17,7 @@ import { I18nProvider } from "@/i18n/provider";
 import { createTranslator, type Messages } from "@/i18n/translate";
 import { getViewer } from "@/lib/access";
 import { parseOverviewFilters } from "@/lib/economy-format";
-import { headingFor, navigationFor } from "@/lib/navigation";
+import { navigationFor } from "@/lib/navigation";
 import { canOpen } from "@/lib/role-routes";
 
 import { EconomyOverview } from "./economy-overview";
@@ -377,7 +377,6 @@ describe("Village Economic Profile navigation (issue #147)", () => {
     expect(viewer.role).toBe(role);
     expect(navigationFor(viewer).main.map((item) => item.href)).toContain("/economic-profile");
     expect(canOpen(viewer.role, "/economic-profile")).toBe(true);
-    expect(headingFor("/economic-profile", viewer).title).toBeTruthy();
   });
 
   it("is not offered to the system administrator", () => {

@@ -45,6 +45,7 @@ export default async function MapPage({ searchParams }: PageProps<"/map">) {
           </form>
         }
         description={t("m.description")}
+        title={t("nav.mapView")}
       />
       <div className="mt-4">
         <SocietyMapView counts={map.counts} demo={isDemoMode()} points={map.points} truncated={map.truncated} />

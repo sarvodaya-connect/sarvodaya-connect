@@ -874,6 +874,10 @@ export function HqOverview({ demo, overview, years }: { demo: boolean; overview:
 
   return (
     <div aria-busy={pending} className={`${styles.root} space-y-4`} data-pending={pending}>
+      <div className={styles.enter} style={{ "--i": 0 } as CSSProperties}>
+        <h1 className="break-words text-[26px] font-bold leading-tight tracking-[-0.02em] text-ink">{t("nav.nationalOverview")}</h1>
+        <p className="mt-1 break-words text-[12.5px] text-ink-soft">{t("sub.national")}</p>
+      </div>
       <div className={`${styles.enter} flex flex-wrap items-center justify-between gap-x-4 gap-y-3`} style={{ "--i": 0 } as CSSProperties}>
         <div className="min-w-0">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-brand-leaf">{t("n.reportingPeriod")}</p>

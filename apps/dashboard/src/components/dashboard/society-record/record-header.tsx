@@ -60,7 +60,7 @@ export function RecordHeader({
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-[20px] font-bold tracking-[-0.015em] text-ink">{record.nameEn}</h2>
+                <h1 className="text-[20px] font-bold tracking-[-0.015em] text-ink">{record.nameEn}</h1>
                 <Pill tone={record.status === "ACTIVE" ? "on-time" : "inactive"}>
                   <span className="capitalize">{statusName(t, record.status)}</span>
                 </Pill>

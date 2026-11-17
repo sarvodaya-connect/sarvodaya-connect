@@ -51,7 +51,7 @@ export default async function GradeQueuePage({ searchParams }: PageProps<"/revie
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-bold text-ink">{t("sr.q.title")}</h2>
+        <h1 className="text-xl font-bold text-ink">{t("sr.q.title")}</h1>
         <p className="mt-0.5 text-xs text-ink-soft">{t("sr.q.subtitle")}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

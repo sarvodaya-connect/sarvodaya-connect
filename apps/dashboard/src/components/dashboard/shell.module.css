@@ -79,3 +79,37 @@
     transform: none;
   }
 }
+
+/*
+ * The Sarvodaya headquarters outline behind every dashboard page, at 7.5%.
+ * Fixed to the viewport, so it stays behind the lower sections of long pages
+ * as they scroll. It sits under the shell's own content (z-index -1 inside
+ * an isolated stacking context), never takes a click, and leaves dialogs,
+ * cards and the green sidebar as they are. On wide screens it starts beside
+ * the sidebar, so the drawing is centred on the page and not hidden under it.
+ */
+.canvas {
+  isolation: isolate;
+}
+.canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url("/brand/sarvodaya-headquarters-outline.png") center / cover no-repeat;
+  opacity: 0.075;
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .canvas::before {
+    left: 248px;
+  }
+  .standardCanvas::before {
+    left: 240px;
+  }
+}
+@media print {
+  .canvas::before {
+    display: none;
+  }
+}

@@ -44,7 +44,7 @@ export function PlatformAdminScreen() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold tracking-[-0.015em] text-ink md:text-2xl">Administration</h2>
+          <h1 className="text-xl font-bold tracking-[-0.015em] text-ink md:text-2xl">Administration</h1>
         </div>
         <button
           className="rounded-button bg-brand-action px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-action-pressed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#bbd7c0]"

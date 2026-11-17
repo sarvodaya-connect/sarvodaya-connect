@@ -43,7 +43,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
       <AdministrationTabs current="log" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Change &amp; Access Log</h2>
+          <h1 className="text-xl font-bold text-ink">Change &amp; Access Log</h1>
           <p className="mt-0.5 text-xs text-ink-soft">Who changed, approved or opened what, and when. NICs, passwords and credentials are never shown here.</p>
         </div>
         <a className={secondaryButtonClass} download href={`/audit/export?${query}`}>
