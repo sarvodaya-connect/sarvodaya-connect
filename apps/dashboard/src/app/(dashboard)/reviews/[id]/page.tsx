@@ -100,9 +100,9 @@ export default async function GradeRequestPage({ params, searchParams }: PagePro
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[22px] font-bold text-ink">
+          <h1 className="text-[22px] font-bold text-ink">
             {t("sr.r.title", { from: request.fromGrade ?? "–", to: request.toGrade, society: society.name })}
-          </h2>
+          </h1>
           <p className="mt-0.5 text-[12.5px] text-ink-soft">
             {t(waiting ? "sr.r.sentByWaiting" : "sr.r.sentBy", {
               code: society.societyCode,

@@ -35,7 +35,7 @@ export function PageStatesGallery() {
   return (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-ink">{t("st.gallery.title")}</h2>
+        <h1 className="text-xl font-bold text-ink">{t("st.gallery.title")}</h1>
         <p className="mt-0.5 text-xs text-muted">{t("st.gallery.subtitle")}</p>
       </div>
       {message && (

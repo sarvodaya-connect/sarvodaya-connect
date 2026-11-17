@@ -57,7 +57,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       <AdministrationTabs current="accounts" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Accounts</h2>
+          <h1 className="text-xl font-bold text-ink">Accounts</h1>
           <p className="mt-0.5 text-xs text-ink-soft">
             {total.toLocaleString("en-GB")} {total === 1 ? "account" : "accounts"} · usernames, passwords, roles and scopes are set here
           </p>

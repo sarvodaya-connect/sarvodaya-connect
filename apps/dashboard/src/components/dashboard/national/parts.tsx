@@ -21,12 +21,12 @@ export function Breadcrumb({ current, home }: { current: string; home?: string }
   );
 }
 
-/** Without `title` only the description shows, for pages whose header already names them. */
-export function PageTitle({ actions, description, title }: { actions?: ReactNode; description: ReactNode; title?: string }) {
+/** The page's one main heading, with its description and controls. */
+export function PageTitle({ actions, description, title }: { actions?: ReactNode; description: ReactNode; title: string }) {
   return (
     <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
       <div>
-        {title && <h1 className="text-[22px] font-bold text-ink">{title}</h1>}
+        <h1 className="text-[22px] font-bold text-ink">{title}</h1>
         <p className="text-[12px] text-ink-soft">{description}</p>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

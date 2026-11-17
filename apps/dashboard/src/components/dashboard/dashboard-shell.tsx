@@ -8,7 +8,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { signOut } from "@/app/identity-actions";
 import { SHORT_ROLE_LABELS, type DemoViewer } from "@/lib/access";
 import {
-  headingFor,
   isActiveItem,
   navigationFor,
   searchActionFor,
@@ -22,21 +21,6 @@ import type { Translator } from "@/i18n/translate";
 import { GlobalSearchForm } from "./global-search-form";
 import { Icon } from "./icon";
 import styles from "./shell.module.css";
-
-/** Hills along the bottom of the V5 header (HQTop). */
-function HeaderHills() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="pointer-events-none absolute bottom-0 right-0 h-[46px] w-[62%]"
-      preserveAspectRatio="none"
-      viewBox="0 0 900 60"
-    >
-      <path d="M0 60 L380 30 L520 8 L640 26 L900 18 L900 60 Z" fill="var(--hill-header-back)" />
-      <path d="M0 60 L300 52 L900 44 L900 60 Z" fill="var(--hill-header-front)" />
-    </svg>
-  );
-}
 
 function SidebarLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
   const active = isActiveItem(item, pathname);
@@ -93,8 +77,8 @@ export function DashboardShell(props: ShellProps) {
 }
 
 /**
- * Prototype V5 desktop shell: 112px header with the logo column, page title,
- * search, alerts and account; 240px green sidebar with role navigation and the
+ * Prototype V5 desktop shell: 112px header with the logo column and floating
+ * search, alerts and account (the page has its own heading); 240px green sidebar with role navigation and the
  * signed-in user. Below the large breakpoint the sidebar becomes a scrolling
  * row of links under the header.
  */
@@ -102,16 +86,15 @@ function StandardShell({ alerts, children, unreadCount = 0, viewer }: ShellProps
   const pathname = usePathname();
   const { t } = useI18n();
   const navigation = navigationFor(viewer, t);
-  const { title, subtitle } = headingFor(pathname, viewer, t);
   const scope = `${viewer.role === "SYSTEM_ADMIN" ? t("role.systemAdmin") : SHORT_ROLE_LABELS[viewer.role]} · ${scopeFor(viewer, t)}`;
   const homeHref = navigation.main[0]?.href ?? "/dashboard";
   // The translation decides what goes around the brand, and the brand stays whole.
   const [askBefore, askAfter] = t("shell.ask").split("{brand}");
 
   return (
-    <div className="flex min-h-screen flex-col bg-canvas text-ink">
-      <header className="relative isolate flex min-h-[112px] shrink-0 items-center overflow-hidden border-b border-header-line bg-surface-wash">
-        <HeaderHills />
+    <div className={`${styles.canvas} ${styles.standardCanvas} flex min-h-screen flex-col bg-canvas text-ink`}>
+      {/* No strip behind the controls: they float over the page background. */}
+      <header className="relative flex min-h-[112px] shrink-0 items-center">
         <Link
           aria-label={t("shell.home")}
           className="relative z-10 hidden w-[240px] shrink-0 justify-center lg:flex"
@@ -126,12 +109,7 @@ function StandardShell({ alerts, children, unreadCount = 0, viewer }: ShellProps
             width={472}
           />
         </Link>
-        <div className="relative z-10 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-4 md:px-7 lg:border-l lg:border-line lg:py-0 lg:pl-[22px]">
-          <div className="min-w-0">
-            <h1 className="text-[20px] font-bold leading-tight md:text-[22px]">{title}</h1>
-            <p className="mt-0.5 text-[13px] text-ink-soft">{subtitle}</p>
-            <p className="mt-1.5 text-[10.5px] text-muted">{t("shell.tagline")}</p>
-          </div>
+        <div className="relative z-10 flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-4 gap-y-3 px-4 py-4 md:px-7 lg:py-0">
           <div className="flex items-center gap-4">
             {viewer.role === "HQ_ADMIN" && (
               // V5 HQTop: SarvoAI is HQ only (the API refuses every other role).
@@ -318,8 +296,8 @@ function PreviewSwitch({ id, preview }: { id: string; preview: ShellPreview }) {
 
 /**
  * The redesigned shell: a full-height green sidebar with the role's navigation
- * and the signed-in user, and a slim sticky header with the page title,
- * SarvoAI (HQ only), search, alerts and account. Below the large breakpoint the sidebar becomes a
+ * and the signed-in user, and floating controls at the top right:
+ * SarvoAI (HQ only), search, alerts and account. Each page has its own heading. Below the large breakpoint the sidebar becomes a
  * scrolling row of links under the header. Each page eases in when the route
  * changes; prefers-reduced-motion turns that and the sliding pill off.
  */
@@ -327,7 +305,6 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
   const pathname = usePathname();
   const { t } = useI18n();
   const navigation = navigationFor(viewer, t);
-  const { title, subtitle } = headingFor(pathname, viewer, t);
   const scope = `${SHORT_ROLE_LABELS[viewer.role]} · ${scopeFor(viewer, t)}`;
   const homeHref = navigation.main[0]?.href ?? "/dashboard";
   // The translation decides what goes around the brand, and the brand stays whole.
@@ -335,14 +312,18 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
   const { nav, pill } = useActivePill(pathname);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+    <div className={`${styles.canvas} min-h-screen bg-canvas text-ink lg:grid lg:grid-cols-[248px_minmax(0,1fr)]`}>
       <aside className="relative hidden h-screen flex-col overflow-hidden bg-brand-forest text-sidebar-text lg:sticky lg:top-0 lg:flex">
         <Link
           aria-label={t("shell.home")}
-          className="flex h-[112px] shrink-0 items-center justify-center px-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+          className="flex h-[104px] shrink-0 items-center justify-center px-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
           href={homeHref}
         >
-          <Image alt="Sarvodaya Connect" className="h-auto w-[208px] max-w-full" height={450} priority src="/brand/sarvodaya-connect-logo-white.png" width={1180} />
+          {/* The original logo on its white background. The square image has wide white margins,
+              so the card crops them away without changing the logo's proportions. */}
+          <span className="relative block h-[76px] w-[192px] max-w-full overflow-hidden rounded-[12px] bg-white shadow-[0_6px_16px_-12px_rgb(0_0_0/0.7)]">
+            <Image alt="Sarvodaya Connect" className="object-cover object-[50%_48%]" fill priority sizes="192px" src="/brand/sarvodaya-connect-logo.jpg" />
+          </span>
         </Link>
         <nav aria-label={t("shell.mainNavigation")} className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4 pt-2" ref={nav}>
           {pill && (
@@ -383,18 +364,13 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 border-b border-header-line bg-[rgb(243_244_238/0.85)] backdrop-blur-md">
-          <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 md:px-7">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link aria-label={t("shell.home")} className="shrink-0 rounded-md lg:hidden" href={homeHref}>
-                <Image alt="" className="h-10 w-auto" height={180} priority src="/brand/sarvodaya-connect-wordmark.png" width={472} />
-              </Link>
-              <div className="min-w-0">
-                <h1 className="break-words text-[19px] font-bold leading-tight tracking-[-0.01em] md:text-[21px]">{title}</h1>
-                <p className="mt-0.5 break-words text-[12.5px] text-ink-soft">{subtitle}</p>
-                <p className="sr-only">{t("shell.tagline")}</p>
-              </div>
-            </div>
+        {/* No strip behind the controls: they float over the page background, and
+            each page names itself with its own heading in the content. */}
+        <header className="relative z-30">
+          <div className="flex min-h-[72px] flex-wrap items-center justify-end gap-x-4 gap-y-3 px-4 py-3 md:px-7">
+            <Link aria-label={t("shell.home")} className="mr-auto shrink-0 rounded-md lg:hidden" href={homeHref}>
+              <Image alt="" className="h-10 w-auto" height={180} priority src="/brand/sarvodaya-connect-wordmark.png" width={472} />
+            </Link>
             <div className="flex items-center gap-3">
               {viewer.role === "HQ_ADMIN" && (
                 // V5 HQTop: SarvoAI is HQ only (the API refuses every other role).
@@ -470,7 +446,7 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
           )}
         </nav>
 
-        <main className={`${styles.page} min-w-0 flex-1 px-4 pb-10 pt-5 md:px-7`} key={pathname}>
+        <main className={`${styles.page} min-w-0 flex-1 px-4 pb-10 pt-1 md:px-7`} key={pathname}>
           {children}
         </main>
       </div>

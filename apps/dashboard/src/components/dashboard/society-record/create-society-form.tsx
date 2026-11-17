@@ -132,7 +132,7 @@ export function CreateSocietyForm({
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[22px] font-bold text-ink">{t("sr.cr.title")}</h2>
+          <h1 className="text-[22px] font-bold text-ink">{t("sr.cr.title")}</h1>
           {steps}
         </div>
         <div className="flex gap-2.5">
