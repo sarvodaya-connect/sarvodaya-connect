@@ -16,6 +16,8 @@ The app reads two compile-time values (`--dart-define`):
 | `COGNITO_CLIENT_ID` | Config | **none** | The phone's public app client (no client secret). |
 | `COGNITO_REGION` | Config | from the pool id | Optional check. |
 
+The installed version's **What's New** notes are not a `--dart-define`: the Android internal release workflow embeds them in `assets/release/release_notes.json` before compiling. Manual and iOS builds keep the committed development file (no notes, no prompt); to preview notes, see [Release notes and What's New](google-play-releases.md#release-notes-and-whats-new).
+
 There are no secrets in the app: users sign in with their own account, and the app holds that sign-in's Cognito tokens in memory only. See `cognito-setup.md`.
 
 ## What the app collects (for the store privacy forms)

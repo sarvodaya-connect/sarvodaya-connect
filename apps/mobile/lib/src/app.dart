@@ -21,6 +21,7 @@ import 'auth/api_auth_service.dart';
 import 'auth/cognito_auth.dart';
 import 'theme/app_theme.dart';
 import 'models/user.dart';
+import 'release/whats_new_screen.dart';
 
 class SarvodayaConnectApp extends StatefulWidget {
   const SarvodayaConnectApp({super.key, this.store});
@@ -94,7 +95,9 @@ class _Root extends StatelessWidget {
     if (store.showSplash) return const SplashScreen();
     if (!store.languageChosen) return const LanguageScreen();
     if (store.user == null) return const SignInScreen();
-    return const HomeShell();
+    // Issue #161: What's New waits until sign-in has finished and the
+    // destination is on screen, then returns to it.
+    return const WhatsNewGate(child: HomeShell());
   }
 }
 

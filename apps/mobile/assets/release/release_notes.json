@@ -1,0 +1,4 @@
+{
+  "comment": "Development fallback (issue #161). Local and iOS builds embed no release, so the app never prompts and More > What's New says notes come with Android releases. The Android internal release workflow replaces this file at build time; see docs/google-play-releases.md.",
+  "schemaVersion": 1
+}

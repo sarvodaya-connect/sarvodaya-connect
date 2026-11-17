@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       release_notes:
-        description: 'What changed for testers (1-500 characters)'
+        description: 'What changed for testers (1-500 characters). Also shown in the app as What’s New'
         required: true
         type: string
       publish:

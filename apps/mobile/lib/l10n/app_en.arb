@@ -3524,5 +3524,49 @@
         "type": "int"
       }
     }
+  },
+  "whatsNewTitle": "What’s New",
+  "@whatsNewTitle": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewVersion": "Version {version} ({build})",
+  "@whatsNewVersion": {
+    "description": "Issue #161 What's New after an app update.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
+  "whatsNewUpdated": "Sarvodaya Connect has been updated on this phone. Here is what changed.",
+  "@whatsNewUpdated": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewInstalled": "The version installed on this phone, and what changed in it.",
+  "@whatsNewInstalled": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewChanges": "What Changed",
+  "@whatsNewChanges": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewEnglishOnly": "These release notes are written in English only.",
+  "@whatsNewEnglishOnly": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewUnavailableTitle": "No Release Notes",
+  "@whatsNewUnavailableTitle": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "whatsNewUnavailable": "This build has no release notes. They are added when the Android release is built.",
+  "@whatsNewUnavailable": {
+    "description": "Issue #161 What's New after an app update."
+  },
+  "moreWhatsNew": "What’s New",
+  "@moreWhatsNew": {
+    "description": "Issue #161 What's New after an app update."
   }
 }

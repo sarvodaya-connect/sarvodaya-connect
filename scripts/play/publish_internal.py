@@ -10,6 +10,8 @@ from pathlib import Path
 import urllib.error
 import urllib.request
 
+from release_notes import ASSET, ReleaseNotesError, read_release_metadata
+
 PACKAGE = 'org.sarvodayaconnect.sarvodaya_connect_mobile'
 BASE = f'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PACKAGE}'
 UPLOAD = f'https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/{PACKAGE}'
@@ -49,10 +51,18 @@ def main():
         raise SystemExit('Missing short-lived Google Play access token.')
     version = os.environ['VERSION_NAME']
     code = int(os.environ['VERSION_CODE'])
-    notes = os.environ['RELEASE_NOTES'].strip()
+    # Issue #161: Play gets the notes embedded in the bundle, not a second
+    # copy, so the store and the app's What's New screen match exactly.
+    try:
+        embedded = read_release_metadata(ASSET)
+    except ReleaseNotesError as error:
+        raise SystemExit(f'Embedded release notes are not usable: {error}') from None
+    if embedded['versionName'] != version or embedded['versionCode'] != code:
+        raise SystemExit('Embedded release notes are for a different version; refusing to publish.')
+    notes = embedded['notes']
     bundle = Path('apps/mobile/build/app/outputs/bundle/release/app-release.aab')
-    if not bundle.is_file() or not 0 < len(notes) <= 500:
-        raise SystemExit('Missing bundle or invalid release notes.')
+    if not bundle.is_file():
+        raise SystemExit('Missing bundle.')
     edit_id = None
     committed = False
     commit_started = False

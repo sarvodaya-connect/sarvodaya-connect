@@ -41,6 +41,7 @@ import '../models/user.dart';
 import '../services/demo_document_upload_service.dart';
 import '../services/document_upload_service.dart';
 import '../validation/validators.dart';
+import '../release/whats_new.dart';
 
 /// Thrown when the demo is in offline mode and an action needs the network.
 class OfflineException implements Exception {
@@ -95,7 +96,9 @@ class DemoStore extends ChangeNotifier {
     IdentityApi? identityApi,
     LanguagePreference? languagePreference,
     List<AppLanguage>? languages,
+    WhatsNew? whatsNew,
   }) : _languagePreference = languagePreference ?? MemoryLanguagePreference(),
+       whatsNew = whatsNew ?? WhatsNew.none(),
        languages = languages ?? availableLanguages(),
        isDemo = demo ?? demoMode,
        identityApi = identityApi ?? IdentityApi(),
@@ -259,6 +262,10 @@ class DemoStore extends ChangeNotifier {
   /// What this build offers. Unreviewed drafts stay out of store builds.
   final List<AppLanguage> languages;
   final LanguagePreference _languagePreference;
+
+  /// Issue #161: the installed release's notes and whether to show them
+  /// once after this update.
+  final WhatsNew whatsNew;
 
   /// Restores a saved language this build still offers. With only one language
   /// to offer, there is nothing to ask on first run.

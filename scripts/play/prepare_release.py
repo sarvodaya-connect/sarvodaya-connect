@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
+from release_notes import ASSET, ReleaseNotesError, normalize_notes, validate_code, validate_version, write_release_metadata
+
 
 def required(name):
     value = os.environ.get(name, '')
@@ -37,13 +39,13 @@ def main():
         raise SystemExit('This workflow is restricted to the Sarvodaya repository.')
     version = required('VERSION_NAME')
     code = required('VERSION_CODE')
-    if not re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)', version) or len(version) > 30:
-        raise SystemExit('Version name must be major.minor.patch, e.g. 0.1.1.')
-    if not re.fullmatch(r'[1-9]\d{0,9}', code) or int(code) > 2100000000:
-        raise SystemExit('Version code must be an integer from 1 to 2100000000.')
-    notes = required('RELEASE_NOTES').strip()
-    if not notes or len(notes) > 500:
-        raise SystemExit('Release notes must contain 1-500 characters.')
+    try:
+        validate_version(version)
+        validate_code(code)
+        # The same normalized text goes into the app and to Google Play.
+        notes = normalize_notes(required('RELEASE_NOTES'))
+    except ReleaseNotesError as error:
+        raise SystemExit(str(error)) from None
     url = required('API_BASE_URL')
     parsed = urlparse(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
@@ -92,7 +94,11 @@ def main():
     with build_config.open('x') as stream:
         json.dump(config, stream)
     build_config.chmod(0o600)
-    print('Release inputs validated; ephemeral signing files prepared (values withheld).')
+    # Issue #161: embed the release and its notes in the bundle before
+    # compilation, replacing the development file in this ephemeral checkout.
+    write_release_metadata(ASSET, version, code, notes)
+    print(f'Release inputs validated; ephemeral signing files prepared (values withheld); '
+          f'release notes embedded for {version} ({code}).')
 
 
 if __name__ == '__main__':

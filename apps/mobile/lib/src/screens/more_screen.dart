@@ -10,6 +10,7 @@ import '../widgets/state_views.dart';
 import 'notifications_screen.dart';
 import '../incidents/incident_screens.dart';
 import '../sarvoai/sarvoai_screen.dart';
+import '../release/whats_new_screen.dart';
 
 /// V5 M17 More: profile, language, notifications, help and sign-out, and
 /// SarvoAI for HQ.
@@ -153,6 +154,19 @@ class MoreScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const IncidentsScreen(),
+                  ),
+                ),
+              ),
+              // Issue #161: the installed release's notes, at any time. Opening
+              // them here does not change what has been acknowledged.
+              _MenuRow(
+                icon: Icons.update,
+                title: l10n.moreWhatsNew,
+                chevron: true,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        WhatsNewScreen(release: store.whatsNew.release),
                   ),
                 ),
               ),

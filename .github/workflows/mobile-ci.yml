@@ -43,6 +43,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Check release notes embedding
+        working-directory: .
+        run: python3 -m unittest discover -s scripts/play -p 'test_*.py'
+
       - name: Restore Flutter dependencies
         run: flutter pub get
 

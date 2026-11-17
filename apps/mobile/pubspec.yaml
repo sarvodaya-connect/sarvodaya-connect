@@ -34,6 +34,9 @@ flutter:
     - assets/branding/sarvodaya_connect_logo_white.png
     - assets/branding/sarvodaya_connect_wordmark.png
     - assets/sdg/
+    # Issue #161: the installed release and its notes, written by the
+    # Android internal release workflow before compilation.
+    - assets/release/release_notes.json
 
 flutter_launcher_icons:
   android: true

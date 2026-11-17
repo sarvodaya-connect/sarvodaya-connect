@@ -16,6 +16,8 @@ a release.
 2. In **Actions -> Android internal release -> Run workflow**, select **main**.
 3. Enter a version name such as `0.1.1`, a new integer version code such as `2`
    (only if higher than every previous Play upload), and 1-500 characters of notes.
+   The same notes go to Google Play and to the app's **What's New** screen; see
+   [Release notes and What's New](#release-notes-and-whats-new).
 4. Leave Publish off for a signed build artifact only, or turn it on to distribute
    through the existing **internal testing** track. Enable translation review only
    when internal testers should see unreviewed Sinhala/Tamil.
@@ -28,6 +30,58 @@ There is no push-to-main publication, production-track option, Apple/TestFlight
 upload, or API/database deployment. The source commit, requested version and bundle
 checksum are recorded. Versions are passed to Flutter at build time; this does not
 change `pubspec.yaml` or create a GitHub tag/release automatically.
+
+## Release notes and What's New
+
+The release owner writes the notes once, in the workflow's **release_notes** box.
+
+- `scripts/play/prepare_release.py` checks them with `scripts/play/release_notes.py`:
+  1-500 characters, plain text, line endings made `\n`, outer spaces removed, and
+  control characters other than newline and tab refused. Quotes, Unicode and line
+  breaks are kept as typed.
+- Before Flutter compiles, it writes them with the version name and code to
+  `apps/mobile/assets/release/release_notes.json` (JSON, so nothing in the notes
+  can break out of the text). No backend call, no fetch from `main` at runtime.
+- `scripts/play/publish_internal.py` sends Play the notes from that same file and
+  refuses to publish if its version or code differ from the run's, so the store
+  and the installed app always say the same thing.
+- The notes reach the scripts only through the `RELEASE_NOTES` environment
+  variable. They are never written into shell code, and the app shows them as
+  plain text (lines starting with `-`, `*` or `•` become list items), never HTML.
+
+On the phone:
+
+- After an update, the installed release's notes show once, after sign-in and
+  over the home screen. **Continue** (or Back) records the release as seen on this
+  phone, keyed by version name and code, and returns to the same screen. Restarting
+  or signing out and back in does not show it again; neither does rerunning the
+  same build. Skipping releases shows only the installed release's notes.
+- A fresh installation is not treated as an update: nothing is shown and the
+  release is recorded silently. The notes are always under **More → What's New**,
+  which never changes what has been recorded.
+- The notes are written in English only. In Sinhala or Tamil the screen says so
+  instead of presenting them as translated.
+- Missing or invalid metadata never stops the app: it starts as usual, shows
+  nothing after the update, and More → What's New says this build has no notes.
+- **First release with this screen:** builds before it saved nothing that marks an
+  update when only English was offered (store builds without translation review).
+  On those phones the first release with What's New is treated like a fresh
+  installation, so the notes stay in More. Every later update shows them once.
+
+Local and iOS builds keep the committed development file, which holds no release,
+so they never prompt and More → What's New says notes come with Android releases.
+Google Play automation stays Android-only.
+
+To preview a release's notes in a local build:
+
+```bash
+python3 scripts/play/release_notes.py --version 0.1.2 --code 3 --notes-file notes.txt
+cd apps/mobile && flutter run
+git checkout -- assets/release/release_notes.json   # before committing
+```
+
+The checks are covered by `python3 -m unittest discover -s scripts/play -p 'test_*.py'`
+(run in Flutter CI) and `apps/mobile/test/whats_new_test.dart`.
 
 ## Existing app and key
 
