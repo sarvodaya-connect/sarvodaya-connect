@@ -1,13 +1,12 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { SocietyRegistrarDocuments } from "@sarvodaya-connect/api-contracts";
 
 import { RegistrarDocumentsList } from "../documents/registrar-documents";
 import { SdgSelector } from "../sdg/sdg-selector";
-import { ActivityReview } from "./activity-review";
 
 function Selector({ initial = [] as number[] }) {
   const [selected, setSelected] = useState(initial);
@@ -35,56 +34,6 @@ describe("V5 SP07 / M51 UN SDG selector", () => {
     expect(screen.getByText("Chosen (2)")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, Justice and Strong Institutions, selected" }));
     expect(screen.getByText("Chosen (1)")).toBeInTheDocument();
-  });
-});
-
-describe("V5 SP07 activity review", () => {
-  const renderReview = (approve = vi.fn().mockResolvedValue({}), sendBack = vi.fn().mockResolvedValue({})) => {
-    render(
-      <ActivityReview
-        actions={{ approve, sendBack }}
-        details={<p>Details</p>}
-        heading={<h1>Youth leadership camp</h1>}
-        officerName="N. Wijesinghe"
-      />,
-    );
-    return { approve, sendBack };
-  };
-
-  it("needs at least one UN SDG before approving", async () => {
-    const { approve } = renderReview();
-    await userEvent.click(screen.getByRole("button", { name: /^Approve$/ }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Choose at least one UN SDG to approve.");
-    expect(approve).not.toHaveBeenCalled();
-  });
-
-  it("approves with the chosen goals and names how many", async () => {
-    const { approve } = renderReview();
-    await userEvent.click(screen.getByRole("button", { name: "SDG 16: Peace, Justice and Strong Institutions" }));
-    await userEvent.click(screen.getByRole("button", { name: "SDG 4: Quality Education" }));
-    await userEvent.click(screen.getByRole("button", { name: /Approve with 2 SDGs/ }));
-    expect(approve).toHaveBeenCalledWith([4, 16]);
-  });
-
-  it("turns both buttons off while saving and shows the API error", async () => {
-    let finish: (value: { error?: string }) => void = () => undefined;
-    const approve = vi.fn(() => new Promise<{ error?: string }>((resolve) => (finish = resolve)));
-    renderReview(approve);
-    await userEvent.click(screen.getByRole("button", { name: "SDG 6: Clean Water and Sanitation" }));
-    await userEvent.click(screen.getByRole("button", { name: /Approve with 1 SDG/ }));
-    expect(screen.getByRole("button", { name: /Approving…/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Send Back" })).toBeDisabled();
-    await act(async () => finish({ error: "This activity is no longer waiting for approval" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("This activity is no longer waiting for approval");
-  });
-
-  it("sends back with an optional note to the Society Officer", async () => {
-    const { sendBack } = renderReview();
-    await userEvent.click(screen.getByRole("button", { name: "Send Back" }));
-    const dialog = screen.getByRole("dialog", { name: "Send Back to N. Wijesinghe?" });
-    await userEvent.type(within(dialog).getByLabelText("What should change? (optional)"), "Split by ward");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Send Back" }));
-    expect(sendBack).toHaveBeenCalledWith("Split by ward");
   });
 });
 

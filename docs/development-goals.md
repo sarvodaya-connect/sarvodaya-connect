@@ -165,13 +165,33 @@ This PR deploys nothing and applies no migration to any shared database.
 
 ## What the clients still need
 
-- **#170 (dashboard approval) and #171 (mobile approval):**
+- **#170 (dashboard approval):** done. See [Dashboard approval](#dashboard-approval-170) below.
+- **#171 (mobile approval):**
   - send `dimensions` and `categories` with `sdgs`;
   - show 400 messages from the API;
-  - reuse the approved dimension artwork from the V6 prototype.
+  - reuse the approved dimension artwork from the V6 prototype (the same three files as `apps/dashboard/public/dimensions/`).
 - **#172 (read-only details):** show `classification`, including `NOT_CLASSIFIED` as not recorded.
 - **#173 (reporting and filters):** use `developmentGoals` and its counting rules, and add filters.
 - **Translations** of the dimension and category titles in each client (#108 policy).
+
+## Dashboard approval (#170)
+
+The SPC's desktop journey follows the V6 prototype flows 20, 32 and 40 (SP07g → SP07r → SP07s → SP08g, with SP07g "v" for a blocked approval and SP07x for a failed one).
+
+- **SP07g, choose.** The three dimension pictures are selectable cards and the ten categories are chips, in catalogue order, followed by the official UN SDG tiles. Each card and chip is a real checkbox, so pointer, keyboard (Tab, Space) and screen readers all get the selected state. Dimensions and categories are independent.
+- **Blocked.** "Review and approve" with a missing choice names each missing list, keeps every other choice and opens nothing.
+- **SP07r, check.** A dialog shows the chosen dimensions, categories and UN SDGs. Nothing is saved until "Approve activity". "Back to edit" and Escape close it without changing the activity.
+- **SP07s, approving.** Both buttons are off and a second click is ignored, so an approval is never sent twice.
+- **SP07x, failed.** The API could not be reached or failed: the dialog says so, keeps the choices and offers "Try again". A 400 shows the API's message.
+- **Stale.** The activity was already approved or sent back (409), or is no longer the SPC's (403, 404): nothing is changed, and only "Back to Activities to Approve" is offered.
+- **SP08g, approved.** The list opens with the confirmation and the Development Goals chosen.
+- **Send back** is unchanged.
+
+While the SPC decides, the Society Officer's planning sector and dimension are not shown as a classification ("You choose them below"). They are still stored, still entered in the Society Officer's form and still shown once the activity is decided. Removing them from the Society Officer's form waits for the API transition.
+
+The dimension pictures in `apps/dashboard/public/dimensions/` are the prototype's original image fills, exported unchanged (492 × 492 PNG). The dashboard repeats the catalogue codes, since it imports only types from the contracts at run time. `development-goals-catalogue.test.ts` fails if they differ.
+
+New text is in English, Sinhala and Tamil (`dg.*`). The dimension and category titles reuse `dimension.*` and `sector.1`–`sector.10`. The Society Officer's read-only details on this page are still English, like other screens not yet converted (#108).
 
 ## Tests
 

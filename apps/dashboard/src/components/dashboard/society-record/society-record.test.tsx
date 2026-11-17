@@ -355,8 +355,8 @@ describe("D05w work plan", () => {
     counts: { planned: 2, approved: 1, waiting: 1, sentBack: 0 },
     permissions: { canAddActivities: true },
     activities: [
-      { id: "a", year: 2027, month: 1, name: "Tank cleaning shramadana", description: "Clear the tank.", sector: "Environment", allocatedCost: 25000, status: "APPROVED", sdgs: [6, 15] },
-      { id: "b", year: 2027, month: 9, name: "Youth leadership camp", description: "Three-day camp.", datesLabel: "12–14 Sep", allocatedCost: 55000, status: "WAITING_FOR_SPC", sdgs: [] },
+      { id: "a", year: 2027, month: 1, name: "Tank cleaning shramadana", description: "Clear the tank.", sector: "Environment", allocatedCost: 25000, status: "APPROVED", sdgs: [6, 15], classification: { state: "NOT_CLASSIFIED", dimensions: [], categories: [], sdgs: [6, 15] } },
+      { id: "b", year: 2027, month: 9, name: "Youth leadership camp", description: "Three-day camp.", datesLabel: "12–14 Sep", allocatedCost: 55000, status: "WAITING_FOR_SPC", sdgs: [], classification: { state: "PENDING", dimensions: [], categories: [], sdgs: [] } },
     ],
     lastChange: { at: "2026-10-18T04:00:00.000Z", by: { displayName: "S. Karunaratne", role: "PROGRAMME_COORDINATOR" } },
   };

@@ -3,31 +3,61 @@ import Link from "next/link";
 import type { ActivityQueueItem } from "@sarvodaya-connect/api-contracts";
 
 import { ApprovalRuleNotice } from "@/components/dashboard/activities/approval-notice";
+import { DevelopmentGoalChips } from "@/components/dashboard/activities/development-goals-picker";
 import { EmptyState } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
 import { SdgChips } from "@/components/dashboard/sdg/sdg-chip";
 import { Pill } from "@/components/dashboard/ui/pill";
+import { getT } from "@/i18n/server";
+import type { Translator } from "@/i18n/translate";
 import { getActivityQueue } from "@/lib/activities-api";
-import { approvedLabel, monthYear, participantsLabel, sdgList, waitingStatus } from "@/lib/activity-format";
+import { approvedLabel, monthYear, participantsLabel, waitingStatus } from "@/lib/activity-format";
 import { isDemoMode } from "@/lib/platform-api";
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function DecisionBanner({ queue, approvedId, sentBackId }: { queue: { approvedRecently: ActivityQueueItem[] }; approvedId?: string; sentBackId?: string }) {
+function DecisionBanner({
+  queue,
+  approvedId,
+  sentBackId,
+  t,
+}: {
+  queue: { approvedRecently: ActivityQueueItem[] };
+  approvedId?: string;
+  sentBackId?: string;
+  t: Translator;
+}) {
   const approved = approvedId && queue.approvedRecently.find((item) => item.id === approvedId);
   if (approved) {
+    const goals = approved.classification;
     return (
-      <p className="flex items-center gap-2.5 rounded-card border border-[#bcd9bd] bg-success-bg px-4 py-2.5 text-[12px] text-success-text" role="status">
-        <Icon className="size-4 shrink-0" name="success" />
-        <span>
-          <strong>
-            Approved: {approved.name} · {approved.society.name}.
-          </strong>{" "}
-          {sdgList(approved.sdgs)}.{approved.sentBy ? ` ${approved.sentBy.displayName} has been notified.` : ""}
-        </span>
-      </p>
+      <div className="rounded-card border border-[#bcd9bd] bg-success-bg px-4 py-3 text-[12px] text-success-text" role="status">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="flex items-center gap-2.5">
+            <Icon className="size-4 shrink-0" name="success" />
+            <strong>
+              {t("dg.approved.banner", { name: approved.name, society: approved.society.name })}
+              {approved.sentBy ? ` ${t("dg.approved.notified", { name: approved.sentBy.displayName })}` : ""}
+            </strong>
+          </p>
+          <Link className="font-semibold text-brand-forest underline underline-offset-2" href={`/activities-to-approve/${approved.id}`}>
+            {t("dg.approved.view")}
+          </Link>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2 pl-[26px]">
+          <span className="text-ink-soft">{t("dg.approved.goals")}</span>
+          {goals?.state === "CLASSIFIED" ? (
+            <DevelopmentGoalChips categories={goals.categories} dimensions={goals.dimensions} sdgs={<SdgChips sdgs={approved.sdgs} t={t} />} />
+          ) : (
+            <>
+              <span className="text-ink-soft">{t("dg.notRecorded")}</span>
+              <SdgChips sdgs={approved.sdgs} t={t} />
+            </>
+          )}
+        </div>
+      </div>
     );
   }
   if (sentBackId) {
@@ -44,10 +74,10 @@ function DecisionBanner({ queue, approvedId, sentBackId }: { queue: { approvedRe
 const th = "px-3 py-2.5 text-left text-[11px] font-medium text-muted";
 const td = "px-3 py-3 text-[12px] text-ink";
 
-/** V5 SP06 (and SP08 after an approval): the SPC's waiting activities and recent approvals. */
+/** V5 SP06 (and V6 SP08g after an approval, with the Development Goals chosen): the SPC's waiting activities and recent approvals. */
 export default async function ActivitiesToApprovePage({ searchParams }: PageProps<"/activities-to-approve">) {
   const params = await searchParams;
-  const queue = await getActivityQueue();
+  const [queue, t] = await Promise.all([getActivityQueue(), getT()]);
   const now = new Date();
   return (
     <>
@@ -62,8 +92,8 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
       </div>
 
       <div className="mt-4 space-y-3">
-        <DecisionBanner approvedId={first(params.approved)} queue={queue} sentBackId={first(params.sentBack)} />
-        <ApprovalRuleNotice />
+        <DecisionBanner approvedId={first(params.approved)} queue={queue} sentBackId={first(params.sentBack)} t={t} />
+        <ApprovalRuleNotice t={t} />
       </div>
 
       <section aria-labelledby="waiting-heading" className="mt-4 rounded-card border border-line bg-surface p-4">

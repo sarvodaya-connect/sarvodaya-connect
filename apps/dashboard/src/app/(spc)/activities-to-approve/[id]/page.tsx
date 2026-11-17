@@ -4,10 +4,13 @@ import type { ActivityDetail } from "@/lib/activities-api";
 
 import { ActivityReview } from "@/components/dashboard/activities/activity-review";
 import { ApprovalRuleNotice } from "@/components/dashboard/activities/approval-notice";
+import { DevelopmentGoalChips } from "@/components/dashboard/activities/development-goals-picker";
 import { NoAccessState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
 import { SdgChips } from "@/components/dashboard/sdg/sdg-chip";
 import { Pill } from "@/components/dashboard/ui/pill";
+import type { Translator } from "@/i18n/translate";
+import { getT } from "@/i18n/server";
 import { getActivity } from "@/lib/activities-api";
 import { DIMENSION_LABELS, whenLabel } from "@/lib/activity-format";
 import { formatLkr, ROLE_LABELS } from "@/lib/society-record-format";
@@ -41,7 +44,13 @@ const PEOPLE: { key: keyof ActivityDetail; label: string; note: string }[] = [
   { key: "womenHeadedHouseholds", label: "Women-Headed Households", note: "Of the households above" },
 ];
 
-function ActivityDetails({ activity }: { activity: ActivityDetail }) {
+/**
+ * While the SPC decides, the Society Officer's planning sector and dimension
+ * are not shown as a classification: V6 shows "You choose them below" (#170).
+ * They stay on record and in the Society Officer's form; the API keeps them
+ * apart from the SPC's Development Goals (#169).
+ */
+function ActivityDetails({ activity, deciding = false, t }: { activity: ActivityDetail; deciding?: boolean; t: Translator }) {
   return (
     <section aria-labelledby="details-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
@@ -56,8 +65,14 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
       <p className="mt-3 text-[13px] text-ink">{activity.description}</p>
       <dl className="mt-4 grid gap-4 sm:grid-cols-3">
         <Field label="When" value={whenLabel(activity)} />
-        <Field label="Sector" value={activity.sector} />
-        <Field label="Dimension" value={activity.dimension ? DIMENSION_LABELS[activity.dimension] : undefined} />
+        {deciding ? (
+          <Field label={t("dg.title")} value={t("dg.detailsValue")} />
+        ) : (
+          <>
+            <Field label="Sector" value={activity.sector} />
+            <Field label="Dimension" value={activity.dimension ? DIMENSION_LABELS[activity.dimension] : undefined} />
+          </>
+        )}
         <Field label="Allocated Cost" value={`${formatLkr(activity.allocatedCost)} · planning`} />
         <Field label="Partners" value={activity.partners} />
         <Field label="Volunteer Hours" value={activity.volunteerHours} />
@@ -81,19 +96,16 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
   );
 }
 
-/** V5 SP07: review one activity, choose its UN SDGs and approve or send it back. */
+/** V6 SP07g (#170): review one activity, choose its Development Goals and UN SDGs, and approve or send it back. */
 export default async function ReviewActivityPage({ params }: PageProps<"/activities-to-approve/[id]">) {
   const { id } = await params;
-  const activity = await getActivity(id);
+  const [activity, t] = await Promise.all([getActivity(id), getT()]);
   const officer = activity.createdBy;
+  const subtitle = `${activity.society.name}${officer ? ` · sent by ${officer.displayName}${officer.role ? ` (${ROLE_LABELS[officer.role]})` : ""}` : ""}${sentAt(activity.submittedAt)}`;
   const heading = (
     <div>
       <h1 className="text-[22px] font-bold text-ink">{activity.name}</h1>
-      <p className="text-[12px] text-ink-soft">
-        {activity.society.name}
-        {officer ? ` · sent by ${officer.displayName}${officer.role ? ` (${ROLE_LABELS[officer.role]})` : ""}` : ""}
-        {sentAt(activity.submittedAt)}
-      </p>
+      <p className="text-[12px] text-ink-soft">{subtitle}</p>
     </div>
   );
 
@@ -122,7 +134,18 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
             </p>
             {activity.status === "APPROVED" && (
               <div className="mt-3">
-                <SdgChips sdgs={activity.sdgs} />
+                {activity.classification?.state === "CLASSIFIED" ? (
+                  <DevelopmentGoalChips
+                    categories={activity.classification.categories}
+                    dimensions={activity.classification.dimensions}
+                    sdgs={<SdgChips sdgs={activity.sdgs} t={t} />}
+                  />
+                ) : (
+                  <>
+                    <p className="mb-2 text-[12px] text-ink-soft">{t("dg.notRecorded")}</p>
+                    <SdgChips sdgs={activity.sdgs} t={t} />
+                  </>
+                )}
               </div>
             )}
             {activity.review?.comment && <p className="mt-2 text-[12px] text-ink">“{activity.review.comment}”</p>}
@@ -136,7 +159,7 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
             />
           </section>
         )}
-        <ActivityDetails activity={activity} />
+        <ActivityDetails activity={activity} t={t} />
       </>
     );
   }
@@ -145,14 +168,16 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
     <>
       {breadcrumb}
       <div className="mt-3">
-        <ApprovalRuleNotice />
+        <ApprovalRuleNotice t={t} />
       </div>
       <div className="mt-4">
         <ActivityReview
           actions={{ approve: approveActivity.bind(null, activity.id), sendBack: sendBackActivity.bind(null, activity.id) }}
-          details={<ActivityDetails activity={activity} />}
+          activityName={activity.name}
+          details={<ActivityDetails activity={activity} deciding t={t} />}
           heading={heading}
-          officerName={officer?.displayName ?? "the Society Officer"}
+          officerName={officer?.displayName ?? t("dg.theOfficer")}
+          subtitle={subtitle}
         />
       </div>
     </>

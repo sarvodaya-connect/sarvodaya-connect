@@ -45,6 +45,16 @@ const national: NationalProgrammes = {
     { sdg: 6, completed: 1 },
     ...[1, 2, 3, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((sdg) => ({ sdg, completed: 0 })),
   ],
+  developmentGoals: {
+    classified: { planned: 0, completed: 0 },
+    notClassified: { planned: 3, completed: 2 },
+    byDimension: [
+      { dimension: "SOCIAL", planned: 0, completed: 0 },
+      { dimension: "ECONOMIC", planned: 0, completed: 0 },
+      { dimension: "GOVERNANCE", planned: 0, completed: 0 },
+    ],
+    byCategory: [],
+  },
   recent: [
     {
       id: "a1",
@@ -61,6 +71,7 @@ const national: NationalProgrammes = {
       householdsBenefited: 146,
       createdBy: "Fictional Officer",
       sdgs: [4, 6],
+      classification: { state: "NOT_CLASSIFIED", dimensions: [], categories: [], sdgs: [] },
     },
   ],
 };

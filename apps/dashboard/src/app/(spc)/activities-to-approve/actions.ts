@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getT } from "@/i18n/server";
 import { asSpc } from "@/lib/activities-api";
 import { getSpcViewer } from "@/lib/current-viewer";
-import { platformApi } from "@/lib/platform-api";
+import { cleanGoals, isComplete } from "@/lib/development-goals";
+import { PlatformApiError, platformApi } from "@/lib/platform-api";
 
 function withSpc(init: RequestInit): RequestInit {
   const demo = asSpc();
@@ -13,20 +15,35 @@ function withSpc(init: RequestInit): RequestInit {
 }
 
 /**
- * V5 SP07: the SPC approves with the UN SDGs they chose. The API checks that
- * the SPC is assigned to the society, needs at least one goal and refuses a
- * second decision.
+ * Why an approval was not saved:
+ * - `invalid`: the API refused the choices (400). Its message is shown and the choices stay.
+ * - `stale`: the activity is no longer this SPC's to decide (already decided, 409; or out of scope, 403/404).
+ *   A second decision is never offered.
+ * - `failed`: the API could not be reached or failed. Nothing changed; the SPC can try again.
  */
-export async function approveActivity(id: string, sdgs: number[]): Promise<{ error?: string }> {
+export type ApprovalResult = { error?: string; kind?: "invalid" | "stale" | "failed" };
+
+/**
+ * V6 SP07r/SP07s (#170): the SPC approves with the Development Goals they chose:
+ * one or more dimensions, one or more of the ten categories and the UN SDGs. The
+ * API checks the SPC is assigned to the society, refuses unknown or missing
+ * choices and writes everything with the approval, in one transaction (#169).
+ */
+export async function approveActivity(id: string, input: { dimensions: unknown; categories: unknown; sdgs: unknown }): Promise<ApprovalResult> {
   await getSpcViewer();
-  if (sdgs.length === 0) return { error: "Choose at least one UN SDG to approve." };
+  const t = await getT();
+  const goals = cleanGoals(input);
+  if (!isComplete(goals)) return { error: t("dg.error.incomplete"), kind: "invalid" };
   try {
-    await platformApi(`/activities/${id}/approve`, withSpc({ method: "POST", body: JSON.stringify({ sdgs }) }));
+    await platformApi(`/activities/${id}/approve`, withSpc({ method: "POST", body: JSON.stringify(goals) }));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The approval could not be saved. Try again." };
+    const status = error instanceof PlatformApiError ? error.status : 0;
+    if (status === 409 || status === 403 || status === 404) return { error: t("dg.error.stale"), kind: "stale" };
+    if (status === 400 && error instanceof Error) return { error: error.message, kind: "invalid" };
+    return { error: t("dg.error.failed"), kind: "failed" };
   }
   revalidatePath("/activities-to-approve", "layout");
-  redirect(`/activities-to-approve?approved=${id}`);
+  redirect(`/activities-to-approve?approved=${encodeURIComponent(id)}`);
 }
 
 /** V5 M51b on the desktop: the activity goes back to the Society Officer to change. */
