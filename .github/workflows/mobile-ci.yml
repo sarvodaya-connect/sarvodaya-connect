@@ -37,14 +37,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        # Pinned to the reviewed commit the Android release workflow uses (#184).
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: "3.47.6"
           channel: stable
           cache: true
 
+      # Exactly the versions in pubspec.lock; fails instead of resolving new ones (#184).
       - name: Restore Flutter dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Analyze Flutter application
         run: flutter analyze

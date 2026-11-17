@@ -64,8 +64,17 @@ for attempt in {1..60}; do
 done
 pg_address="$("${compose[@]}" port postgres 5432)"
 minio_address="$("${compose[@]}" port minio 9000)"
+# MinIO is a throwaway container published on loopback only
+# (docker-compose.aws-smoke.yml: "127.0.0.1::9000"), with random credentials,
+# removed when this script exits. Plain HTTP never leaves the runner, and MinIO
+# has no certificate here; deployed S3 is always HTTPS (#184, reviewed
+# exception to Sonar shell:S5332). Refuse anything that is not loopback.
+if [[ "$minio_address" != 127.0.0.1:* ]]; then
+  echo "MinIO must be published on 127.0.0.1 only, not $minio_address" >&2
+  exit 1
+fi
 export DATABASE_URL="postgresql://aws_smoke:$SMOKE_DB_PASSWORD@$pg_address/aws_smoke"
-export S3_ENDPOINT_URL="http://$minio_address"
+export S3_ENDPOINT_URL="http://$minio_address" # NOSONAR: loopback-only throwaway MinIO, checked above (#184)
 for attempt in {1..60}; do
   if curl --fail --silent --max-time 2 "$S3_ENDPOINT_URL/minio/health/live" >/dev/null; then break; fi
   if (( attempt == 60 )); then echo "MinIO did not become ready" >&2; exit 1; fi

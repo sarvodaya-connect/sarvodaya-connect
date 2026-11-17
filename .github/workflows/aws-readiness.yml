@@ -36,8 +36,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # Wheels only (#184): no package's setup.py can run while installing.
       - name: Install CloudFormation linter
-        run: python -m pip install cfn-lint==1.59.0
+        run: "python -m pip install --only-binary :all: cfn-lint==1.59.0"
       - name: Render foundation template without AWS access
         run: |
           python infrastructure/aws/test/render-foundation.py --bootstrap > bootstrap.rendered.yaml
@@ -83,8 +84,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/api/package-lock.json
+      # No dependency lifecycle scripts run (#184); package:lambda generates the
+      # Prisma client itself, the only install step the API needs.
       - name: Install API dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Build Lambda deployment package
         run: npm run package:lambda
       - name: Check packaged handler with PostgreSQL and MinIO

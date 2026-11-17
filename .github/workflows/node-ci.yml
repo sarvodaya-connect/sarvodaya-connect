@@ -45,8 +45,9 @@ jobs:
           cache: npm
           cache-dependency-path: packages/api-contracts/package-lock.json
 
+      # No dependency lifecycle scripts run (#184); the contracts need none.
       - name: Install contract dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Type-check shared contracts
         run: npm run check
@@ -100,8 +101,14 @@ jobs:
           cache: npm
           cache-dependency-path: apps/api/package-lock.json
 
+      # No dependency lifecycle scripts run (#184). The only one the API needs is
+      # its own postinstall, Prisma client generation, which runs explicitly
+      # next. Prisma fetches its checksummed schema engine on first use.
       - name: Install API dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
 
       - name: Lint API
         run: npm run lint
@@ -112,14 +119,15 @@ jobs:
       - name: Run API end-to-end tests
         run: npm run test:e2e
 
+      # The lockfile's Prisma, through npm scripts: npx could fetch another version.
       - name: Validate Prisma schema
-        run: npx prisma validate
+        run: npm run prisma:validate
 
       - name: Apply database migrations
         run: npm run prisma:deploy
 
       - name: Check migrations match the Prisma schema
-        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+        run: npm run prisma:check-migrations
 
       - name: Run database tests
         run: npm run test:db
@@ -150,8 +158,11 @@ jobs:
           cache: npm
           cache-dependency-path: apps/dashboard/package-lock.json
 
+      # No dependency lifecycle scripts run (#184). The dashboard needs none:
+      # native tools (unrs-resolver, sharp, Next's SWC) come as prebuilt
+      # optional packages, and their scripts only check that one is present.
       - name: Install dashboard dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint dashboard
         run: npm run lint

@@ -11,8 +11,10 @@ OUT=.lambda
 rm -rf "$OUT/package" "$OUT/sarvodaya-api.zip"
 mkdir -p "$OUT/package"
 
-npx prisma generate >/dev/null
-npx nest build
+# The lockfile's own Prisma and Nest CLIs, through npm scripts. npx could fetch
+# and run a different version if one were missing (#184).
+npm run --silent prisma:generate >/dev/null
+npm run --silent build
 cp -R dist/. "$OUT/package/"
 # Public AWS RDS trust anchors, reviewed in Git; no network download at build time.
 mkdir -p "$OUT/package/certificates"
@@ -36,7 +38,7 @@ cp package.json package-lock.json "$OUT/package/"
 find "$OUT/package" -name '*.d.ts' -not -path '*/node_modules/*' -delete
 
 # A native binary built on a developer machine would not run on Lambda's Linux.
-if [ -n "$(find "$OUT/package" \( -name '*.node' -o -name '*.dylib' -o -name '*.so' \) -print -quit)" ]; then
+if [[ -n "$(find "$OUT/package" \( -name '*.node' -o -name '*.dylib' -o -name '*.so' \) -print -quit)" ]]; then
   echo "Native binaries found in the package; build it on Linux or in the AWS SAM build image." >&2
   exit 1
 fi
