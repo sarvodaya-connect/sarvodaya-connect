@@ -7,6 +7,7 @@ import { Icon } from "@/components/dashboard/icon";
 import {
   ChangeRoleDialog,
   CreateAccountDrawer,
+  DeleteAccountDialog,
   DisableAccountDialog,
   SetPasswordDialog,
 } from "@/components/dashboard/identity-forms";
@@ -181,6 +182,10 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                           )}
                           {account.id !== viewer.id && account.status !== "INACTIVE" && (
                             <DisableAccountDialog account={account} />
+                          )}
+                          {/* HQ cannot delete itself; the API also refuses the last active HQ administrator. */}
+                          {account.id !== viewer.id && (
+                            <DeleteAccountDialog account={{ ...account, scopeLabel: `${ROLE_LABELS[account.role]} · ${scope}` }} />
                           )}
                         </div>
                       </td>

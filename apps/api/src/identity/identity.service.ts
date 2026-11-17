@@ -89,6 +89,7 @@ const AUDIT_ACTIONS: Record<AuditType, readonly string[]> = {
     'ACCOUNT_SCOPE_UPDATED',
     'ACCOUNT_PASSWORD_CHANGED',
     'ACCOUNT_DISABLED',
+    'ACCOUNT_DELETED',
     'LOCAL_HQ_BOOTSTRAPPED',
     'COGNITO_HQ_LINKED',
   ],
@@ -112,6 +113,14 @@ const AUDIT_TYPE_OF: Record<string, AuditType> = Object.fromEntries(
   ),
 );
 const LOCKOUT_MS = 15 * 60_000;
+
+/** What happened to a deleted account's Cognito sign-in, as the change log says it. */
+const SIGN_IN_OUTCOME = {
+  DELETED: 'sign-in deleted',
+  DISABLED:
+    'sign-in disabled and signed out (deleting it needs the AdminDeleteUser permission)',
+  NONE: 'no sign-in to delete',
+} as const;
 
 /** HQ-facing messages for Cognito refusals; never the password or AWS detail. */
 function cognitoFailure(error: unknown): Error {
@@ -233,6 +242,8 @@ export class IdentityService {
   async accounts(principal: Principal, now = new Date()) {
     this.hq(principal);
     const rows = await this.db.platformAccount.findMany({
+      // A deleted account is kept only so history can name the person.
+      where: { status: { not: 'DELETED' } },
       orderBy: { displayName: 'asc' },
       select: {
         id: true,
@@ -452,7 +463,8 @@ export class IdentityService {
     this.hq(principal);
     await this.validateScope(input);
     const current = await this.db.platformAccount.findUnique({ where: { id } });
-    if (!current) throw new NotFoundException('Account not found');
+    if (!current || current.status === 'DELETED')
+      throw new NotFoundException('Account not found');
     if (id === principal.id && input.role !== 'HQ_ADMIN')
       throw new BadRequestException('You cannot remove your own HQ access');
     const result = await this.db.$transaction(async (tx) => {
@@ -495,7 +507,9 @@ export class IdentityService {
     if (!this.cognito) this.localOnly();
     this.hq(principal);
     const account = await this.db.platformAccount.findUnique({ where: { id } });
-    if (!account) throw new NotFoundException('Account not found');
+    // A deleted account never comes back: a new password would reactivate it.
+    if (!account || account.status === 'DELETED')
+      throw new NotFoundException('Account not found');
     this.validatePassword(input.password, account.username);
     // Cognito: permanent, so the person signs in with it straight away (V5 D16).
     // This also finishes an account whose creation stopped part-way (PENDING).
@@ -535,7 +549,8 @@ export class IdentityService {
     if (id === principal.id)
       throw new BadRequestException('You cannot disable your own account');
     const current = await this.db.platformAccount.findUnique({ where: { id } });
-    if (!current) throw new NotFoundException('Account not found');
+    if (!current || current.status === 'DELETED')
+      throw new NotFoundException('Account not found');
     const result = await this.db.$transaction(async (tx) => {
       await tx.platformAccount.update({
         where: { id },
@@ -554,6 +569,153 @@ export class IdentityService {
     if (current.providerSubject)
       await this.cognitoFollowUp(id, current.username, true);
     return result;
+  }
+  /**
+   * HQ deletes an account for good. The person's Cognito sign-in is deleted,
+   * every session and temporary district view ends, and the password, phone,
+   * email and society assignments are erased; the username is freed for reuse.
+   * The row stays only as a locked record with the name, role and district,
+   * because the change log, grade requests, documents and incidents name people
+   * by account id. Society records are never touched, and it cannot be undone.
+   *
+   * Everything happens in one transaction that locks the account (and, for an
+   * HQ account, every active HQ account), so HQ can never delete itself or the
+   * last active HQ administrator, even when two administrators act at once.
+   * Cognito is changed inside it: if Cognito refuses, nothing is changed.
+   */
+  async deleteAccount(id: string, principal: Principal) {
+    this.hq(principal);
+    if (id === principal.id)
+      throw new BadRequestException('You cannot delete your own account');
+    const found = await this.db.platformAccount.findUnique({
+      where: { id },
+      select: { role: true, status: true },
+    });
+    if (!found || found.status === 'DELETED')
+      throw new NotFoundException('Account not found');
+    const removedAt = new Date();
+    return this.db.$transaction(
+      async (tx) => {
+        // One ordered statement locks every active HQ account, so no deadlock.
+        const activeHq =
+          found.role === 'HQ_ADMIN'
+            ? await tx.$queryRaw<{ id: string }[]>`
+                SELECT id FROM platform_accounts
+                WHERE role = 'HQ_ADMIN' AND status = 'ACTIVE'
+                ORDER BY id FOR UPDATE`
+            : [];
+        await tx.$queryRaw`SELECT id FROM platform_accounts WHERE id = ${id}::uuid FOR UPDATE`;
+        const current = await tx.platformAccount.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            username: true,
+            role: true,
+            status: true,
+            districtId: true,
+            providerSubject: true,
+          },
+        });
+        if (!current || current.status === 'DELETED')
+          throw new NotFoundException('Account not found');
+        if (
+          current.role === 'HQ_ADMIN' &&
+          current.status === 'ACTIVE' &&
+          !activeHq.some((row) => row.id !== id)
+        )
+          throw new ConflictException(
+            'This is the last active HQ administrator. Create another HQ account before deleting this one.',
+          );
+        const signIn = await this.deleteCognitoSignIn(current, tx);
+        await tx.platformAccount.update({
+          where: { id },
+          data: {
+            status: 'DELETED',
+            username: `deleted-${id}`,
+            phone: '',
+            email: null,
+            passwordHash: null,
+            providerSubject: null,
+            societyIds: [],
+            failedLoginCount: 0,
+            lockedUntil: null,
+            sessionsRevokedAt: removedAt,
+          },
+        });
+        await tx.accountSession.deleteMany({ where: { accountId: id } });
+        await tx.accountInvitation.deleteMany({ where: { accountId: id } });
+        await tx.districtAccessGrant.updateMany({
+          where: { deputyId: id, revokedAt: null },
+          data: { revokedAt: removedAt },
+        });
+        await tx.platformAuditEvent.create({
+          data: {
+            actorId: principal.id,
+            actorName: principal.displayName,
+            actorRole: principal.roles[0] ?? null,
+            action: 'ACCOUNT_DELETED',
+            targetId: id,
+            districtId: current.districtId,
+            detail: `Role ${current.role}; ${SIGN_IN_OUTCOME[signIn]}; sessions and temporary access revoked; history kept`,
+          },
+        });
+        return { status: 'DELETED' as const, signIn };
+      },
+      // Cognito is called inside the transaction; give it time to answer.
+      { maxWait: 10_000, timeout: 30_000 },
+    );
+  }
+  /**
+   * Deletes the account's own Cognito user. A Cognito user with this username
+   * that belongs to another account is never touched. Until the API's IAM role
+   * may delete users, the user is disabled and signed out instead, and the
+   * change log says so; any other refusal stops the whole deletion.
+   */
+  private async deleteCognitoSignIn(
+    account: { id: string; username: string; providerSubject: string | null },
+    tx: Pick<PrismaService, 'platformAccount'>,
+  ): Promise<keyof typeof SIGN_IN_OUTCOME> {
+    if (!this.cognito) return 'NONE';
+    let subject: string | null;
+    try {
+      subject = await this.cognitoAdmin.findSubject(account.username);
+    } catch (error) {
+      throw cognitoFailure(error);
+    }
+    if (!subject) return 'NONE';
+    const linked = await tx.platformAccount.findUnique({
+      where: { providerSubject: subject },
+      select: { id: true },
+    });
+    if (
+      (linked && linked.id !== account.id) ||
+      (account.providerSubject && account.providerSubject !== subject)
+    ) {
+      this.logger.warn(
+        `Cognito user for deleted account ${account.id} belongs to another sign-in; it was left unchanged`,
+      );
+      return 'NONE';
+    }
+    try {
+      await this.cognitoAdmin.deleteUser(account.username);
+      return 'DELETED';
+    } catch (error) {
+      if (
+        !(error instanceof CognitoAdminError) ||
+        error.reason !== 'NOT_PERMITTED'
+      )
+        throw cognitoFailure(error);
+    }
+    try {
+      await this.cognitoAdmin.disable(account.username);
+      await this.cognitoAdmin.signOut(account.username);
+    } catch (error) {
+      throw cognitoFailure(error);
+    }
+    this.logger.warn(
+      `Cognito user for deleted account ${account.id} was disabled, not deleted: AdminDeleteUser is not allowed yet`,
+    );
+    return 'DISABLED';
   }
   async login(input: LoginDto, now = new Date()) {
     this.localOnly();

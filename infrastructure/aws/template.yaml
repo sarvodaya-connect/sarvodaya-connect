@@ -161,8 +161,8 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/societies/*
                 - !Sub arn:${AWS::Partition}:s3:::${DocumentsBucketName}/incidents/*
             # HQ account management (D16): create a user, set HQ's permanent password,
-            # enable or disable it and end its sessions. One user pool only; no delete,
-            # no attribute or pool changes, no listing of users.
+            # enable or disable it, end its sessions and delete it when HQ deletes the
+            # account. One user pool only; no attribute or pool changes, no listing of users.
             - Sid: CognitoAccountAdmin
               Effect: Allow
               Action:
@@ -172,6 +172,7 @@ Resources:
                 - cognito-idp:AdminEnableUser
                 - cognito-idp:AdminDisableUser
                 - cognito-idp:AdminUserGlobalSignOut
+                - cognito-idp:AdminDeleteUser
               Resource: !Sub
                 - arn:${AWS::Partition}:cognito-idp:${PoolRegion}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
                 - PoolRegion: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]

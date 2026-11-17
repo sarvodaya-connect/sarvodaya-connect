@@ -1,5 +1,6 @@
 import {
   AdminCreateUserCommand,
+  AdminDeleteUserCommand,
   AdminDisableUserCommand,
   AdminGetUserCommand,
   AdminSetUserPasswordCommand,
@@ -57,7 +58,8 @@ describe('AwsCognitoAccountAdmin (no AWS calls; the client is a stub)', () => {
       ['InvalidPasswordException', 'INVALID_PASSWORD'],
       ['UsernameExistsException', 'USERNAME_EXISTS'],
       ['UserNotFoundException', 'NOT_FOUND'],
-      ['AccessDeniedException', 'UNAVAILABLE'],
+      // The IAM role does not allow the call yet (for example AdminDeleteUser before a deploy).
+      ['AccessDeniedException', 'NOT_PERMITTED'],
       ['TooManyRequestsException', 'UNAVAILABLE'],
     ] as const) {
       const { admin: cognito } = admin(() => {
@@ -68,6 +70,22 @@ describe('AwsCognitoAccountAdmin (no AWS calls; the client is a stub)', () => {
       expect(error).toMatchObject({ reason });
       expect(String((error as Error).message)).not.toContain('fictional-pass-1');
     }
+  });
+
+  it('deletes a user, and counts one that is already gone as deleted', async () => {
+    const { admin: cognito, send } = admin(() => ({}));
+    await cognito.deleteUser('fictional.leaver');
+    const command = send.mock.calls[0]![0] as AdminDeleteUserCommand;
+    expect(command).toBeInstanceOf(AdminDeleteUserCommand);
+    expect(command.input).toEqual({ UserPoolId: POOL, Username: 'fictional.leaver' });
+    const gone = admin(() => {
+      throw failure('UserNotFoundException');
+    });
+    await expect(gone.admin.deleteUser('fictional.leaver')).resolves.toBeUndefined();
+    const denied = admin(() => {
+      throw failure('AccessDeniedException');
+    });
+    await expect(denied.admin.deleteUser('fictional.leaver')).rejects.toMatchObject({ reason: 'NOT_PERMITTED' });
   });
 
   it('needs a valid pool id from the configuration', () => {
