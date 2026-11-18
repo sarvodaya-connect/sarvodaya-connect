@@ -273,11 +273,15 @@ Resources:
       # S3 server access logs can be delivered only to SSE-S3 encrypted buckets.
       BucketEncryption:
         ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]
+      # Each log file has a unique key, so versioning stores nothing extra
+      # unless a log is deleted or overwritten; that copy is kept for 30 days.
+      VersioningConfiguration: {Status: Enabled}
       LifecycleConfiguration:
         Rules:
           - Id: ExpireAccessLogs
             Status: Enabled
             ExpirationInDays: 90
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
             AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
   DocumentAccessLogsPolicy:
     Type: AWS::S3::BucketPolicy

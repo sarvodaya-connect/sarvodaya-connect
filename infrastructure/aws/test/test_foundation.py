@@ -146,8 +146,10 @@ class FoundationSafety(unittest.TestCase):
         self.assertNotIn('LoggingConfiguration', logs['Properties'])
         self.assertEqual(logs['Properties']['OwnershipControls'],
                          {'Rules': [{'ObjectOwnership': 'BucketOwnerEnforced'}]})
+        self.assertEqual(logs['Properties']['VersioningConfiguration'], {'Status': 'Enabled'})
         rule = logs['Properties']['LifecycleConfiguration']['Rules'][0]
         self.assertEqual((rule['Status'], rule['ExpirationInDays']), ('Enabled', 90))
+        self.assertEqual(rule['NoncurrentVersionExpiration'], {'NoncurrentDays': 30})
         statements = self.resources['DocumentAccessLogsPolicy']['Properties']['PolicyDocument']['Statement']
         self.assertEqual(len(statements), 2)
         write = statements[1]

@@ -31,8 +31,9 @@ SonarCloud findings reviewed in issue #186. The template choices below are delib
 - **Build bucket without versioning or access logs** (`Artifacts`): holds only
   `sam deploy` packages, rebuilt from the reviewed commit and stored under
   content-hash keys, so nothing is overwritten. No personal data.
-- **Log bucket without its own logging or versioning** (`DocumentAccessLogs`): a
-  log bucket logging to itself would loop, and logs are written once and expire.
+- **Log bucket without its own access logging** (`DocumentAccessLogs`): a log
+  bucket logging to itself would loop. It is versioned, so a deleted or
+  overwritten log is kept for 30 days.
 
 ## Deployment order: bootstrap, then foundation
 
@@ -70,7 +71,7 @@ there is no automatic deletion/recreation step in this fix.
 | NAT | One AL2023 ARM64 `t4g.nano`, encrypted 8 GB gp3 with 2 GiB disk-backed swap before package installation, one public IPv4; Standard CPU credits, IMDSv2; no SSH, key pair or instance profile |
 | Database | Private PostgreSQL 17.11 `db.t4g.micro`, Single-AZ, encrypted 20 GB gp3; seven-day backups, deletion protection, final snapshot, no paid extended-support enrollment |
 | Files | Private document/build buckets; AES256 encryption, HTTPS enforcement, public-access blocks; document versioning and old-version cleanup after 30 days |
-| Access logs | S3 server access logs for the document bucket, in a separate private log bucket (same protections) that deletes logs after 90 days; only S3 logging for the document bucket in this account may write to it |
+| Access logs | S3 server access logs for the document bucket, in a separate private, versioned log bucket (same protections) that deletes logs after 90 days and replaced or deleted copies after 30; only S3 logging for the document bucket in this account may write to it |
 | Sign-in | Admin-only Cognito Essentials pool; public dashboard/mobile clients using the repository's password/refresh flows; no users or passwords |
 | Configuration | Small parameter-preparation Lambda, named execution role, 14-day log group and two Standard SecureStrings encrypted with managed `aws/ssm` |
 
