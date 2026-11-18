@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 
 import { readableDistrictIds, type Principal } from '../auth/principal.js';
 import type { SocietyScope } from './national.repository.js';
+import { byInstant } from '../common/compare.js';
 
 export type ProgrammeScopeKind =
   'DISTRICT' | 'ASSIGNED' | 'ASSIGNED_AND_DISTRICT';
@@ -64,6 +65,6 @@ export function delegationEndsAt(
         Date.parse(grant.expiresAt) > now.getTime(),
     )
     .map((grant) => grant.expiresAt)
-    .sort();
+    .sort(byInstant);
   return ends[0] ?? null;
 }

@@ -15,6 +15,7 @@ import { AppModule } from '../../src/app.module.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -1054,8 +1055,8 @@ describe('Issue #145 Village Economic Profile (PostgreSQL)', () => {
       temporaryAccessEndsAt: null,
     });
     expect(dm.districts.map((d) => d.id)).toEqual([north]);
-    expect(dm.societies.map((s) => s.id).sort()).toEqual(
-      [society.n1, society.n2].sort(),
+    expect(dm.societies.map((s) => s.id).sort(byCodeUnit)).toEqual(
+      [society.n1, society.n2].sort(byCodeUnit),
     );
     // Asking for another district gives nothing, not that district's societies.
     expect(
@@ -1094,8 +1095,8 @@ describe('Issue #145 Village Economic Profile (PostgreSQL)', () => {
     expect(hq.districts.map((d) => d.id)).toEqual(
       expect.arrayContaining([north, central]),
     );
-    expect(hq.societies.map((s) => s.id).sort()).toEqual(
-      [society.n1, society.n2].sort(),
+    expect(hq.societies.map((s) => s.id).sort(byCodeUnit)).toEqual(
+      [society.n1, society.n2].sort(byCodeUnit),
     );
   });
 });

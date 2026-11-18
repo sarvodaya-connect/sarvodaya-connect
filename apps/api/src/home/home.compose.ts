@@ -7,6 +7,7 @@ import type {
   HomeStaffMember,
   HomeSummary,
 } from './home.types.js';
+import { byName } from '../common/compare.js';
 
 /** A society is "not updated" when its record has not changed for this many days. */
 export const NOT_UPDATED_DAYS = 90;
@@ -364,7 +365,7 @@ export function composeSocietyList(
         ...new Set(
           rows.map((r) => r.dsDivision).filter((d): d is string => !!d),
         ),
-      ].sort(),
+      ].sort(byName),
       spcs: people(spc),
       ddms: people(ddm),
     },
