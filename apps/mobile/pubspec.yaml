@@ -34,6 +34,7 @@ flutter:
     - assets/branding/sarvodaya_connect_logo_white.png
     - assets/branding/sarvodaya_connect_wordmark.png
     - assets/sdg/
+    - assets/development_goals/
 
 flutter_launcher_icons:
   android: true

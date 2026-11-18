@@ -3524,5 +3524,57 @@
         "type": "int"
       }
     }
+  },
+  "approvalReview": "Review Activity",
+  "approvalSocial": "Social",
+  "approvalEconomic": "Economic",
+  "approvalGovernance": "Governance",
+  "approvalCommunityEducation": "Community education",
+  "approvalChildWellbeing": "Child wellbeing",
+  "approvalCulture": "Culture",
+  "approvalEconomy": "Economy",
+  "approvalHealthAndNutrition": "Health and nutrition",
+  "approvalHousingAndInfrastructure": "Housing and infrastructure",
+  "approvalSpiritualDevelopment": "Spiritual development",
+  "approvalAgriculture": "Agriculture",
+  "approvalEnvironment": "Environment",
+  "approvalDimensions": "Sarvodaya dimensions",
+  "approvalCategories": "Sarvodaya categories",
+  "approvalSdgs": "UN SDGs",
+  "approvalConfirm": "Check and approve",
+  "approvalChooseDimension": "Choose at least one Sarvodaya dimension.",
+  "approvalChooseCategory": "Choose at least one Sarvodaya category.",
+  "approvalChooseSdg": "Choose at least one UN SDG to approve.",
+  "approvalOnlySpc": "Only the society’s SPC can approve its activities.",
+  "approvalNoLongerWaiting": "This activity is no longer waiting for approval.",
+  "approvalSendBack": "Send back",
+  "approvalBack": "Back",
+  "approvalSaving": "Approving…",
+  "approvalApprove": "Approve",
+  "approvalContinue": "Continue",
+  "approvalApproved": "Activity approved",
+  "approvalNextActivity": "Next activity",
+  "approvalDone": "Done",
+  "approvalClassificationMissing": "Sarvodaya classification was not recorded.",
+  "approvalStep": "Step {step} of 4",
+  "@approvalStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalApproveActivity": "Approve activity",
+  "approvalSelected": "Selected",
+  "approvalTapToSelect": "Tap to select",
+  "approvalSelectDimensions": "Select all dimensions that apply.",
+  "approvalSelectCategories": "Select all categories that apply.",
+  "approvalSelectionCount": "Selected: {count}",
+  "@approvalSelectionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

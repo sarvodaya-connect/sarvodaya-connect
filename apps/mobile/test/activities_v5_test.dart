@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/activity_screens.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/society_record_api.dart';
+import 'package:sarvodaya_connect_mobile/src/society_record/society_record_models.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/society_record_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
@@ -144,7 +145,7 @@ void main() {
     );
   });
 
-  group('M50–M52 SPC approval', () {
+  group('M50–M57 SPC approval', () {
     testWidgets('lists waiting activities for the SPC only', (tester) async {
       await _pump(
         tester,
@@ -162,7 +163,7 @@ void main() {
     });
 
     testWidgets(
-      'the SPC must choose at least one UN SDG, then approves (M51, M52)',
+      'the SPC validates each step and approves multiple classifications',
       (tester) async {
         final store = await _pump(
           tester,
@@ -172,6 +173,45 @@ void main() {
         await _tap(tester, find.text('Youth leadership camp'));
         expect(find.text('Review Activity'), findsOneWidget);
 
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          find.text('Choose at least one Sarvodaya dimension.'),
+          findsOneWidget,
+        );
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Economic'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          find.text('Choose at least one Sarvodaya category.'),
+          findsOneWidget,
+        );
+        await _tap(
+          tester,
+          find.widgetWithText(CheckboxListTile, 'Community education'),
+        );
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Governance'));
+        await _tap(tester, find.widgetWithText(OutlinedButton, 'Back'));
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Social'),
+              )
+              .value,
+          isTrue,
+        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Governance'),
+              )
+              .value,
+          isTrue,
+        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+
         // All 17 official goals, each named for screen readers.
         expect(find.bySemanticsLabel('SDG 1: No Poverty'), findsOneWidget);
         expect(
@@ -179,7 +219,7 @@ void main() {
           findsOneWidget,
         );
 
-        await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
         expect(
           find.text('Choose at least one UN SDG to approve.'),
           findsOneWidget,
@@ -196,12 +236,19 @@ void main() {
             'SDG 16: Peace, Justice and Strong Institutions',
           ),
         );
-        expect(
-          find.text('Tap every goal that applies (2 chosen)'),
-          findsOneWidget,
-        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(find.text('Check and approve'), findsOneWidget);
+        expect(find.text('Social · Economic'), findsOneWidget);
+        expect(find.text('Community education · Governance'), findsOneWidget);
 
+        store.offline = true;
         await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
+        expect(find.textContaining('You are offline.'), findsOneWidget);
+        expect(find.text('Activity approved'), findsNothing);
+        expect(find.text('Community education · Governance'), findsOneWidget);
+
+        store.offline = false;
+        await _tap(tester, find.widgetWithText(FilledButton, 'Try again'));
         expect(find.text('Activity approved'), findsOneWidget);
         expect(find.text('SDG 4 · Quality Education'), findsOneWidget);
         expect(
@@ -215,6 +262,14 @@ void main() {
           (a) => a.name == 'Youth leadership camp',
         );
         expect(camp.sdgs, [4, 16]);
+        expect(camp.classification?.dimensions, [
+          ActivityDimension.social,
+          ActivityDimension.economic,
+        ]);
+        expect(camp.classification?.categories, [
+          ActivityCategory.communityEducation,
+          ActivityCategory.governance,
+        ]);
         expect(
           () => store.societyRecords.approveActivity(camp.id, [4]),
           throwsA(isA<SocietyRecordException>()),
@@ -273,6 +328,13 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         await tester.drag(find.byType(ListView).first, const Offset(0, -1500));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+        expect(tester.takeException(), isNull);
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await tester.drag(find.byType(ListView).first, const Offset(0, -700));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       });
