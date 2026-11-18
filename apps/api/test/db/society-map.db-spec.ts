@@ -13,6 +13,7 @@ import { AppModule } from '../../src/app.module.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -39,7 +40,7 @@ describe('Society map pins within each role’s scope (PostgreSQL)', () => {
   const get = (token: string, path: string) =>
     http().get(`/api/v1${path}`).set('Authorization', `Bearer ${token}`);
   const ids = (body: { points: Pin[] }) =>
-    body.points.map((point) => point.id).sort();
+    body.points.map((point) => point.id).sort(byCodeUnit);
 
   async function account(
     label: string,
@@ -246,7 +247,7 @@ describe('Society map pins within each role’s scope (PostgreSQL)', () => {
   it('gives a DM their own district only', async () => {
     const map = (await get(tokens.dm!.token, '/societies/map').expect(200))
       .body;
-    expect(ids(map)).toEqual([a1, a3].sort());
+    expect(ids(map)).toEqual([a1, a3].sort(byCodeUnit));
     expect(map.withoutLocation).toBe(1);
   });
 
@@ -279,7 +280,7 @@ describe('Society map pins within each role’s scope (PostgreSQL)', () => {
     });
     const during = (await get(tokens.ddm!.token, '/societies/map').expect(200))
       .body;
-    expect(ids(during)).toEqual([a1, b1].sort());
+    expect(ids(during)).toEqual([a1, b1].sort(byCodeUnit));
     expect(during.withoutLocation).toBe(1);
 
     await db.districtAccessGrant.update({

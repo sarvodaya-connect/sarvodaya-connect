@@ -2,10 +2,19 @@
     <!-- The only permission: the app talks to the Sarvodaya Connect API over HTTPS.
          Documents are chosen with the system file picker, which needs no storage permission. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- No Android backup: the only saved setting is the chosen language, and
+         sign-in is kept in memory only, so nothing worth restoring would be lost.
+         HTTPS only, including Android versions before 9 where plain HTTP was
+         allowed by default; debug builds allow plain HTTP to this computer only
+         (src/debug/res/xml/network_security_config.xml). -->
     <application
         android:label="Sarvodaya Connect"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"

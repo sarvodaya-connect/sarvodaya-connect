@@ -11,6 +11,7 @@ import {
   SIGN_IN_LOCKED,
 } from '../../src/identity/identity.service.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
   throw new Error('Use a disposable local PostgreSQL DATABASE_URL');
@@ -314,7 +315,9 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
     // A Society Officer has exactly one society, inside the chosen district.
     await post('/identity/accounts', { ...base, societyIds: [societyId, neighbourId] }).expect(400);
     await post('/identity/accounts', { ...base, societyIds: [outsiderId] }).expect(400);
-    await post('/identity/accounts', { ...base, password: 'no-digits-here' }).expect(400);
+    // Long enough, but without a number.
+    const noDigits = `fictional-${randomUUID().replace(/[\d-]/g, '')}`;
+    await post('/identity/accounts', { ...base, password: noDigits }).expect(400);
     await post('/identity/accounts', { ...base, password: base.username }).expect(400);
     const created = await post('/identity/accounts', base).expect(201);
     accounts.push(created.body.account.id);
@@ -387,15 +390,16 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .expect(401);
     const changed = await db.platformAccount.findUniqueOrThrow({ where: { id: ddm.id } });
     expect(changed.role).toBe('PROGRAMME_COORDINATOR');
-    expect(changed.societyIds.sort()).toEqual([societyId, neighbourId].sort());
+    expect(changed.societyIds.sort(byCodeUnit)).toEqual([societyId, neighbourId].sort(byCodeUnit));
     const grant = await db.districtAccessGrant.findFirstOrThrow({ where: { deputyId: ddm.id } });
     expect(grant.revokedAt).not.toBeNull();
 
     await post(`/identity/accounts/${spc.id}/disable`, {}).expect(201);
     await post('/identity/login', { username: spc.username, password: 'test-password-123' }, '').expect(401);
     // Setting a new password lets a disabled person back in.
-    await post(`/identity/accounts/${spc.id}/password`, { password: 'welcome-back-123' }).expect(201);
-    await post('/identity/login', { username: spc.username, password: 'welcome-back-123' }, '').expect(201);
+    const welcomeBack = `fictional-${randomUUID()}-1`;
+    await post(`/identity/accounts/${spc.id}/password`, { password: welcomeBack }).expect(201);
+    await post('/identity/login', { username: spc.username, password: welcomeBack }, '').expect(201);
   });
 
   it('HQ deletes an account: its sessions end, it can never sign in again, and it leaves the account list', async () => {

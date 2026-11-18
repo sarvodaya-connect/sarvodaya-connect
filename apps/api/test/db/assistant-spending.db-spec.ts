@@ -39,6 +39,7 @@ import type { Principal } from '../../src/auth/principal.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -538,7 +539,7 @@ describe('SarvoAI spending limit (PostgreSQL)', () => {
         'reserved_micro_usd',
         'status',
         'updated_at',
-      ].sort(),
+      ].sort(byCodeUnit),
     );
   });
 

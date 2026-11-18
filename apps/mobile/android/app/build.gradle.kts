@@ -54,6 +54,12 @@ android {
     buildTypes {
         release {
             signingConfig = if (uploadKey.isNotEmpty()) signingConfigs.getByName("upload") else null
+            // R8 shrinks and obfuscates the Android code. Flutter already turns
+            // this on for release builds and adds its own keep rules; stating it
+            // here keeps it on. The R8 mapping file goes inside the app bundle
+            // for Google Play to decode crash reports.
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }
