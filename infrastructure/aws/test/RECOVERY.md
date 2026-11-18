@@ -88,7 +88,8 @@ production resources and DNS remain outside this recovery.
    previously worked without attaching the broad role-manager admin role.
 6. Inspect the import: exactly `Documents`, `Artifacts`, `UserPool`, all actions
    `Import`, no creation/deletion/property changes. All three use `DeletionPolicy:
-   Retain`; their definitions are copied unchanged from the full foundation.
+   Retain`; their definitions are copied unchanged from the full foundation,
+   except that `Documents` omits access logging until step 8.
    Enable termination protection on the stack before execution. Execute only
    after owner review; wait for `IMPORT_COMPLETE`.
 7. Verify imported bucket settings with drift detection and service read APIs.
@@ -97,7 +98,10 @@ production resources and DNS remain outside this recovery.
    import does not establish that service settings match the template.
 8. Prepare a separate **UPDATE** change set using the complete corrected
    `foundation.rendered.yaml`. Retain the same imported logical IDs. Expect
-   additions for missing network/database/client/policy resources and no
+   additions for missing network/database/client/policy resources, the new
+   document access-log bucket and its policy, one in-place change adding
+   `LoggingConfiguration` to `Documents` (the import template leaves it out
+   because an import cannot create the log bucket), and no
    replacement/deletion of the retained buckets/pool. Inspect actual property
    changes, stop on unexpected changes, and execute only after review. Prefer
    preserving successfully provisioned resources on a new failure, rather than
