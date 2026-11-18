@@ -177,7 +177,7 @@ LAMBDA_HANDLER_PATH=.lambda/package/lambda.js npm run lambda:local
 SMOKE_HQ_USERNAME=<local hq> SMOKE_HQ_PASSWORD=<password> npm run smoke:local
 ```
 
-`scripts/smoke-local.ts` checks, in order: HQ signs in; HQ creates a fictional SPC for a seeded society; the SPC signs in; `GET /home` returns the SPC home; `GET /home` without a token is 401; the API returns a 15-minute pre-signed upload URL whose key holds only ids; the file uploads straight to storage; the same URL with a different content type is refused (403); `POST /documents/:id/complete` confirms the size; the pre-signed download returns the same bytes; an unsigned GET is refused. **All 11 checks passed** against the packaged handler, and the 128 JSON log lines contained no password, token, document content or signature.
+`scripts/smoke-local.ts` talks only to an API on this computer unless `SMOKE_ALLOW_REMOTE=1` is set for an agreed HTTPS test environment, follows pre-signed links only to local storage or Amazon S3 over HTTPS, refuses redirects and puts only UUIDs into request paths (`scripts/smoke-safety.ts`). It checks, in order: HQ signs in; HQ creates a fictional SPC for a seeded society; the SPC signs in; `GET /home` returns the SPC home; `GET /home` without a token is 401; the API returns a 15-minute pre-signed upload URL whose key holds only ids; the file uploads straight to storage; the same URL with a different content type is refused (403); `POST /documents/:id/complete` confirms the size; the pre-signed download returns the same bytes; an unsigned GET is refused. **All 11 checks passed** against the packaged handler, and the 128 JSON log lines contained no password, token, document content or signature.
 
 ### Database: RDS through RDS Proxy
 
