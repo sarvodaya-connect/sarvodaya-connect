@@ -48,6 +48,18 @@ function hmac(key: string | Buffer, value: string): Buffer {
   return createHmac('sha256', key).update(value, 'utf8').digest();
 }
 
+/**
+ * Signature Version 4 sorts header names and encoded query parameter names by
+ * character code, so "X-Amz-Date" comes before "response-content-type".
+ * Alphabetical (locale) order would put them the other way round and S3 would
+ * reject the signature. Names here are ASCII, so code units equal code points.
+ */
+function byCharacterCode(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
 function amzDate(now: Date): string {
   return now
     .toISOString()
@@ -70,7 +82,7 @@ export function presignS3Url(options: PresignS3Options): string {
   for (const [name, value] of Object.entries(options.signedHeaders ?? {})) {
     headers[name.toLowerCase()] = value.trim();
   }
-  const headerNames = Object.keys(headers).sort();
+  const headerNames = Object.keys(headers).sort(byCharacterCode);
   const signedHeaderList = headerNames.join(';');
 
   const query: Record<string, string> = {
@@ -86,7 +98,7 @@ export function presignS3Url(options: PresignS3Options): string {
   };
   const canonicalQuery = Object.entries(query)
     .map(([name, value]) => [awsUriEncode(name), awsUriEncode(value)] as const)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .sort(([a], [b]) => byCharacterCode(a, b))
     .map(([name, value]) => `${name}=${value}`)
     .join('&');
 

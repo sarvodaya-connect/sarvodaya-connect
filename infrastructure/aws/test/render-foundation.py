@@ -21,14 +21,22 @@ if args.bootstrap:
 elif '__PARAMETER_CODE__' in source:
     raise SystemExit('The foundation must not generate its own prerequisite parameters')
 if args.retained_import:
-    # Preserve resource definitions byte-for-byte; never create a recovery copy
-    # of the database/network or weaken a retained resource's safeguards.
+    # Preserve resource definitions byte-for-byte (apart from the access-logging
+    # setting below); never create a recovery copy of the database/network or
+    # weaken a retained resource's safeguards.
     header, resources = source.split('Resources:\n', 1)
     resources = resources.split('Outputs:\n', 1)[0]
     blocks = re.split(r'(?=^  [A-Za-z0-9]+:\n)', resources, flags=re.MULTILINE)
     selected = [block for block in blocks if block.split(':', 1)[0].strip() in {'Documents', 'Artifacts', 'UserPool'}]
     if len(selected) != 3:
         raise SystemExit('Expected exactly three retained resources for recovery import')
+    # The one exception: document access logging names the log bucket, which an
+    # import cannot create. The UPDATE after the import adds both.
+    logging = re.compile(r'^      # Downloads use pre-signed links.*\n(?:      #.*\n)*      LoggingConfiguration: .*\n', re.MULTILINE)
+    documents = selected[0]
+    if not documents.startswith('  Documents:\n') or len(logging.findall(documents)) != 1:
+        raise SystemExit('Expected exactly one documents access-logging setting')
+    selected[0] = logging.sub('', documents)
     start, end = header.index('  NatImage:\n'), header.index('  DashboardOrigin:\n')
     header = header[:start] + header[end:]
     header = re.sub(r'^Description:.*$', 'Description: Sarvodaya Connect retained-resource IMPORT only; requires approved recovery plan', header, count=1, flags=re.MULTILINE)
