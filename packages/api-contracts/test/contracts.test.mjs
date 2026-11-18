@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ACTIVITY_CATEGORIES,
   ACCOUNT_STATUSES,
   ACCOUNT_TYPES,
   AUTH_PROVIDERS,
@@ -120,4 +121,12 @@ test("Village Economic Profile catalogue is consistent (issue #145)", async () =
   assert.deepEqual(economy.PRODUCTION_MEASUREMENTS, ["ACTUAL", "ESTIMATED"]);
   assert.deepEqual(economy.PRODUCTION_BASES, ["WEEKLY", "MONTHLY", "SEASONAL"]);
   assert.deepEqual(economy.BUSINESS_STATUSES, ["OPERATING", "SEASONAL", "TEMPORARILY_STOPPED", "CLOSED"]);
+});
+
+test("SPC categories use stable codes in prototype order", () => {
+  assert.deepEqual(ACTIVITY_CATEGORIES, [
+    "COMMUNITY_EDUCATION", "CHILD_WELLBEING", "CULTURE", "ECONOMY", "GOVERNANCE",
+    "HEALTH_AND_NUTRITION", "HOUSING_AND_INFRASTRUCTURE", "SPIRITUAL_DEVELOPMENT",
+    "AGRICULTURE", "ENVIRONMENT",
+  ]);
 });

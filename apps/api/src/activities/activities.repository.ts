@@ -3,7 +3,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import type { Principal } from '../auth/principal.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { ActivityInputDto } from './activities.dto.js';
+import type { ApproveActivityDto, ActivityInputDto } from './activities.dto.js';
 
 const ACTIVITY_INCLUDE = {
   sdgs: { select: { sdg: true }, orderBy: { sdg: 'asc' } },
@@ -170,7 +170,7 @@ export class ActivitiesRepository {
   approve(
     activityId: string,
     society: SocietyRef & { name: string },
-    sdgs: number[],
+    input: ApproveActivityDto,
     principal: Principal,
   ) {
     return executeDatabaseOperation(() =>
@@ -179,6 +179,8 @@ export class ActivitiesRepository {
           where: { id: activityId, status: 'WAITING_FOR_SPC' },
           data: {
             status: 'APPROVED',
+            spcDimensions: input.dimensions,
+            spcCategories: input.categories,
             reviewedById: principal.id,
             reviewedByName: principal.displayName,
             reviewedAt: new Date(),
@@ -192,7 +194,7 @@ export class ActivitiesRepository {
         }
         await tx.workPlanActivitySdg.deleteMany({ where: { activityId } });
         await tx.workPlanActivitySdg.createMany({
-          data: sdgs.map((sdg) => ({ activityId, sdg })),
+          data: input.sdgs.map((sdg) => ({ activityId, sdg })),
         });
         const activity = await tx.workPlanActivity.findUniqueOrThrow({
           where: { id: activityId },
@@ -206,7 +208,7 @@ export class ActivitiesRepository {
             societyId: society.id,
             districtId: society.districtId,
             detail:
-              `Activity “${activity.name}” approved by the SPC · UN SDG ${sdgs.join(', ')}`.slice(
+              `Activity “${activity.name}” approved by the SPC · UN SDG ${input.sdgs.join(', ')}`.slice(
                 0,
                 2000,
               ),

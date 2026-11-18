@@ -309,12 +309,21 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
       .post(`/activities/${id}/approve`, { sdgs: [18] })
       .expect(400);
 
+    const classification = { dimensions: ['SOCIAL', 'ECONOMIC'], categories: ['AGRICULTURE', 'CULTURE'] };
+    for (const invalid of [
+      { dimensions: ['SOCIAL'] }, { categories: ['CULTURE'] },
+      { ...classification, categories: [] }, { ...classification, dimensions: [] },
+      { ...classification, categories: ['UNKNOWN'] }, { ...classification, dimensions: ['SOCIAL', 'SOCIAL'] },
+    ]) {
+      await api(tokens.spc!.token).post(`/activities/${id}/approve`, { sdgs: [6], ...invalid }).expect(400);
+    }
     const approved = await api(tokens.spc!.token)
-      .post(`/activities/${id}/approve`, { sdgs: [6, 3] })
+      .post(`/activities/${id}/approve`, { sdgs: [6, 3], ...classification })
       .expect(200);
     expect(approved.body).toMatchObject({
       status: 'APPROVED',
       sdgs: [3, 6],
+      classification,
       review: { by: { role: 'PROGRAMME_COORDINATOR' } },
     });
     const stored = await db.workPlanActivitySdg.findMany({
@@ -350,7 +359,17 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
       queue.body.approvedRecently.find(
         (item: { id: string }) => item.id === id,
       ),
-    ).toMatchObject({ sdgs: [3, 6] });
+    ).toMatchObject({ sdgs: [3, 6], classification });
+  });
+
+  it('keeps approvals from an SDG-only client explicitly unclassified', async () => {
+    const { body } = await api(tokens.so!.token)
+      .post(`/societies/${societyId}/activities`, activity)
+      .expect(201);
+    const approved = await api(tokens.spc!.token)
+      .post(`/activities/${body.id}/approve`, { sdgs: [4] })
+      .expect(200);
+    expect(approved.body).toMatchObject({ status: 'APPROVED', classification: null, sdgs: [4] });
   });
 
   it('sends an activity back with a comment, and the officer can change and resend it', async () => {
