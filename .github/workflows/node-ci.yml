@@ -72,7 +72,9 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: sarvodaya_ci
-          POSTGRES_PASSWORD: ci_only_not_secret
+          # A throwaway database inside this job's runner, so no password is
+          # needed: none is stored here, and none can be reused anywhere.
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: sarvodaya_connect_ci
         ports:
           - 5432:5432
@@ -83,7 +85,7 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://sarvodaya_ci:ci_only_not_secret@localhost:5432/sarvodaya_connect_ci
+      DATABASE_URL: postgresql://sarvodaya_ci@localhost:5432/sarvodaya_connect_ci
 
     defaults:
       run:

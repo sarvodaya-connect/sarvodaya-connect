@@ -231,6 +231,9 @@ Resources:
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       BucketEncryption:
         ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]
+      # Downloads use pre-signed links, so the API only records that a link was
+      # issued. S3 access logs record each request actually made to the bucket.
+      LoggingConfiguration: {DestinationBucketName: !Ref DocumentAccessLogs, LogFilePrefix: documents/}
       CorsConfiguration: !If
         - HasDashboardOrigin
         - CorsRules:
@@ -259,6 +262,47 @@ Resources:
             Action: s3:*
             Resource: [!GetAtt Documents.Arn, !Sub '${Documents.Arn}/*']
             Condition: {Bool: {'aws:SecureTransport': 'false'}}
+  DocumentAccessLogs:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub sarvodaya-connect-test-access-logs-${AWS::AccountId}-${AWS::Region}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      # S3 server access logs can be delivered only to SSE-S3 encrypted buckets.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]
+      # Each log file has a unique key, so versioning stores nothing extra
+      # unless a log is deleted or overwritten; that copy is kept for 30 days.
+      VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireAccessLogs
+            Status: Enabled
+            ExpirationInDays: 90
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+  DocumentAccessLogsPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DocumentAccessLogs
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt DocumentAccessLogs.Arn, !Sub '${DocumentAccessLogs.Arn}/*']
+            Condition: {Bool: {'aws:SecureTransport': 'false'}}
+          # Only S3 logging, for the documents bucket in this account, may write.
+          - Effect: Allow
+            Principal: {Service: logging.s3.amazonaws.com}
+            Action: s3:PutObject
+            Resource: !Sub '${DocumentAccessLogs.Arn}/documents/*'
+            Condition:
+              ArnLike: {'aws:SourceArn': !Sub 'arn:${AWS::Partition}:s3:::sarvodaya-connect-test-documents-${AWS::AccountId}-${AWS::Region}'}
+              StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}
   Artifacts:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
@@ -337,6 +381,7 @@ Outputs:
   DatabaseIdentifier: {Value: !Ref Database}
   DocumentsBucketName: {Value: !Ref Documents}
   DeploymentBucketName: {Value: !Ref Artifacts}
+  DocumentAccessLogsBucketName: {Value: !Ref DocumentAccessLogs}
   CognitoUserPoolId: {Value: !Ref UserPool}
   DashboardClientId: {Value: !Ref DashboardClient}
   MobileClientId: {Value: !Ref MobileClient}
