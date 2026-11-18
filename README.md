@@ -410,7 +410,7 @@ flutter run -d DEVICE_ID \
   --dart-define=API_BASE_URL=http://localhost:3001/api/v1
 ```
 
-`localhost` works for an iOS simulator on the Mac hosting the API. Android emulators generally use `10.0.2.2`; physical devices need a reachable host address or a configured development tunnel. For HTTPS TEST/Cognito builds use the values and instructions in [mobile releases](docs/mobile-release.md) and [Cognito setup](docs/cognito-setup.md). Never put AWS keys or a Cognito client secret into the app.
+`localhost` works for an iOS simulator on the Mac hosting the API. Android emulators generally use `10.0.2.2`. Android debug builds allow plain HTTP only to `10.0.2.2`, `localhost` and `127.0.0.1`, so connect a physical Android phone by USB, run `adb reverse tcp:3001 tcp:3001`, and use `http://localhost:3001/api/v1`; a LAN address needs HTTPS. Release builds are HTTPS only. For HTTPS TEST/Cognito builds use the values and instructions in [mobile releases](docs/mobile-release.md) and [Cognito setup](docs/cognito-setup.md). Never put AWS keys or a Cognito client secret into the app.
 
 Sinhala/Tamil drafts are offered in debug builds. Review-only deployed dashboard builds use `SHOW_UNREVIEWED_TRANSLATIONS=true`; review-only mobile releases use `--dart-define=SC_SHOW_UNREVIEWED_TRANSLATIONS=true`. Production/release builds otherwise offer reviewed languages only. See [localization status and review](docs/localization.md).
 
