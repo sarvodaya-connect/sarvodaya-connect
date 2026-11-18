@@ -9,6 +9,7 @@ import {
   LocalDocumentStorage,
   UploadChecksumMismatchError,
   UploadSizeMismatchError,
+  withoutTrailingSlashes,
 } from './local-document-storage.js';
 
 const KEY =
@@ -147,5 +148,25 @@ describe('LocalDocumentStorage', () => {
       k: KEY,
       fn: 'Audit report.pdf',
     });
+  });
+});
+
+describe('withoutTrailingSlashes', () => {
+  it.each([
+    ['http://localhost:3001/', 'http://localhost:3001'],
+    ['http://localhost:3001///', 'http://localhost:3001'],
+    ['http://localhost:3001', 'http://localhost:3001'],
+    ['http://localhost:3001/base/', 'http://localhost:3001/base'],
+    ['///', ''],
+    ['', ''],
+  ])('trims %j to %j', (value, trimmed) => {
+    expect(withoutTrailingSlashes(value)).toBe(trimmed);
+  });
+
+  it('stays fast when slashes repeat in the middle', () => {
+    const value = `http://x${'/'.repeat(50_000)}y`;
+    const started = performance.now();
+    expect(withoutTrailingSlashes(value)).toBe(value);
+    expect(performance.now() - started).toBeLessThan(100);
   });
 });
