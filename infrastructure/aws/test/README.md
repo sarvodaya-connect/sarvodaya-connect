@@ -15,6 +15,25 @@ retained resource names or delete anything without explicit owner approval.
 The template now provisions 2 GiB disk-backed swap before package work and waits
 for NAT bootstrap before creating RDS; AWS verification remains outstanding.
 
+## Scanner review: network, API and buckets
+
+SonarCloud findings reviewed in issue #186. The template choices below are deliberate:
+
+- **NAT public IPv4** (`NatInstance`): outbound internet route for the private
+  subnets (Cognito, SSM, Bedrock). Its security group admits only `10.77.0.0/16`
+  on ports 80/443; no SSH, key pair or instance profile; IMDSv2; forwarding only
+  from the VPC.
+- **Public HTTP API** (`../template.yaml`): the mobile app and dashboard server
+  must reach it. Every feature controller requires `AuthenticationGuard` and
+  `RolesGuard`; only `/health` and signed, expiring `storage/local` links (404
+  under the S3 driver) are open. Throttled, with access logs that exclude headers,
+  tokens and bodies.
+- **Build bucket without versioning or access logs** (`Artifacts`): holds only
+  `sam deploy` packages, rebuilt from the reviewed commit and stored under
+  content-hash keys, so nothing is overwritten. No personal data.
+- **Log bucket without its own logging or versioning** (`DocumentAccessLogs`): a
+  log bucket logging to itself would loop, and logs are written once and expire.
+
 ## Deployment order: bootstrap, then foundation
 
 The first owner-driven change-set attempt on 4 November 2026 failed with
@@ -51,11 +70,13 @@ there is no automatic deletion/recreation step in this fix.
 | NAT | One AL2023 ARM64 `t4g.nano`, encrypted 8 GB gp3 with 2 GiB disk-backed swap before package installation, one public IPv4; Standard CPU credits, IMDSv2; no SSH, key pair or instance profile |
 | Database | Private PostgreSQL 17.11 `db.t4g.micro`, Single-AZ, encrypted 20 GB gp3; seven-day backups, deletion protection, final snapshot, no paid extended-support enrollment |
 | Files | Private document/build buckets; AES256 encryption, HTTPS enforcement, public-access blocks; document versioning and old-version cleanup after 30 days |
+| Access logs | S3 server access logs for the document bucket, in a separate private log bucket (same protections) that deletes logs after 90 days; only S3 logging for the document bucket in this account may write to it |
 | Sign-in | Admin-only Cognito Essentials pool; public dashboard/mobile clients using the repository's password/refresh flows; no users or passwords |
 | Configuration | Small parameter-preparation Lambda, named execution role, 14-day log group and two Standard SecureStrings encrypted with managed `aws/ssm` |
 
 Standing foundation compute/storage/network is approximately **USD 29.30/month**, plus small
-storage/log/request charges. The full initial app estimate is **USD 35.93/month**,
+storage/log/request charges. S3 does not charge for delivering access logs; the TEST
+log bucket adds only its storage, a few cents a month at pilot volume. The full initial app estimate is **USD 35.93/month**,
 before credits/tax, assuming the usage in the cost plan. Forecasts are not caps.
 No RDS Proxy, NAT Gateway, Multi-AZ database, SQS, Bedrock access or organization
 changes are included. Amplify and the application Lambda/HTTP API come later.

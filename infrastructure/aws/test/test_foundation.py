@@ -115,12 +115,13 @@ class FoundationSafety(unittest.TestCase):
             self.assertNotIn(forbidden, types)
 
     def test_buckets_private_encrypted_https_retained(self):
-        for name in ['Documents', 'Artifacts']:
+        for name in ['Documents', 'Artifacts', 'DocumentAccessLogs']:
             bucket = self.resources[name]
             self.assertEqual(bucket['DeletionPolicy'], 'Retain')
             self.assertTrue(all(bucket['Properties']['PublicAccessBlockConfiguration'].values()))
             self.assertIn('BucketEncryption', bucket['Properties'])
-            statement = self.resources[name + 'Https']['Properties']['PolicyDocument']['Statement'][0]
+            policy = self.resources.get(name + 'Https', self.resources.get(name + 'Policy'))
+            statement = policy['Properties']['PolicyDocument']['Statement'][0]
             self.assertEqual(statement['Effect'], 'Deny')
             self.assertEqual(statement['Condition']['Bool']['aws:SecureTransport'], 'false')
         cors = self.resources['Documents']['Properties']['CorsConfiguration']['If'][1]['CorsRules'][0]
@@ -133,6 +134,31 @@ class FoundationSafety(unittest.TestCase):
                        'https://dashboard.sarvodayaconnect.com/', 'https://a.example,']:
             self.assertFalse(pattern.fullmatch(origin), origin)
         self.assertIn('x-amz-checksum-sha256', cors['AllowedHeaders'])
+
+    def test_document_requests_are_logged_to_a_private_expiring_bucket(self):
+        documents = self.resources['Documents']['Properties']
+        self.assertEqual(documents['LoggingConfiguration'], {
+            'DestinationBucketName': {'Ref': 'DocumentAccessLogs'}, 'LogFilePrefix': 'documents/'})
+        logs = self.resources['DocumentAccessLogs']
+        self.assertEqual(logs['UpdateReplacePolicy'], 'Retain')
+        # Log delivery supports SSE-S3 only, and the log bucket never logs itself.
+        self.assertEqual(logs['Properties']['BucketEncryption'], documents['BucketEncryption'])
+        self.assertNotIn('LoggingConfiguration', logs['Properties'])
+        self.assertEqual(logs['Properties']['OwnershipControls'],
+                         {'Rules': [{'ObjectOwnership': 'BucketOwnerEnforced'}]})
+        rule = logs['Properties']['LifecycleConfiguration']['Rules'][0]
+        self.assertEqual((rule['Status'], rule['ExpirationInDays']), ('Enabled', 90))
+        statements = self.resources['DocumentAccessLogsPolicy']['Properties']['PolicyDocument']['Statement']
+        self.assertEqual(len(statements), 2)
+        write = statements[1]
+        self.assertEqual(write['Effect'], 'Allow')
+        self.assertEqual(write['Principal'], {'Service': 'logging.s3.amazonaws.com'})
+        self.assertEqual(write['Action'], 's3:PutObject')
+        self.assertEqual(write['Resource'], {'Sub': '${DocumentAccessLogs.Arn}/documents/*'})
+        self.assertEqual(write['Condition']['StringEquals'], {'aws:SourceAccount': {'Ref': 'AWS::AccountId'}})
+        # The writer is the documents bucket itself, by its exact name.
+        source = write['Condition']['ArnLike']['aws:SourceArn']['Sub']
+        self.assertEqual(source.split(':::', 1)[1], documents['BucketName']['Sub'])
 
     def test_cognito_admin_only_public_clients_no_users(self):
         pool = self.resources['UserPool']['Properties']
@@ -191,8 +217,14 @@ class FoundationSafety(unittest.TestCase):
         template = yaml.load(rendered, Loader=TemplateLoader)
         self.assertEqual(set(template['Resources']), {'Documents', 'Artifacts', 'UserPool'})
         for name, resource in template['Resources'].items():
-            self.assertEqual(resource, self.resources[name])
+            expected = self.resources[name]
+            if name == 'Documents':
+                # Import cannot create the log bucket; the UPDATE after it adds logging.
+                expected = {**expected, 'Properties': {
+                    key: value for key, value in expected['Properties'].items() if key != 'LoggingConfiguration'}}
+            self.assertEqual(resource, expected)
             self.assertEqual(resource['DeletionPolicy'], 'Retain')
+        self.assertNotIn('DocumentAccessLogs', rendered)
         self.assertEqual(template['Rules'], self.template['Rules'])
         self.assertNotIn('NatImage', template['Parameters'])
         self.assertNotIn('Outputs', template)
