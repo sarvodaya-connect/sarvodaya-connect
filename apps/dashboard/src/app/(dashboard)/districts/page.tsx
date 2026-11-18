@@ -26,7 +26,7 @@ export default async function DistrictsPage({ searchParams }: PageProps<"/distri
   const search = (first(params.q) ?? "").trim();
   const province = first(params.province) ?? "";
   const summaries = await getDistrictSummaries(year);
-  const provinces = [...new Set(summaries.data.map((row) => row.province).filter((value): value is string => Boolean(value)))].sort();
+  const provinces = [...new Set(summaries.data.map((row) => row.province).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "en"));
   const shown = summaries.data.filter(
     (row) => (!search || row.name.toLowerCase().includes(search.toLowerCase())) && (!province || row.province === province),
   );

@@ -11,6 +11,7 @@ import {
   SIGN_IN_LOCKED,
 } from '../../src/identity/identity.service.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
   throw new Error('Use a disposable local PostgreSQL DATABASE_URL');
@@ -387,7 +388,7 @@ describe('V4 identity, scoped access and NIC vault (PostgreSQL)', () => {
       .expect(401);
     const changed = await db.platformAccount.findUniqueOrThrow({ where: { id: ddm.id } });
     expect(changed.role).toBe('PROGRAMME_COORDINATOR');
-    expect(changed.societyIds.sort()).toEqual([societyId, neighbourId].sort());
+    expect(changed.societyIds.sort(byCodeUnit)).toEqual([societyId, neighbourId].sort(byCodeUnit));
     const grant = await db.districtAccessGrant.findFirstOrThrow({ where: { deputyId: ddm.id } });
     expect(grant.revokedAt).not.toBeNull();
 

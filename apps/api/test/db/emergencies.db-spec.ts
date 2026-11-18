@@ -18,6 +18,7 @@ import { AppModule } from '../../src/app.module.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -360,13 +361,13 @@ describe('V5 disaster response (PostgreSQL)', () => {
         )
       ).body;
     const ids = (body: { societies: { id: string }[] }) =>
-      body.societies.map((s) => s.id).sort();
+      body.societies.map((s) => s.id).sort(byCodeUnit);
     expect(ids(await options(tokens.officer))).toEqual([own]);
-    expect(ids(await options(tokens.spc))).toEqual([own, neighbour].sort());
+    expect(ids(await options(tokens.spc))).toEqual([own, neighbour].sort(byCodeUnit));
     // Temporary access is view only, so the district's societies are not offered.
     expect(ids(await options(tokens.ddmTemporary))).toEqual([]);
     expect(ids(await options(tokens.dm))).toEqual(
-      [own, neighbour, helper].sort(),
+      [own, neighbour, helper].sort(byCodeUnit),
     );
     const hq = await options(
       tokens.hq,
