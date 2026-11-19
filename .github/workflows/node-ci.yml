@@ -1,25 +1,8 @@
 name: Node.js CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "apps/api/**"
-      - "apps/dashboard/**"
-      - "packages/api-contracts/**"
-      - ".nvmrc"
-      - ".github/workflows/node-ci.yml"
-
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/api/**"
-      - "apps/dashboard/**"
-      - "packages/api-contracts/**"
-      - ".nvmrc"
-      - ".github/workflows/node-ci.yml"
+  # Run by ci.yml, which picks the checks a change needs and reports "CI passed".
+  workflow_call:
 
 permissions:
   contents: read

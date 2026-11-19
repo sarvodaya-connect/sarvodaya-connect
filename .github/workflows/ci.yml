@@ -1,0 +1,111 @@
+name: CI
+
+# The one workflow every pull request and push to main runs. It works out which
+# areas changed, runs only their checks, and ends with "CI passed", the status
+# check the main ruleset requires. Docs-only changes skip every area and still
+# get a green "CI passed".
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Choose checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      node: ${{ steps.areas.outputs.node }}
+      mobile: ${{ steps.areas.outputs.mobile }}
+      aws: ${{ steps.areas.outputs.aws }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List the areas this change touches
+        id: areas
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          node=false mobile=false aws=false
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]] || ! files=$(git diff --name-only "$BASE" "$HEAD"); then
+            echo "No usable base commit, so every area runs."
+            node=true mobile=true aws=true
+          else
+            while IFS= read -r file; do
+              case "$file" in
+                .github/workflows/ci.yml)
+                  node=true mobile=true aws=true ;;
+              esac
+              # Keep these lists in step with what each workflow builds.
+              case "$file" in
+                apps/api/* | apps/dashboard/* | packages/api-contracts/* | .nvmrc | .github/workflows/node-ci.yml)
+                  node=true ;;
+              esac
+              case "$file" in
+                apps/mobile/* | scripts/play/* | .github/workflows/mobile-ci.yml | .github/workflows/play-internal-release.yml)
+                  mobile=true ;;
+              esac
+              case "$file" in
+                apps/api/* | packages/api-contracts/* | infrastructure/aws/* | infrastructure/docker/docker-compose.aws-smoke.yml | amplify.yml | .nvmrc | .github/workflows/aws-readiness.yml)
+                  aws=true ;;
+              esac
+            done <<< "$files"
+          fi
+          {
+            echo "node=$node"
+            echo "mobile=$mobile"
+            echo "aws=$aws"
+          } >> "$GITHUB_OUTPUT"
+          echo "Node.js: $node · Mobile: $mobile · AWS readiness: $aws"
+
+  node:
+    name: Node.js
+    needs: changes
+    if: needs.changes.outputs.node == 'true'
+    uses: ./.github/workflows/node-ci.yml
+
+  mobile:
+    name: Mobile
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    uses: ./.github/workflows/mobile-ci.yml
+
+  aws:
+    name: AWS readiness
+    needs: changes
+    if: needs.changes.outputs.aws == 'true'
+    uses: ./.github/workflows/aws-readiness.yml
+
+  ci-passed:
+    name: CI passed
+    needs: [changes, node, mobile, aws]
+    # Always runs, so the required check is never left waiting. Skipped areas
+    # count as passed; a failed or cancelled one fails this job.
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check every area that ran
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error::These checks did not pass: $failed"
+            exit 1
+          fi

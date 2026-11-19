@@ -1,0 +1,46 @@
+# Version updates, weekly and grouped to keep the number of PRs small.
+# Security updates are a repository setting and open PRs as soon as an
+# advisory is published, outside this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /apps/api
+      - /apps/dashboard
+      - /apps/landing
+      - /packages/api-contracts
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Colombo
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      npm-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: pub
+    directory: /apps/mobile
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Colombo
+    open-pull-requests-limit: 3
+    labels: [dependencies, mobile]
+    groups:
+      pub-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Colombo
+    open-pull-requests-limit: 3
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ["*"]
