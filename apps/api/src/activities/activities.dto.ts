@@ -3,6 +3,8 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
+  IsArray,
+  ValidateIf,
   IsIn,
   IsInt,
   IsNumber,
@@ -14,6 +16,7 @@ import {
   MinLength,
 } from 'class-validator';
 
+import { ActivityCategory, ActivityDimension } from '../generated/prisma/enums.js';
 import { MAX_YEARLY_AMOUNT } from '../societies/dto/society-record.dto.js';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -109,6 +112,21 @@ export class ActivityInputDto {
 
 /** SP07 / M51: at least one UN SDG, numbers 1–17, each once. */
 export class ApproveActivityDto {
+  @ValidateIf((dto: ApproveActivityDto) => dto.dimensions !== undefined || dto.categories !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsIn(Object.values(ActivityDimension), { each: true })
+  dimensions?: ActivityDimension[];
+
+  @ValidateIf((dto: ApproveActivityDto) => dto.dimensions !== undefined || dto.categories !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsIn(Object.values(ActivityCategory), { each: true })
+  categories?: ActivityCategory[];
+
+
   @ArrayMinSize(1, { message: 'Choose at least one UN SDG to approve' })
   @ArrayMaxSize(17)
   @ArrayUnique({ message: 'Choose each UN SDG only once' })

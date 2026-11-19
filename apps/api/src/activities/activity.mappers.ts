@@ -32,11 +32,19 @@ export interface ActivityRecord {
   reviewedByName: string | null;
   reviewedAt: Date | null;
   reviewComment: string | null;
+  spcDimensions: string[];
+  spcCategories: string[];
   sdgs: { sdg: number }[];
 }
 
 const optional = <K extends string, V>(key: K, value: V | null | undefined) =>
   (value == null ? {} : { [key]: value }) as Partial<Record<K, V>>;
+
+export function spcClassification(row: Pick<ActivityRecord, 'spcDimensions' | 'spcCategories'>) {
+  return row.spcDimensions.length && row.spcCategories.length
+    ? { dimensions: row.spcDimensions, categories: row.spcCategories }
+    : null;
+}
 
 /** The WorkPlanActivity contract in packages/api-contracts. */
 export function toWorkPlanActivity(row: ActivityRecord) {
@@ -51,6 +59,7 @@ export function toWorkPlanActivity(row: ActivityRecord) {
     allocatedCost: toAmount(row.allocatedCost) ?? 0,
     status: row.status,
     ...optional('dimension', row.dimension),
+    classification: spcClassification(row),
     sdgs: row.sdgs.map((entry) => entry.sdg),
     ...optional('femaleParticipants', row.femaleParticipants),
     ...optional('maleParticipants', row.maleParticipants),
@@ -107,6 +116,7 @@ export function toQueueItem(
     ...optional('submittedAt', row.submittedAt?.toISOString()),
     totalParticipants: totalParticipants(row),
     ...optional('householdsBenefited', row.householdsBenefited),
+    classification: spcClassification(row),
     sdgs: row.sdgs.map((entry) => entry.sdg),
     ...(row.status === 'APPROVED'
       ? optional('approvedAt', row.reviewedAt?.toISOString())

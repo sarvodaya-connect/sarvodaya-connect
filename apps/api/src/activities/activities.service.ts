@@ -201,7 +201,7 @@ export class ActivitiesService {
     const activity = await this.repository.approve(
       activityId,
       { ...existing.society, name: existing.society.nameEn },
-      sdgs,
+      { ...input, sdgs },
       principal,
     );
     await this.notify(
