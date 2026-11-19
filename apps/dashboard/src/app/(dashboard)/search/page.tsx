@@ -45,7 +45,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         <label className="sr-only" htmlFor="search-query">{t("s.filterSearch")}</label>
         <div className="flex items-center gap-2 rounded-card border-2 border-brand-forest bg-surface px-4 py-3">
           <Icon className="size-4 text-ink-soft" name="search" />
-          <input autoFocus className="flex-1 bg-transparent text-[14px] text-ink outline-none" defaultValue={query} id="search-query" minLength={2} name="q" placeholder={t("q.placeholder")} />
+          <input className="flex-1 bg-transparent text-[14px] text-ink outline-none" defaultValue={query} id="search-query" minLength={2} name="q" placeholder={t("q.placeholder")} />
         </div>
       </form>
 

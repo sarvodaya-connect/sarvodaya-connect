@@ -156,7 +156,8 @@
   pointer-events: none;
 }
 .columnGroup:hover .tooltip,
-.columnGroup:focus-visible .tooltip {
+.columnGroup:focus-visible .tooltip,
+.columnGroup[aria-pressed="true"] .tooltip {
   opacity: 1;
   transform: translate(-50%, 0);
 }
