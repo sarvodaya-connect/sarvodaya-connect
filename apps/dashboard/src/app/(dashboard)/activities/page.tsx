@@ -1,3 +1,8 @@
+import { randomUUID } from "node:crypto";
+
+import type { ScopedProgrammes } from "@sarvodaya-connect/api-contracts";
+
+import { RecheckOnReturn } from "@/components/dashboard/district-access/recheck-on-return";
 import { ProgrammesView } from "@/components/dashboard/programmes/programmes-view";
 import { first } from "@/components/dashboard/national/format";
 import { getT } from "@/i18n/server";
@@ -18,5 +23,7 @@ export default async function ProgrammesPage({ searchParams }: PageProps<"/activ
     viewer.role === "HQ_ADMIN" ? getNationalProgrammes(year) : getScopedProgrammes(year),
     getT(),
   ]);
-  return <ProgrammesView activityId={first(params.activity)} demo={isDemoMode()} programmes={programmes} role={viewer.role} t={t} />;
+  const page = <ProgrammesView activityId={first(params.activity)} demo={isDemoMode()} programmes={programmes} role={viewer.role} t={t} />;
+  const temporary = (programmes as Partial<ScopedProgrammes>).scope?.kind === "ASSIGNED_AND_DISTRICT";
+  return temporary ? <RecheckOnReturn token={randomUUID()}>{page}</RecheckOnReturn> : page;
 }

@@ -7,6 +7,7 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/count_field.dart';
 import '../widgets/state_views.dart';
+import 'development_goals_card.dart';
 import 'record_widgets.dart';
 import 'sdg_widgets.dart';
 import 'society_record_api.dart';
@@ -587,13 +588,17 @@ class _SentScreen extends StatelessWidget {
 
 /// Loads one activity with the standard loading, error and no-access states.
 class _ActivityLoader extends StatefulWidget {
-  const _ActivityLoader({required this.activityId, required this.builder});
+  const _ActivityLoader({
+    super.key,
+    required this.activityId,
+    required this.builder,
+  });
 
   final String activityId;
   final Widget Function(
     BuildContext context,
     ActivityDetail detail,
-    VoidCallback reload,
+    Future<void> Function() reload,
   )
   builder;
 
@@ -604,6 +609,7 @@ class _ActivityLoader extends StatefulWidget {
 class _ActivityLoaderState extends State<_ActivityLoader> {
   ActivityDetail? _detail;
   SocietyRecordException? _error;
+  var _loading = false;
 
   @override
   void initState() {
@@ -612,13 +618,20 @@ class _ActivityLoaderState extends State<_ActivityLoader> {
   }
 
   Future<void> _load() async {
-    setState(() => _error = null);
+    if (!mounted || _loading) return;
+    setState(() {
+      _loading = true;
+      _detail = null;
+      _error = null;
+    });
     try {
       final detail = await DemoScope.read(context).societyRecords
           .fetchActivity(widget.activityId);
       if (mounted) setState(() => _detail = detail);
     } on SocietyRecordException catch (error) {
       if (mounted) setState(() => _error = error);
+    } finally {
+      _loading = false;
     }
   }
 
@@ -758,63 +771,58 @@ class ActivityDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Activity')),
     body: _ActivityLoader(
+      key: ValueKey(activityId),
       activityId: activityId,
       builder: (context, detail, reload) {
         final activity = detail.activity;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-          children: [
-            if (activity.status == ActivityStatus.sentBack) ...[
-              RecordNote(
-                icon: Icons.undo,
-                tone: NoteTone.warning,
-                title:
-                    'Sent Back by ${activity.reviewedBy?.label ?? 'the SPC'}',
-                message:
-                    activity.reviewComment ??
-                    'Change the activity and send it again.',
-              ),
-              const SizedBox(height: 10),
-            ],
-            if (activity.status == ActivityStatus.approved) ...[
-              RecordCard(
-                title: 'UN SDGs Chosen by the SPC',
-                children: [
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [for (final sdg in activity.sdgs) SdgChip(sdg)],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-            ActivityDetailsCards(detail: detail),
-            if (detail.canEdit) ...[
-              const SizedBox(height: 14),
-              FilledButton(
-                onPressed: () async {
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => ActivityWizardScreen(
-                        societyId: detail.societyId,
-                        societyName: societyName,
-                        year: activity.year,
-                        spcName: spcName,
-                        existing: activity,
-                      ),
-                    ),
-                  );
-                  if (changed == true) reload();
-                },
-                child: Text(
-                  activity.status == ActivityStatus.sentBack
-                      ? 'Change and send again'
-                      : 'Change Activity',
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+            children: [
+              if (activity.status == ActivityStatus.sentBack) ...[
+                RecordNote(
+                  icon: Icons.undo,
+                  tone: NoteTone.warning,
+                  title:
+                      'Sent Back by ${activity.reviewedBy?.label ?? 'the SPC'}',
+                  message:
+                      activity.reviewComment ??
+                      'Change the activity and send it again.',
                 ),
-              ),
+                const SizedBox(height: 10),
+              ],
+              ActivityDetailsCards(detail: detail),
+              const SizedBox(height: 10),
+              DevelopmentGoalsCard(activity: activity),
+              if (detail.canEdit &&
+                  activity.status != ActivityStatus.approved) ...[
+                const SizedBox(height: 14),
+                FilledButton(
+                  onPressed: () async {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => ActivityWizardScreen(
+                          societyId: detail.societyId,
+                          societyName: societyName,
+                          year: activity.year,
+                          spcName: spcName,
+                          existing: activity,
+                        ),
+                      ),
+                    );
+                    if (changed == true) reload();
+                  },
+                  child: Text(
+                    activity.status == ActivityStatus.sentBack
+                        ? 'Change and send again'
+                        : 'Change Activity',
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         );
       },
     ),
@@ -996,29 +1004,39 @@ class _ActivitiesToApproveScreenState extends State<ActivitiesToApproveScreen> {
                         for (final (index, item)
                             in queue.approvedRecently.indexed) ...[
                           if (index > 0) const Divider(height: 1),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item.name, style: RecordStyle.value),
-                                Text(
-                                  [
-                                    item.societyName,
-                                    if (item.approvedAt != null)
-                                      'approved ${formatDate(item.approvedAt!)}',
-                                  ].join(' · '),
-                                  style: RecordStyle.caption,
+                          InkWell(
+                            onTap: () => Navigator.of(context).push<void>(
+                              MaterialPageRoute(
+                                builder: (_) => ActivityDetailScreen(
+                                  activityId: item.id,
+                                  societyName: item.societyName,
                                 ),
-                                const SizedBox(height: 5),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [
-                                    for (final sdg in item.sdgs) SdgChip(sdg),
-                                  ],
-                                ),
-                              ],
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.name, style: RecordStyle.value),
+                                  Text(
+                                    [
+                                      item.societyName,
+                                      if (item.approvedAt != null)
+                                        'approved ${formatDate(item.approvedAt!)}',
+                                    ].join(' · '),
+                                    style: RecordStyle.caption,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      for (final sdg in item.sdgs) SdgChip(sdg),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -1143,14 +1161,16 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
           children: [
             ActivityDetailsCards(detail: detail),
             const SizedBox(height: 10),
-            if (!detail.canReview)
+            if (!detail.canReview) ...[
               RecordNote(
                 icon: Icons.lock_outline,
                 message: detail.activity.status == ActivityStatus.waitingForSpc
                     ? "Only the society's SPC approves its activities."
                     : 'This activity is no longer waiting for approval.',
-              )
-            else
+              ),
+              const SizedBox(height: 10),
+              DevelopmentGoalsCard(activity: detail.activity),
+            ] else
               RecordCard(
                 children: [
                   Row(

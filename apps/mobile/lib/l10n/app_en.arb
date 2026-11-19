@@ -3524,5 +3524,13 @@
         "type": "int"
       }
     }
-  }
+  },
+  "dgHeading": "Development Goals",
+  "dgDimensions": "Sarvodaya dimensions",
+  "dgCategories": "Sarvodaya categories",
+  "dgSdgs": "UN SDGs",
+  "dgLegacy": "Sarvodaya classification not yet recorded.",
+  "dgPending": "The SPC selects the Development Goals during approval.",
+  "dgSentBack": "The SPC will select the Development Goals if the activity is resubmitted and approved.",
+  "dgNoSdgs": "No UN SDGs recorded."
 }
