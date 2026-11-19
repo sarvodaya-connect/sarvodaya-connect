@@ -88,7 +88,7 @@ function calendarDate(value: unknown, name: string) {
   const time =
     typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
       ? Date.parse(`${value}T00:00:00.000Z`)
-      : NaN;
+      : Number.NaN;
   if (
     !Number.isFinite(time) ||
     new Date(time).toISOString().slice(0, 10) !== value
@@ -222,7 +222,7 @@ export function pricingApproval(
       typeof through === 'string' &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(through)
         ? Date.parse(through)
-        : NaN;
+        : Number.NaN;
     // A later moment would approve overages that have not happened yet.
     if (!Number.isFinite(moment) || moment > now.getTime())
       throw new SpendingBlockedError(
@@ -345,8 +345,10 @@ export function reservationBound(
     Buffer.byteLength(JSON.stringify(billable), 'utf8') +
     REQUEST_OVERHEAD_TOKENS;
   const tier = tierFor(promptTokens, approval);
-  const dearestInput = [tier.input, tier.cacheWrite, tier.cacheRead].reduce(
+  // Prices are bigint, so Math.max does not apply; start from the input price.
+  const dearestInput = [tier.cacheWrite, tier.cacheRead].reduce(
     (dearest, price) => (price > dearest ? price : dearest),
+    tier.input,
   );
   return {
     microUsd:
