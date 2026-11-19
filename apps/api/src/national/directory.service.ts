@@ -1,3 +1,4 @@
+import { spcClassification } from '../activities/activity.mappers.js';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import type { Principal } from '../auth/principal.js';
@@ -287,6 +288,7 @@ export class DirectoryService {
         latest: approved[0]
           ? {
               name: approved[0].name,
+              classification: spcClassification(approved[0]),
               sdgs: approved[0].sdgs.map((row) => row.sdg),
             }
           : null,

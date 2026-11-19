@@ -75,6 +75,19 @@ describe('SC-65 society record permissions (Prototype v4, page 4)', () => {
     ).toBe(true);
   });
 
+  it('shows temporary access lasting until the latest grant ends, compared by time', () => {
+    // 23:00 at UTC-5 (04:00 UTC on 1 Nov) is later than 01:00 UTC on 1 Nov.
+    const later = '2026-10-31T23:00:00-05:00';
+    const twoGrants: Principal = {
+      ...ddm,
+      delegatedDistrictAccess: [
+        { districtId: NORTH, startsAt: '2026-10-27T02:30:00.000Z', expiresAt: later },
+        { districtId: NORTH, startsAt: '2026-10-27T02:30:00.000Z', expiresAt: '2026-11-01T01:00:00.000Z' },
+      ],
+    };
+    expect(recordPermissions(twoGrants, BLUEBIRD, now).viewOnlyUntil).toBe(later);
+  });
+
   it('lets only the Society Officer or assigned SPC enter yearly figures and the audit report', () => {
     expect(canEditAnnualSummary(officer, SUNRISE)).toBe(true);
     expect(canEditAnnualSummary(spc, SUNRISE)).toBe(true);

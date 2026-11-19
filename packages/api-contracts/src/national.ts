@@ -7,7 +7,7 @@
  * approved records. No list here carries a NIC, and financial data is only
  * the yearly total profit and total expenses.
  */
-import type { ActivityDimension, RegistrarDocumentType } from "./activities.js";
+import type { ActivityClassification, ActivityDimension, RegistrarDocumentType } from "./activities.js";
 import type { SocietyStatus } from "./registry.js";
 
 export interface FinancialYearPeriod {
@@ -214,6 +214,7 @@ export interface NationalProgrammes {
     maleParticipants: number;
     householdsBenefited: number;
     createdBy: string | null;
+    classification?: ActivityClassification | null;
     sdgs: number[];
   }[];
 }
@@ -322,7 +323,7 @@ export interface SocietyAtAGlance {
   registrarDocuments: { documentType: RegistrarDocumentType; uploaded: boolean }[];
   auditReportPastDue: boolean;
   gradeRequest: { fromGrade: string | null; toGrade: string; requestedAt: string } | null;
-  activities: { planned: number; approved: number; latest: { name: string; sdgs: number[] } | null };
+  activities: { planned: number; approved: number; latest: { name: string; classification?: ActivityClassification | null; sdgs: number[] } | null };
 }
 
 export const SEARCH_RESULT_TYPES = ["society", "person", "document", "activity", "request"] as const;

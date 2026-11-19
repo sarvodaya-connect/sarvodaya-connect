@@ -1,3 +1,4 @@
+import { spcClassification } from '../activities/activity.mappers.js';
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import type { Principal } from '../auth/principal.js';
@@ -405,6 +406,7 @@ export class NationalService {
         maleParticipants: activity.maleParticipants ?? 0,
         householdsBenefited: activity.householdsBenefited ?? 0,
         createdBy: activity.createdByName,
+        classification: spcClassification(activity),
         sdgs: activity.sdgs.map((row) => row.sdg),
       })),
     };

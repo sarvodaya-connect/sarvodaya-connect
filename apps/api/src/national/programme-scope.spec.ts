@@ -49,6 +49,20 @@ const ddm = (grant?: { startsAt: string; expiresAt: string }) =>
   });
 
 describe('Issue #117 programme scope', () => {
+  it('reports the earliest end by time, even when grants use different offsets', () => {
+    // 01:00 UTC is earlier than 23:00 at UTC-5 the evening before (04:00 UTC).
+    const early = '2026-11-09T01:00:00.000Z';
+    const late = '2026-11-08T23:00:00-05:00';
+    const principal = person('DEPUTY_DISTRICT_MANAGER', {
+      districtIds: [NORTH],
+      delegatedDistrictAccess: [
+        { districtId: NORTH, startsAt: hours(-1), expiresAt: late },
+        { districtId: NORTH, startsAt: hours(-1), expiresAt: early },
+      ],
+    });
+    expect(delegationEndsAt(principal, [NORTH], now)).toBe(early);
+  });
+
   it('limits a DM to their own district', () => {
     expect(programmeScopeFor(dmNorth, now)).toEqual({
       kind: 'DISTRICT',
@@ -245,6 +259,8 @@ describe('Issue #117 scoped programme figures', () => {
       maleParticipants: null,
       householdsBenefited: null,
       createdByName: null,
+      spcDimensions: [],
+      spcCategories: [],
       sdgs: [{ sdg: 1 }, { sdg: 17 }],
     });
     repo.recentApprovedActivities.mockResolvedValue([

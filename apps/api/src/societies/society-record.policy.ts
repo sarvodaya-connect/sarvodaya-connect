@@ -7,6 +7,7 @@ import {
   type UserRole,
 } from '../auth/principal.js';
 import { canViewSociety } from './society-access.policy.js';
+import { byInstant } from '../common/compare.js';
 
 /**
  * SC-65 rules for the V4 society record (Prototype v4, page 4 "Who can see
@@ -150,7 +151,7 @@ export function recordPermissions(
           Date.parse(grant.expiresAt) > now.getTime(),
       )
       .map((grant) => grant.expiresAt)
-      .sort();
+      .sort(byInstant);
     if (ends.length) permissions.viewOnlyUntil = ends[ends.length - 1];
   }
   return permissions;

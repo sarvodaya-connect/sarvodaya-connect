@@ -1,4 +1,4 @@
-import type { ActivityDimension, ActivityParticipants, ActivityReview, ActivityStatus } from "./activities.js";
+import type { ActivityClassification, ActivityDimension, ActivityParticipants, ActivityReview, ActivityStatus } from "./activities.js";
 import type { IsoDate, IsoDateTime } from "./common.js";
 import type { UserRole } from "./identity.js";
 import type { SocietyDetails } from "./registry.js";
@@ -264,6 +264,7 @@ export interface WorkPlanActivity extends ActivityParticipants {
   /** V5 PR 4. Activities planned before review existed are APPROVED. */
   status: ActivityStatus;
   dimension?: ActivityDimension;
+  classification?: ActivityClassification | null;
   sdgs: number[];
   partners?: string;
   resourcesNeeded?: string;
