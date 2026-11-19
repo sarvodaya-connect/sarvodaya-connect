@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 
 import '../district_access/access_format.dart';
+import '../motion/app_motion.dart';
 import '../society_record/society_record_models.dart' show PickedDocument;
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -574,7 +575,10 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                     label: const Text('Report an incident'),
                   ),
                   if (_alerts.isNotEmpty) ...[
-                    const _SectionLabel('Incident Notifications'),
+                    MotionEntrance(
+                      id: 'incidents.notifications.heading',
+                      child: const _SectionLabel('Incident Notifications'),
+                    ),
                     for (final alert in _alerts)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),

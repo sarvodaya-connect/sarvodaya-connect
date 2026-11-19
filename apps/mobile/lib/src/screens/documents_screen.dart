@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/demo_data.dart';
 import '../format.dart';
 import '../models/document.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
@@ -155,12 +156,15 @@ class _DocumentsContentState extends State<_DocumentsContent> {
       padding: const EdgeInsets.all(16),
       children: [
         if (widget.hasDraft) ...[
-          NoticeBanner(
-            icon: Icons.attach_file,
-            title: 'Supporting Document for Your Council Update',
-            message: store.draftDocuments.isEmpty
-                ? 'Upload the AGM minutes that record the change. Files are attached as Draft until you submit.'
-                : '${store.draftDocuments.length} file attached as Draft to your pending update.',
+          MotionEntrance(
+            id: 'documents.supporting-draft',
+            child: NoticeBanner(
+              icon: Icons.attach_file,
+              title: 'Supporting Document for Your Council Update',
+              message: store.draftDocuments.isEmpty
+                  ? 'Upload the AGM minutes that record the change. Files are attached as Draft until you submit.'
+                  : '${store.draftDocuments.length} file attached as Draft to your pending update.',
+            ),
           ),
           const SizedBox(height: 12),
         ],
@@ -183,26 +187,29 @@ class _DocumentsContentState extends State<_DocumentsContent> {
           const SizedBox(height: 12),
         ],
         if (_filter == null) ...[
-          SectionCard(
-            title: 'Registrar Documents · FY 2025/26',
-            trailing: Text(
-              '$approvedCount of 4\napproved',
-              textAlign: TextAlign.end,
-              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          MotionEntrance(
+            id: 'documents.registrar',
+            child: SectionCard(
+              title: 'Registrar Documents · FY 2025/26',
+              trailing: Text(
+                '$approvedCount of 4\napproved',
+                textAlign: TextAlign.end,
+                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              children: [
+                for (final (index, row) in registrarRows.indexed)
+                  _RegistrarRow(
+                    number: index + 1,
+                    type: row.$1,
+                    document: latest(row.$1)?.uploadedAt.year == 2026
+                        ? latest(row.$1)
+                        : null,
+                    dueLabel: row.$2,
+                    overdue: row.$3,
+                  ),
+              ],
             ),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            children: [
-              for (final (index, row) in registrarRows.indexed)
-                _RegistrarRow(
-                  number: index + 1,
-                  type: row.$1,
-                  document: latest(row.$1)?.uploadedAt.year == 2026
-                      ? latest(row.$1)
-                      : null,
-                  dueLabel: row.$2,
-                  overdue: row.$3,
-                ),
-            ],
           ),
           const SizedBox(height: 12),
         ],
@@ -228,9 +235,12 @@ class _DocumentsContentState extends State<_DocumentsContent> {
           padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
           children: [
             if (visible.isEmpty)
-              _EmptyLibrary(
-                filter: _filter,
-                onShowAll: () => setState(() => _filter = null),
+              MotionEntrance(
+                id: 'documents.empty',
+                child: _EmptyLibrary(
+                  filter: _filter,
+                  onShowAll: () => setState(() => _filter = null),
+                ),
               ),
             for (final (i, document) in visible.indexed) ...[
               if (i > 0) const Divider(height: 1),
@@ -743,43 +753,50 @@ class _UploadSheetState extends State<_UploadSheet> {
                   ],
                 ),
               ),
-              if (_fileError != null) ...[
-                const SizedBox(height: 4),
-                NoticeBanner(
-                  icon: Icons.error_outline,
-                  tone: NoticeTone.error,
-                  title: "Couldn't upload",
-                  message: '$_fileError Your other answers are safe.',
-                ),
-              ],
-              if (_uploadFailure != null) ...[
-                const SizedBox(height: 4),
-                NoticeBanner(
-                  icon: Icons.cloud_off_outlined,
-                  tone: NoticeTone.error,
-                  title: 'Upload Failed',
-                  message:
-                      '$_uploadFailure ${_file!.name} was not saved. Your choices are kept, so you can retry now or later from Documents.',
-                ),
-              ],
-              if (uploading) ...[
-                const SizedBox(height: 12),
-                // A spinner and text, not a bar (V5: no horizontal progress bars).
-                Row(
+              MotionSize(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox.square(
-                      dimension: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Uploading… ${_file!.name} · ${((_progress ?? 0) * 100).round()}%',
+                    if (_fileError != null) ...[
+                      const SizedBox(height: 4),
+                      NoticeBanner(
+                        icon: Icons.error_outline,
+                        tone: NoticeTone.error,
+                        title: "Couldn't upload",
+                        message: '$_fileError Your other answers are safe.',
                       ),
-                    ),
+                    ],
+                    if (_uploadFailure != null) ...[
+                      const SizedBox(height: 4),
+                      NoticeBanner(
+                        icon: Icons.cloud_off_outlined,
+                        tone: NoticeTone.error,
+                        title: 'Upload Failed',
+                        message:
+                            '$_uploadFailure ${_file!.name} was not saved. Your choices are kept, so you can retry now or later from Documents.',
+                      ),
+                    ],
+                    if (uploading) ...[
+                      const SizedBox(height: 12),
+                      // A spinner and text, not a bar (V5: no horizontal progress bars).
+                      Row(
+                        children: [
+                          const SizedBox.square(
+                            dimension: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Uploading… ${_file!.name} · ${((_progress ?? 0) * 100).round()}%',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
-              ],
+              ),
               const SizedBox(height: 16),
               if (uploading)
                 OutlinedButton(

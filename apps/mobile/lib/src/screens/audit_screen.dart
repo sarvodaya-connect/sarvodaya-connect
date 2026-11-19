@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../models/audit.dart';
 import '../models/document.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_loader.dart';
@@ -44,19 +45,33 @@ class _AuditContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final audits = DemoScope.of(context).audits;
     if (audits.isEmpty) {
-      return StateMessage(
-        icon: Icons.fact_check_outlined,
-        title: 'No Audits Yet',
-        message: 'When your society’s first annual audit is due, its checklist will appear here.',
-        secondaryLabel: 'Back',
-        onSecondary: () => Navigator.of(context).maybePop(),
+      return MotionEntrance(
+        id: 'society.audit.empty',
+        child: StateMessage(
+          icon: Icons.fact_check_outlined,
+          title: 'No Audits Yet',
+          message: 'When your society’s first annual audit is due, its checklist will appear here.',
+          secondaryLabel: 'Back',
+          onSecondary: () => Navigator.of(context).maybePop(),
+        ),
       );
     }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _CurrentAuditCard(audit: audits.first),
-        for (final audit in audits.skip(1)) ...[
+        MotionEntrance(
+          id: 'society.audit.current',
+          child: _CurrentAuditCard(audit: audits.first),
+        ),
+        for (final (index, audit) in audits.skip(1).take(4).indexed) ...[
+          const SizedBox(height: 12),
+          MotionEntrance(
+            id: 'society.audit.past.$index',
+            order: index + 1,
+            child: _PastAuditCard(audit: audit),
+          ),
+        ],
+        for (final audit in audits.skip(5)) ...[
           const SizedBox(height: 12),
           _PastAuditCard(audit: audit),
         ],
