@@ -3,10 +3,13 @@ import Link from "next/link";
 import type { ActivityQueueItem } from "@sarvodaya-connect/api-contracts";
 
 import { ApprovalRuleNotice } from "@/components/dashboard/activities/approval-notice";
+import { GoalsSummary } from "@/components/dashboard/activities/development-goals";
 import { EmptyState } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
 import { SdgChips } from "@/components/dashboard/sdg/sdg-chip";
 import { Pill } from "@/components/dashboard/ui/pill";
+import { getT } from "@/i18n/server";
+import type { Translator } from "@/i18n/translate";
 import { getActivityQueue } from "@/lib/activities-api";
 import { approvedLabel, monthYear, participantsLabel, sdgList, waitingStatus } from "@/lib/activity-format";
 import { isDemoMode } from "@/lib/platform-api";
@@ -15,19 +18,39 @@ function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function DecisionBanner({ queue, approvedId, sentBackId }: { queue: { approvedRecently: ActivityQueueItem[] }; approvedId?: string; sentBackId?: string }) {
+function DecisionBanner({
+  queue,
+  approvedId,
+  sentBackId,
+  t,
+}: {
+  queue: { approvedRecently: ActivityQueueItem[] };
+  approvedId?: string;
+  sentBackId?: string;
+  t: Translator;
+}) {
   const approved = approvedId && queue.approvedRecently.find((item) => item.id === approvedId);
   if (approved) {
     return (
-      <p className="flex items-center gap-2.5 rounded-card border border-[#bcd9bd] bg-success-bg px-4 py-2.5 text-[12px] text-success-text" role="status">
-        <Icon className="size-4 shrink-0" name="success" />
-        <span>
-          <strong>
-            Approved: {approved.name} · {approved.society.name}.
-          </strong>{" "}
-          {sdgList(approved.sdgs)}.{approved.sentBy ? ` ${approved.sentBy.displayName} has been notified.` : ""}
-        </span>
-      </p>
+      <div className="rounded-card border border-[#bcd9bd] bg-success-bg px-4 py-3 text-[12px] text-success-text" role="status">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="flex items-center gap-2.5">
+            <Icon className="size-4 shrink-0" name="success" />
+            <span>
+              <strong>
+                Approved: {approved.name} · {approved.society.name}.
+              </strong>{" "}
+              {sdgList(approved.sdgs)}.{approved.sentBy ? ` ${approved.sentBy.displayName} has been notified.` : ""}
+            </span>
+          </p>
+          <Link className="font-semibold text-brand-forest underline underline-offset-2" href={`/activities-to-approve/${approved.id}`}>
+            {t("goals.viewDetails")}
+          </Link>
+        </div>
+        <div className="mt-3 rounded-lg bg-surface/70 p-3 text-ink">
+          <GoalsSummary classification={approved.classification} sdgs={approved.sdgs} t={t} />
+        </div>
+      </div>
     );
   }
   if (sentBackId) {
@@ -47,7 +70,7 @@ const td = "px-3 py-3 text-[12px] text-ink";
 /** V5 SP06 (and SP08 after an approval): the SPC's waiting activities and recent approvals. */
 export default async function ActivitiesToApprovePage({ searchParams }: PageProps<"/activities-to-approve">) {
   const params = await searchParams;
-  const queue = await getActivityQueue();
+  const [queue, t] = await Promise.all([getActivityQueue(), getT()]);
   const now = new Date();
   return (
     <>
@@ -62,7 +85,7 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
       </div>
 
       <div className="mt-4 space-y-3">
-        <DecisionBanner approvedId={first(params.approved)} queue={queue} sentBackId={first(params.sentBack)} />
+        <DecisionBanner approvedId={first(params.approved)} queue={queue} sentBackId={first(params.sentBack)} t={t} />
         <ApprovalRuleNotice />
       </div>
 
