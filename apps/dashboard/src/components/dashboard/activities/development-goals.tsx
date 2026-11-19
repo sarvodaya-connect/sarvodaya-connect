@@ -1,12 +1,9 @@
 import Image from "next/image";
 
-import {
-  ACTIVITY_CATEGORIES,
-  ACTIVITY_DIMENSIONS,
-  type WorkPlanActivity,
-} from "@sarvodaya-connect/api-contracts";
+import type { WorkPlanActivity } from "@sarvodaya-connect/api-contracts";
 
 import type { Translator } from "@/i18n/translate";
+import { ACTIVITY_CATEGORIES, ACTIVITY_DIMENSIONS } from "@/lib/v5-constants";
 import { SdgChips } from "../sdg/sdg-chip";
 
 type GoalsActivity = Pick<WorkPlanActivity, "status" | "classification" | "sdgs">;

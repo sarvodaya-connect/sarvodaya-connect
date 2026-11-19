@@ -1,4 +1,5 @@
 import type {
+  ActivityCategory,
   ActivityDimension,
   RegistrarDocumentType,
 } from "@sarvodaya-connect/api-contracts";
@@ -36,6 +37,19 @@ export const REGISTRAR_DOCUMENT_TYPES: readonly RegistrarDocumentType[] = [
 ];
 
 export const ACTIVITY_DIMENSIONS: readonly ActivityDimension[] = ["SOCIAL", "ECONOMIC", "GOVERNANCE"];
+
+export const ACTIVITY_CATEGORIES: readonly ActivityCategory[] = [
+  "COMMUNITY_EDUCATION",
+  "CHILD_WELLBEING",
+  "CULTURE",
+  "ECONOMY",
+  "GOVERNANCE",
+  "HEALTH_AND_NUTRITION",
+  "HOUSING_AND_INFRASTRUCTURE",
+  "SPIRITUAL_DEVELOPMENT",
+  "AGRICULTURE",
+  "ENVIRONMENT",
+];
 
 export const SARVODAYA_SECTORS = [
   "Community education",
