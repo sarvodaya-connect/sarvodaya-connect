@@ -6,7 +6,7 @@ import { Brand } from "@/components/dashboard/brand";
 import { ErrorState } from "@/components/dashboard/data-states";
 import { useI18n } from "@/i18n/provider";
 
-export default function Error({
+export default function RootErrorPage({
   error,
   reset,
 }: {

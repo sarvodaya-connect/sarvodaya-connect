@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { CommitteeMember, MembershipCategory } from "@sarvodaya-connect/api-contracts";
 
@@ -217,6 +217,13 @@ export function ExcoEditor({
 }) {
   const { t } = useI18n();
   const [showAll, setShowAll] = useState(true);
+  // Opened from "Change office bearers": start on seat 1's office. Only when the editor
+  // opens, so later re-renders never pull focus back.
+  const firstOffice = useRef<HTMLSelectElement>(null);
+  const focusOnOpen = useRef(focusOffices);
+  useEffect(() => {
+    if (focusOnOpen.current) firstOffice.current?.focus();
+  }, []);
   const filled = rows.filter(rowFilled).length;
   const stillMissing = excoStillMissing(rows, t);
   const payload = useMemo(() => JSON.stringify(excoPayload(rows)), [rows]);
@@ -283,7 +290,7 @@ export function ExcoEditor({
                     <td className="px-2 py-1.5">
                       <select
                         aria-label={t("sr.ee.fieldOffice", seat)}
-                        autoFocus={focusOffices && row.seatNumber === 1}
+                        ref={row.seatNumber === 1 ? firstOffice : undefined}
                         className={`${cell} min-w-[115px]`}
                         onChange={(event) => chooseOffice(row.seatNumber, event.target.value)}
                         value={OFFICE_BEARERS.includes(row.position as never) ? row.position : "Member"}
