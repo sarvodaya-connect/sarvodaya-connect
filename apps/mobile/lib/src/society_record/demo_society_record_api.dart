@@ -1135,6 +1135,7 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     String activityId,
     List<int> sdgs, {
     ActivityClassification? classification,
+    DateTime? reviewedSubmittedAt,
   }) async {
     await _wait();
     if (sdgs.isEmpty) {
@@ -1162,12 +1163,27 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       );
     }
     final found = _reviewable(activityId);
+    final current = found.society.workPlan[found.index];
+    // Like the server: approve only the version the SPC reviewed.
+    if (reviewedSubmittedAt != null &&
+        current.submittedAt?.isAtSameMomentAs(reviewedSubmittedAt) != true) {
+      throw const SocietyRecordException(
+        'This activity was changed while you were reviewing it. Check it again before approving',
+        status: 409,
+      );
+    }
     final sorted = sdgs.toSet().toList()..sort();
     final activity = _decide(
-      found.society.workPlan[found.index],
+      current,
       status: ActivityStatus.approved,
-      sdgs: sorted,
-      classification: classification,
+      sdgs: List.unmodifiable(sorted),
+      // A copy, so the caller cannot change the saved decision afterwards.
+      classification: classification == null
+          ? null
+          : ActivityClassification(
+              dimensions: List.unmodifiable(classification.dimensions),
+              categories: List.unmodifiable(classification.categories),
+            ),
     );
     found.society.workPlan = [...found.society.workPlan]
       ..[found.index] = activity;

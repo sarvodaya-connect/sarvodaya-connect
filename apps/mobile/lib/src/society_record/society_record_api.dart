@@ -72,10 +72,13 @@ abstract interface class SocietyRecordApi {
   Future<ActivityQueue> fetchActivityQueue();
 
   /// M51: the assigned SPC approves with at least one UN SDG (1–17).
+  /// [reviewedSubmittedAt] is the submittedAt of the version the SPC reviewed;
+  /// the server refuses with 409 if the officer changed it since.
   Future<ActivityDetail> approveActivity(
     String activityId,
     List<int> sdgs, {
     ActivityClassification? classification,
+    DateTime? reviewedSubmittedAt,
   });
 
   /// M51b: the assigned SPC sends it back, with an optional note.
@@ -285,11 +288,17 @@ class HttpSocietyRecordApi implements SocietyRecordApi {
     String activityId,
     List<int> sdgs, {
     ActivityClassification? classification,
+    DateTime? reviewedSubmittedAt,
   }) async => ActivityDetail.fromJson(
     await _call(
       '/activities/$activityId/approve',
       method: 'POST',
-      body: {'sdgs': sdgs, ...?classification?.toJson()},
+      body: {
+        'sdgs': sdgs,
+        ...?classification?.toJson(),
+        if (reviewedSubmittedAt != null)
+          'reviewedSubmittedAt': reviewedSubmittedAt.toUtc().toIso8601String(),
+      },
     ) as Map<String, dynamic>,
   );
 

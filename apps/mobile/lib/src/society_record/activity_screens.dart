@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../format.dart';
 import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 import '../motion/app_motion.dart';
+import '../national/national_screens.dart' show programmeSdgLabel;
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/count_field.dart';
@@ -1096,6 +1098,8 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
   var _sdgs = <int>[];
   var _step = 0;
   var _saving = false;
+  // Which decision is being sent, for the progress label.
+  var _sendingBack = false;
   var _loadVersion = 0;
   String? _error;
   ActivityDetail? _approved;
@@ -1126,7 +1130,9 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
   }
 
   void _handleDecisionError(SocietyRecordException error) => setState(() {
-    _error = error.message;
+    // App-written failures (offline, server) in the chosen language.
+    final failure = error.failure;
+    _error = failure == null ? error.message : context.l10n.failure(failure);
     if (error.status == 409 || error.status == 403 || error.status == 404) {
       _step = 0;
       _loadVersion++;
@@ -1152,6 +1158,7 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
             detail.activity.id,
             _sdgs,
             classification: _classification,
+            reviewedSubmittedAt: detail.activity.submittedAt,
           );
       if (mounted) setState(() => _approved = approved);
     } on SocietyRecordException catch (error) {
@@ -1174,6 +1181,7 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
     if (comment == null || !mounted) return;
     setState(() {
       _saving = true;
+      _sendingBack = true;
       _error = null;
     });
     try {
@@ -1186,7 +1194,12 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
     } on SocietyRecordException catch (error) {
       if (mounted) _handleDecisionError(error);
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _sendingBack = false;
+        });
+      }
     }
   }
 
@@ -1248,64 +1261,86 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
             children: [
               if (_step == 0) ActivityDetailsCards(detail: detail),
-              if (!detail.canReview)
+              if (!detail.canReview) ...[
                 RecordNote(
                   icon: Icons.lock_outline,
                   message:
                       detail.activity.status == ActivityStatus.waitingForSpc
                       ? l10n.approvalOnlySpc
                       : l10n.approvalNoLongerWaiting,
-                )
-              else if (_step > 0)
+                ),
+                // For example after a retry finds an earlier approval went through:
+                // show the saved decision and who made it.
+                if (detail.activity.status == ActivityStatus.approved)
+                  _SavedDecision(activity: detail.activity),
+              ] else if (_step > 0)
                 MotionEntrance(
                   id: '${detail.activity.id}-spc-approval-$_step',
                   child: _selectionCard(l10n),
                 ),
-              if (_error != null) ...[
+              if (_error != null && !detail.canReview) ...[
                 const SizedBox(height: 10),
-                Semantics(
-                  liveRegion: true,
-                  child: RecordNote(
-                    icon: Icons.error_outline,
-                    tone: NoteTone.error,
-                    message: _error!,
-                  ),
-                ),
+                _errorNote(),
               ],
             ],
           ),
+          // The error sits above the buttons, so a failed Continue always shows why,
+          // however far the choices scroll.
           bottomNavigationBar: detail.canReview
-              ? BottomActionBar(
-                  secondary: OutlinedButton(
-                    onPressed: _saving
-                        ? null
-                        : (_step == 0 ? () => _sendBack(detail) : _back),
-                    child: Text(
-                      _step == 0 ? l10n.approvalSendBack : l10n.approvalBack,
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                        child: _errorNote(),
+                      ),
+                    BottomActionBar(
+                      secondary: OutlinedButton(
+                        onPressed: _saving
+                            ? null
+                            : (_step == 0 ? () => _sendBack(detail) : _back),
+                        child: Text(
+                          _step == 0
+                              ? l10n.approvalSendBack
+                              : l10n.approvalBack,
+                        ),
+                      ),
+                      primary: FilledButton(
+                        onPressed: _saving
+                            ? null
+                            : (_step == 4
+                                  ? () => _approve(detail)
+                                  : () => _next(detail)),
+                        child: Text(
+                          _saving
+                              ? (_sendingBack
+                                    ? l10n.gradeReqSending
+                                    : l10n.approvalSaving)
+                              : _step == 4
+                              ? (_error == null
+                                    ? l10n.approvalApprove
+                                    : l10n.commonTryAgain)
+                              : l10n.approvalContinue,
+                        ),
+                      ),
                     ),
-                  ),
-                  primary: FilledButton(
-                    onPressed: _saving
-                        ? null
-                        : (_step == 4
-                              ? () => _approve(detail)
-                              : () => _next(detail)),
-                    child: Text(
-                      _saving
-                          ? l10n.approvalSaving
-                          : _step == 4
-                          ? (_error == null
-                                ? l10n.approvalApprove
-                                : l10n.commonTryAgain)
-                          : l10n.approvalContinue,
-                    ),
-                  ),
+                  ],
                 )
               : null,
         ),
       ),
     );
   }
+
+  Widget _errorNote() => Semantics(
+    liveRegion: true,
+    child: RecordNote(
+      icon: Icons.error_outline,
+      tone: NoteTone.error,
+      message: _error!,
+    ),
+  );
 
   Widget _selectionCard(AppLocalizations l10n) {
     final title = switch (_step) {
@@ -1421,10 +1456,59 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: [for (final sdg in _sdgs) SdgChip(sdg)],
+            children: [
+              for (final sdg in _sdgs)
+                SdgChip(sdg, title: programmeSdgLabel(l10n, sdg)),
+            ],
           ),
         ],
       ],
+    );
+  }
+}
+
+/// An approval already saved on the server, shown without claiming the
+/// current attempt made it.
+class _SavedDecision extends StatelessWidget {
+  const _SavedDecision({required this.activity});
+
+  final WorkPlanActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final reviewer = activity.reviewedBy?.displayName;
+    final classification = activity.classification;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: RecordCard(
+        children: [
+          if (reviewer != null) ...[
+            Text(
+              l10n.gradeReqApprovedBy(reviewer),
+              style: RecordStyle.cardTitle,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (classification != null)
+            _ClassificationSummary(classification: classification)
+          else
+            Text(l10n.approvalClassificationMissing),
+          if (activity.sdgs.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(l10n.approvalSdgs, style: RecordStyle.cardTitle),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final sdg in activity.sdgs)
+                  SdgChip(sdg, title: programmeSdgLabel(l10n, sdg)),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

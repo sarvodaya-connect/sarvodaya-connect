@@ -151,6 +151,7 @@ void main() {
               'sdgs': [4, 16],
               'dimensions': ['SOCIAL', 'ECONOMIC'],
               'categories': ['COMMUNITY_EDUCATION', 'GOVERNANCE'],
+              'reviewedSubmittedAt': '2026-11-01T04:30:00.000Z',
             });
             return http.Response(
               jsonEncode({
@@ -174,10 +175,13 @@ void main() {
         )..token = 'session',
       );
 
-      final saved = await api.approveActivity('activity-1', [
-        4,
-        16,
-      ], classification: classification);
+      final saved = await api.approveActivity(
+        'activity-1',
+        [4, 16],
+        classification: classification,
+        // Sent in UTC, whatever the phone's time zone.
+        reviewedSubmittedAt: DateTime.parse('2026-11-01T10:00:00+05:30'),
+      );
       expect(saved.activity.status, ActivityStatus.approved);
       expect(
         saved.activity.classification?.dimensions,
