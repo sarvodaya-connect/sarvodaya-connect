@@ -72,6 +72,8 @@ function row(overrides: Record<string, unknown> = {}) {
     reviewedByName: null,
     reviewedAt: null,
     reviewComment: null,
+    spcDimensions: [],
+    spcCategories: [],
     sdgs: [] as { sdg: number }[],
     society: SUNRISE,
     ...overrides,
@@ -197,12 +199,13 @@ describe('ActivitiesService (V5 PR 4)', () => {
       expect(repository.approve).toHaveBeenCalledWith(
         ACTIVITY_ID,
         expect.objectContaining({ id: SUNRISE.id }),
-        [4, 16],
+        { sdgs: [4, 16] },
         spc,
       );
       expect(result).toMatchObject({
         status: 'APPROVED',
         sdgs: [4, 16],
+        classification: null,
         review: { by: { displayName: spc.displayName } },
         permissions: { canReview: false, canEdit: false },
       });

@@ -52,6 +52,29 @@ export const SARVODAYA_SECTORS = [
   "Environment",
 ] as const;
 
+export const ACTIVITY_CATEGORIES = [
+  "COMMUNITY_EDUCATION",
+  "CHILD_WELLBEING",
+  "CULTURE",
+  "ECONOMY",
+  "GOVERNANCE",
+  "HEALTH_AND_NUTRITION",
+  "HOUSING_AND_INFRASTRUCTURE",
+  "SPIRITUAL_DEVELOPMENT",
+  "AGRICULTURE",
+  "ENVIRONMENT",
+] as const;
+export type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
+
+export interface ActivityClassification {
+  dimensions: ActivityDimension[];
+  categories: ActivityCategory[];
+}
+
+export interface ActivityApprovalInput extends ActivityClassification {
+  sdgs: number[];
+}
+
 export interface ActivityParticipants {
   femaleParticipants?: number;
   maleParticipants?: number;
@@ -86,6 +109,7 @@ export interface ActivitySummary {
   societyId: string;
   status: ActivityStatus;
   /** UN SDG numbers chosen by the SPC (empty until approved). */
+  classification?: ActivityClassification | null;
   sdgs: number[];
   submittedAt?: IsoDateTime;
   createdBy?: ActorReference;
@@ -105,6 +129,7 @@ export interface ActivityQueueItem {
   totalParticipants: number;
   householdsBenefited?: number;
   sdgs: number[];
+  classification?: ActivityClassification | null;
   approvedAt?: IsoDateTime;
 }
 

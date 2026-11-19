@@ -259,6 +259,8 @@ describe('Issue #117 scoped programme figures', () => {
       maleParticipants: null,
       householdsBenefited: null,
       createdByName: null,
+      spcDimensions: [],
+      spcCategories: [],
       sdgs: [{ sdg: 1 }, { sdg: 17 }],
     });
     repo.recentApprovedActivities.mockResolvedValue([
