@@ -28,8 +28,8 @@ export function suggestUsername(fullName: string): string {
   return fullName
     .normalize("NFKD")
     .toLowerCase()
+    // Each run of other characters becomes one ".", so only a single "." can lead or trail.
     .replace(/[^a-z0-9]+/g, ".")
-    .replace(/^\.+|\.+$/g, "")
-    .replace(/\.{2,}/g, ".")
+    .replace(/^\.|\.$/g, "")
     .slice(0, 100);
 }

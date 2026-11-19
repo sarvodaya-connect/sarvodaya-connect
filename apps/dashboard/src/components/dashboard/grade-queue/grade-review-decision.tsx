@@ -36,22 +36,20 @@ export function GradeReviewDecision({ decide, request }: { decide: DecideFromQue
 
   const option = (value: GradeDecision, title: string, hint: string) => (
     <label
-      className={`flex cursor-pointer gap-3 rounded-xl border px-4 py-3.5 ${
+      className={`grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 rounded-xl border px-4 py-3.5 ${
         decision === value ? "border-brand-action bg-brand-mint-soft ring-1 ring-brand-action" : "border-line bg-surface"
       }`}
     >
       <input
         checked={decision === value}
-        className="mt-1 accent-[var(--brand-action)]"
+        className="row-span-2 mt-1 accent-[var(--brand-action)]"
         name="decision"
         onChange={() => setDecision(value)}
         type="radio"
         value={value}
       />
-      <span>
-        <strong className="block text-[13px] text-ink">{title}</strong>
-        <span className="text-[11.5px] text-ink-soft">{hint}</span>
-      </span>
+      <strong className="block text-[13px] text-ink">{title}</strong>
+      <span className="text-[11.5px] text-ink-soft">{hint}</span>
     </label>
   );
 

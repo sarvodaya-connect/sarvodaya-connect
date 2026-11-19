@@ -128,12 +128,14 @@ export type ColumnSeries = { key: string; label: string; colour: string };
 export type ColumnGroup = { key: string; label: string; values: Record<string, number>; description: string };
 
 /**
- * Vertical grouped columns (never horizontal bars). Each group is focusable
- * and names its figures, so keyboard and screen-reader users get the same
+ * Vertical grouped columns (never horizontal bars). Each group is a toggle button
+ * named by its figures, so keyboard, touch and screen-reader users get the same
  * numbers the tooltip shows; the full table sits next to the chart.
  */
 export function Columns({ groups, height = 168, series }: { groups: ColumnGroup[]; height?: number; series: ColumnSeries[] }) {
   const drawn = useDrawn();
+  // Tapping or pressing Enter/Space on a column keeps its figures shown (touch screens have no hover).
+  const [pinned, setPinned] = useState<string | null>(null);
   const max = Math.max(1, ...groups.flatMap((group) => series.map((s) => group.values[s.key] ?? 0)));
   return (
     <div className="relative">
@@ -145,12 +147,13 @@ export function Columns({ groups, height = 168, series }: { groups: ColumnGroup[
       <ul className="relative grid items-end gap-3" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
         {groups.map((group) => (
           <li className="min-w-0" key={group.key}>
-            <div
+            <button
               aria-label={group.description}
-              className={`${styles.columnGroup} ${styles.focusRing} relative flex items-end justify-center gap-1 rounded-md`}
-              role="img"
+              aria-pressed={pinned === group.key}
+              className={`${styles.columnGroup} ${styles.focusRing} relative flex w-full items-end justify-center gap-1 rounded-md`}
+              onClick={() => setPinned((key) => (key === group.key ? null : group.key))}
               style={{ height }}
-              tabIndex={0}
+              type="button"
             >
               {series.map((s) => {
                 const value = group.values[s.key] ?? 0;
@@ -162,10 +165,10 @@ export function Columns({ groups, height = 168, series }: { groups: ColumnGroup[
                   />
                 );
               })}
-              <span className={`${styles.tooltip} absolute left-1/2 top-1 z-10 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10.5px] font-semibold text-white shadow`}>
+              <span aria-hidden="true" className={`${styles.tooltip} absolute left-1/2 top-1 z-10 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[10.5px] font-semibold text-white shadow`}>
                 {series.map((s) => `${s.label} ${(group.values[s.key] ?? 0).toLocaleString("en-GB")}`).join(" · ")}
               </span>
-            </div>
+            </button>
             <p className="mt-2 break-words text-center text-[10.5px] leading-tight text-ink-soft">{group.label}</p>
           </li>
         ))}
