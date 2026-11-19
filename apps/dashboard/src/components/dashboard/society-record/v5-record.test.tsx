@@ -136,6 +136,23 @@ describe("Edit Exco form", () => {
     expect(screen.getByText(/Saving completes the Exco/)).toBeInTheDocument();
   });
 
+  it("starts on seat 1's office only when opened from Change office bearers", () => {
+    const { rerender } = render(
+      <ExcoEditForm action={vi.fn(async () => ({}))} focusOffices members={members(["President"])} societyId="s1" />,
+    );
+    const firstOffice = screen.getByRole("combobox", { name: /seat 1\b/i });
+    expect(firstOffice).toHaveFocus();
+    // A later re-render (for example after typing elsewhere) must not pull focus back.
+    screen.getByRole("button", { name: "Save Exco" }).focus();
+    rerender(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices members={members(["President"])} societyId="s1" />);
+    expect(firstOffice).not.toHaveFocus();
+  });
+
+  it("leaves focus alone when opened to edit the whole Exco", () => {
+    render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President"])} societyId="s1" />);
+    expect(screen.getByRole("combobox", { name: /seat 1\b/i })).not.toHaveFocus();
+  });
+
   it("lets the officer save a partial Exco", () => {
     render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President"]).slice(0, 4)} societyId="s1" />);
     expect(screen.getByRole("button", { name: "Save Exco" })).toBeEnabled();

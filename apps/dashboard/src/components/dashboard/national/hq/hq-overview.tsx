@@ -330,11 +330,10 @@ function SocietyStatus({ index, overview }: { index: number; overview: NationalO
               <li
                 className="flex cursor-default items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-muted"
                 key={row.key}
-                onBlur={() => setHighlight(null)}
-                onFocus={() => setHighlight(row.key)}
+                // Hover only highlights the matching donut segment. Each row already shows its
+                // grade, note and count as text, so it is not a keyboard stop.
                 onMouseEnter={() => setHighlight(row.key)}
                 onMouseLeave={() => setHighlight(null)}
-                tabIndex={0}
               >
                 <span className="flex min-w-0 items-start gap-2">
                   <span aria-hidden className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.colour }} />

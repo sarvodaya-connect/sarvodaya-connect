@@ -75,4 +75,18 @@ describe("suggestUsername", () => {
     expect(suggestUsername("P. Jayaweera")).toBe("p.jayaweera");
     expect(suggestUsername("  Sunethra  Karunaratne ")).toBe("sunethra.karunaratne");
   });
+
+  it("joins every run of other characters with one dot and trims the ends", () => {
+    expect(suggestUsername("...P. -- Jayaweera!!")).toBe("p.jayaweera");
+    expect(suggestUsername("A..B")).toBe("a.b");
+    expect(suggestUsername("Dulanjalī")).toBe("dulanjali");
+    expect(suggestUsername("!!! ???")).toBe("");
+  });
+
+  it("stays fast on long runs of punctuation", () => {
+    const name = `a${".".repeat(50_000)} ${"-".repeat(50_000)}b`;
+    const started = performance.now();
+    expect(suggestUsername(name)).toBe("a.b");
+    expect(performance.now() - started).toBeLessThan(100);
+  });
 });
