@@ -19,6 +19,15 @@ updates:
       npm-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      # Major upgrades are done by hand, one at a time, so Dependabot
+      # only proposes minor and patch updates.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # Keep @types/node on 24.x: the project runs on Node 24 (.nvmrc and
+      # the Lambda runtime).
+      - dependency-name: "@types/node"
+        versions: [">=25"]
 
   - package-ecosystem: pub
     directory: /apps/mobile
@@ -32,6 +41,10 @@ updates:
       pub-minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      # Major upgrades are done by hand, one at a time.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
@@ -42,6 +55,8 @@ updates:
     open-pull-requests-limit: 3
     labels: [dependencies, ci]
     groups:
+      # All action bumps, majors included, arrive as one PR. Updates whose
+      # type is not listed here would get a PR of their own.
       actions:
         patterns: ["*"]
-        update-types: [minor, patch]
+        update-types: [major, minor, patch]
