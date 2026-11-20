@@ -1,23 +1,8 @@
 name: Flutter CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "apps/mobile/**"
-      - ".github/workflows/mobile-ci.yml"
-      - ".github/workflows/play-internal-release.yml"
-      - "scripts/play/**"
-
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/mobile/**"
-      - ".github/workflows/mobile-ci.yml"
-      - ".github/workflows/play-internal-release.yml"
-      - "scripts/play/**"
+  # Run by ci.yml, which picks the checks a change needs and reports "CI passed".
+  workflow_call:
 
 permissions:
   contents: read
