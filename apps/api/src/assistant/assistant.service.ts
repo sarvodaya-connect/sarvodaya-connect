@@ -10,14 +10,14 @@ import { scrubAssistantPayload, scrubAssistantText } from './assistant-privacy.j
 import { AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import { ASSISTANT_TOOLS, AssistantTools, type ToolOutcome } from './assistant-tools.js';
 import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind, type AssistantTurn } from './assistant.types.js';
+import { runAssistantWorkflow } from './assistant-workflow.js';
 
-/** Tool rounds per question; a normal answer needs one or two. */
-const MAX_ROUNDS = 6;
 /** Output allowance per model call; also what each call reserves (issue #96). */
 export const MAX_OUTPUT_TOKENS = 2048;
 /** Longest summary and suggestion the screens show (V5 PR 10 output limits). */
 const MAX_SUMMARY = 1200;
 const MAX_OPTION = 200;
+const approvedToolNames = new Set(ASSISTANT_TOOLS.map((tool) => tool.name));
 
 const systemPrompt = (now: Date) => {
   const latest = financialYear(latestCompletedFinancialYear(now));
@@ -81,56 +81,50 @@ export class AssistantService {
       { role: 'user', content: scrubAssistantText(question) },
     ];
     const toolsUsed: string[] = [];
-    let lastData: ToolOutcome['answer'];
-    const evidence = new Map<string, NonNullable<AssistantAnswer['details']['sources']>[number]>();
-    const recordsUsed = new Set<string>();
     const signal = AbortSignal.timeout(22_000);
 
     try {
-      for (let round = 0; round < MAX_ROUNDS; round += 1) {
-        const response = await this.callModel(
-          {
-            max_tokens: MAX_OUTPUT_TOKENS,
-            system: [{ type: 'text', text: systemPrompt(now) }],
-            tools: ASSISTANT_TOOLS,
-            messages,
-            // Off so that the reservation's upper bound holds (issue #96): see assertBillableRequest.
-            thinking: { type: 'disabled' },
-            output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
-          },
-          signal,
-        );
+      const { response, answers } = await runAssistantWorkflow({
+        messages,
+        signal,
+        approvedToolNames,
+        callModel: (conversation) =>
+          this.callModel(
+            {
+              max_tokens: MAX_OUTPUT_TOKENS,
+              system: [{ type: 'text', text: systemPrompt(now) }],
+              tools: ASSISTANT_TOOLS,
+              messages: conversation,
+              // Disable extended thinking to preserve the spending reservation bound.
+              thinking: { type: 'disabled' },
+              output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
+            },
+            signal,
+          ),
+        runTool: (name, input) => this.tools.run(name, input, now),
+        onToolsUsed: (names) => toolsUsed.push(...names),
+      });
 
-        if (response.stop_reason === 'refusal') {
-          return this.finish(principal, toolsUsed, now, { kind: 'UNSUPPORTED', summary: 'SarvoAI can’t answer this question.', options: [] });
-        }
+      if (response?.stop_reason === 'refusal') {
+        return this.finish(principal, toolsUsed, now, { kind: 'UNSUPPORTED', summary: 'SarvoAI can’t answer this question.', options: [] });
+      }
 
-        if (response.stop_reason === 'tool_use') {
-          messages.push({ role: 'assistant', content: response.content });
-          const calls = response.content.filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use');
-          if (calls.length === 0 || calls.length > 4 || calls.some((call) => !ASSISTANT_TOOLS.some((tool) => tool.name === call.name))) break;
-          const outcomes = await Promise.all(calls.map((call) => this.tools.run(call.name, call.input, now)));
-          calls.forEach((call, index) => {
-            toolsUsed.push(call.name);
-            const data = outcomes[index].answer;
-            if (data) {
-              lastData = data;
-              data.details.recordsUsed.forEach((record) => recordsUsed.add(record));
-              data.details.sources?.forEach((source) => evidence.set(source.href, source));
-            }
-          });
-          messages.push({
-            role: 'user',
-            content: calls.map((call, index): Anthropic.ToolResultBlockParam => ({ type: 'tool_result', tool_use_id: call.id, content: scrubAssistantText(outcomes[index].content), is_error: outcomes[index].isError })),
-          });
-          continue;
-        }
-
-        if (response.stop_reason !== 'end_turn') break;
+      if (response?.stop_reason === 'end_turn') {
         const parsed = this.parse(response.content);
-        if (!parsed) break;
-        if (lastData) lastData = { ...lastData, details: { ...lastData.details, recordsUsed: [...recordsUsed], sources: [...evidence.values()].slice(0, 50) } };
-        return this.finish(principal, toolsUsed, now, parsed, lastData);
+        if (parsed) {
+          const lastData = answers.at(-1);
+          const evidence = new Map<string, NonNullable<AssistantAnswer['details']['sources']>[number]>();
+          const recordsUsed = new Set<string>();
+          for (const { details } of answers) {
+            details.recordsUsed.forEach((record) => recordsUsed.add(record));
+            details.sources?.forEach((source) => evidence.set(source.href, source));
+          }
+          const data = lastData && {
+            ...lastData,
+            details: { ...lastData.details, recordsUsed: [...recordsUsed], sources: [...evidence.values()].slice(0, 50) },
+          };
+          return this.finish(principal, toolsUsed, now, parsed, data);
+        }
       }
     } catch (error) {
       if (error instanceof AssistantNotConfiguredError) throw new ServiceUnavailableException('SarvoAI is not switched on for this environment');

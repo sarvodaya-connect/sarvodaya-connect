@@ -82,6 +82,31 @@ describe('AssistantService', () => {
     expect(createMessage.mock.calls[0][0].messages.map((message: { role: string }) => message.role)).toEqual(['user', 'assistant', 'user']);
   });
 
+  it('keeps tool results separate when HQ questions run concurrently', async () => {
+    const { service, createMessage, run } = setup([]);
+    createMessage.mockImplementation(async ({ messages }: { messages: Anthropic.MessageParam[] }) => {
+      const question = messages[0].content;
+      if (typeof question !== 'string') throw new Error('Expected a text question');
+      if (messages.length === 1) return toolUse('list_districts', { question });
+      return final({
+        kind: 'ANSWER',
+        summary: JSON.stringify(messages.at(-1)?.content),
+        options: [],
+      });
+    });
+    run.mockImplementation(async (_name: string, input: { question: string }) => ({
+      content: input.question,
+    }));
+
+    const [first, second] = await Promise.all([
+      service.ask(hq, 'First fictional district', [], now),
+      service.ask(hq, 'Second fictional district', [], now),
+    ]);
+
+    expect(JSON.parse(first.summary)).toMatchObject([{ content: 'First fictional district' }]);
+    expect(JSON.parse(second.summary)).toMatchObject([{ content: 'Second fictional district' }]);
+  });
+
   it('answers UNSUPPORTED when the model refuses', async () => {
     const { service } = setup([message('refusal', [])]);
     expect((await service.ask(hq, 'Something it declines', [], now)).kind).toBe('UNSUPPORTED');
