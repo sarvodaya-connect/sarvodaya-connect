@@ -259,6 +259,21 @@ describe('retrying a photo with its clientUploadId', () => {
     expect(storage.createUploadRequest).toHaveBeenCalledOnce();
   });
 
+  it('confirms a completed photo whose assessment id differs only in letter case', async () => {
+    // The completed-photo check compares the route's id with the stored one.
+    const lettered = 'abcdef12-3456-4abc-8def-0123456789ab';
+    const done = row({
+      assessmentId: lettered,
+      clientUploadId: PHOTO_ID,
+      uploadedAt: new Date(),
+    });
+    const { svc, prisma } = service([done]);
+    await expect(
+      svc.assessmentEvidence(lettered.toUpperCase(), withId, officer),
+    ).resolves.toMatchObject({ evidence: { id: done.id }, upload: null });
+    expect(prisma.emergencyEvidence.create).not.toHaveBeenCalled();
+  });
+
   it('refuses the same id for a different photo', async () => {
     const done = row({ clientUploadId: PHOTO_ID, uploadedAt: new Date() });
     const { svc } = service([done]);

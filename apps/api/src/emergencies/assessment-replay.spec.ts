@@ -91,6 +91,25 @@ describe('sending the same assessment again (issue #125)', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('confirms a retry whose ids differ only in letter case', async () => {
+    // Ids with letters, so upper case really differs from what is stored.
+    const incident = 'abcdef12-3456-4abc-8def-0123456789ab';
+    const society = 'fedcba98-7654-4cba-8fed-ba9876543210';
+    const { svc } = service({
+      id: 'a1',
+      incidentId: incident,
+      societyId: society,
+      createdAt: new Date('2026-11-10T03:00:00Z'),
+    });
+    await expect(
+      svc.sendAssessment(
+        incident.toUpperCase(),
+        { ...input, societyId: society.toUpperCase() },
+        ddm,
+      ),
+    ).resolves.toMatchObject({ id: 'a1', replayed: true });
+  });
+
   it('refuses the same id for another incident or society', async () => {
     const { svc } = service({
       id: 'a1',

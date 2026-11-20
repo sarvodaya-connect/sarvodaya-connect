@@ -117,6 +117,15 @@ function sriLankaTime(value: Date) {
   return `${local.getUTCDate()} ${months[local.getUTCMonth()]}, ${hour}:${minute} ${local.getUTCHours() < 12 ? 'a.m.' : 'p.m.'}`;
 }
 
+/**
+ * Two UUIDs are the same whatever their letter case. Route and body UUIDs
+ * keep the case the client sent, while PostgreSQL returns them in lower
+ * case, so a retry must not be refused only because of case.
+ */
+function sameId(a: string | null | undefined, b: string | null | undefined) {
+  return (a ?? null)?.toLowerCase() === (b ?? null)?.toLowerCase();
+}
+
 function isUniqueViolation(error: unknown) {
   return (error as { code?: string } | null)?.code === 'P2002';
 }
@@ -529,7 +538,10 @@ export class EmergenciesService {
       }),
     );
     if (!replay) return null;
-    if (replay.incidentId !== id || replay.societyId !== input.societyId) {
+    if (
+      !sameId(replay.incidentId, id) ||
+      !sameId(replay.societyId, input.societyId)
+    ) {
       throw new ConflictException(
         'This assessment ID was already used for another society',
       );
@@ -1343,8 +1355,8 @@ export class EmergenciesService {
     target: { assessmentId?: string; helperId?: string },
   ) {
     if (
-      existing.assessmentId !== (target.assessmentId ?? null) ||
-      existing.helperId !== (target.helperId ?? null) ||
+      !sameId(existing.assessmentId, target.assessmentId) ||
+      !sameId(existing.helperId, target.helperId) ||
       existing.contentType !== input.contentType ||
       existing.sizeBytes !== input.sizeBytes ||
       existing.checksumSha256 !== (input.checksumSha256 ?? null)
