@@ -8,7 +8,7 @@ import { REQUIRED_ROLES } from '../auth/require-roles.decorator.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type Anthropic from '@anthropic-ai/sdk';
 
-import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, MODEL_TIMEOUT_MS } from './assistant-model.js';
+import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, HAIKU_45_MODEL_ID, MODEL_TIMEOUT_MS } from './assistant-model.js';
 import { assertBillableRequest, SpendingBlockedError } from './assistant-cost.js';
 import { type AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
@@ -23,10 +23,10 @@ const message = (stop_reason: Anthropic.StopReason, content: object[]) => ({ sto
 const toolUse = (name: string, input: object) => message('tool_use', [{ type: 'tool_use', id: `call-${name}`, name, input }]);
 const final = (answer: object) => message('end_turn', [{ type: 'text', text: JSON.stringify(answer) }]);
 
-function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content: '{}' }) {
+function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content: '{}' }, modelId = 'fake') {
   const createMessage = vi.fn();
   for (const response of responses) createMessage.mockResolvedValueOnce(response);
-  const model: AssistantModel = { modelId: 'fake', createMessage };
+  const model: AssistantModel = { modelId, createMessage };
   const run = vi.fn().mockResolvedValue(outcome);
   const auditCreate = vi.fn().mockResolvedValue({});
   const prisma = { platformAuditEvent: { create: auditCreate } } as unknown as PrismaService;
@@ -80,6 +80,45 @@ describe('AssistantService', () => {
     expect(answer.options).toHaveLength(3);
     expect(answer.table).toBeUndefined();
     expect(createMessage.mock.calls[0][0].messages.map((message: { role: string }) => message.role)).toEqual(['user', 'assistant', 'user']);
+  });
+
+  it('keeps tool results separate when HQ questions run concurrently', async () => {
+    const { service, createMessage, run } = setup([]);
+    createMessage.mockImplementation(async ({ messages }: { messages: Anthropic.MessageParam[] }) => {
+      const question = messages[0].content;
+      if (typeof question !== 'string') throw new Error('Expected a text question');
+      if (messages.length === 1) return toolUse('list_districts', { question });
+      return final({
+        kind: 'ANSWER',
+        summary: JSON.stringify(messages.at(-1)?.content),
+        options: [],
+      });
+    });
+    run.mockImplementation(async (_name: string, input: { question: string }) => ({
+      content: input.question,
+    }));
+
+    const [first, second] = await Promise.all([
+      service.ask(hq, 'First fictional district', [], now),
+      service.ask(hq, 'Second fictional district', [], now),
+    ]);
+
+    expect(JSON.parse(first.summary)).toMatchObject([{ content: 'First fictional district' }]);
+    expect(JSON.parse(second.summary)).toMatchObject([{ content: 'Second fictional district' }]);
+  });
+
+  it('reserves and sends structured output without the unsupported Haiku 4.5 effort field', async () => {
+    const { service, spending, createMessage } = setup(
+      [final({ kind: 'CLARIFY', summary: 'Which district?', options: [] })],
+      undefined,
+      HAIKU_45_MODEL_ID,
+    );
+    await service.ask(hq, 'Show the totals', [], now);
+
+    const request = createMessage.mock.calls[0][0];
+    expect(request.output_config.format.type).toBe('json_schema');
+    expect(request.output_config).not.toHaveProperty('effort');
+    expect(spending.reserve).toHaveBeenCalledWith(HAIKU_45_MODEL_ID, request);
   });
 
   it('answers UNSUPPORTED when the model refuses', async () => {
@@ -352,9 +391,9 @@ describe('assistantModelFromConfig', () => {
     expect(assistantModelFromConfig(config({ SARVOAI_ENABLED: 'yes' }))).toBeInstanceOf(DisabledAssistantModel);
   });
 
-  it('defaults to Claude Haiku 5.5 through the global profile from Singapore', () => {
+  it('defaults to Claude Haiku 4.5 through the global profile from Singapore', () => {
     const model = assistantModelFromConfig(config({ SARVOAI_ENABLED: 'true' }));
     expect(model).toBeInstanceOf(BedrockAssistantModel);
-    expect(model.modelId).toBe('global.anthropic.claude-haiku-5-5');
+    expect(model.modelId).toBe(HAIKU_45_MODEL_ID);
   });
 });
