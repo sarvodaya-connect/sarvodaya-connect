@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../l10n/record_l10n.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -51,6 +52,8 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
       : null;
 
   Future<void> _send() async {
+    // One submission at a time, whichever control started it.
+    if (_sending) return;
     setState(() {
       _submitted = true;
       _error = null;
@@ -86,129 +89,140 @@ class _GradeChangeRequestScreenState extends State<GradeChangeRequestScreen> {
     final current = record.grade;
     return Scaffold(
       appBar: recordFormAppBar(context, title: l.gradeReqFormTitle),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          Container(
-            color: const Color(0xFFE4EFE5),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.shield_outlined,
-                  size: 13,
-                  color: AppColors.pine,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${record.nameEn} · ${record.societyCode}',
-                    style: const TextStyle(
-                      color: AppColors.pine,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
+      body: MotionEntrance(
+        id: 'gradeRequest.${widget.record.id}',
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Container(
+              color: const Color(0xFFE4EFE5),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.shield_outlined,
+                    size: 13,
+                    color: AppColors.pine,
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                FieldLabel(l.gradeReqCurrent),
-                ReadOnlyField(
-                  current == null
-                      ? l.recNotSet
-                      : '$current · ${l.gradeName(current)}',
-                ),
-                const SizedBox(height: 14),
-                FieldLabel(l.gradeReqRequested, required: true),
-                Row(
-                  children: [
-                    for (final grade in const ['A', 'B', 'C']) ...[
-                      Expanded(
-                        child: _GradeOption(
-                          grade: grade,
-                          isCurrent: grade == current,
-                          selected: grade == _grade,
-                          onTap: grade == current
-                              ? null
-                              : () => setState(() => _grade = grade),
-                        ),
-                      ),
-                      if (grade != 'C') const SizedBox(width: 8),
-                    ],
-                  ],
-                ),
-                if (_submitted && _gradeError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                  const SizedBox(width: 6),
+                  Expanded(
                     child: Text(
-                      _gradeError!,
-                      style: RecordStyle.caption.copyWith(
-                        color: AppColors.danger,
+                      '${record.nameEn} · ${record.societyCode}',
+                      style: const TextStyle(
+                        color: AppColors.pine,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                const SizedBox(height: 14),
-                FieldLabel(l.gradeReqWhy, required: true),
-                TextField(
-                  controller: _reason,
-                  maxLines: 5,
-                  minLines: 3,
-                  maxLength: _maxReason,
-                  style: recordInputStyle,
-                  decoration: changedDecoration(
-                    changed: false,
-                    error: _submitted ? _reasonError : null,
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FieldLabel(l.gradeReqCurrent),
+                  ReadOnlyField(
+                    current == null
+                        ? l.recNotSet
+                        : '$current · ${l.gradeName(current)}',
                   ),
-                  buildCounter: (
-                    _, {
-                    required currentLength,
-                    required isFocused,
-                    maxLength,
-                  }) => null,
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  l.gradeReqHqReads(_reason.text.length, _maxReason),
-                  style: RecordStyle.caption,
-                ),
-                const SizedBox(height: 12),
-                RecordNote(
-                  icon: Icons.info_outline,
-                  tone: NoteTone.warning,
-                  title: l.gradeReqApprovalTitle,
-                  message: current == null
-                      ? l.gradeReqStaysAsIs
-                      : l.gradeReqStays(current),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
+                  FieldLabel(l.gradeReqRequested, required: true),
+                  Row(
+                    children: [
+                      for (final grade in const ['A', 'B', 'C']) ...[
+                        Expanded(
+                          child: _GradeOption(
+                            grade: grade,
+                            isCurrent: grade == current,
+                            selected: grade == _grade,
+                            onTap: grade == current
+                                ? null
+                                : () => setState(() => _grade = grade),
+                          ),
+                        ),
+                        if (grade != 'C') const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                  if (_submitted && _gradeError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _gradeError!,
+                        style: RecordStyle.caption.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  FieldLabel(l.gradeReqWhy, required: true),
+                  TextField(
+                    controller: _reason,
+                    maxLines: 5,
+                    minLines: 3,
+                    maxLength: _maxReason,
+                    style: recordInputStyle,
+                    decoration: changedDecoration(
+                      changed: false,
+                      error: _submitted ? _reasonError : null,
+                    ),
+                    buildCounter: (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    l.gradeReqHqReads(_reason.text.length, _maxReason),
+                    style: RecordStyle.caption,
+                  ),
+                  const SizedBox(height: 12),
                   RecordNote(
-                    icon: Icons.error_outline,
-                    tone: NoteTone.error,
-                    title: l.gradeReqNotSent,
-                    message: _error!,
+                    icon: Icons.info_outline,
+                    tone: NoteTone.warning,
+                    title: l.gradeReqApprovalTitle,
+                    message: current == null
+                        ? l.gradeReqStaysAsIs
+                        : l.gradeReqStays(current),
+                  ),
+                  // Appears at full size at once; only the space opens smoothly.
+                  MotionSize(
+                    child: _error != null
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: RecordNote(
+                              icon: Icons.error_outline,
+                              tone: NoteTone.error,
+                              title: l.gradeReqNotSent,
+                              message: _error!,
+                            ),
+                          )
+                        : const SizedBox(width: double.infinity),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: BottomActionBar(
         secondary: OutlinedButton(
           onPressed: () => Navigator.of(context).maybePop(),
           child: Text(l.commonCancel),
         ),
-        primary: FilledButton(
-          onPressed: _sending ? null : _send,
-          child: Text(_sending ? l.gradeReqSending : l.gradeReqSend),
+        primary: MotionPress(
+          enabled: !_sending,
+          child: FilledButton(
+            onPressed: _sending ? null : _send,
+            child: Text(_sending ? l.gradeReqSending : l.gradeReqSend),
+          ),
         ),
       ),
     );
@@ -244,7 +258,9 @@ class _GradeOption extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Opacity(
           opacity: isCurrent ? 0.45 : 1,
-          child: Container(
+          child: AnimatedContainer(
+            duration: AppMotion.duration(context, AppMotion.state),
+            curve: AppMotion.curve,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
             decoration: BoxDecoration(
               color: selected ? AppColors.mintSoft : AppColors.surface,

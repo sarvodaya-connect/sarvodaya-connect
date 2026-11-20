@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
+import '../motion/app_motion.dart';
 import '../theme/app_theme.dart';
 
 /// The whole number a person typed, or null when it is not a count from 0 to
@@ -114,15 +115,19 @@ class _CountFieldState extends State<CountField> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              visualDensity: widget.compact ? VisualDensity.compact : null,
-              tooltip: widget.decreaseTooltip ?? l.countFewer(widget.label),
-              onPressed: current != null && current > 0
-                  ? () => _step(-1)
-                  : null,
-              icon: Icon(
-                widget.compact ? Icons.remove : Icons.remove_circle_outline,
-                size: buttonSize,
+            // Press feedback only; the buttons keep their own taps, focus and semantics.
+            MotionPress(
+              enabled: current != null && current > 0,
+              child: IconButton(
+                visualDensity: widget.compact ? VisualDensity.compact : null,
+                tooltip: widget.decreaseTooltip ?? l.countFewer(widget.label),
+                onPressed: current != null && current > 0
+                    ? () => _step(-1)
+                    : null,
+                icon: Icon(
+                  widget.compact ? Icons.remove : Icons.remove_circle_outline,
+                  size: buttonSize,
+                ),
               ),
             ),
             Flexible(
@@ -158,32 +163,42 @@ class _CountFieldState extends State<CountField> {
                 ),
               ),
             ),
-            IconButton(
-              visualDensity: widget.compact ? VisualDensity.compact : null,
-              tooltip: widget.increaseTooltip ?? l.countMore(widget.label),
-              onPressed: current != null && current < widget.max
-                  ? () => _step(1)
-                  : null,
-              icon: Icon(
-                widget.compact ? Icons.add : Icons.add_circle_outline,
-                size: buttonSize,
+            MotionPress(
+              enabled: current != null && current < widget.max,
+              child: IconButton(
+                visualDensity: widget.compact ? VisualDensity.compact : null,
+                tooltip: widget.increaseTooltip ?? l.countMore(widget.label),
+                onPressed: current != null && current < widget.max
+                    ? () => _step(1)
+                    : null,
+                icon: Icon(
+                  widget.compact ? Icons.add : Icons.add_circle_outline,
+                  size: buttonSize,
+                ),
               ),
             ),
           ],
         ),
-        if (_invalid)
-          ConstrainedBox(
-            // As wide as the controls, so a long message wraps under them.
-            constraints: const BoxConstraints(maxWidth: 176),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                l.countInvalid(l.number(widget.max)),
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontSize: 11.5, color: AppColors.danger),
-              ),
-            ),
-          ),
+        // The message is readable at once; only the space below the count opens.
+        MotionSize(
+          child: !_invalid
+              ? const SizedBox.shrink()
+              : ConstrainedBox(
+                  // As wide as the controls, so a long message wraps under them.
+                  constraints: const BoxConstraints(maxWidth: 176),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      l.countInvalid(l.number(widget.max)),
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.danger,
+                      ),
+                    ),
+                  ),
+                ),
+        ),
       ],
     );
   }

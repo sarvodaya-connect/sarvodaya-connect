@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
 import '../models/society.dart';
+import '../motion/app_motion.dart';
 import '../screens/manual_pin_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -161,6 +162,8 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   ].every((error) => error == null);
 
   Future<bool> _save() async {
+    // One save at a time: the button, the keyboard and the leave dialog all end here.
+    if (_saving) return false;
     setState(() {
       _submitted = true;
       _serverError = null;
@@ -445,133 +448,141 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                children: [
-                  _text(
-                    _name,
-                    l.recSocietyName,
-                    required: true,
-                    error: _nameError,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            FieldLabel(l.recSNumber),
-                            ReadOnlyField(record.societyCode),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            FieldLabel(l.recGrade),
-                            ReadOnlyField(record.grade ?? '–'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (record.permissions.canRequestGradeChange &&
-                      record.openGradeRequest == null)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        style: compactTextStyle,
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<bool>(
-                            builder: (_) =>
-                                GradeChangeRequestScreen(record: record),
-                          ),
-                        ),
-                        child: Text(l.editRequestLink),
-                      ),
+              child: MotionEntrance(
+                id: 'edit.${record.id}',
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  children: [
+                    _text(
+                      _name,
+                      l.recSocietyName,
+                      required: true,
+                      error: _nameError,
                     ),
-                  const SizedBox(height: 12),
-                  _members(l),
-                  _text(
-                    _address,
-                    l.recAddress,
-                    required: true,
-                    error: _addressError,
-                  ),
-                  _text(
-                    _landline,
-                    l.editLandline,
-                    error: _landlineError,
-                    keyboard: TextInputType.phone,
-                    hint: l.editLandlineHint,
-                  ),
-                  _text(
-                    _business,
-                    l.editBusiness,
-                    maxLines: 4,
-                    hint: l.editBusinessHint,
-                  ),
-                  FieldLabel(l.editMapLocation),
-                  Stack(
-                    children: [
-                      SocietyStreetMap(
-                        height: 110,
-                        location: _location,
-                        onPick: (location) =>
-                            setState(() => _location = location),
-                        semanticLabel: _location == null
-                            ? l.editNoLocation
-                            : l.editLocationAt(
-                                _location!.latitude.toStringAsFixed(4),
-                                _location!.longitude.toStringAsFixed(4),
-                              ),
-                      ),
-                      Positioned(
-                        right: 8,
-                        bottom: 8,
-                        child: OutlinedButton.icon(
-                          style: compactOutlinedStyle.copyWith(
-                            backgroundColor: const WidgetStatePropertyAll(
-                              AppColors.surface,
-                            ),
-                            minimumSize: const WidgetStatePropertyAll(
-                              Size(0, 30),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FieldLabel(l.recSNumber),
+                              ReadOnlyField(record.societyCode),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FieldLabel(l.recGrade),
+                              ReadOnlyField(record.grade ?? '–'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (record.permissions.canRequestGradeChange &&
+                        record.openGradeRequest == null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          style: compactTextStyle,
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<bool>(
+                              builder: (_) =>
+                                  GradeChangeRequestScreen(record: record),
                             ),
                           ),
-                          onPressed: _movePin,
-                          icon: const Icon(Icons.place_outlined, size: 14),
-                          label: Text(l.editMovePin),
+                          child: Text(l.editRequestLink),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _location == null
-                        ? l.editNoLocationYet
-                        : (_locationChanged
-                              ? l.editCoordinatesChanged
-                              : l.editCoordinates)(
-                            _location!.latitude.toStringAsFixed(4),
-                            _location!.longitude.toStringAsFixed(4),
-                          ),
-                    style: RecordStyle.caption,
-                  ),
-                  if (_serverError != null) ...[
                     const SizedBox(height: 12),
-                    NoticeBanner(
-                      icon: Icons.error_outline,
-                      tone: NoticeTone.error,
-                      title: l.editNotSaved,
-                      message: _serverError,
+                    _members(l),
+                    _text(
+                      _address,
+                      l.recAddress,
+                      required: true,
+                      error: _addressError,
+                    ),
+                    _text(
+                      _landline,
+                      l.editLandline,
+                      error: _landlineError,
+                      keyboard: TextInputType.phone,
+                      hint: l.editLandlineHint,
+                    ),
+                    _text(
+                      _business,
+                      l.editBusiness,
+                      maxLines: 4,
+                      hint: l.editBusinessHint,
+                    ),
+                    FieldLabel(l.editMapLocation),
+                    Stack(
+                      children: [
+                        SocietyStreetMap(
+                          height: 110,
+                          location: _location,
+                          onPick: (location) =>
+                              setState(() => _location = location),
+                          semanticLabel: _location == null
+                              ? l.editNoLocation
+                              : l.editLocationAt(
+                                  _location!.latitude.toStringAsFixed(4),
+                                  _location!.longitude.toStringAsFixed(4),
+                                ),
+                        ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: OutlinedButton.icon(
+                            style: compactOutlinedStyle.copyWith(
+                              backgroundColor: const WidgetStatePropertyAll(
+                                AppColors.surface,
+                              ),
+                              minimumSize: const WidgetStatePropertyAll(
+                                Size(0, 30),
+                              ),
+                            ),
+                            onPressed: _movePin,
+                            icon: const Icon(Icons.place_outlined, size: 14),
+                            label: Text(l.editMovePin),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _location == null
+                          ? l.editNoLocationYet
+                          : (_locationChanged
+                                ? l.editCoordinatesChanged
+                                : l.editCoordinates)(
+                              _location!.latitude.toStringAsFixed(4),
+                              _location!.longitude.toStringAsFixed(4),
+                            ),
+                      style: RecordStyle.caption,
+                    ),
+                    // The banner appears at full size at once; only the space opens smoothly.
+                    MotionSize(
+                      child: _serverError == null
+                          ? const SizedBox(width: double.infinity)
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: NoticeBanner(
+                                icon: Icons.error_outline,
+                                tone: NoticeTone.error,
+                                title: l.editNotSaved,
+                                message: _serverError,
+                              ),
+                            ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -581,9 +592,12 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
             onPressed: () => Navigator.of(context).maybePop(),
             child: Text(l.editCancel),
           ),
-          primary: FilledButton(
-            onPressed: dirty && !_saving && _valid ? _save : null,
-            child: Text(_saving ? l.recSaving : l.editSave),
+          primary: MotionPress(
+            enabled: dirty && !_saving && _valid,
+            child: FilledButton(
+              onPressed: dirty && !_saving && _valid ? _save : null,
+              child: Text(_saving ? l.recSaving : l.editSave),
+            ),
           ),
         ),
       ),
