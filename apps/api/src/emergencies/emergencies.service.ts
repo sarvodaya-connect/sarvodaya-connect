@@ -1219,19 +1219,28 @@ export class EmergenciesService {
         : null;
       if (pending) return this.resumeUpload(pending, input, target);
     }
+    // Two retries of the same photo can arrive together. If the other one
+    // recorded it first, resume or confirm that record instead of refusing
+    // this one, including when that record was the last of the 10 places.
+    const raced = async () =>
+      input.clientUploadId
+        ? this.uploadById(principal, input.clientUploadId)
+        : null;
     if (target.count >= MAX_EVIDENCE_PER_RECORD) {
+      const existing = await raced();
+      if (existing) return this.resumeUpload(existing, input, target);
       throw new BadRequestException(target.limitMessage);
     }
     let created;
     try {
       created = await this.recordEvidence(input, principal, target);
     } catch (error) {
-      // Two retries of the same photo arrived together and the other one
-      // was recorded first: resume or confirm that one.
       const cause = (error as { cause?: unknown }).cause ?? error;
-      if (input.clientUploadId && isUniqueViolation(cause)) {
-        const raced = await this.uploadById(principal, input.clientUploadId);
-        if (raced) return this.resumeUpload(raced, input, target);
+      // A unique violation (same id recorded at the same moment) or the
+      // locked count reaching the limit because that record took the place.
+      if (isUniqueViolation(cause) || error instanceof BadRequestException) {
+        const existing = await raced();
+        if (existing) return this.resumeUpload(existing, input, target);
       }
       throw error;
     }

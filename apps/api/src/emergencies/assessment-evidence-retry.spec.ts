@@ -121,6 +121,7 @@ function service(rows: Row[] = []) {
     ),
   };
   const tx = { $queryRaw: vi.fn(async () => []), emergencyEvidence: evidence };
+  let locked: Promise<void> = Promise.resolve();
   const prisma = {
     emergencyAssessment: {
       findUnique: vi.fn(async () => ({
@@ -136,7 +137,16 @@ function service(rows: Row[] = []) {
       })),
     },
     emergencyEvidence: evidence,
-    $transaction: vi.fn(async (run: (db: typeof tx) => unknown) => run(tx)),
+    // Like the row lock (SELECT … FOR UPDATE): one transaction at a time, so a
+    // second one counts the first one's insert.
+    $transaction: vi.fn((run: (db: typeof tx) => unknown) => {
+      const result = locked.then(() => run(tx));
+      locked = result.then(
+        () => undefined,
+        () => undefined,
+      );
+      return result;
+    }),
   };
   const storage = {
     createUploadRequest: vi.fn(async ({ key }: { key: string }) => ({
@@ -286,6 +296,33 @@ describe('retrying a photo with its clientUploadId', () => {
       rows[0]!.id,
       rows[0]!.id,
     ]);
+  });
+
+  it('two retries of the tenth photo arriving together leave one record and refuse neither', async () => {
+    const others = Array.from({ length: 9 }, () =>
+      row({ uploadedAt: new Date() }),
+    );
+    const { svc, rows } = service(others);
+    // Both miss the id lookup; the first takes the last place, and the
+    // second then counts 10 under the lock.
+    const results = await Promise.all([
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+    ]);
+    expect(rows).toHaveLength(10);
+    const tenth = rows.find((r) => r.clientUploadId === PHOTO_ID)!;
+    expect(results.map((r) => r.evidence.id)).toEqual([tenth.id, tenth.id]);
+  });
+
+  it('still refuses an eleventh photo with a new id', async () => {
+    const full = Array.from({ length: 10 }, () =>
+      row({ uploadedAt: new Date() }),
+    );
+    const { svc, rows } = service(full);
+    await expect(
+      svc.assessmentEvidence(ASSESSMENT, withId, officer),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(rows).toHaveLength(10);
   });
 
   it('completing a photo twice confirms it, without checking storage again', async () => {
