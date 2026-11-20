@@ -50,6 +50,7 @@ export async function openIncident(_state: IncidentFormState, form: FormData): P
   const title = text(form, "title", 160);
   const description = text(form, "description", 1000);
   const message = text(form, "message", 1000);
+  const clientMutationId = text(form, "clientMutationId", 36);
   let id: string;
   try {
     const opened: { id: string } = await post("/emergencies/incidents", {
@@ -61,6 +62,7 @@ export async function openIncident(_state: IncidentFormState, form: FormData): P
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
       ...(message ? { message } : {}),
+      ...(isUuid(clientMutationId) ? { clientMutationId } : {}),
     });
     id = opened.id;
   } catch (error) {

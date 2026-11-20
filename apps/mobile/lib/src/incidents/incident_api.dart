@@ -495,6 +495,7 @@ abstract class IncidentApi {
     required List<String> districtIds,
     required String description,
     required DateTime startedAt,
+    String? clientMutationId,
   });
   Future<SituationReport> report(String reportId);
   Future<List<IncidentNotification>> notifications();
@@ -677,6 +678,7 @@ class HttpIncidentApi implements IncidentApi {
     required List<String> districtIds,
     required String description,
     required DateTime startedAt,
+    String? clientMutationId,
   }) async {
     final opened = await _call(
       '/emergencies/incidents',
@@ -687,6 +689,7 @@ class HttpIncidentApi implements IncidentApi {
         'districtIds': districtIds,
         'description': description.trim(),
         'startedAt': startedAt.toUtc().toIso8601String(),
+        'clientMutationId': ?clientMutationId,
       },
     ) as Map<String, dynamic>;
     return opened['id'] as String;

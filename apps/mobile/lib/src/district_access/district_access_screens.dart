@@ -587,7 +587,10 @@ class _GiveAccessScreenState extends State<GiveAccessScreen> {
                     ),
                     items: [
                       for (final d in deputies)
-                        DropdownMenuItem(value: d.id, child: Text(d.name)),
+                        DropdownMenuItem(
+                          value: d.id,
+                          child: Text(d.name, overflow: TextOverflow.ellipsis),
+                        ),
                     ],
                     onChanged: (value) => setState(() => _deputyId = value),
                   ),

@@ -287,6 +287,7 @@ class DemoIncidentApi implements IncidentApi {
     required List<String> districtIds,
     required String description,
     required DateTime startedAt,
+    String? clientMutationId,
   }) async => _incident.id;
 
   @override
