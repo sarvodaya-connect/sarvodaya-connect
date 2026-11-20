@@ -2563,6 +2563,7 @@
   "aqSaving": "Saving on this phone…",
   "aqSavedTitle": "Saved on This Phone",
   "aqSavedNext": "It has not reached the server yet. Keep the app open when you are back online and open Disaster Response, or tap Retry sending there.",
+  "aqPhotosNext": "The photos have not reached the server yet. Keep the app open when you are back online and open Disaster Response, or tap Retry sending there.",
   "aqBlockedTitle": "Saved, but It Can't Be Sent Yet",
   "aqBlockedNext": "It stays on this phone until you retry or remove it from Disaster Response.",
   "aqSaveFailed": "The assessment could not be saved on this phone: {reason}",

@@ -651,9 +651,17 @@ class HttpIncidentApi implements IncidentApi {
     // answer was lost. Nothing to upload or complete again.
     if (created['upload'] == null && evidence['uploaded'] == true) return;
     final upload = created['upload'] as Map<String, dynamic>;
-    final request = http.Request(
+    // At the deadline the request is aborted, not just abandoned, so a
+    // retry never runs alongside an earlier upload still holding the photo.
+    final abort = Completer<void>();
+    void stop() {
+      if (!abort.isCompleted) abort.complete();
+    }
+
+    final request = http.AbortableRequest(
       upload['method'] as String? ?? 'PUT',
       Uri.parse(upload['url'] as String),
+      abortTrigger: abort.future,
     )..bodyBytes = file.bytes;
     (upload['headers'] as Map? ?? const {}).forEach(
       (key, value) => request.headers['$key'] = '$value',
@@ -661,9 +669,31 @@ class HttpIncidentApi implements IncidentApi {
     if (stillSignedIn != null && !stillSignedIn()) {
       throw const IncidentException('Sign in again to send this.', status: 401);
     }
+    const unreachable = IncidentException(
+      'The photo did not reach storage. Check your connection and try again.',
+      offline: true,
+    );
+    final deadline = Timer(uploadTimeout, stop);
     try {
       // A stalled upload ends, so the queue can mark it and retry later.
-      final response = await _uploadClient.send(request).timeout(uploadTimeout);
+      final response = await _uploadClient
+          .send(request)
+          .timeout(
+            uploadTimeout,
+            onTimeout: () {
+              stop();
+              throw TimeoutException('Upload timed out', uploadTimeout);
+            },
+          );
+      // Read (and so release) the response on success and on failure, within
+      // the same deadline; storage sends little or nothing back.
+      await response.stream.drain<void>().timeout(
+        uploadTimeout,
+        onTimeout: () {
+          stop();
+          throw TimeoutException('Upload response timed out', uploadTimeout);
+        },
+      );
       if (response.statusCode >= 300) {
         throw const IncidentException(
           'The photo did not reach storage. Try again.',
@@ -671,15 +701,12 @@ class HttpIncidentApi implements IncidentApi {
         );
       }
     } on http.ClientException {
-      throw const IncidentException(
-        'The photo did not reach storage. Check your connection and try again.',
-        offline: true,
-      );
+      // Includes RequestAbortedException when the deadline aborted it.
+      throw unreachable;
     } on TimeoutException {
-      throw const IncidentException(
-        'The photo did not reach storage. Check your connection and try again.',
-        offline: true,
-      );
+      throw unreachable;
+    } finally {
+      deadline.cancel();
     }
     try {
       await _call(

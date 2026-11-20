@@ -647,6 +647,241 @@ void main() {
     );
   });
 
+  group('demo API behaves like the real one (#128 review)', () {
+    test(
+      'after the incident closes, a replay is confirmed and a new one refused',
+      () async {
+        final demo = DemoIncidentApi(clock: () => demoNow);
+        final sent = await demo.sendAssessment(
+          'incident-demo',
+          'society-demo',
+          'replayed-id',
+          _answers(),
+        );
+        await demo.close('incident-demo');
+        expect(
+          await demo.sendAssessment(
+            'incident-demo',
+            'society-demo',
+            'replayed-id',
+            _answers(),
+          ),
+          sent,
+        );
+        await expectLater(
+          demo.sendAssessment(
+            'incident-demo',
+            'society-demo',
+            'new-id',
+            _answers(),
+          ),
+          throwsA(
+            isA<IncidentException>().having(
+              problemOf,
+              'queue problem',
+              QueueProblem.closed,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('a photo retried with the same upload id counts once', () async {
+      final demo = DemoIncidentApi(clock: () => demoNow);
+      final id = await demo.sendAssessment(
+        'incident-demo',
+        'society-demo',
+        'with-photos',
+        _answers(),
+      );
+      final photo = _answers(photos: 1).photos.single;
+      await demo.addPhoto(id, photo, clientUploadId: 'upload-1');
+      await demo.addPhoto(id, photo, clientUploadId: 'upload-1');
+      await demo.addPhoto(id, photo, clientUploadId: 'upload-2');
+      final update = (await demo.updates(
+        'incident-demo',
+        'society-demo',
+      )).singleWhere((u) => u.id == id);
+      expect(update.photos, 2);
+    });
+  });
+
+  group('review fixes (#128)', () {
+    late _FlakyStorage storage;
+    AssessmentQueue flakyQueue() => AssessmentQueue(
+      storage: storage,
+      accountId: () => account,
+      api: () => api,
+      clock: () => demoNow,
+    );
+    List<File> photoFiles() => root
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.uri.pathSegments.last.startsWith('photo-'))
+        .toList();
+
+    setUp(() {
+      storage = _FlakyStorage(
+        EncryptedFileQueueStorage(keys: keys, root: () async => root),
+      );
+    });
+
+    test(
+      'a recovered queue is kept even when its backup cannot be deleted yet',
+      () async {
+        final first = await save(flakyQueue());
+        storage.failReads = true;
+        final q = flakyQueue();
+        expect(await q.load(), isEmpty);
+        final second = await save(q);
+        storage.failReads = false;
+
+        storage.failDeleteSetAside = true;
+        final recovering = flakyQueue();
+        final items = await recovering.load();
+        expect(items.map((i) => i.clientMutationId).toSet(), {
+          first.clientMutationId,
+          second.clientMutationId,
+        });
+        // The next save starts from the merged queue and erases nothing.
+        final third = await save(recovering);
+        expect(recovering.items.map((i) => i.clientMutationId).toSet(), {
+          first.clientMutationId,
+          second.clientMutationId,
+          third.clientMutationId,
+        });
+
+        // Later the backup goes, and nothing is merged twice.
+        storage.failDeleteSetAside = false;
+        expect(await recovering.load(), hasLength(3));
+        expect(
+          root
+              .listSync(recursive: true)
+              .where((f) => f.path.contains('set-aside')),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'a save is not reported when sign-out stopped it being written',
+      () async {
+        final existing = await save(flakyQueue());
+        storage.failReads = true;
+        final q = flakyQueue();
+        expect(await q.load(), isEmpty);
+        // Signed out after the photo copy is written, before the queue is.
+        storage.afterPut = () async {
+          account = null;
+          q.forget();
+        };
+        await expectLater(
+          save(q, photos: 1),
+          throwsA(isA<QueueSaveException>()),
+        );
+        // The unreadable queue is untouched and the photo copy is gone.
+        storage
+          ..afterPut = null
+          ..failReads = false;
+        account = 'account-a';
+        expect((await flakyQueue().load()).map((i) => i.clientMutationId), [
+          existing.clientMutationId,
+        ]);
+        expect(photoFiles(), isEmpty);
+      },
+    );
+
+    test('a failed save leaves no photo copies behind', () async {
+      final q = flakyQueue();
+      storage.failPutAt = 2;
+      await expectLater(
+        save(q, photos: 2),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(photoFiles(), isEmpty);
+
+      storage
+        ..failPutAt = null
+        ..failWrites = true;
+      await expectLater(
+        save(q, photos: 2),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(photoFiles(), isEmpty);
+      expect(q.items, isEmpty);
+    });
+
+    test("a new account never joins the previous account's round", () async {
+      final q = queue();
+      final mine = await save(q);
+      final inFlight = Completer<void>();
+      final release = Completer<void>();
+      api.beforeSend = (id) async {
+        if (id != mine.clientMutationId) return;
+        inFlight.complete();
+        await release.future;
+      };
+      final roundA = q.sync();
+      await inFlight.future;
+      // A signs out mid-request; B signs in, saves and asks to send.
+      account = 'account-b';
+      q.forget();
+      final theirs = await save(q);
+      final roundB = q.sync();
+      expect(identical(roundA, roundB), isFalse);
+      release.complete();
+      await roundA;
+      final result = await roundB;
+      expect(result.sent, 1);
+      expect(api.received.keys, contains(theirs.clientMutationId));
+      expect(q.items, isEmpty);
+    });
+
+    test('an assessment removed during a round is never sent', () async {
+      final q = queue();
+      final first = await save(q);
+      final second = await save(q);
+      final inFlight = Completer<void>();
+      final release = Completer<void>();
+      api.beforeSend = (id) async {
+        if (id != first.clientMutationId) return;
+        inFlight.complete();
+        await release.future;
+      };
+      final round = q.sync();
+      await inFlight.future;
+      await q.discard(second.clientMutationId);
+      release.complete();
+      final result = await round;
+      expect(api.received.keys, [first.clientMutationId]);
+      expect(api.sendCalls, 1);
+      expect(result.sent, 1);
+      expect(q.delivered(second.clientMutationId), isFalse);
+    });
+
+    test(
+      'a photo copy that cannot be deleted does not undo a confirmed delivery',
+      () async {
+        final q = flakyQueue();
+        final saved = await save(q, photos: 1);
+        storage.failDeletePhoto = true;
+        final result = await q.sync();
+        expect(result.sent, 1);
+        expect(result.blocked, 0);
+        expect(q.items, isEmpty);
+        expect(q.delivered(saved.clientMutationId), isTrue);
+        expect(api.photoCalls, 1);
+        expect(photoFiles(), hasLength(1));
+
+        // The copy goes at the next round, without uploading it again.
+        storage.failDeletePhoto = false;
+        await q.sync();
+        expect(photoFiles(), isEmpty);
+        expect(api.photoCalls, 1);
+      },
+    );
+  });
+
   test('a damaged photo blocks only its own assessment', () async {
     final q = queue();
     final damaged = await save(q, photos: 1);
@@ -705,6 +940,16 @@ class _FlakyStorage implements QueueStorage {
   _FlakyStorage(this._inner);
   final QueueStorage _inner;
   bool failReads = false;
+  bool failWrites = false;
+  bool failDeleteSetAside = false;
+  bool failDeletePhoto = false;
+
+  /// Fails the photo write with this number (1 is the first).
+  int? failPutAt;
+  int _puts = 0;
+
+  /// Runs after each photo is written, to act part-way through a save.
+  Future<void> Function()? afterPut;
 
   @override
   Future<String?> readQueue(String accountId) {
@@ -713,8 +958,10 @@ class _FlakyStorage implements QueueStorage {
   }
 
   @override
-  Future<void> writeQueue(String accountId, String json) =>
-      _inner.writeQueue(accountId, json);
+  Future<void> writeQueue(String accountId, String json) {
+    if (failWrites) throw const FileSystemException('Storage full');
+    return _inner.writeQueue(accountId, json);
+  }
 
   @override
   Future<void> setAsideQueue(String accountId) =>
@@ -725,20 +972,32 @@ class _FlakyStorage implements QueueStorage {
       failReads ? const {} : _inner.readSetAside(accountId);
 
   @override
-  Future<void> deleteSetAside(String accountId, String name) =>
-      _inner.deleteSetAside(accountId, name);
+  Future<void> deleteSetAside(String accountId, String name) {
+    if (failDeleteSetAside) throw const FileSystemException('Busy');
+    return _inner.deleteSetAside(accountId, name);
+  }
 
   @override
-  Future<String> putPhoto(String accountId, String name, List<int> bytes) =>
-      _inner.putPhoto(accountId, name, bytes);
+  Future<String> putPhoto(
+    String accountId,
+    String name,
+    List<int> bytes,
+  ) async {
+    if (++_puts == failPutAt) throw const FileSystemException('Storage full');
+    final ref = await _inner.putPhoto(accountId, name, bytes);
+    await afterPut?.call();
+    return ref;
+  }
 
   @override
   Future<List<int>> readPhoto(String accountId, String ref) =>
       _inner.readPhoto(accountId, ref);
 
   @override
-  Future<void> deletePhoto(String accountId, String ref) =>
-      _inner.deletePhoto(accountId, ref);
+  Future<void> deletePhoto(String accountId, String ref) {
+    if (failDeletePhoto) throw const FileSystemException('Busy');
+    return _inner.deletePhoto(accountId, ref);
+  }
 }
 
 /// The phone's key store answers after a moment, as the real Keychain does.

@@ -55,6 +55,41 @@ class _OfflineIncidentApi extends DemoIncidentApi {
   }
 }
 
+/// The first list of incidents waits for [firstList]; later ones answer at once.
+class _SlowFirstListApi extends DemoIncidentApi {
+  _SlowFirstListApi({required super.clock});
+  final firstList = Completer<List<IncidentSummary>>();
+  var _calls = 0;
+
+  @override
+  Future<List<IncidentSummary>> active() =>
+      _calls++ == 0 ? firstList.future : super.active();
+}
+
+/// Runs [onSend] inside each send, to sign out part-way.
+class _SignOutIncidentApi extends DemoIncidentApi {
+  _SignOutIncidentApi({required super.clock});
+  void Function()? onSend;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    onSend?.call();
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
+      stillSignedIn: stillSignedIn,
+    );
+  }
+}
+
 /// Sending a saved assessment hangs until [release] completes, like a large
 /// photo or a stalled upload.
 class _StalledIncidentApi extends DemoIncidentApi {
@@ -601,6 +636,70 @@ void main() {
     );
     expect(store.assessments.items.single.blocked, isTrue);
   });
+
+  testWidgets(
+    'a sign-out while sending never shows the assessment as sent (#128 review)',
+    (tester) async {
+      final api = _SignOutIncidentApi(clock: () => demoNow);
+      final detail = await api.detail('incident-demo');
+      final store = await _pump(
+        tester,
+        RapidAssessmentScreen(
+          incident: detail.incident,
+          societies: detail.assessableSocieties,
+        ),
+        api: api,
+      );
+      // As in the app: the API answers 401, which signs the user out and
+      // hides their saved items without sending them.
+      api.onSend = () {
+        store.signOut();
+        throw const IncidentException('Sign in again', status: 401);
+      };
+      await _tap(tester, find.text('Critical'));
+      for (var i = 0; i < 9; i++) {
+        await _tap(tester, find.text('Next'));
+      }
+      await _tap(tester, find.text('Check answers'));
+      await _tap(tester, find.text('Send assessment'));
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.textContaining('Sign in again to send it.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a slow first load never replaces the refresh after a delivery (#128 review)',
+    (tester) async {
+      final api = _SlowFirstListApi(clock: () => demoNow);
+      final store = await _pump(tester, const SizedBox(), api: api);
+      final detail = await api.detail('incident-demo');
+      await store.assessments.save(
+        incident: detail.incident,
+        societyId: detail.assessableSocieties.first.id,
+        societyName: detail.assessableSocieties.first.name,
+        clientMutationId: newClientMutationId(),
+        answers: AssessmentAnswers()..impact = 'CRITICAL',
+      );
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const IncidentsScreen(),
+          ),
+        ),
+      );
+      // The saved assessment is sent, so the screen reloads (fast) while the
+      // first load is still waiting.
+      await tester.pumpAndSettle();
+      expect(find.text(detail.incident.title), findsWidgets);
+      // The first load now answers with what it saw before the delivery.
+      api.firstList.complete(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(detail.incident.title), findsWidgets);
+    },
+  );
 
   testWidgets('M49: closing asks first and records the closer', (tester) async {
     await _pump(tester, const IncidentScreen(incidentId: 'incident-demo'));

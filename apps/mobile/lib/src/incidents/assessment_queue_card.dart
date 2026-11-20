@@ -205,8 +205,14 @@ class SavedAssessmentNotice extends StatelessWidget {
     return NoticeBanner(
       icon: item.blocked ? Icons.error_outline : Icons.save_outlined,
       title: item.blocked ? l.aqBlockedTitle : l.aqSavedTitle,
+      // Once the assessment has arrived only its photos are waiting, so the
+      // follow-up never says the assessment itself has not reached the server.
       message:
-          '${queueProblemText(l, item)} ${item.blocked ? l.aqBlockedNext : l.aqSavedNext}',
+          '${queueProblemText(l, item)} ${item.blocked
+              ? l.aqBlockedNext
+              : item.assessmentId != null
+              ? l.aqPhotosNext
+              : l.aqSavedNext}',
       tone: item.blocked ? NoticeTone.error : NoticeTone.warning,
     );
   }

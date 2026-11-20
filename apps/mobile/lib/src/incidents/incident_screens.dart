@@ -392,6 +392,10 @@ class IncidentHomeSection extends StatefulWidget {
 class _IncidentHomeSectionState extends State<IncidentHomeSection> {
   IncidentDetail? _detail;
 
+  /// Only the newest load may update the screen, so a slow first load never
+  /// replaces the refresh after a delivery.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -401,11 +405,14 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
   Future<void> _load({bool send = true}) async {
     final store = DemoScope.read(context);
     final api = store.incidents;
+    final generation = ++_generation;
     if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
       final active = await api.active();
       final detail = active.isEmpty ? null : await api.detail(active.first.id);
-      if (mounted) setState(() => _detail = detail);
+      if (mounted && generation == _generation) {
+        setState(() => _detail = detail);
+      }
     } on IncidentException {
       // The home still works without the incident card; the Incident tab shows the error.
     }
@@ -530,6 +537,9 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
   List<IncidentNotification> _alerts = const [];
   String? _error;
 
+  /// Only the newest load may update the screen.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -539,6 +549,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
   Future<void> _load({bool send = true}) async {
     final store = DemoScope.read(context);
     final api = store.incidents;
+    final generation = ++_generation;
     setState(() => _error = null);
     if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
@@ -546,14 +557,16 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
       final alerts = await api.notifications().catchError(
         (_) => const <IncidentNotification>[],
       );
-      if (mounted) {
+      if (mounted && generation == _generation) {
         setState(() {
           _incidents = incidents;
           _alerts = alerts;
         });
       }
     } on IncidentException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && generation == _generation) {
+        setState(() => _error = error.message);
+      }
     }
   }
 
@@ -715,6 +728,9 @@ class _IncidentScreenState extends State<IncidentScreen> {
   String? _error;
   bool _closing = false;
 
+  /// Only the newest load may update the screen.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -722,6 +738,7 @@ class _IncidentScreenState extends State<IncidentScreen> {
   }
 
   Future<void> _load({bool send = true}) async {
+    final generation = ++_generation;
     setState(() => _error = null);
     if (send) {
       _sendSavedThen(
@@ -732,9 +749,13 @@ class _IncidentScreenState extends State<IncidentScreen> {
     try {
       final detail = await DemoScope.read(context).incidents
           .detail(widget.incidentId);
-      if (mounted) setState(() => _detail = detail);
+      if (mounted && generation == _generation) {
+        setState(() => _detail = detail);
+      }
     } on IncidentException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && generation == _generation) {
+        setState(() => _error = error.message);
+      }
     }
   }
 
@@ -1326,21 +1347,25 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
       syncFailed = true;
     }
     if (!mounted) return;
-    // This assessment is the newest in the queue, so it is sent last: if
-    // sending stopped with an error, it is still saved on the phone.
-    final left =
-        queue.items
-            .where((item) => item.clientMutationId == _clientMutationId)
-            .firstOrNull ??
-        (syncFailed ? saved : null);
-    if (left != null) {
-      if (mounted) {
-        setState(() {
-          _saved = left;
-          _sending = false;
-          _status = '';
-        });
-      }
+    // "Sent" only once the API confirmed this assessment and every photo.
+    // Missing from the queue is not enough: a sign-out during sending hides
+    // the account's saved items without sending them.
+    if (syncFailed || !queue.delivered(_clientMutationId)) {
+      final current = queue.items
+          .where((item) => item.clientMutationId == _clientMutationId)
+          .firstOrNull;
+      setState(() {
+        _saved =
+            current ??
+            (store.user == null
+                ? saved.copyWith(
+                    problem: QueueProblem.signIn,
+                    message: 'Sign in again to send this.',
+                  )
+                : saved);
+        _sending = false;
+        _status = '';
+      });
       return;
     }
     List<AssessmentUpdate> updates;

@@ -497,7 +497,11 @@ class EncryptedFileQueueStorage implements QueueStorage {
   @override
   Future<void> deletePhoto(String accountId, String ref) async {
     final file = File('${(await _folder(accountId)).path}/$ref');
-    if (await file.exists()) await file.delete();
+    try {
+      await file.delete();
+    } on PathNotFoundException {
+      // Already gone (for example deleted by another round): nothing to do.
+    }
   }
 }
 
@@ -506,6 +510,16 @@ class EncryptedFileQueueStorage implements QueueStorage {
 class _UnreadablePhoto implements Exception {
   const _UnreadablePhoto(this.cause);
   final Object cause;
+}
+
+/// An assessment that could not be saved on the phone. Its message is
+/// shown to the user as the reason.
+class QueueSaveException implements Exception {
+  const QueueSaveException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 /// What one round of sending did.
@@ -533,6 +547,23 @@ class AssessmentQueue extends ChangeNotifier {
   List<QueuedAssessment> _items = const [];
   Future<SyncResult>? _syncing;
 
+  /// The account the running round sends for. Another account never joins it.
+  String? _syncingFor;
+
+  /// Assessments the API confirmed in this app session, with every photo.
+  /// "Sent" is decided from this, never from an item missing from the queue
+  /// (a sign-out also hides items).
+  final _delivered = <String>{};
+
+  /// Encrypted photo copies whose deletion failed, by account. They are
+  /// tried again at the next load and round; a failed clean-up is never shown
+  /// as a problem with an assessment.
+  final _photoCleanup = <String, Set<String>>{};
+
+  /// Set-aside queues already merged back whose deletion failed, by account.
+  /// They are not merged again, only deleted again later.
+  final _setAsideCleanup = <String, Set<String>>{};
+
   /// Every read and change of the saved queue runs one at a time, so a save
   /// during a retry round (or a discard) never overwrites another change.
   Future<void> _lock = Future.value();
@@ -552,6 +583,36 @@ class AssessmentQueue extends ChangeNotifier {
 
   bool get syncing => _syncing != null;
 
+  /// True once the API confirmed this assessment and all its photos.
+  bool delivered(String clientMutationId) =>
+      _delivered.contains(clientMutationId);
+
+  /// Deletes a local photo copy; if that fails, it is kept for a later try.
+  Future<void> _deletePhoto(String account, String ref) async {
+    try {
+      await _storage.deletePhoto(account, ref);
+      _photoCleanup[account]?.remove(ref);
+    } catch (error) {
+      debugPrint('A saved photo copy could not be deleted yet: $error');
+      (_photoCleanup[account] ??= {}).add(ref);
+    }
+  }
+
+  /// Tries again the clean-ups that failed earlier.
+  Future<void> _retryCleanup(String account) async {
+    for (final ref in List.of(_photoCleanup[account] ?? const <String>{})) {
+      await _deletePhoto(account, ref);
+    }
+    for (final name in List.of(_setAsideCleanup[account] ?? const <String>{})) {
+      try {
+        await _storage.deleteSetAside(account, name);
+        _setAsideCleanup[account]?.remove(name);
+      } catch (error) {
+        debugPrint('A merged set-aside queue could not be deleted yet: $error');
+      }
+    }
+  }
+
   /// Reads the signed-in account's queue.
   ///
   /// A queue that cannot be read (a passing storage error, or a key lost
@@ -565,6 +626,7 @@ class AssessmentQueue extends ChangeNotifier {
       forget();
       return const <QueuedAssessment>[];
     }
+    await _retryCleanup(account);
     var stored = await _readStored(account);
     if (stored != null) stored = await _recoverSetAside(account, stored);
     // Signed out or switched account while reading: keep nothing in memory.
@@ -588,6 +650,10 @@ class AssessmentQueue extends ChangeNotifier {
       debugPrint('Set-aside queues could not be read: $error');
       return stored;
     }
+    // Already merged back earlier; only their deletion is still owed.
+    setAside.removeWhere(
+      (name, _) => _setAsideCleanup[account]?.contains(name) ?? false,
+    );
     if (setAside.isEmpty) return stored;
     final merged = [...stored];
     final recovered = <String>[];
@@ -613,8 +679,16 @@ class AssessmentQueue extends ChangeNotifier {
       account,
       jsonEncode([for (final item in merged) item.toJson()]),
     );
+    // The merged queue is saved: it is the result now, even if deleting a
+    // set-aside copy fails. A failed deletion is tried again later, and that
+    // copy is never merged again.
     for (final name in recovered) {
-      await _storage.deleteSetAside(account, name);
+      try {
+        await _storage.deleteSetAside(account, name);
+      } catch (error) {
+        debugPrint('A merged set-aside queue could not be deleted yet: $error');
+        (_setAsideCleanup[account] ??= {}).add(name);
+      }
     }
     return merged;
   }
@@ -652,13 +726,16 @@ class AssessmentQueue extends ChangeNotifier {
   /// A saved queue that cannot be read is never written over. Once signed
   /// out it is left untouched; for the signed-in account it is set aside (and
   /// added back once it can be read), and the change starts a new queue.
-  Future<void> _update(
+  ///
+  /// Returns false when nothing was written (signed out with an unreadable
+  /// queue), so a caller never reports the change as saved.
+  Future<bool> _update(
     String account,
     List<QueuedAssessment> Function(List<QueuedAssessment> current) change,
   ) => _serialized(() async {
     var current = _loadedFor == account ? _items : await _readStored(account);
     if (current == null) {
-      if (_accountId() != account) return;
+      if (_accountId() != account) return false;
       await _storage.setAsideQueue(account);
       current = const [];
     }
@@ -672,6 +749,17 @@ class AssessmentQueue extends ChangeNotifier {
       _loadedFor = account;
       notifyListeners();
     }
+    return true;
+  });
+
+  /// Whether the assessment is still in the account's saved queue, read
+  /// under the queue lock, so one discarded meanwhile is never sent.
+  Future<bool> _stillQueued(
+    String account,
+    String clientMutationId,
+  ) => _serialized(() async {
+    final current = _loadedFor == account ? _items : await _readStored(account);
+    return current?.any((i) => i.clientMutationId == clientMutationId) ?? false;
   });
 
   /// Saves an assessment on the phone before any attempt to send it.
@@ -687,35 +775,67 @@ class AssessmentQueue extends ChangeNotifier {
       throw StateError('Sign in to save an assessment');
     }
     await _ensureLoaded(account);
-    final photos = [
-      for (final photo in answers.photos)
-        QueuedPhoto(
-          ref: await _storage.putPhoto(account, photo.name, photo.bytes),
-          name: photo.name,
-          contentType: photo.contentType,
-          sizeBytes: photo.sizeBytes,
-          uploadId: newClientMutationId(),
-        ),
-    ];
-    final item = QueuedAssessment(
-      clientMutationId: clientMutationId,
-      incidentId: incident.id,
-      incidentReference: incident.reference,
-      societyId: societyId,
-      societyName: societyName,
-      answers: answers.toJson(clientMutationId, societyId),
-      photos: photos,
-      savedAt: _clock(),
-    );
-    await _update(
-      account,
-      (current) => [
-        for (final existing in current)
-          if (existing.clientMutationId != clientMutationId) existing,
-        item,
-      ],
-    );
-    return item;
+    // Every photo copy written so far, so a save that does not finish leaves
+    // nothing behind that the queue cannot show or remove.
+    final written = <String>[];
+    QueuedAssessment? replaced;
+    try {
+      final photos = <QueuedPhoto>[];
+      for (final photo in answers.photos) {
+        final ref = await _storage.putPhoto(account, photo.name, photo.bytes);
+        written.add(ref);
+        photos.add(
+          QueuedPhoto(
+            ref: ref,
+            name: photo.name,
+            contentType: photo.contentType,
+            sizeBytes: photo.sizeBytes,
+            uploadId: newClientMutationId(),
+          ),
+        );
+      }
+      final item = QueuedAssessment(
+        clientMutationId: clientMutationId,
+        incidentId: incident.id,
+        incidentReference: incident.reference,
+        societyId: societyId,
+        societyName: societyName,
+        answers: answers.toJson(clientMutationId, societyId),
+        photos: photos,
+        savedAt: _clock(),
+      );
+      final saved = await _update(account, (current) {
+        replaced = current
+            .where((i) => i.clientMutationId == clientMutationId)
+            .firstOrNull;
+        return [
+          for (final existing in current)
+            if (existing.clientMutationId != clientMutationId) existing,
+          item,
+        ];
+      });
+      if (!saved) {
+        throw const QueueSaveException(
+          'You were signed out before it could be saved. Sign in again and send it.',
+        );
+      }
+      // Saved again under the same id: the earlier copies of its photos go.
+      // While a round is running it may still be reading them, so they are
+      // left for the next round's clean-up instead.
+      for (final photo in replaced?.photos ?? const <QueuedPhoto>[]) {
+        if (_syncing != null) {
+          (_photoCleanup[account] ??= {}).add(photo.ref);
+        } else {
+          await _deletePhoto(account, photo.ref);
+        }
+      }
+      return item;
+    } catch (error, stack) {
+      for (final ref in written) {
+        await _deletePhoto(account, ref);
+      }
+      Error.throwWithStackTrace(error, stack);
+    }
   }
 
   Future<void> _ensureLoaded(String account) async {
@@ -723,16 +843,36 @@ class AssessmentQueue extends ChangeNotifier {
   }
 
   /// Sends what is saved, oldest first. Only one round runs at a time; a
-  /// second call joins the round already running.
-  Future<SyncResult> sync() => _syncing ??= _sync().whenComplete(() {
-    _syncing = null;
-    notifyListeners();
-  });
+  /// second call for the same account joins the round already running.
+  ///
+  /// A round never serves another account: if the previous account's round
+  /// is still finishing a request, a fresh round for this account starts
+  /// after it, and checks who is signed in before sending anything.
+  Future<SyncResult> sync() {
+    final account = _accountId();
+    final running = _syncing;
+    if (running != null && _syncingFor == account) return running;
+    final round = running == null
+        ? _sync()
+        : running.then((_) => _sync(), onError: (Object _) => _sync());
+    late final Future<SyncResult> tracked;
+    tracked = round.whenComplete(() {
+      if (identical(_syncing, tracked)) {
+        _syncing = null;
+        _syncingFor = null;
+      }
+      notifyListeners();
+    });
+    _syncing = tracked;
+    _syncingFor = account;
+    return tracked;
+  }
 
   Future<SyncResult> _sync() async {
     final account = _accountId();
     if (account == null) return const SyncResult();
     await _ensureLoaded(account);
+    await _retryCleanup(account);
     if (_items.isEmpty) return const SyncResult();
     notifyListeners();
     var sent = 0;
@@ -744,6 +884,8 @@ class AssessmentQueue extends ChangeNotifier {
       // The account changed while sending: stop, and never mix queues.
       if (stop || !stillSignedIn()) break;
       var item = saved;
+      // Removed from the phone since the round began: never send it.
+      if (!await _stillQueued(account, item.clientMutationId)) continue;
       try {
         final api = _api();
         var assessmentId = item.assessmentId;
@@ -777,6 +919,8 @@ class AssessmentQueue extends ChangeNotifier {
             await _replace(account, item);
             photo = named;
           }
+          // Removed from the phone during this item: send nothing more of it.
+          if (!await _stillQueued(account, item.clientMutationId)) break;
           final List<int> bytes;
           try {
             bytes = await _storage.readPhoto(account, photo.ref);
@@ -800,9 +944,14 @@ class AssessmentQueue extends ChangeNotifier {
             ],
           );
           await _replace(account, item);
-          await _storage.deletePhoto(account, photo.ref);
+          // The API has the photo. Deleting the local copy is clean-up only:
+          // a failure is retried later and never reported as a refusal.
+          await _deletePhoto(account, photo.ref);
         }
         final done = item.clientMutationId;
+        // Discarded part-way: nothing to confirm or remove.
+        if (item.photosLeft > 0) continue;
+        _delivered.add(done);
         await _update(
           account,
           (current) => [
@@ -882,7 +1031,7 @@ class AssessmentQueue extends ChangeNotifier {
     });
     // The answers are gone from the queue first, then their photos.
     for (final photo in removed?.photos ?? const <QueuedPhoto>[]) {
-      await _storage.deletePhoto(account, photo.ref);
+      await _deletePhoto(account, photo.ref);
     }
   }
 }

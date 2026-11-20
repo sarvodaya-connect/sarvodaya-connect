@@ -188,6 +188,9 @@ class DemoIncidentApi implements IncidentApi {
   /// Like the API: a retry with the same id returns the update already received.
   final _byMutation = <String, String>{};
 
+  /// Like the API: one evidence record per clientUploadId, per assessment.
+  final _uploadIds = <String, Set<String>>{};
+
   void _requireOnline() {
     if (!_isOnline()) {
       throw const IncidentException(
@@ -216,6 +219,14 @@ class DemoIncidentApi implements IncidentApi {
     _requireOnline();
     final replay = _byMutation[clientMutationId];
     if (replay != null) return replay;
+    // Like the API: a replay is still confirmed, but nothing new is taken
+    // once the incident is closed (the queue shows it as closed).
+    if (_incident.isClosed) {
+      throw const IncidentException(
+        'This incident is closed. No new assessments can be added.',
+        status: 409,
+      );
+    }
     final id = 'update-${_updates.length + 1}';
     _byMutation[clientMutationId] = id;
     _updates.add(
@@ -241,6 +252,12 @@ class DemoIncidentApi implements IncidentApi {
     _requireOnline();
     final index = _updates.indexWhere((u) => u.id == assessmentId);
     if (index < 0) return;
+    // A retry of a photo already received confirms it without counting it
+    // again. Calls without an id (older apps) count every time, as before.
+    if (clientUploadId != null &&
+        !(_uploadIds[assessmentId] ??= {}).add(clientUploadId)) {
+      return;
+    }
     final update = _updates[index];
     _updates[index] = AssessmentUpdate(
       id: update.id,
