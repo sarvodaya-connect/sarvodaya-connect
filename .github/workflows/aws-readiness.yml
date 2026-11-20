@@ -1,26 +1,8 @@
 name: AWS readiness
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/api-contracts/**"
-      - "infrastructure/aws/**"
-      - "infrastructure/docker/docker-compose.aws-smoke.yml"
-      - "amplify.yml"
-      - ".nvmrc"
-      - ".github/workflows/aws-readiness.yml"
-  push:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/api-contracts/**"
-      - "infrastructure/aws/**"
-      - "infrastructure/docker/docker-compose.aws-smoke.yml"
-      - "amplify.yml"
-      - ".nvmrc"
-      - ".github/workflows/aws-readiness.yml"
+  # Run by ci.yml, which picks the checks a change needs and reports "CI passed".
+  workflow_call:
   workflow_dispatch:
 
 permissions:
