@@ -14,7 +14,7 @@ import {
   unpricedBilling,
   usageCounts,
 } from './assistant-cost.js';
-import type { ModelRequest } from './assistant-model.js';
+import { HAIKU_45_MODEL_ID, type ModelRequest } from './assistant-model.js';
 
 const MODEL = 'global.anthropic.claude-haiku-5-5';
 const REGION = 'ap-southeast-1';
@@ -81,6 +81,27 @@ describe('SarvoAI spending limit setting', () => {
 });
 
 describe('SarvoAI pricing approval', () => {
+  it('uses the reviewed standard rates for Haiku 4.5 without a long-prompt tier', () => {
+    const haiku = pricingApproval(
+      JSON.stringify(
+        approvalFields({
+          modelId: HAIKU_45_MODEL_ID,
+          longPrompt: undefined,
+          standard: {
+            inputUsdPerMTok: '1.00',
+            outputUsdPerMTok: '5.00',
+            cacheWriteUsdPerMTok: '1.25',
+            cacheReadUsdPerMTok: '0.10',
+          },
+        }),
+      ),
+      { modelId: HAIKU_45_MODEL_ID, region: REGION },
+      now,
+    );
+    expect(haiku.standard.output).toBe(5_000_000n);
+    expect(haiku.aboveTokens).toBe(Infinity);
+  });
+
   it('reads every reviewed price', () => {
     expect(approval.standard).toEqual({
       input: 100_000n,

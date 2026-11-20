@@ -5,7 +5,7 @@
       "Sid": "SarvoAIGlobalInferenceProfile",
       "Effect": "Allow",
       "Action": "bedrock:InvokeModel",
-      "Resource": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5",
+      "Resource": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "ap-southeast-1"
@@ -16,11 +16,11 @@
       "Sid": "SarvoAIRegionalModel",
       "Effect": "Allow",
       "Action": "bedrock:InvokeModel",
-      "Resource": "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-haiku-5-5",
+      "Resource": "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "ap-southeast-1",
-          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5"
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0"
         }
       }
     },
@@ -28,11 +28,11 @@
       "Sid": "SarvoAIGlobalModel",
       "Effect": "Allow",
       "Action": "bedrock:InvokeModel",
-      "Resource": "arn:aws:bedrock:::foundation-model/anthropic.claude-haiku-5-5",
+      "Resource": "arn:aws:bedrock:::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "unspecified",
-          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-5-5"
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-southeast-1:ACCOUNT_ID:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0"
         }
       }
     }
