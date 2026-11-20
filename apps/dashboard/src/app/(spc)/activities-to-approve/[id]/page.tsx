@@ -149,7 +149,7 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
       </div>
       <div className="mt-4">
         <ActivityReview
-          actions={{ approve: approveActivity.bind(null, activity.id), sendBack: sendBackActivity.bind(null, activity.id) }}
+          actions={{ approve: approveActivity.bind(null, activity.id, activity.submittedAt), sendBack: sendBackActivity.bind(null, activity.id) }}
           activityName={activity.name}
           details={<ActivityDetails activity={activity} />}
           heading={heading}

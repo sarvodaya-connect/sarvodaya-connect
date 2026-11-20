@@ -19,8 +19,16 @@ function withSpc(init: RequestInit): RequestInit {
  * V6 SP07r: the SPC approves with the Sarvodaya dimensions, categories and UN
  * SDGs they chose. The API checks that the SPC is assigned to the society,
  * needs at least one of each and refuses a second decision.
+ *
+ * `reviewedSubmittedAt` is the activity's submittedAt when the SPC opened it.
+ * Every Society Officer edit resets it, so the API refuses (409) an approval of
+ * a version the SPC did not see; that comes back as `stale`.
  */
-export async function approveActivity(id: string, input: ActivityApprovalInput): Promise<ApproveResult> {
+export async function approveActivity(
+  id: string,
+  reviewedSubmittedAt: string | undefined,
+  input: ActivityApprovalInput,
+): Promise<ApproveResult> {
   await getSpcViewer();
   if (input.dimensions.length === 0 || input.categories.length === 0 || input.sdgs.length === 0) {
     return { kind: "invalid", error: "Choose at least one Sarvodaya dimension, one Sarvodaya category and one UN SDG." };
@@ -30,7 +38,12 @@ export async function approveActivity(id: string, input: ActivityApprovalInput):
       `/activities/${id}/approve`,
       withSpc({
         method: "POST",
-        body: JSON.stringify({ sdgs: input.sdgs, dimensions: input.dimensions, categories: input.categories }),
+        body: JSON.stringify({
+          sdgs: input.sdgs,
+          dimensions: input.dimensions,
+          categories: input.categories,
+          ...(reviewedSubmittedAt ? { reviewedSubmittedAt } : {}),
+        }),
       }),
     );
   } catch (error) {
