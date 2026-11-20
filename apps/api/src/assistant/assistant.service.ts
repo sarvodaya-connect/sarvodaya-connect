@@ -124,6 +124,8 @@ export class AssistantService {
           }
           const data = lastData && {
             ...lastData,
+            // A tool's fixed summary covers only its own result; a multi-result answer keeps the model's synthesis.
+            summary: answers.length === 1 ? lastData.summary : undefined,
             details: { ...lastData.details, recordsUsed: [...recordsUsed], sources: [...evidence.values()].slice(0, 50) },
           };
           return this.finish(principal, toolsUsed, now, parsed, data);
@@ -200,6 +202,9 @@ export class AssistantService {
     await this.audit(principal, toolsUsed, answer.kind);
     return {
       ...answer,
+      summary: answer.kind === 'ANSWER' && data?.summary
+        ? scrubAssistantText(data.summary).slice(0, MAX_SUMMARY)
+        : answer.summary,
       scope: showData ? data?.scope : undefined,
       table: answer.kind === 'ANSWER' ? data?.table : undefined,
       details: showData && data ? data.details : { recordsUsed: [] },
