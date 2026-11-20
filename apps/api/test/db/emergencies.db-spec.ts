@@ -10,7 +10,7 @@ import { Test } from '@nestjs/testing';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -832,6 +832,120 @@ describe('V5 disaster response (PostgreSQL)', () => {
       tokens.hq,
     ).expect(404);
   });
+
+  it('#125: a photo retried after a lost answer is confirmed, never counted twice', async () => {
+    const sent = await api(
+      'post',
+      `/emergencies/incidents/${incidentId}/assessments`,
+      tokens.officer,
+      assessment(own),
+    ).expect(201);
+    const assessmentId = sent.body.id as string;
+    try {
+      await photoRetries(assessmentId);
+    } finally {
+      // Leave the society's counts as the later tests expect them.
+      await db.emergencyAssessment.delete({ where: { id: assessmentId } });
+    }
+  });
+
+  async function photoRetries(assessmentId: string) {
+    const photos = Array.from({ length: 10 }, (_, index) => {
+      const bytes = Buffer.from(`fictional photo ${index} ${randomUUID()}`);
+      return {
+        bytes,
+        body: {
+          contentType: 'image/jpeg',
+          sizeBytes: bytes.length,
+          checksumSha256: createHash('sha256').update(bytes).digest('base64'),
+          clientUploadId: randomUUID(),
+        },
+      };
+    });
+    const start = (body: object) =>
+      api(
+        'post',
+        `/emergencies/assessments/${assessmentId}/evidence`,
+        tokens.officer,
+        body,
+      );
+    const put = (url: string, bytes: Buffer) =>
+      request(app.getHttpServer())
+        .put(new URL(url).pathname)
+        .set('Content-Type', 'image/jpeg')
+        .send(bytes)
+        .expect(200);
+    const complete = (id: string) =>
+      api('post', `/emergencies/evidence/${id}/complete`, tokens.officer);
+
+    // Photo 4 is uploaded and completed, but the phone never hears back.
+    const lost = photos[3]!;
+    const first = await start(lost.body).expect(201);
+    await put(first.body.upload.url, lost.bytes);
+    await complete(first.body.evidence.id).expect(201);
+
+    // Photo 7 is retried three times at once, as if from two rounds.
+    const racing = await Promise.all(
+      [1, 2, 3].map(() => start(photos[6]!.body).expect(201)),
+    );
+    expect(new Set(racing.map((r) => r.body.evidence.id)).size).toBe(1);
+
+    // The retry round sends all ten again, photo 4 included.
+    for (const [index, { bytes, body }] of photos.entries()) {
+      const created = await start(body).expect(201);
+      if (index === 3) {
+        // Confirmed: the same record, and no link to replace its file.
+        expect(created.body).toEqual({
+          evidence: {
+            id: first.body.evidence.id,
+            contentType: 'image/jpeg',
+            sizeBytes: bytes.length,
+            uploaded: true,
+          },
+          upload: null,
+        });
+        continue;
+      }
+      if (index === 6) {
+        expect(created.body.evidence.id).toBe(racing[0]!.body.evidence.id);
+      }
+      await put(created.body.upload.url, bytes);
+      await complete(created.body.evidence.id).expect(201);
+    }
+    // Completing again, or another retry of a finished photo, confirms it.
+    await complete(first.body.evidence.id).expect(201);
+    await start(lost.body).expect(201);
+
+    const records = await db.emergencyEvidence.findMany({
+      where: { assessmentId },
+    });
+    expect(records).toHaveLength(10);
+    expect(records.every((r) => r.uploadedAt !== null)).toBe(true);
+
+    // An actual eleventh photo is refused.
+    const eleventh = Buffer.from(`fictional photo 11 ${randomUUID()}`);
+    await start({
+      contentType: 'image/jpeg',
+      sizeBytes: eleventh.length,
+      checksumSha256: createHash('sha256').update(eleventh).digest('base64'),
+      clientUploadId: randomUUID(),
+    }).expect(400);
+    // Released clients without an id still meet the same limit.
+    await start({ contentType: 'image/jpeg', sizeBytes: 100 }).expect(400);
+    // The same id cannot stand for a different file, nor for someone else.
+    await start({ ...lost.body, sizeBytes: lost.bytes.length + 1 }).expect(409);
+    // Another person with the same id is not shown this photo: for them it
+    // is a new photo, and the assessment is full.
+    await api(
+      'post',
+      `/emergencies/assessments/${assessmentId}/evidence`,
+      tokens.spc,
+      lost.body,
+    ).expect(400);
+    expect(await db.emergencyEvidence.count({ where: { assessmentId } })).toBe(
+      10,
+    );
+  }
 
   it('D33 / M47: only HQ makes numbered situation reports; everyone in scope reads them', async () => {
     const make = (token: string) =>
