@@ -6,7 +6,8 @@ Issue #125 brings back the offline queue from PR #53, rebuilt for the V5 disaste
 
 1. **Saved first.** "Send assessment" saves the answers and any photos on the phone before trying to send.
 2. **Sent.** The phone sends the assessment, then each photo. An item is removed from the phone only after the API confirms the assessment and every photo.
-3. **Kept when it can't be sent.** The screen says "Saved on This Phone" or "Saved, but It Can't Be Sent Yet", with the reason. It never says "Assessment Sent" until the API has it.
+3. **Kept when it can't be sent.** The screen says "Saved on This Phone" or "Saved, but It Can't Be Sent Yet", with the reason. It says "Assessment Sent" only after the API confirmed that assessment and every photo, never because the item is no longer listed (a sign-out during sending also hides it).
+4. **A save that did not finish is reported as not saved,** and leaves no photo copies behind.
 
 ## When it is retried
 
@@ -20,7 +21,11 @@ Nothing is sent in the background after the app is closed.
 
 Sending never holds up a screen:
 - Disaster Response, the incident page and the home's incident card load at the same time as saved assessments are sent, and reload once when something was sent.
-- A photo upload that does not finish within 2 minutes counts as no connection, and the assessment is retried later.
+- A photo upload that does not finish within 2 minutes is aborted (not just abandoned) and counts as no connection; the assessment is retried later. The storage response is always read, so a failed upload never holds a connection.
+- One round of sending runs at a time per account. A second tap joins it; another account never does. If someone signs in while the previous person's round is finishing a request, their own round starts after it.
+- Each item is checked against the saved queue just before it (and each photo) is sent, so one removed from the phone during a round is never sent.
+- Deleting a photo's local copy after the API has it is clean-up only: if it fails, it is tried again at the next load or round, and the delivery still counts as sent.
+- Only the newest load of a screen is shown, so a slow first load never replaces the refresh after a delivery.
 - The "saved on this phone" card stays visible while a screen is loading and when it cannot load (for example offline), with each item's state, **Retry sending** and **Remove from this phone**.
   - The card and the loading or error content below it share one scrolling page. However many items are saved, and on a small phone with large text, every item, its **Remove** button, **Retry sending** and the content below can be scrolled to.
   - With few items the content fills the space under the card as before. Loading the screen never waits for sending.
@@ -52,6 +57,8 @@ Sending never holds up a screen:
   - **Retries at the same moment** (a second tap, or two rounds): the unique index lets only one record be created; the other request resumes or confirms that record.
   - **Completing again** returns success for the uploader's own photo, instead of 409, without checking or touching storage.
   - **The 10-photo limit** counts records, and a retry never adds one. While a new photo is counted and recorded, its assessment (or delivery) is locked, so photos sent together cannot pass the limit. An actual eleventh photo is refused.
+  - **Letter case:** ids that differ only in letter case are the same id, so a retry is never refused for that.
+  - **The last place:** two retries of the same tenth photo arriving together both end on that one record; neither is refused for the limit.
   - **Boundaries:** the lookup is limited to the signed-in uploader's own photos. The same id on another assessment or for a different file (type, size or SHA-256) is refused with 409. A completed photo is confirmed before the incident's state and the user's current access are checked, as an assessment is. A photo not yet uploaded goes through every check again.
   - **Items saved by an earlier build** have no photo id. One is given and saved on the phone before that photo is sent.
   - **Released apps** that send no id work as before: an unfinished upload of the same file (same uploader, assessment, type, size and SHA-256) is reused.
@@ -87,10 +94,10 @@ Use fictional data and a local or TEST API.
 
 1. Sign in as a Society Officer, SPC or DDM who covers a society in a live incident.
 2. Turn on airplane mode. Complete a rapid assessment, with a photo, and tap **Send assessment**. Expect "Saved on This Phone".
-3. Close the app completely and open it again. Sign in once the connection is back; airplane mode can stay on until step 4. Open Disaster Response and expect "1 assessment saved on this phone".
-4. Turn off airplane mode and tap **Retry sending**. Expect "1 saved assessment sent." Check the incident shows one new update with its photo.
-5. Tap **Retry sending** again, or pull to refresh. No second update appears.
-6. Sign out and sign in as someone else. The saved card is not shown.
+3. Without closing the app, open Disaster Response while still offline. Expect "1 assessment saved on this phone", with **Retry sending** and **Remove from this phone**.
+4. Close the app completely and open it again. The app keeps no session after it closes, so turn off airplane mode and sign in. Signing in opens the home, which sends saved assessments straight away. Check that the incident shows one new update with its photo: the assessment saved before the relaunch arrived.
+5. Open Disaster Response, tap **Retry sending** if it is shown, or pull to refresh. No second update appears.
+6. Sign out and sign in as someone else. No saved card from the first account is shown.
 7. Close the incident from another account, then send a new assessment offline and retry online. Expect "The incident was closed before this arrived". The item stays until you remove it.
 
 The pull request for issue #125 records the simulator check that was run.
