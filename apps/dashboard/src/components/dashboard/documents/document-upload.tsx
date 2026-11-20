@@ -98,7 +98,7 @@ export function DocumentUpload({
       <h3 className="text-[14px] font-bold text-ink">Upload a Document</h3>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-[12px] font-semibold text-ink">
-          Document type <span className="text-danger-text">*</span>
+          Document Type <span className="text-danger-text">*</span>
           <select className={fieldClass} disabled={uploading} onChange={(event) => setType(event.target.value)} value={type}>
             {registrarTypes.map((value) => (
               <option key={value} value={value}>{REGISTRAR_LABELS[value].title}</option>
@@ -110,7 +110,7 @@ export function DocumentUpload({
         </label>
         {isYearly ? (
           <label className="text-[12px] font-semibold text-ink">
-            Financial year <span className="text-danger-text">*</span>
+            Financial Year <span className="text-danger-text">*</span>
             <select className={fieldClass} disabled={uploading} onChange={(event) => setYear(Number(event.target.value))} value={year}>
               {financialYears.map((option) => (
                 <option key={option.startYear} value={option.startYear}>{option.label}</option>

@@ -15,6 +15,7 @@ import { AppModule } from '../../src/app.module.js';
 import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -316,7 +317,7 @@ describe('V5 society admin and grade queue (PostgreSQL)', () => {
     ).expect(200);
     expect(
       options.body.coordinators.map((row: { id: string }) => row.id).sort(),
-    ).toEqual([ids.spc, ids.spc2].sort());
+    ).toEqual([ids.spc, ids.spc2].sort(byCodeUnit));
 
     await call(
       'put',

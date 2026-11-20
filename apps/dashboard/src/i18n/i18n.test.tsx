@@ -10,7 +10,7 @@ vi.mock("@/app/identity-actions", () => ({ signOut: vi.fn() }));
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import type { DemoViewer } from "@/lib/access";
-import { headingFor, navigationFor } from "@/lib/navigation";
+import { navigationFor } from "@/lib/navigation";
 
 import { availableLocales, DEFAULT_LOCALE, LOCALES, type Locale, REVIEWED_LOCALES, resolveLocale } from "./config";
 import { en, type MessageKey } from "./messages/en";
@@ -24,7 +24,7 @@ const keys = Object.keys(en) as MessageKey[];
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 
 /** Same in every language on purpose: brand names, acronyms and pure placeholders. */
-const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "shell.sarvoai", "prog.sdgNumber", "eco.period.range", "eco.period.season", "eco.history.by"]);
+const SAME_IN_EVERY_LANGUAGE = new Set<MessageKey>(["da.theDdm", "home.greeting", "s.filterSpc", "s.spcOf", "prog.sdgNumber", "eco.period.range", "eco.period.season", "eco.history.by"]);
 
 describe.each(["si", "ta"] as const)("the %s catalog", (locale) => {
   const catalog = CATALOGS[locale];
@@ -79,14 +79,14 @@ describe("which languages people can choose", () => {
 
 describe("messages", () => {
   it("fills in values", () => {
-    expect(createTranslator(en, "en")("shell.alertsNew", { count: 3 })).toBe("Alerts, 3 new");
+    expect(createTranslator(en, "en")("shell.alertsNew", { count: 3 })).toBe("Alerts, 3 New");
     expect(createTranslator(ta, "ta")("shell.accountSignOut", { name: "Fictional Name" })).toContain("Fictional Name");
   });
 
   it("uses each language's plural forms", () => {
     const english = createTranslator(en, "en");
-    expect(english.plural("scope.societies", 1)).toBe("1 society");
-    expect(english.plural("scope.societies", 12)).toBe("12 societies");
+    expect(english.plural("scope.societies", 1)).toBe("1 Society");
+    expect(english.plural("scope.societies", 12)).toBe("12 Societies");
     expect(createTranslator(ta, "ta").plural("scope.societies", 12)).toBe("12 சங்கங்கள்");
     expect(createTranslator(si, "si").plural("scope.societies", 12)).toBe("සමිති 12");
   });
@@ -101,7 +101,7 @@ const viewers: DemoViewer[] = [
   { id: "1", displayName: "Fictional HQ", initials: "FH", role: "HQ_ADMIN", roleLabel: "HQ", scopeLabel: "National", districtIds: "ALL" },
   { id: "2", displayName: "Fictional DM", initials: "FD", role: "DISTRICT_MANAGER", roleLabel: "DM", scopeLabel: "Fictional", districtIds: ["d"], societyIds: [] },
   { id: "3", displayName: "Fictional DDM", initials: "FD", role: "DEPUTY_DISTRICT_MANAGER", roleLabel: "DDM", scopeLabel: "Fictional", districtIds: ["d"], societyIds: ["s"] },
-  { id: "4", displayName: "Fictional SPC", initials: "FS", role: "PROGRAMME_COORDINATOR", roleLabel: "SPC", scopeLabel: "2 societies", districtIds: [], societyIds: ["s", "t"] },
+  { id: "4", displayName: "Fictional SPC", initials: "FS", role: "PROGRAMME_COORDINATOR", roleLabel: "SPC", scopeLabel: "2 Societies", districtIds: [], societyIds: ["s", "t"] },
 ];
 
 describe.each(viewers)("the dashboard shell for $role", (viewer) => {
@@ -112,13 +112,13 @@ describe.each(viewers)("the dashboard shell for $role", (viewer) => {
       </I18nProvider>,
     );
 
-  it.each(["si", "ta"] as const)("shows its navigation and heading in %s", (locale) => {
+  it.each(["si", "ta"] as const)("shows its navigation in %s, and leaves the heading to the page", (locale) => {
     open(locale);
     const t = createTranslator(CATALOGS[locale], locale);
     for (const item of [...navigationFor(viewer, t).main, ...navigationFor(viewer, t).secondary]) {
       expect(screen.getAllByRole("link", { name: item.label }).length).toBeGreaterThan(0);
     }
-    expect(screen.getByRole("heading", { level: 1, name: headingFor("/dashboard", viewer, t).title })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     for (const item of navigationFor(viewer).main) {
       if (item.label !== "SarvoAI") expect(screen.queryByRole("link", { name: item.label })).not.toBeInTheDocument();
     }

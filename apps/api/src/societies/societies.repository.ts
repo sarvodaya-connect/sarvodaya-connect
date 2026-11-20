@@ -11,6 +11,12 @@ import type {
 import type { Principal } from '../auth/principal.js';
 import { societyWhereForPrincipal } from './society-access.policy.js';
 
+interface ProfileChange {
+  summary: string;
+  grade?: GradeChange;
+  membershipChanged?: boolean;
+}
+
 /**
  * The most pins one map request returns. PR 5 sizes the map for about 5,500
  * located societies; 10,000 pins is roughly 1 MB of JSON, well inside Lambda.
@@ -156,6 +162,7 @@ export class SocietiesRepository {
         }),
         this.prisma.platformAccount.findMany({
           where: {
+            status: { not: 'DELETED' },
             OR: [
               { societyIds: { has: society.id } },
               { role: 'DISTRICT_MANAGER', districtId: society.districtId },
@@ -184,15 +191,8 @@ export class SocietiesRepository {
     id: string,
     input: SocietyProfileUpdateDto,
     principal: Principal,
-    change: {
-      summary: string;
-      grade?: GradeChange;
-      membershipChanged?: boolean;
-    } = {
-      summary: `Fields: ${Object.keys(input)
-        .filter((key) => input[key as keyof typeof input] !== undefined)
-        .join(', ')}`,
-    },
+    // Required: the service writes the history summary from the values that changed.
+    change: ProfileChange,
   ) {
     try {
       return await this.saveProfile(id, input, principal, change);
@@ -210,11 +210,7 @@ export class SocietiesRepository {
     id: string,
     input: SocietyProfileUpdateDto,
     principal: Principal,
-    change: {
-      summary: string;
-      grade?: GradeChange;
-      membershipChanged?: boolean;
-    },
+    change: ProfileChange,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const { primaryContact, establishedOn } = input;

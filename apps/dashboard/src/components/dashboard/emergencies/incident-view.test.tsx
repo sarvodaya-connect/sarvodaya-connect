@@ -139,17 +139,17 @@ describe("V5 PR 8 incident views", () => {
     const [, critical, missing] = screen.getAllByRole("row");
     expect(within(critical!).getByText("Critical")).toBeInTheDocument();
     expect(within(critical!).getByText("146 / 520")).toBeInTheDocument();
-    expect(within(critical!).getByText("Temporary shelter, drinking water")).toBeInTheDocument();
+    expect(within(critical!).getByText("Temporary Shelter, Drinking Water")).toBeInTheDocument();
     expect(within(critical!).getByText("Update 2")).toBeInTheDocument();
-    expect(within(missing!).getByRole("link", { name: "Submit assessment" })).toHaveAttribute("href", "/emergencies/inc-1?panel=assess&society=b");
+    expect(within(missing!).getByRole("link", { name: "Submit Assessment" })).toHaveAttribute("href", "/emergencies/inc-1?panel=assess&society=b");
   });
 
   it("D32 board: needs sit in their status column with badges, and only HQ gets the assign button", () => {
     const actions = [action("n1", "NEEDED", []), action("p1", "IN_PROGRESS", [helper("IN_PROGRESS", 12)])];
     const { rerender } = render(<ActionsBoard actions={actions} canAssign incidentId="inc-1" />);
     const needed = screen.getByRole("region", { name: "Needed" });
-    expect(within(needed).getByRole("link", { name: "Assign helpers" })).toHaveAttribute("href", "/emergencies/inc-1?tab=actions&panel=assign&action=n1");
-    const progress = screen.getByRole("region", { name: "In progress" });
+    expect(within(needed).getByRole("link", { name: "Assign Helpers" })).toHaveAttribute("href", "/emergencies/inc-1?tab=actions&panel=assign&action=n1");
+    const progress = screen.getByRole("region", { name: "In Progress" });
     expect(within(progress).getByText("Giriulla SSS · 12 of 40")).toBeInTheDocument();
     rerender(<ActionsBoard actions={actions} canAssign={false} incidentId="inc-1" />);
     expect(screen.queryByRole("link", { name: /helpers/ })).toBeNull();
@@ -159,14 +159,14 @@ describe("V5 PR 8 incident views", () => {
     render(<ActionsSummary actions={[action("p1", "IN_PROGRESS", [helper("IN_PROGRESS", 12)]), action("n1", "NEEDED", [])]} />);
     expect(screen.getByText("Pahala Kosgama SSS ← Giriulla SSS · 12 of 40")).toBeInTheDocument();
     expect(screen.getByText("Pahala Kosgama SSS · no helper yet")).toBeInTheDocument();
-    expect(screen.getByText("In progress")).toBeInTheDocument();
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
     expect(screen.getByText("Needed")).toBeInTheDocument();
   });
 });
 
 describe("incident wording", () => {
   it("reads naturally", () => {
-    expect(needsLine(["DRINKING_WATER", "DRY_RATIONS", "MEDICAL_HELP"])).toBe("Drinking water, dry rations");
+    expect(needsLine(["DRINKING_WATER", "DRY_RATIONS", "MEDICAL_HELP"])).toBe("Drinking Water, Dry Rations");
     expect(needsLine([])).toBe("—");
     expect(openedByLine({ openedBy: { name: "K. Mendis", role: "HQ_ADMIN" }, reportingSociety: null })).toBe("K. Mendis (HQ)");
     expect(dueLine({ ...incident, assessmentsDueAt: "2026-10-31T12:30:00Z" }, now)).toBe("assessments due 31 Oct, 6:00 p.m. · 5 days left");

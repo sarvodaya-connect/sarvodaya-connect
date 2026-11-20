@@ -58,7 +58,7 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
             {queue.waiting.length} waiting from your {queue.societyCount} {queue.societyCount === 1 ? "society" : "societies"}
           </p>
         </div>
-        {isDemoMode() && <Pill tone="preview">Sample data · demonstration mode</Pill>}
+        {isDemoMode() && <Pill tone="preview">Sample Data · Demonstration Mode</Pill>}
       </div>
 
       <div className="mt-4 space-y-3">

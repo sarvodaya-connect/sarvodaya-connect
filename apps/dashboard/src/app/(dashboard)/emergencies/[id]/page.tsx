@@ -74,7 +74,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
   const tab = incidentTab(first(query.tab));
   const panel = first(query.panel);
   const now = new Date();
-  const back = <Link className={secondaryButtonClass} href="/emergencies">Back to disaster response</Link>;
+  const back = <Link className={secondaryButtonClass} href="/emergencies">Back to Disaster Response</Link>;
   if (!isUuid(id)) return <NoAccessState action={back} description="This incident could not be found, or it does not cover your societies." heading="h1" title="You Don’t Have Access to This Incident" />;
 
   let detail: EmergencyIncidentDetail;
@@ -88,7 +88,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
       <section className="rounded-card border border-[#efc4bd] bg-surface p-6" role="alert">
         <h1 className="text-[15px] font-bold text-ink">We Couldn’t Load This Incident</h1>
         <p className="mt-1 text-[12.5px] text-ink-soft">{failureMessage(error)}</p>
-        <Link className="mt-3 inline-block text-[12.5px] font-semibold text-brand-forest underline underline-offset-2" href={`/emergencies/${id}`}>Try again</Link>
+        <Link className="mt-3 inline-block text-[12.5px] font-semibold text-brand-forest underline underline-offset-2" href={`/emergencies/${id}`}>Try Again</Link>
       </section>
     );
   }
@@ -115,17 +115,17 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
       {isHq ? (
         <Link className={secondaryButtonClass} href={`${base}?tab=reports`}>
           <Icon className="size-4" name="document" strokeWidth={2} />
-          Situation report
+          Situation Report
         </Link>
       ) : (
         permissions.canAssess && (
           <Link className={primaryButtonClass} href={`${tabHref}${tab === "overview" ? "?" : "&"}panel=assess`}>
             <Icon className="size-4" name="clipboard" strokeWidth={2} />
-            Submit rapid assessment
+            Submit Rapid Assessment
           </Link>
         )
       )}
-      {permissions.canClose && <Link className={dangerOutline} href={`${tabHref}${tab === "overview" ? "?" : "&"}panel=close`}>Close incident</Link>}
+      {permissions.canClose && <Link className={dangerOutline} href={`${tabHref}${tab === "overview" ? "?" : "&"}panel=close`}>Close Incident</Link>}
     </>
   );
 
@@ -182,7 +182,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
                     action={
                       <span className="inline-flex items-center gap-1 rounded-pill bg-brand-forest px-2 py-0.5 text-[10.5px] font-semibold text-white">
                         <Icon className="size-3" name="lock" strokeWidth={2.2} />
-                        HQ decides
+                        HQ Decides
                       </span>
                     }
                     eyebrow="Response Actions"
@@ -212,7 +212,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             <div>
               <p className="text-[10px] font-bold tracking-[0.08em] text-brand-forest">Assessments</p>
               <h2 className="text-[15px] font-bold text-ink" id="all-assessments">
-                {isHq ? `Societies in the area (${totals.societiesInArea})` : "Your societies in the area"}
+                {isHq ? `Societies in the Area (${totals.societiesInArea})` : "Your Societies in the Area"}
               </h2>
               <p className="text-[12px] text-ink-soft">{totals.assessed} assessed · {totals.notAssessed} not yet assessed{detail.lastReminderAt ? ` · last reminder ${shortDateTime(detail.lastReminderAt)}` : ""}</p>
             </div>
@@ -221,7 +221,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
                 <input name="incidentId" type="hidden" value={id} />
                 <button className={secondaryButtonClass} type="submit">
                   <Icon className="size-4" name="bell" strokeWidth={2} />
-                  Remind {totals.notAssessed} {totals.notAssessed === 1 ? "society" : "societies"}
+                  Remind {totals.notAssessed} {totals.notAssessed === 1 ? "Society" : "Societies"}
                 </button>
               </form>
             )}
@@ -271,7 +271,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             {permissions.canAssign && (
               <Link className={primaryButtonClass} href={`${base}?tab=actions&panel=need`}>
                 <Icon className="size-4" name="list" strokeWidth={2} />
-                Add a need
+                Add a Need
               </Link>
             )}
           </div>
@@ -293,7 +293,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
               <form action={createSituationReport} className="flex flex-wrap items-end gap-2.5">
                 <input name="incidentId" type="hidden" value={id} />
                 <label className="text-[12px] font-semibold text-ink">
-                  Summary (optional)
+                  Summary (Optional)
                   <input
                     className="mt-1 block w-[320px] max-w-full rounded-input border border-line bg-surface px-3 py-2.5 text-[12.5px] text-ink"
                     maxLength={4000}
@@ -304,7 +304,7 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
                 </label>
                 <button className={secondaryButtonClass} type="submit">
                   <Icon className="size-4" name="refresh" strokeWidth={2} />
-                  {detail.reports.length ? "Refresh from latest data" : "Make the first report"}
+                  {detail.reports.length ? "Refresh from Latest Data" : "Make the First Report"}
                 </button>
               </form>
             )}
@@ -355,9 +355,9 @@ export default async function IncidentPage({ params, searchParams }: PageProps<"
             </p>
             <p className="text-[12px] text-ink-soft">Your name ({viewer.displayName}, {SHORT_ROLE_LABELS[viewer.role]}) and the time are recorded in the incident history.</p>
             <div className="flex justify-end gap-2.5">
-              <Link className={secondaryButtonClass} href={tabHref}>Keep open</Link>
+              <Link className={secondaryButtonClass} href={tabHref}>Keep Open</Link>
               <button className="inline-flex h-[38px] items-center rounded-button bg-danger-dot px-4 text-[13px] font-semibold text-white hover:bg-danger-text" type="submit">
-                Close incident
+                Close Incident
               </button>
             </div>
           </form>

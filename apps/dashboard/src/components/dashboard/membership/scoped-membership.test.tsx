@@ -61,11 +61,11 @@ describe("scoped Membership (issue #118)", () => {
     render(<ScopedMembershipView demo={false} membership={membership()} t={ENGLISH} viewer={viewer("DISTRICT_MANAGER")} />);
     const profile = within(screen.getByRole("region", { name: "Members on Society Profiles" }));
     const cards = profile.getAllByRole("listitem").map((item) => item.textContent);
-    expect(cards).toEqual(["2,040Total members · 4 society profiles", "1,000Female · 61% where female and male are entered", "640Male · 39% where female and male are entered"]);
+    expect(cards).toEqual(["2,040Total Members · 4 Society Profiles", "1,000Female · 61% where female and male are entered", "640Male · 39% where female and male are entered"]);
     expect(profile.getByText("3 of 4 societies have entered their female and male members.")).toBeInTheDocument();
     expect(profile.getByText(/1 society has a total but no female\/male split yet/)).toBeInTheDocument();
     // The category figures keep their own heading, year and numbers.
-    expect(screen.getByText("Category counts · 2026")).toBeInTheDocument();
+    expect(screen.getByText("Category Counts · 2026")).toBeInTheDocument();
     expect(screen.getByText(/Never added to the profile members above/)).toBeInTheDocument();
     expect(screen.getByText("1 of these societies has no category counts for 2026.")).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")[3]).toHaveTextContent("1,000In 4 active societies");
@@ -99,7 +99,7 @@ describe("scoped Membership (issue #118)", () => {
 
   it("offers a DDM the district tab only while temporary access is valid", () => {
     const { unmount } = render(<ScopedMembershipView demo={false} membership={membership({ scope: "MINE", districtView: { available: false, expiresAt: null } })} t={ENGLISH} viewer={viewer("DEPUTY_DISTRICT_MANAGER")} />);
-    expect(screen.queryByRole("link", { name: "District · view only" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "District · View Only" })).not.toBeInTheDocument();
     unmount();
     render(
       <ScopedMembershipView
@@ -109,7 +109,7 @@ describe("scoped Membership (issue #118)", () => {
         viewer={viewer("DEPUTY_DISTRICT_MANAGER")}
       />,
     );
-    expect(screen.getByRole("link", { name: "District · view only" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "District · View Only" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Fictional North" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
   });
 

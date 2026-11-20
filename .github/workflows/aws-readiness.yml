@@ -1,26 +1,8 @@
 name: AWS readiness
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/api-contracts/**"
-      - "infrastructure/aws/**"
-      - "infrastructure/docker/docker-compose.aws-smoke.yml"
-      - "amplify.yml"
-      - ".nvmrc"
-      - ".github/workflows/aws-readiness.yml"
-  push:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/api-contracts/**"
-      - "infrastructure/aws/**"
-      - "infrastructure/docker/docker-compose.aws-smoke.yml"
-      - "amplify.yml"
-      - ".nvmrc"
-      - ".github/workflows/aws-readiness.yml"
+  # Run by ci.yml, which picks the checks a change needs and reports "CI passed".
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -72,7 +54,7 @@ jobs:
     env:
       # Prisma needs a URL during generation; the smoke runner replaces it with
       # the disposable database's random port and temporary credentials.
-      DATABASE_URL: postgresql://unused:unused@127.0.0.1:5432/unused
+      DATABASE_URL: postgresql://unused@127.0.0.1:5432/unused
       # A unique project also lets the final step remove resources if the runner
       # was interrupted before its shell trap completed.
       COMPOSE_PROJECT_NAME: aws-smoke-${{ github.run_id }}-${{ github.run_attempt }}

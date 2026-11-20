@@ -43,7 +43,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
       <AdministrationTabs current="log" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Change &amp; Access Log</h2>
+          <h1 className="text-xl font-bold text-ink">Change &amp; Access Log</h1>
           <p className="mt-0.5 text-xs text-ink-soft">Who changed, approved or opened what, and when. NICs, passwords and credentials are never shown here.</p>
         </div>
         <a className={secondaryButtonClass} download href={`/audit/export?${query}`}>
@@ -54,7 +54,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
 
       <form action="/audit" className="flex flex-wrap items-center gap-2.5" role="search">
         <label className="relative w-full max-w-[280px]">
-          <span className="sr-only">Society, user or S number</span>
+          <span className="sr-only">Society, User or S Number</span>
           <Icon className="absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
           <input
             className="h-[38px] w-full rounded-[10px] border border-line bg-surface pl-[34px] pr-3 text-xs outline-none focus:border-brand-leaf focus:ring-3 focus:ring-brand-mint"
@@ -101,7 +101,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         </label>
         <button className={secondaryButtonClass} type="submit">Apply</button>
         {(filters.q || filters.districtId || filters.type || filters.role || filters.days !== "30") && (
-          <Link className="text-xs font-semibold text-brand-action underline underline-offset-2" href="/audit">Clear filters</Link>
+          <Link className="text-xs font-semibold text-brand-action underline underline-offset-2" href="/audit">Clear Filters</Link>
         )}
       </form>
 
@@ -151,7 +151,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
           </div>
         ) : (
           <EmptyState
-            action={<Link className={secondaryButtonClass} href="/audit">Clear filters</Link>}
+            action={<Link className={secondaryButtonClass} href="/audit">Clear Filters</Link>}
             description="Nothing matches these filters in this period."
             icon="search"
             title="No Log Entries"

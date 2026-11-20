@@ -2,9 +2,15 @@
  * This is not a general PII classifier: arbitrary unlabelled secrets cannot be
  * reliably recognized. Initial TEST use is restricted to fictional records.
  */
+/** URLs with credentials. Reads up to the first ':' and then up to the first '@' after
+ * it, so the two parts cannot trade characters and backtrack. It matches the same text as
+ * "any ':' followed by any '@'". */
+export const CONNECTION_WITH_CREDENTIALS =
+  /\b(?:postgres(?:ql)?|https?):\/\/[^\s"<>:]*:[^\s"<>@]*@[^\s"<>]+/gi;
+
 export function scrubAssistantText(value: string): string {
   return value
-    .replace(/\b(?:postgres(?:ql)?|https?):\/\/[^\s"<>]*:[^\s"<>]*@[^\s"<>]+/gi, '[REDACTED CONNECTION]')
+    .replace(CONNECTION_WITH_CREDENTIALS, '[REDACTED CONNECTION]')
     .replace(/\b(?:Bearer\s+\S+|(?:AKIA|ASIA)[A-Z0-9]{16}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/gi, '[REDACTED TOKEN]')
     .replace(/\b(?:password|passwd|secret|api[_ -]?key|access[_ -]?token)\s*[:=]\s*[^\s,;]+/gi, '[REDACTED SECRET]')
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[REDACTED EMAIL]')

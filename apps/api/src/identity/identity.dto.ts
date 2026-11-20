@@ -29,6 +29,10 @@ export class UpdateAccountDto extends AccountDetailsDto {}
 export class SetAccountPasswordDto {
   @IsString() @Length(10, 128) @Matches(/\d/) password: string;
 }
+/** HQ types "delete" in the dialog; the API checks it again so no stray request deletes an account. */
+export class DeleteAccountDto {
+  @IsString() @IsIn(['delete']) confirmation: 'delete';
+}
 export class LoginDto {
   @IsString() @Length(1, 100) username: string;
   @IsString() @Length(1, 200) password: string;

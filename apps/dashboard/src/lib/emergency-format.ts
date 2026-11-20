@@ -22,15 +22,15 @@ export const INCIDENT_TYPE_LABELS: Record<EmergencyIncidentType, string> = {
   CYCLONE: "Cyclone",
   DROUGHT: "Drought",
   FIRE: "Fire",
-  PUBLIC_HEALTH: "Public health",
+  PUBLIC_HEALTH: "Public Health",
   OTHER: "Other",
 };
 
 export const NEED_LABELS: Record<EmergencyNeed, string> = {
-  DRINKING_WATER: "Drinking water",
-  DRY_RATIONS: "Dry rations",
-  TEMPORARY_SHELTER: "Temporary shelter",
-  MEDICAL_HELP: "Medical help",
+  DRINKING_WATER: "Drinking Water",
+  DRY_RATIONS: "Dry Rations",
+  TEMPORARY_SHELTER: "Temporary Shelter",
+  MEDICAL_HELP: "Medical Help",
   CLOTHING: "Clothing",
   VOLUNTEERS: "Volunteers",
   OTHER: "Other",
@@ -38,8 +38,8 @@ export const NEED_LABELS: Record<EmergencyNeed, string> = {
 
 export const ROAD_LABELS: Record<EmergencyRoadAccess, string> = {
   OPEN: "Open",
-  PARTLY_BLOCKED: "Partly blocked",
-  CUT_OFF: "Cut off",
+  PARTLY_BLOCKED: "Partly Blocked",
+  CUT_OFF: "Cut Off",
   UNKNOWN: "Unknown",
 };
 
@@ -47,26 +47,26 @@ export const STATE_LABELS: Record<EmergencySocietyState, string> = {
   SAFE: "Safe",
   AFFECTED: "Affected",
   CRITICAL: "Critical",
-  NOT_ASSESSED: "Not assessed",
+  NOT_ASSESSED: "Not Assessed",
 };
 
 export const ACTION_STATE_LABELS: Record<EmergencyActionState, string> = {
   NEEDED: "Needed",
   ASSIGNED: "Assigned",
-  IN_PROGRESS: "In progress",
+  IN_PROGRESS: "In Progress",
   DELIVERED: "Delivered",
 };
 
 export const HELPER_STATUS_LABELS: Record<EmergencyHelperStatus, string> = {
   ASSIGNED: "Assigned",
-  IN_PROGRESS: "In progress",
+  IN_PROGRESS: "In Progress",
   DELIVERED: "Delivered",
 };
 
-/** "Water, dry rations" for the Top needs column. */
+/** Short need labels for the Top Needs column. */
 export function needsLine(needs: EmergencyNeed[]) {
   if (!needs.length) return "—";
-  const words = needs.slice(0, 2).map((need, index) => (index === 0 ? NEED_LABELS[need] : NEED_LABELS[need].toLowerCase()));
+  const words = needs.slice(0, 2).map((need) => NEED_LABELS[need]);
   return words.join(", ");
 }
 
@@ -107,14 +107,14 @@ export function quantityLine(quantity: number, unit: string) {
 
 /** Words for the incident history (IR01). */
 export const HISTORY_LABELS: Record<string, string> = {
-  INCIDENT_OPENED: "Incident opened",
-  INCIDENT_ASSESSMENT_SENT: "Assessment received",
-  INCIDENT_NEED_ADDED: "Need added",
-  INCIDENT_HELPERS_ASSIGNED: "Helpers assigned",
-  INCIDENT_DELIVERY_UPDATED: "Delivery updated",
-  INCIDENT_REMINDER_SENT: "Reminder sent",
-  INCIDENT_REPORT_CREATED: "Situation report",
-  INCIDENT_CLOSED: "Incident closed",
+  INCIDENT_OPENED: "Incident Opened",
+  INCIDENT_ASSESSMENT_SENT: "Assessment Received",
+  INCIDENT_NEED_ADDED: "Need Added",
+  INCIDENT_HELPERS_ASSIGNED: "Helpers Assigned",
+  INCIDENT_DELIVERY_UPDATED: "Delivery Updated",
+  INCIDENT_REMINDER_SENT: "Reminder Sent",
+  INCIDENT_REPORT_CREATED: "Situation Report",
+  INCIDENT_CLOSED: "Incident Closed",
 };
 
 export const INCIDENT_TABS = ["overview", "assessments", "actions", "reports"] as const;

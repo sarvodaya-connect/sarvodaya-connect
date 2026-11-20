@@ -1,15 +1,17 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import type { ScopeOptions, UserRole } from "@sarvodaya-connect/api-contracts";
 import {
   createAccount,
+  deleteAccount,
   disableAccount,
   login,
   setAccountPassword,
   updateAccount,
   type FormResult,
 } from "@/app/identity-actions";
-import { ROLE_LABELS } from "@/lib/accounts";
+import { DELETE_CONFIRMATION, ROLE_LABELS } from "@/lib/accounts";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/i18n/provider";
 import { SIGN_IN_ERROR_KEYS, suggestUsername } from "@/lib/sign-in-messages";
@@ -28,10 +30,10 @@ function Required() {
 /** Password box with a show/hide eye (V5 D01, D16i, D16t). */
 function PasswordInput({
   autoComplete,
-  hideLabel = "Hide password",
+  hideLabel = "Hide Password",
   invalid,
   name,
-  showLabel = "Show password",
+  showLabel = "Show Password",
   ...props
 }: {
   autoComplete: string;
@@ -209,7 +211,7 @@ function RoleScopeFields({
               required
               value={districtId}
             >
-              <option value="">Choose a district</option>
+              <option value="">Choose a District</option>
               {options.districts.map((district) => (
                 <option key={district.id} value={district.id}>
                   {district.nameEn}{role === "DISTRICT_MANAGER" ? " District" : ""}
@@ -230,7 +232,7 @@ function RoleScopeFields({
             name="societyIds"
             required
           >
-            <option value="">{districtId ? "Choose the society" : "Choose a district first"}</option>
+            <option value="">{districtId ? "Choose the Society" : "Choose a District First"}</option>
             {societies.map((society) => (
               <option key={society.id} value={society.id}>{society.nameEn} · {society.societyCode}</option>
             ))}
@@ -287,7 +289,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
     <>
       <button className={primaryButtonClass} onClick={() => dialog.current?.showModal()} type="button">
         <Icon className="size-4" name="user" strokeWidth={2} />
-        Create account
+        Create Account
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -315,7 +317,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             </button>
           </div>
           <label className={labelClass}>
-            Full name<Required />
+            Full Name<Required />
             <input
               className={`${inputClass} mt-1.5`}
               maxLength={150}
@@ -345,11 +347,11 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <span className="mt-1 block text-[11px] font-normal text-ink-soft" id={`${titleId}-username`}>Suggested from the name. Must be unique.</span>
           </label>
           <label className={labelClass}>
-            Mobile number<Required />
+            Mobile Number<Required />
             <input autoComplete="off" className={`${inputClass} mt-1.5`} inputMode="tel" maxLength={30} minLength={7} name="phone" required />
           </label>
           <label className={labelClass}>
-            Email (optional)
+            Email (Optional)
             <input autoComplete="off" className={`${inputClass} mt-1.5`} name="email" type="email" />
           </label>
           <RoleScopeFields key={formVersion} options={options} />
@@ -361,7 +363,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <span className="mt-1 block text-[11px] font-semibold">This is the person&apos;s permanent password.</span>
           </label>
           <label className={labelClass}>
-            Repeat password<Required />
+            Repeat Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
             </span>
@@ -382,7 +384,7 @@ export function CreateAccountDrawer({ options }: { options: ScopeOptions }) {
             <button className={secondaryButtonClass} onClick={close} type="button">Cancel</button>
             <button className={primaryButtonClass} disabled={pending} type="submit">
               <Icon className="size-4" name="user" strokeWidth={2} />
-              {pending ? "Creating…" : "Create account"}
+              {pending ? "Creating…" : "Create Account"}
             </button>
           </div>
         </form>
@@ -415,7 +417,7 @@ export function SetPasswordDialog({
         onClick={() => dialog.current?.showModal()}
         type="button"
       >
-        Set new password
+        Set New Password
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -444,13 +446,13 @@ export function SetPasswordDialog({
             </p>
           </div>
           <label className={labelClass}>
-            New password<Required />
+            New Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="password" />
             </span>
           </label>
           <label className={labelClass}>
-            Repeat new password<Required />
+            Repeat New Password<Required />
             <span className="mt-1.5 block">
               <PasswordInput autoComplete="new-password" invalid={mismatch} maxLength={128} minLength={10} name="confirmPassword" />
             </span>
@@ -471,7 +473,7 @@ export function SetPasswordDialog({
             {!state.success && (
               <button className={primaryButtonClass} disabled={pending} type="submit">
                 <Icon className="size-4" name="key" strokeWidth={2} />
-                {pending ? "Setting…" : "Set password"}
+                {pending ? "Setting…" : "Set Password"}
               </button>
             )}
           </div>
@@ -512,7 +514,7 @@ export function ChangeRoleDialog({
         onClick={() => dialog.current?.showModal()}
         type="button"
       >
-        Change role
+        Change Role
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -553,7 +555,7 @@ export function ChangeRoleDialog({
             </button>
             {!state.success && (
               <button className={primaryButtonClass} disabled={pending} type="submit">
-                {pending ? "Saving…" : "Save role"}
+                {pending ? "Saving…" : "Save Role"}
               </button>
             )}
           </div>
@@ -606,12 +608,165 @@ export function DisableAccountDialog({ account }: { account: Pick<ManagedAccount
                 disabled={pending}
                 type="submit"
               >
-                {pending ? "Disabling…" : "Disable account"}
+                {pending ? "Disabling…" : "Disable Account"}
               </button>
             )}
           </div>
         </form>
       </dialog>
     </>
+  );
+}
+
+type DeletableAccount = Pick<ManagedAccount, "id" | "displayName" | "username"> & { scopeLabel: string };
+
+/**
+ * Administration "Delete Account": a confirmation that names the account and
+ * says what happens, and only lets HQ go ahead after typing "delete". The API
+ * enforces the same rules; this dialog only makes the choice deliberate.
+ */
+export function DeleteAccountDialog({ account }: { account: DeletableAccount }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const router = useRouter();
+  // Each opening gets a fresh form: nothing typed, no earlier result.
+  const [attempt, setAttempt] = useState(0);
+  const deleted = useRef(false);
+  const busy = useRef(false);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  return (
+    <>
+      <button
+        aria-label={`Delete account for ${account.displayName}`}
+        className={`${secondaryButtonClass} px-3.5 text-danger-text`}
+        onClick={() => {
+          setAttempt((value) => value + 1);
+          dialog.current?.showModal();
+        }}
+        type="button"
+      >
+        Delete
+      </button>
+      <dialog
+        aria-describedby={descriptionId}
+        aria-labelledby={titleId}
+        className="m-auto w-[min(500px,calc(100vw-32px))] rounded-2xl bg-surface p-0 text-left shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop:bg-[rgba(28,42,33,0.35)]"
+        onCancel={(event) => {
+          // Escape does not close the dialog while the deletion is being sent.
+          if (busy.current) event.preventDefault();
+        }}
+        // Once deleted, closing the dialog in any way refreshes the list without the row.
+        onClose={() => {
+          if (deleted.current) router.refresh();
+        }}
+        ref={dialog}
+      >
+        <DeleteAccountForm
+          account={account}
+          close={() => dialog.current?.close()}
+          descriptionId={descriptionId}
+          key={attempt}
+          onBusy={(value) => {
+            busy.current = value;
+          }}
+          onDeleted={() => {
+            deleted.current = true;
+          }}
+          titleId={titleId}
+        />
+      </dialog>
+    </>
+  );
+}
+
+function DeleteAccountForm({
+  account,
+  close,
+  descriptionId,
+  onBusy,
+  onDeleted,
+  titleId,
+}: {
+  account: DeletableAccount;
+  close: () => void;
+  descriptionId: string;
+  onBusy: (busy: boolean) => void;
+  onDeleted: () => void;
+  titleId: string;
+}) {
+  const inputId = useId();
+  const [typed, setTyped] = useState("");
+  const [state, action, pending] = useActionState(deleteAccount, {});
+  const deleted = Boolean(state.success);
+  const matches = typed === DELETE_CONFIRMATION;
+  useEffect(() => {
+    onBusy(pending);
+  }, [onBusy, pending]);
+  useEffect(() => {
+    if (deleted) onDeleted();
+  }, [deleted, onDeleted]);
+
+  return (
+    <form action={action} className="space-y-4 p-6">
+      <input name="id" type="hidden" value={account.id} />
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-state-danger text-danger-dot">
+          <Icon className="size-5" name="alert" strokeWidth={2} />
+        </span>
+        <h2 className="text-lg font-bold text-ink" id={titleId}>Delete {account.displayName}&rsquo;s Account?</h2>
+        <p className="text-xs text-ink-soft">
+          username <strong className="text-ink">{account.username}</strong> · {account.scopeLabel}
+        </p>
+      </div>
+      <div
+        className="rounded-xl border border-[var(--banner-incident-line)] bg-[var(--banner-incident-bg)] px-3.5 py-2.5 text-xs text-[var(--banner-incident-text)]"
+        id={descriptionId}
+      >
+        <p className="font-semibold">This cannot be undone.</p>
+        <ul className="mt-1.5 list-disc space-y-1 pl-4">
+          <li>They are signed out everywhere, and their sign-in is deleted. This account can never sign in again.</li>
+          <li>Their password, phone number, email and society assignments are removed, and the username can be given to someone new.</li>
+          <li>Society records, documents and the change log stay as they are. Past entries still show their name.</li>
+        </ul>
+        <p className="mt-1.5">To stop them signing in for a while instead, use Disable.</p>
+      </div>
+      {!deleted && (
+        <div className="space-y-1.5">
+          <label className={labelClass} htmlFor={inputId}>
+            Type <strong className="font-mono">{DELETE_CONFIRMATION}</strong> to confirm
+          </label>
+          <input
+            autoCapitalize="off"
+            autoComplete="off"
+            autoCorrect="off"
+            className={inputClass}
+            id={inputId}
+            name="confirmation"
+            onChange={(event) => setTyped(event.target.value)}
+            readOnly={pending}
+            spellCheck={false}
+            value={typed}
+          />
+        </div>
+      )}
+      <div aria-live="polite">
+        <Message result={state} />
+      </div>
+      <div className="flex justify-end gap-2.5">
+        <button className={secondaryButtonClass} disabled={pending} onClick={close} type="button">
+          {deleted ? "Close" : "Cancel"}
+        </button>
+        {!deleted && (
+          <button
+            className={`${primaryButtonClass} border-danger-dot bg-danger-dot hover:bg-[#8a241d] disabled:cursor-not-allowed disabled:opacity-50`}
+            disabled={!matches || pending}
+            type="submit"
+          >
+            {pending ? "Deleting…" : "Delete Account"}
+          </button>
+        )}
+      </div>
+    </form>
   );
 }

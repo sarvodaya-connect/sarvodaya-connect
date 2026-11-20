@@ -17,6 +17,7 @@ import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { passwordHash } from '../../src/identity/identity.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { latestCompletedFinancialYear } from '../../src/societies/financial-year.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -222,7 +223,7 @@ describe('Issue #117 scoped Programmes & Activities (PostgreSQL)', () => {
   });
 
   const shown = (body: { recent: { name: string }[] }) =>
-    body.recent.map((row) => row.name.replace(` ${suffix}`, '')).sort();
+    body.recent.map((row) => row.name.replace(` ${suffix}`, '')).sort(byCodeUnit);
 
   it('serves DMs, DDMs and SPCs only; HQ keeps the national view', async () => {
     await get(`/programmes?year=${fy}`, 'hq').expect(403);

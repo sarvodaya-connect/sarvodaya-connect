@@ -87,19 +87,19 @@ export default async function SocietyPage({ params, searchParams }: PageProps<"/
               className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
               type="button"
             >
-              View on map
+              View on Map
             </button>
             <button
               className="rounded-button border border-line bg-surface px-3 py-2 text-[12px] font-semibold text-ink-soft hover:bg-brand-mint-soft"
               type="button"
             >
-              Export profile
+              Export Profile
             </button>
             <button
               className="rounded-button bg-brand-action px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-action-pressed"
               type="button"
             >
-              Send a request
+              Send a Request
             </button>
           </div>
         </div>

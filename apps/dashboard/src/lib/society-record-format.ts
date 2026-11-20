@@ -36,16 +36,16 @@ export function excoProgress(status: ExcoStatus | undefined, committee: SocietyR
     missingOffices,
     /** What is still missing, in plain words. Empty when complete. */
     problems,
-    /** "Exco not entered yet", "Exco incomplete · 12 of 25", "Exco incomplete · no Treasurer" or "Exco complete". */
+    /** Short Exco status labels; completion remains determined by the API. */
     label: complete
-      ? "Exco complete"
+      ? "Exco Complete"
       : filled === 0
-        ? "Exco not entered yet"
+        ? "Exco Not Entered Yet"
         : toFill > 0
-          ? `Exco incomplete · ${filled} of 25`
+          ? `Exco Incomplete · ${filled} of 25`
           : missingOffices.length
-            ? `Exco incomplete · no ${missingOffices.join(", ")}`
-            : "Exco incomplete · needs checking",
+            ? `Exco Incomplete · No ${missingOffices.join(", ")}`
+            : "Exco Incomplete · Needs Checking",
   };
 }
 

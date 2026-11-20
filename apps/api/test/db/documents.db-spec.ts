@@ -28,6 +28,7 @@ import { findDemoPrincipal } from '../../src/auth/demo-principals.js';
 import { NotificationsRepository } from '../../src/notifications/notifications.repository.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { latestCompletedFinancialYear } from '../../src/societies/financial-year.js';
+import { byCodeUnit } from '../../src/common/compare.js';
 
 const databaseUrl = process.env['DATABASE_URL'];
 if (!databaseUrl)
@@ -229,11 +230,11 @@ describe('Document and notification persistence (PostgreSQL)', () => {
 
     expect(await idsFor('demo-officer-sunrise')).toEqual([standard.id]);
     expect(await idsFor('demo-dm-north')).toEqual(
-      [standard.id, restricted.id].sort(),
+      [standard.id, restricted.id].sort(byCodeUnit),
     );
     expect(await idsFor('demo-dm-central')).toEqual([lotus.id]);
     expect(await idsFor('demo-hq-admin')).toEqual(
-      [standard.id, restricted.id, lotus.id].sort(),
+      [standard.id, restricted.id, lotus.id].sort(byCodeUnit),
     );
     expect(await idsFor('demo-hq-admin')).not.toContain(draft.id);
 

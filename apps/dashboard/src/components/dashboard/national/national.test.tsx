@@ -2,14 +2,18 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { NationalOverview, ReportTable, SocietyAtAGlance } from "@sarvodaya-connect/api-contracts";
+import type { NationalOverview, ReportTable } from "@sarvodaya-connect/api-contracts";
 
 import { reportCsv } from "@/lib/reports";
 
-const { loadSocietySummary } = vi.hoisted(() => ({ loadSocietySummary: vi.fn() }));
+const { loadNationalMapPins, push } = vi.hoisted(() => ({ loadNationalMapPins: vi.fn(), push: vi.fn() }));
 // The HQ period switch moves between years with the app router.
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
-vi.mock("@/app/(dashboard)/map/actions", () => ({ loadSocietySummary, loadNationalMapPins: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), usePathname: () => "/dashboard" }));
+vi.mock("@/app/(dashboard)/map/actions", () => ({ loadNationalMapPins }));
+vi.mock("maplibre-gl", () => import("../maps/fake-maplibre.test-helper"));
+vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
+
+import { fakeMapLibre } from "../maps/fake-maplibre.test-helper";
 
 import { NationalOverviewView } from "./national-overview";
 import { ReportTableView } from "./report-table";
@@ -76,46 +80,49 @@ describe("V5 D02 National Dashboard", () => {
     expect(screen.getByText("LKR 1,026.8 m")).toBeInTheDocument();
     // The audit share, on the key figure and in the documents card.
     expect(screen.getAllByText("75%")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Kurunegala: 98 active societies" })).toHaveAttribute("href", "/societies?districtId=d1");
+    // The society map is the street map, never the drawn district map.
+    expect(screen.getByRole("region", { name: "Map of societies in Sri Lanka, coloured by grade" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "6 grade requests waiting" })).toHaveAttribute("href", "/reviews");
     expect(screen.getByText(/No open incidents/)).toBeInTheDocument();
     // Sample data is labelled only in demonstration mode.
-    expect(screen.queryByText(/Demonstration data/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Demonstration Data/)).not.toBeInTheDocument();
     // No horizontal progress bars as data displays.
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
-  it("keeps the drawn district map, with a note and no error, when Mapbox is not set up", () => {
-    vi.stubEnv("NEXT_PUBLIC_MAPBOX_TOKEN", "");
+  it("shows the street map with no key, and never a drawn map", async () => {
+    fakeMapLibre.reset();
+    loadNationalMapPins.mockResolvedValue({ counts: {}, points: [], truncated: false });
     render(<NationalOverviewView demo={false} overview={overview} years={[2025]} />);
-    vi.unstubAllEnvs();
-    expect(screen.getByRole("img", { name: "Active societies in each district" })).toBeInTheDocument();
-    expect(screen.getByText("The street map is not set up yet, so a drawn map is shown.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Map of societies in Sri Lanka, coloured by grade" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Societies by Grade" })).toBeInTheDocument();
+    await waitFor(() => expect(loadNationalMapPins).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("img", { name: "Active Societies in Each District" })).not.toBeInTheDocument();
     expect(screen.queryByText("The Map Could Not Load")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "List view ›" })).toHaveAttribute("href", "/societies");
+    expect(screen.getByRole("link", { name: "List View ›" })).toHaveAttribute("href", "/societies");
     expect(screen.getByRole("link", { name: /12 active societies have no map position yet/ })).toHaveAttribute("href", "/reports?type=data-quality");
   });
 
   it("labels sample figures in demonstration mode", () => {
     render(<NationalOverviewView demo overview={overview} years={[2025]} />);
     expect(screen.getByText("Demonstration data · sample figures, not real")).toBeInTheDocument();
-    expect(screen.getByText("Sample figures")).toBeInTheDocument();
+    expect(screen.getByText("Sample Figures")).toBeInTheDocument();
   });
 
   it("lists what needs HQ's attention, each opening the list where it is dealt with", () => {
     render(<NationalOverviewView demo={false} overview={overview} years={[2025]} />);
-    const attention = screen.getByRole("region", { name: "Needs attention" });
+    const attention = screen.getByRole("region", { name: "Needs Attention" });
     const row = (name: RegExp) => within(attention).getByRole("link", { name });
-    expect(row(/Grade requests to review/)).toHaveAttribute("href", "/reviews");
-    expect(row(/Audit reports missing for FY 2025\/26/)).toHaveAttribute("href", "/compliance?year=2025");
-    expect(row(/Audit reports missing/)).toHaveTextContent("264");
-    expect(row(/Yearly figures not added/)).toHaveAttribute("href", "/societies?view=figures-not-added");
+    expect(row(/Grade Requests to Review/)).toHaveAttribute("href", "/reviews");
+    expect(row(/Audit Reports Missing for FY 2025\/26/)).toHaveAttribute("href", "/compliance?year=2025");
+    expect(row(/Audit Reports Missing/)).toHaveTextContent("264");
+    expect(row(/Yearly Figures Not Added/)).toHaveAttribute("href", "/societies?view=figures-not-added");
     expect(row(/Records Not Updated in 90\+ Days/)).toHaveAttribute("href", "/societies?view=not-updated");
     expect(row(/without a map position/i)).toHaveAttribute("href", "/reports?type=data-quality");
     // Nothing to act on is left out rather than shown as 0.
-    expect(within(attention).queryByText("Active societies not graded yet")).not.toBeInTheDocument();
+    expect(within(attention).queryByText("Active Societies Not Graded Yet")).not.toBeInTheDocument();
     // The lines overlap and count different things, so the badge counts lines, not a sum (532).
-    expect(within(attention).getByText("5 lists")).toBeInTheDocument();
+    expect(within(attention).getByText("5 Lists")).toBeInTheDocument();
     expect(within(attention).queryByText("532")).not.toBeInTheDocument();
   });
 
@@ -143,22 +150,22 @@ describe("V5 D02 National Dashboard", () => {
         years={[2025]}
       />,
     );
-    const figures = screen.getByRole("list", { name: "Key figures" });
-    const live = within(figures).getByRole("link", { name: /Live incidents/ });
+    const figures = screen.getByRole("list", { name: "Key Figures" });
+    const live = within(figures).getByRole("link", { name: /Live Incidents/ });
     expect(live).toHaveAttribute("href", "/emergencies");
     // 3 + 1: one society can sit in both areas, so this is not called a count of societies.
     expect(live).toHaveTextContent("4 assessments still to do, across live incidents");
-    const attention = within(screen.getByRole("region", { name: "Needs attention" })).getAllByRole("link");
+    const attention = within(screen.getByRole("region", { name: "Needs Attention" })).getAllByRole("link");
     expect(attention[0]).toHaveAttribute("href", "/emergencies");
-    expect(attention[0]).toHaveTextContent(/added up across live incidents/);
+    expect(attention[0]).toHaveTextContent(/Added Up Across Live Incidents/);
   });
 
   it("links every key figure to its page, for the chosen year", () => {
     render(<NationalOverviewView demo={false} overview={overview} years={[2025, 2024]} />);
-    const figures = screen.getByRole("list", { name: "Key figures" });
-    expect(within(figures).getByRole("link", { name: /Active societies/ })).toHaveAttribute("href", "/societies");
+    const figures = screen.getByRole("list", { name: "Key Figures" });
+    expect(within(figures).getByRole("link", { name: /Active Societies/ })).toHaveAttribute("href", "/societies");
     expect(within(figures).getByRole("link", { name: /Completed Activities/ })).toHaveAttribute("href", "/activities?year=2025");
-    expect(within(figures).getByRole("link", { name: /Audit reports submitted/ })).toHaveAttribute("href", "/compliance?year=2025");
+    expect(within(figures).getByRole("link", { name: /Audit Reports Submitted/ })).toHaveAttribute("href", "/compliance?year=2025");
     const years = screen.getByRole("navigation", { name: "Financial Year" });
     expect(within(years).getByRole("link", { name: "FY 2025/26" })).toHaveAttribute("aria-current", "true");
     expect(within(years).getByRole("link", { name: "FY 2024/25" })).toHaveAttribute("href", "/dashboard?year=2024");
@@ -176,9 +183,9 @@ describe("V5 D02 National Dashboard", () => {
         years={[2025]}
       />,
     );
-    expect(screen.getByText("No membership counts entered yet")).toBeInTheDocument();
+    expect(screen.getByText("No Membership Counts Entered Yet")).toBeInTheDocument();
     expect(screen.getByText("No society has entered membership counts yet.")).toBeInTheDocument();
-    expect(screen.getAllByText("Not added yet")).toHaveLength(2);
+    expect(screen.getAllByText("Not Added Yet")).toHaveLength(2);
     expect(screen.queryByText("LKR 0")).not.toBeInTheDocument();
   });
 
@@ -191,12 +198,12 @@ describe("V5 D02 National Dashboard", () => {
       />,
     );
     expect(screen.getByText("LKR 412,500")).toBeInTheDocument();
-    expect(screen.getAllByText("Not added yet")).toHaveLength(1);
+    expect(screen.getAllByText("Not Added Yet")).toHaveLength(1);
   });
 
   it("says membership is the latest year counted, whichever year is chosen", () => {
     render(<NationalOverviewView demo={false} overview={overview} years={[2025, 2024]} />);
-    const figures = screen.getByRole("list", { name: "Key figures" });
+    const figures = screen.getByRole("list", { name: "Key Figures" });
     expect(within(figures).getByRole("link", { name: /Total Membership/ })).toHaveTextContent("Latest counts (2026), whichever year is chosen");
     expect(screen.getByText(/Membership is the latest year counted \(2026\)\. Yearly figures, audits and activities are for FY 2025\/26\./)).toBeInTheDocument();
   });
@@ -208,7 +215,7 @@ describe("V5 D02 National Dashboard", () => {
     await user.click(split);
     expect(split).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("img", { name: "Members: 56,214 female and 42,426 male" })).toBeInTheDocument();
-    const table = screen.getByRole("button", { name: "Show the table" });
+    const table = screen.getByRole("button", { name: "Show the Table" });
     await user.click(table);
     expect(table).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("table", { name: "Membership Categories" })).toBeInTheDocument();
@@ -238,11 +245,11 @@ describe("V5 D02 National Dashboard", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "3 districts" }));
-    const panel = screen.getByRole("dialog", { name: "Active societies in each district" });
+    const panel = screen.getByRole("dialog", { name: "Active Societies in Each District" });
     const links = within(panel).getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/societies"));
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/societies?districtId=d3", "/societies?districtId=d1", "/societies?districtId=d2"]);
-    expect(within(panel).getAllByText("No map position yet")).toHaveLength(2);
-    expect(within(panel).getByRole("link", { name: /Ampara/ })).toHaveTextContent("No map position yet");
+    expect(within(panel).getAllByText("No Map Position Yet")).toHaveLength(2);
+    expect(within(panel).getByRole("link", { name: /Ampara/ })).toHaveTextContent("No Map Position Yet");
   });
 
   it("formats yearly totals", () => {
@@ -252,64 +259,62 @@ describe("V5 D02 National Dashboard", () => {
 });
 
 describe("V5 D03 Map view", () => {
-  const summary: SocietyAtAGlance = {
-    id: "s1",
-    name: "Pahala Kosgama SSS",
-    societyCode: "S-104233",
-    districtId: "d1",
+  const counts = { A: 1, B: 1, C: 0, ungraded: 0, notActive: 0, withoutLocation: 3 };
+  const point = (id: string, name: string, mapClass: "A" | "B", latitude: number, longitude: number) => ({
+    id,
+    name,
+    societyCode: `S-${id}`,
+    class: mapClass,
+    latitude,
+    longitude,
     district: "Kurunegala",
-    grade: "B",
-    status: "ACTIVE",
-    updatedAt: "2026-11-03T03:00:00.000Z",
-    members: 418,
-    membershipYear: 2026,
-    recordsCompletePercent: 96,
-    missingFields: 1,
-    financialYear: overview.financialYear,
-    profit: null,
-    expenses: null,
-    hasSocietyOfficer: true,
-    excoSeatsFilled: 0,
-    excoComplete: false,
-    excoMissingOffices: ["President", "Secretary", "Treasurer"],
-    spcName: null,
-    registrarDocuments: [],
-    auditReportPastDue: false,
-    gradeRequest: null,
-    activities: { planned: 0, approved: 0, latest: null },
-  };
+  });
+  const points = [point("s1", "Pahala Kosgama SSS", "B", 7.5, 80.4), point("s2", "Galewela SSS", "A", 7.75, 80.57)];
+  const drawn = (shown: typeof points) =>
+    shown.map((p) => ({ properties: { key: `${p.latitude},${p.longitude}`, count: 1 }, geometry: { coordinates: [p.longitude, p.latitude] as [number, number] } }));
 
-  it("shows the chosen society's summary", async () => {
-    loadSocietySummary.mockResolvedValue(summary);
+  it("puts the filtered societies on the street map, and a click opens the record", async () => {
+    fakeMapLibre.reset();
+    vi.clearAllMocks();
+    fakeMapLibre.features = drawn(points);
     const user = userEvent.setup();
-    render(
-      <SocietyMapView
-        counts={{ A: 1, B: 1, C: 0, ungraded: 0, notActive: 0, withoutLocation: 3 }}
-        demo={false}
-        points={[{ id: "s1", name: "Pahala Kosgama SSS", societyCode: "S-104233", class: "B", latitude: 7.5, longitude: 80.4, district: "Kurunegala" }]}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Pahala Kosgama SSS, S-104233" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Pahala Kosgama SSS" })).toBeInTheDocument());
-    expect(loadSocietySummary).toHaveBeenCalledWith("s1");
-    expect(screen.getByText("96%")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open society record" })).toHaveAttribute("href", "/societies/s1");
-    expect(screen.getByRole("link", { name: "Societies in Kurunegala" })).toHaveAttribute("href", "/societies?districtId=d1");
+    render(<SocietyMapView counts={counts} demo={false} points={points} truncated={false} />);
+    const society = await screen.findByRole("link", { name: "Pahala Kosgama SSS, grade B, open record" });
+    expect(society).toHaveAttribute("href", "/societies/s1");
+    await user.click(society);
+    expect(push).toHaveBeenCalledWith("/societies/s1");
+    // The page's own filtered list is drawn; nothing else is fetched for the pins.
+    expect(loadNationalMapPins).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "2 Active Societies" })).toBeInTheDocument();
+    expect(screen.getByText("Click a society to open its record. Numbered bubbles zoom in to show the societies inside.")).toBeInTheDocument();
+    expect(screen.getByText(/3 societies have no position yet/)).toBeInTheDocument();
+    expect(screen.queryByText("Demonstration Data")).not.toBeInTheDocument();
   });
 
-  it("says when the society cannot be opened", async () => {
-    loadSocietySummary.mockResolvedValue({ error: "Society Not Found" });
-    const user = userEvent.setup();
-    render(
-      <SocietyMapView
-        counts={{ A: 0, B: 0, C: 0, ungraded: 1, notActive: 0, withoutLocation: 0 }}
-        demo
-        points={[{ id: "s2", name: "Example", societyCode: "S-1", class: "UNGRADED", latitude: 7, longitude: 80, district: "Kurunegala" }]}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "Example, S-1" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Society Not Found");
-    expect(screen.getByText("Demonstration data")).toBeInTheDocument();
+  it("follows the filters without starting a new map", async () => {
+    fakeMapLibre.reset();
+    fakeMapLibre.features = drawn(points);
+    const { rerender } = render(<SocietyMapView counts={counts} demo={false} points={points} truncated={false} />);
+    await screen.findByRole("link", { name: "Galewela SSS, grade A, open record" });
+    const gradeA = points.filter((p) => p.class === "A");
+    fakeMapLibre.features = drawn(gradeA);
+    rerender(<SocietyMapView counts={{ ...counts, B: 0 }} demo={false} points={gradeA} truncated={false} />);
+    await waitFor(() => expect(fakeMapLibre.maps[0]!.data.societies).toHaveLength(1));
+    expect(fakeMapLibre.maps).toHaveLength(1);
+    const data = fakeMapLibre.maps[0]!.data.societies![0] as { features: unknown[] };
+    expect(data.features).toHaveLength(1);
+    // The old markers go; the map draws the new ones when it settles.
+    expect(screen.queryByRole("link", { name: "Pahala Kosgama SSS, grade B, open record" })).not.toBeInTheDocument();
+  });
+
+  it("offers the society list when the map cannot load", async () => {
+    fakeMapLibre.reset();
+    fakeMapLibre.failLoad = true;
+    render(<SocietyMapView counts={counts} demo points={points} truncated={false} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("The Map Could Not Load");
+    expect(within(screen.getByRole("alert")).getByRole("link", { name: "List View ›" })).toHaveAttribute("href", "/societies");
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+    expect(screen.getByText("Demonstration Data")).toBeInTheDocument();
   });
 });
 

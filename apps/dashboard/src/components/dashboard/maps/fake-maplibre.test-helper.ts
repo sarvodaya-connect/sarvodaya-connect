@@ -1,23 +1,25 @@
 /**
- * A stand-in for mapbox-gl in tests (`vi.mock("mapbox-gl", () => import(...))`).
+ * A stand-in for maplibre-gl in tests (`vi.mock("maplibre-gl", () => import(...))`).
  * jsdom has no WebGL, so the fake map only keeps the HTML markers it is given
- * in its container and returns `fakeMapbox.features` as the drawn features.
+ * in its container and returns `fakeMapLibre.features` as the drawn features.
  */
 type Handler = (event?: unknown) => void;
 type LngLat = [number, number];
 
-export const fakeMapbox = {
-  /** What queryRenderedFeatures returns: points and clusters as Mapbox would draw them. */
+export const fakeMapLibre = {
+  /** What queryRenderedFeatures returns: points and clusters as MapLibre would draw them. */
   features: [] as { properties: Record<string, unknown>; geometry: { coordinates: LngLat } }[],
-  /** Fail the next maps before "load", as a refused token or no network would. */
+  /** Fail the next maps before "load", as no network or a blocked tile server would. */
   failLoad: false,
   maps: [] as Map[],
   markers: [] as Marker[],
+  workerUrl: "",
   reset() {
     this.features = [];
     this.failLoad = false;
     this.maps = [];
     this.markers = [];
+    this.workerUrl = "";
   },
 };
 
@@ -32,8 +34,8 @@ export class Map {
     this.container = options.container;
     this.options = options;
     this.easeTo = (eased) => this.eased.push(eased);
-    fakeMapbox.maps.push(this);
-    const fail = fakeMapbox.failLoad;
+    fakeMapLibre.maps.push(this);
+    const fail = fakeMapLibre.failLoad;
     queueMicrotask(() => this.emit(fail ? "error" : "load", { error: new Error("refused") }));
   }
 
@@ -54,12 +56,22 @@ export class Map {
 
   addLayer() {}
 
-  getSource() {
-    return { getClusterExpansionZoom: (_id: number, done: (error: Error | null, zoom: number) => void) => done(null, 12) };
+  /** Each source's data after setData, newest last. */
+  data: Record<string, unknown[]> = {};
+
+  getSource(id: string) {
+    return {
+      getClusterExpansionZoom: async () => 12,
+      setData: (data: unknown) => (this.data[id] ??= []).push(data),
+    };
   }
 
   queryRenderedFeatures() {
-    return fakeMapbox.features;
+    return fakeMapLibre.features;
+  }
+
+  getContainer() {
+    return this.container;
   }
 
   getCanvas() {
@@ -78,7 +90,7 @@ export class Marker {
   constructor(options: { element: HTMLElement; draggable?: boolean }) {
     this.element = options.element;
     this.draggable = Boolean(options.draggable);
-    fakeMapbox.markers.push(this);
+    fakeMapLibre.markers.push(this);
   }
 
   setLngLat(lngLat: LngLat) {
@@ -105,6 +117,10 @@ export class Marker {
   }
 }
 
-// mapbox-gl's own typings declare a default export with the same classes.
-const mapboxgl = { Map, Marker };
-export default mapboxgl;
+export function getWorkerUrl() {
+  return fakeMapLibre.workerUrl;
+}
+
+export function setWorkerUrl(url: string) {
+  fakeMapLibre.workerUrl = url;
+}

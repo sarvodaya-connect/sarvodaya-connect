@@ -5,7 +5,6 @@ import type { SocietyRecord, WorkPlanOverview } from "@sarvodaya-connect/api-con
 import { ENGLISH } from "@/i18n/english";
 import { actorName, excoMissing, gradeFull, officeName, recordDate, roleName, waiting } from "@/i18n/society-record";
 import { formatNumber, localeTag, type Translator } from "@/i18n/translate";
-import { mapboxToken } from "@/lib/mapbox";
 
 import { secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
@@ -59,19 +58,12 @@ function Field({ label, t, value }: { label: string; t: Translator; value?: stri
 }
 
 /** A decorative map with the society's pin, shown when Mapbox is not set up. Coordinates are shown as text. */
-function MapPreview({ hasLocation }: { hasLocation: boolean }) {
+/** No position recorded yet: a plain panel, never a drawn map. The note under the card says who can set it. */
+function NoLocation() {
   return (
-    <svg aria-hidden="true" className="h-32 w-full rounded-lg border border-line bg-[#e3efe0]" preserveAspectRatio="none" viewBox="0 0 240 120">
-      <path d="M0 22 C60 12 90 38 140 24 S220 30 240 18" fill="none" stroke="#c7dbe7" strokeWidth="9" />
-      <path d="M0 96 C70 72 120 90 160 70 S220 64 240 76" fill="none" stroke="#fff" strokeWidth="6" />
-      <path d="M100 0 C108 40 122 70 112 120" fill="none" stroke="#fff" strokeWidth="5" />
-      {hasLocation && (
-        <g transform="translate(112 52)">
-          <path d="M0 -14 C-7 -14 -10 -9 -10 -5 C-10 2 0 12 0 12 C0 12 10 2 10 -5 C10 -9 7 -14 0 -14 Z" fill="none" stroke="#c0392b" strokeWidth="2.2" />
-          <circle cx="0" cy="-5" fill="#c0392b" r="3" />
-        </g>
-      )}
-    </svg>
+    <div aria-hidden="true" className="grid h-32 place-items-center rounded-lg border border-line bg-surface-muted text-muted">
+      <Icon className="size-7" name="map" strokeWidth={1.8} />
+    </div>
   );
 }
 
@@ -113,7 +105,6 @@ export function RecordOverview({
   const staff = [...record.staff].sort((a, b) => STAFF_ORDER.indexOf(a.role as never) - STAFF_ORDER.indexOf(b.role as never));
   const request = record.openGradeRequest;
   const exco = excoProgress(record.excoStatus, record.committee);
-  const token = mapboxToken();
 
   return (
     <>
@@ -146,10 +137,10 @@ export function RecordOverview({
               </div>
             </dl>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {record.location && token ? (
-                <SocietyLocationMap className="h-32" name={record.nameEn} position={record.location} token={token} />
+              {record.location ? (
+                <SocietyLocationMap className="h-32" name={record.nameEn} position={record.location} />
               ) : (
-                <MapPreview hasLocation={Boolean(record.location)} />
+                <NoLocation />
               )}
               <div>
                 <p className="text-[10px] text-muted">{t("sr.ov.business")}</p>

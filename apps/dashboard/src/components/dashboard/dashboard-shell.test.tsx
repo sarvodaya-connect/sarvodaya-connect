@@ -17,7 +17,6 @@ function renderShell(viewer: DemoViewer, unread = 0) {
   );
 }
 
-const TAGLINE = "People | Communities | A Just and Compassionate Society";
 const desktopNav = () => screen.getAllByRole("navigation", { name: "Main Navigation" })[0]!;
 
 describe("V5 dashboard shell", () => {
@@ -25,14 +24,15 @@ describe("V5 dashboard shell", () => {
     pathname.current = "/dashboard";
   });
 
-  it("shows the HQ header, sidebar and signed-in user", () => {
+  it("shows the HQ controls, sidebar and signed-in user, and leaves the heading to the page", () => {
     renderShell(getViewer("hq-admin"), 3);
 
-    expect(screen.getByRole("heading", { level: 1, name: "National Dashboard" })).toBeInTheDocument();
-    expect(screen.getByText("Shramadana Societies Across Sri Lanka")).toBeInTheDocument();
+    // One main heading per page: the page names itself, so the shell has none.
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.queryByText("Shramadana Societies Across Sri Lanka")).not.toBeInTheDocument();
     expect(screen.getAllByPlaceholderText("Search societies by name, S number or district…")).not.toHaveLength(0);
-    expect(screen.getByRole("link", { name: "Alerts, 3 new" })).toHaveAttribute("href", "/notifications");
-    expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alerts, 3 New" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("button", { name: "Account: K. Fernando · Sign Out" })).toBeInTheDocument();
 
     const nav = within(desktopNav());
     expect(nav.getByRole("link", { name: "National Overview" })).toHaveAttribute("aria-current", "page");
@@ -46,7 +46,15 @@ describe("V5 dashboard shell", () => {
     renderShell(getViewer("hq-admin"));
 
     expect(within(desktopNav()).getByRole("link", { name: "Administration" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("heading", { level: 1, name: "Change & Access Log" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  });
+
+  it("puts Review Queue after Requests & Tasks and before Reports", () => {
+    renderShell(getViewer("hq-admin"));
+    const labels = within(desktopNav()).getAllByRole("link").map((link) => link.textContent);
+    const at = (label: string) => labels.indexOf(label);
+    expect(at("Review Queue")).toBe(at("Requests & Tasks") + 1);
+    expect(at("Reports")).toBe(at("Review Queue") + 1);
   });
 
   it("gives coordinators a scoped search and no HQ pages", () => {
@@ -66,11 +74,11 @@ describe("V5 dashboard shell", () => {
     expect(screen.getByRole("link", { name: "Alerts" })).toBeInTheDocument();
   });
 
-  it("tells District Managers their district is view only", () => {
+  it("gives District Managers no header heading either", () => {
     renderShell(getViewer("district-manager"));
 
-    expect(screen.getByRole("heading", { level: 1, name: "District Overview" })).toBeInTheDocument();
-    expect(screen.getByText("Kurunegala District · view only")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.queryByText("Kurunegala District · View Only")).not.toBeInTheDocument();
   });
 });
 
@@ -84,12 +92,17 @@ describe("Redesigned shell", () => {
   it("gives HQ the redesigned shell with SarvoAI, search, alerts and account", () => {
     renderShell(getViewer("hq-admin"), 2);
 
-    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo-white");
+    // The original logo on its white background, not the white lettering.
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo.jpg");
+    expect(logo().parentElement).toHaveClass("bg-white");
     expect(screen.getByRole("link", { name: /SarvoAI/ })).toHaveAttribute("href", "/sarvoai");
-    expect(screen.getByRole("link", { name: "Alerts, 2 new" })).toHaveAttribute("href", "/notifications");
-    expect(screen.getByRole("button", { name: "Account: K. Fernando · sign out" })).toBeInTheDocument();
-    // The tagline stays for screen readers in the slimmer header.
-    expect(screen.getByText(TAGLINE)).toHaveClass("sr-only");
+    expect(screen.getByRole("link", { name: "Alerts, 2 New" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("button", { name: "Account: K. Fernando · Sign Out" })).toBeInTheDocument();
+    // The controls float: no strip, line or blur behind them.
+    const header = document.querySelector("header")!;
+    expect(header.className).not.toMatch(/\bbg-|border-b|backdrop-blur/);
+    // The headquarters outline sits behind the page (a CSS module class on the shell).
+    expect(header.closest("[class*='canvas']")).not.toBeNull();
   });
 
   const deputy: DemoViewer = {
@@ -105,13 +118,13 @@ describe("Redesigned shell", () => {
 
   it.each([
     ["SPC", getViewer("programme-coordinator"), "SPC · 3 assigned societies"],
-    ["DDM", deputy, "DDM · 1 society"],
+    ["DDM", deputy, "DDM · 1 Society"],
     ["DM", getViewer("district-manager"), "DM · Kurunegala District"],
   ])("gives the %s the redesigned shell, without HQ-only SarvoAI", (_role, viewer, scope) => {
     renderShell(viewer);
 
-    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo-white");
-    expect(screen.getByText(TAGLINE)).toHaveClass("sr-only");
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo.jpg");
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /SarvoAI/ })).not.toBeInTheDocument();
     expect(within(desktopNav()).getByText(scope)).toBeInTheDocument();
     expect(within(desktopNav()).queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
@@ -121,19 +134,20 @@ describe("Redesigned shell", () => {
     renderShell(getViewer("system-admin"));
 
     expect(logo().getAttribute("src")).toContain("sarvodaya-connect-wordmark");
-    expect(screen.getByText(TAGLINE)).not.toHaveClass("sr-only");
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(document.querySelector("header")!.className).not.toMatch(/\bbg-|border-b/);
     expect(document.querySelector("main")?.className).toBe("min-w-0 flex-1 px-4 pb-8 pt-[18px] md:px-7");
   });
 
   it("shows the demonstration Preview as switch only when the layout passes one", () => {
     const { unmount } = renderShell(getViewer("programme-coordinator"));
-    expect(screen.queryByLabelText("Preview as (demo)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Preview as (Demo)")).not.toBeInTheDocument();
     unmount();
     render(
       <DashboardShell preview={{ action: vi.fn(), current: "programme-coordinator", options: [{ id: "hq-admin", label: "HQ" }, { id: "programme-coordinator", label: "SPC" }] }} viewer={getViewer("programme-coordinator")}>
         <p>Page body</p>
       </DashboardShell>,
     );
-    expect(screen.getAllByLabelText("Preview as (demo)")[0]).toHaveValue("programme-coordinator");
+    expect(screen.getAllByLabelText("Preview as (Demo)")[0]).toHaveValue("programme-coordinator");
   });
 });

@@ -219,7 +219,7 @@ export class LocalDocumentStorage implements DocumentStorage {
   }
 
   private urlFor(token: string): string {
-    return `${this.options.publicBaseUrl.replace(/\/+$/, '')}/api/v1/storage/local/${token}`;
+    return `${withoutTrailingSlashes(this.options.publicBaseUrl)}/api/v1/storage/local/${token}`;
   }
 
   private sign(payload: LocalUrlPayload): string {
@@ -234,4 +234,11 @@ export class LocalDocumentStorage implements DocumentStorage {
         .digest('base64url'),
     );
   }
+}
+
+/** Drops trailing '/' characters with one backward scan (a /\/+$/ regex rescans each run of slashes). */
+export function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }

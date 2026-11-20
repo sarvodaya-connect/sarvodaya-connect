@@ -74,19 +74,19 @@ describe("SP01 SPC home", () => {
   it("shows the five figures, what needs attention and the latest changes", () => {
     const { container } = render(<RoleHome home={home()} now={now} viewer={getViewer("programme-coordinator")} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Good morning, P. Wickramasinghe" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Good Morning, P. Wickramasinghe" })).toBeInTheDocument();
     expect(screen.getByText("Society Program Coordinator (SPC) · Monday 26 Oct 2026")).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Your access: 12 assigned societies · view and edit. Grade changes are decided by HQ.");
     expect(screen.getByText("A 2 · B 4 · C 6")).toBeInTheDocument();
     expect(screen.getByText("Pahala Kosgama SSS · 2 days")).toBeInTheDocument();
     expect(screen.getByText("Hettipola SSS, Wariyapola SSS")).toBeInTheDocument();
-    expect(screen.getByText("Societies With a 2027 Plan")).toBeInTheDocument();
+    expect(screen.getByText("Societies with a 2027 Plan")).toBeInTheDocument();
 
     const attention = within(screen.getByRole("region", { name: "Needs Attention" }));
     expect(attention.getAllByRole("link", { name: "Pahala Kosgama SSS" })[0]).toHaveAttribute("href", "/societies/s1");
     expect(attention.getByText("Activity to approve: Youth leadership camp")).toBeInTheDocument();
     expect(attention.getAllByText("Editable")).toHaveLength(3);
-    expect(attention.getByRole("link", { name: "All 12 societies" })).toHaveAttribute("href", "/my-societies");
+    expect(attention.getByRole("link", { name: "All 12 Societies" })).toHaveAttribute("href", "/my-societies");
 
     expect(screen.getByText("Membership · Members 412 → 418 · Pahala Kosgama SSS")).toBeInTheDocument();
     expect(screen.getByText("N. Wijesinghe (Society Officer) · Today")).toBeInTheDocument();
@@ -125,11 +125,11 @@ describe("SP01 SPC home", () => {
     expect(alert).toHaveTextContent(
       "Active incident INC-2026-09 · Floods — North Western. Opened by N. Wijesinghe (Society Officer) yesterday · assessments due Tue 27 Oct, 6:00 p.m.",
     );
-    expect(within(alert).getByRole("link", { name: "Open incident" })).toHaveAttribute("href", "/emergencies/i1");
+    expect(within(alert).getByRole("link", { name: "Open Incident" })).toHaveAttribute("href", "/emergencies/i1");
     // SP01 card 3: both buttons work.
     const card = screen.getByRole("region", { name: "Incidents" });
-    expect(within(card).getByRole("link", { name: /Open incident/ })).toHaveAttribute("href", "/emergencies/i1");
-    expect(within(card).getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+    expect(within(card).getByRole("link", { name: /Open Incident/ })).toHaveAttribute("href", "/emergencies/i1");
+    expect(within(card).getByRole("link", { name: /Report an Incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
   });
 
   it("lets SPCs, DDMs and DMs open the disaster response pages", () => {
@@ -164,7 +164,7 @@ describe("DD01 DDM home", () => {
       />,
     );
     expect(screen.getByText("106")).toBeInTheDocument();
-    expect(screen.getByText("View only · until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
+    expect(screen.getByText("View Only · Until Sat 31 Oct, 6:00 p.m.")).toBeInTheDocument();
   });
 });
 
@@ -203,15 +203,15 @@ describe("DM01 DM district overview", () => {
     expect(staff.getByText("P. Dissanayake (DDM)")).toBeInTheDocument();
     expect(staff.getByText("S. Karunaratne (SPC)")).toBeInTheDocument();
 
-    const attention = within(screen.getByRole("region", { name: "Societies to Follow Up With Your Staff" }));
+    const attention = within(screen.getByRole("region", { name: "Societies to Follow Up with Your Staff" }));
     expect(attention.getByText("M. Herath")).toBeInTheDocument();
-    expect(attention.getByText("View only")).toBeInTheDocument();
+    expect(attention.getByText("View Only")).toBeInTheDocument();
     expect(attention.queryByText("Editable")).not.toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Active grant" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Active Grant" })).toBeInTheDocument();
     // V5 PR 7: the DM can see the grant's history or end it early from DM01.
-    expect(screen.getByRole("link", { name: "See details" })).toHaveAttribute("href", "/district-access?grant=g1");
-    expect(screen.getByRole("button", { name: "End now" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See Details" })).toHaveAttribute("href", "/district-access?grant=g1");
+    expect(screen.getByRole("button", { name: "End Now" })).toBeInTheDocument();
     expect(screen.getByText(/View only · all 106 societies · ends Sat 31 Oct, 6:00 p.m. · 5 days left/)).toBeInTheDocument();
     noBars(container);
   });
@@ -277,13 +277,13 @@ describe("SP02 / DM02 society lists", () => {
     expect(table.getByRole("columnheader", { name: "Society Officer" })).toBeInTheDocument();
     expect(table.queryByRole("columnheader", { name: "SPC" })).not.toBeInTheDocument();
     expect(table.getByText("B → A with HQ")).toBeInTheDocument();
-    expect(table.getByText("Not assigned")).toBeInTheDocument();
-    expect(table.getByText("Not recorded")).toBeInTheDocument();
+    expect(table.getByText("Not Assigned")).toBeInTheDocument();
+    expect(table.getByText("Not Recorded")).toBeInTheDocument();
     expect(table.getByText("02 Jun")).toHaveClass("text-danger-text");
     expect(table.getAllByText("Editable")).toHaveLength(2);
     expect(screen.getByText("Showing 1–2 of 2 assigned societies")).toBeInTheDocument();
     expect(screen.getByText("Why can't I see other societies?")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Clear filters" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Clear Filters" })).not.toBeInTheDocument();
   });
 
   it("DM02: the DM's list is view only, with SPC and DDM columns and their filters", () => {
@@ -295,7 +295,7 @@ describe("SP02 / DM02 society lists", () => {
     const table = within(screen.getByRole("table"));
     expect(table.getByRole("columnheader", { name: "DDM" })).toBeInTheDocument();
     expect(table.queryByRole("columnheader", { name: "Your Access" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/my-societies");
+    expect(screen.getByRole("link", { name: "Clear Filters" })).toHaveAttribute("href", "/my-societies");
   });
 
   it("says when filters match nothing, and pages through long lists", () => {
@@ -363,15 +363,15 @@ describe("PR 2: regional dashboards redesign", () => {
 
   it("SPC: leads with activities to approve and links each figure to its list", () => {
     const { container } = render(<RoleHome home={home({ activitiesWaiting: 4 })} now={now} viewer={getViewer("programme-coordinator")} />);
-    const figures = within(screen.getByRole("list", { name: "Key figures" }));
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
     const approve = figures.getByRole("link", { name: /Activities to Approve/ });
     expect(approve).toHaveAttribute("href", "/activities-to-approve");
     expect(approve).toHaveTextContent("4");
-    expect(figures.getByRole("link", { name: /Grade Requests With HQ/ })).toHaveAttribute("href", "/my-societies?gradeRequest=PENDING");
+    expect(figures.getByRole("link", { name: /Grade Requests with HQ/ })).toHaveAttribute("href", "/my-societies?gradeRequest=PENDING");
     expect(figures.getByRole("link", { name: /Not Updated 90\+ Days/ })).toHaveAttribute("href", "/my-societies?needsUpdate=true");
-    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
-    expect(actions.getByRole("link", { name: "Review activities" })).toHaveAttribute("href", "/activities-to-approve");
-    expect(actions.getByRole("link", { name: /Report an incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
+    const actions = within(screen.getByRole("navigation", { name: "Quick Actions" }));
+    expect(actions.getByRole("link", { name: "Review Activities" })).toHaveAttribute("href", "/activities-to-approve");
+    expect(actions.getByRole("link", { name: /Report an Incident/ })).toHaveAttribute("href", "/dashboard?report=incident");
     // HQ-only SarvoAI never reaches a regional home.
     expect(screen.queryByText(/SarvoAI/)).not.toBeInTheDocument();
     noBars(container);
@@ -381,7 +381,7 @@ describe("PR 2: regional dashboards redesign", () => {
     const { rerender } = render(<RoleHome home={home()} now={now} viewer={getViewer("programme-coordinator")} />);
     const reporting = within(screen.getByRole("region", { name: "Reporting This Year" }));
     // 12 active, 3 without a yearly summary; 8 of 12 societies with a 2027 plan.
-    expect(reporting.getByText("Yearly summaries · FY 2025/26")).toBeInTheDocument();
+    expect(reporting.getByText("Yearly Summaries · FY 2025/26")).toBeInTheDocument();
     expect(reporting.getByText("9 of 12 active societies")).toBeInTheDocument();
     expect(reporting.getByText("3 missing")).toBeInTheDocument();
     expect(reporting.getByText("8 of 12 societies")).toBeInTheDocument();
@@ -401,15 +401,15 @@ describe("PR 2: regional dashboards redesign", () => {
   it("DDM: keeps assigned editing apart from the temporary view, with its scope, expiry and who gave it", () => {
     render(<RoleHome home={home({ role: "DEPUTY_DISTRICT_MANAGER", districtViewCount: 106, temporaryAccess: [grant] })} now={now} viewer={ddm} />);
     const access = within(screen.getByRole("region", { name: "Your Access" }));
-    expect(access.getByRole("heading", { name: "Your assigned societies" })).toBeInTheDocument();
+    expect(access.getByRole("heading", { name: "Your Assigned Societies" })).toBeInTheDocument();
     expect(access.getByText("12 societies · view and edit")).toBeInTheDocument();
     expect(access.getByText("Editable")).toBeInTheDocument();
-    expect(access.getByText("Active · view only")).toBeInTheDocument();
+    expect(access.getByText("Active · View Only")).toBeInTheDocument();
     expect(access.getByText("All 106 Kurunegala societies, view only.")).toBeInTheDocument();
     expect(access.getByText("Ends Sat 31 Oct, 6:00 p.m. · 5 days left")).toBeInTheDocument();
     expect(access.getByText("R. Fernando")).toBeInTheDocument();
-    expect(access.getByRole("link", { name: "Browse district societies" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
-    const figures = within(screen.getByRole("list", { name: "Key figures" }));
+    expect(access.getByRole("link", { name: "Browse District Societies" })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
     expect(figures.getByRole("link", { name: /District Societies/ })).toHaveAttribute("href", "/my-societies?scope=DISTRICT");
   });
 
@@ -426,11 +426,11 @@ describe("PR 2: regional dashboards redesign", () => {
     );
     const access = within(screen.getByRole("region", { name: "Your Access" }));
     expect(access.getByText("Ended")).toBeInTheDocument();
-    expect(access.getByText(/^Ended early on /)).toBeInTheDocument();
+    expect(access.getByText(/^Ended Early on /)).toBeInTheDocument();
     expect(access.getByText(/Links to other district societies now show No access\./)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Browse district societies" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Browse District Societies" })).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/my-societies?scope=DISTRICT"]')).toBeNull();
-    const figures = within(screen.getByRole("list", { name: "Key figures" }));
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
     expect(figures.queryByRole("link", { name: /District Societies/ })).not.toBeInTheDocument();
     expect(figures.getByText("—")).toBeInTheDocument();
   });
@@ -452,15 +452,15 @@ describe("PR 2: regional dashboards redesign", () => {
     );
     const grades = within(screen.getByRole("region", { name: "Grades in Kurunegala" }));
     expect(grades.getByRole("img", { name: "Active societies by grade: A 14, B 18, C 60, not graded 6" })).toBeInTheDocument();
-    expect(grades.getByText("Not graded yet")).toBeInTheDocument();
-    expect(grades.getByText("View only")).toBeInTheDocument();
+    expect(grades.getByText("Not Graded Yet")).toBeInTheDocument();
+    expect(grades.getByText("View Only")).toBeInTheDocument();
     const reporting = within(screen.getByRole("region", { name: "Reporting This Year" }));
     expect(reporting.getByText("80 of 98 active societies")).toBeInTheDocument();
     expect(reporting.getByText("70 of 106 societies")).toBeInTheDocument();
-    const actions = within(screen.getByRole("navigation", { name: "Quick actions" }));
+    const actions = within(screen.getByRole("navigation", { name: "Quick Actions" }));
     expect(actions.getByRole("link", { name: "Temporary DDM Access" })).toHaveAttribute("href", "/district-access");
-    expect(actions.queryByRole("link", { name: "Review activities" })).not.toBeInTheDocument();
-    const figures = within(screen.getByRole("list", { name: "Key figures" }));
+    expect(actions.queryByRole("link", { name: "Review Activities" })).not.toBeInTheDocument();
+    const figures = within(screen.getByRole("list", { name: "Key Figures" }));
     expect(figures.getByRole("link", { name: /Members/ })).toHaveAttribute("href", "/membership");
   });
 });

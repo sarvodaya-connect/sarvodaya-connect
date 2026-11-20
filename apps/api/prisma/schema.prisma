@@ -332,6 +332,21 @@ enum ActivityDimension {
 
 // D05w / M09 work plan and M09a–M09d activities (V5 PR 4). Allocated costs
 // are planning figures, not payments or spending.
+enum ActivityCategory {
+  COMMUNITY_EDUCATION
+  CHILD_WELLBEING
+  CULTURE
+  ECONOMY
+  GOVERNANCE
+  HEALTH_AND_NUTRITION
+  HOUSING_AND_INFRASTRUCTURE
+  SPIRITUAL_DEVELOPMENT
+  AGRICULTURE
+  ENVIRONMENT
+
+  @@map("activity_category")
+}
+
 model WorkPlanActivity {
   id                    String                @id @default(uuid()) @db.Uuid
   societyId             String                @map("society_id") @db.Uuid
@@ -343,6 +358,8 @@ model WorkPlanActivity {
   sector                String?               @db.VarChar(100)
   datesLabel            String?               @map("dates_label") @db.VarChar(60)
   allocatedCost         Decimal               @map("allocated_cost") @db.Decimal(14, 2)
+  spcDimensions         ActivityDimension[]   @default([]) @map("spc_dimensions")
+  spcCategories         ActivityCategory[]    @default([]) @map("spc_categories")
   dimension             ActivityDimension?
   // Activities from before V5 PR 4 were planned without review, so they stay approved.
   status                ActivityStatus        @default(APPROVED)

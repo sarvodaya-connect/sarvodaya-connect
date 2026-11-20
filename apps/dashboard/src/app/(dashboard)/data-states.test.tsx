@@ -17,7 +17,7 @@ describe("Dashboard route states", () => {
   it("shows a loading status while the page loads", () => {
     render(<DashboardLoading />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard data…");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading Dashboard Data…");
   });
 
   it("shows a safe error message, a reference and recovery actions", async () => {
@@ -32,13 +32,13 @@ describe("Dashboard route states", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("We Couldn't Load This Page");
     expect(screen.queryByText(/db-internal-01/)).not.toBeInTheDocument();
     expect(screen.getByText("4021984")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Back to societies" })).toHaveAttribute("href", "/societies");
+    expect(screen.getByRole("link", { name: "Back to Societies" })).toHaveAttribute("href", "/societies");
 
     // Next.js passes only `error` and `reset`; Try again must use reset.
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(reset).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole("link", { name: "Back to societies" }));
+    await user.click(screen.getByRole("link", { name: "Back to Societies" }));
     expect(push).toHaveBeenCalledWith("/societies");
     expect(reset).toHaveBeenCalledTimes(2);
   });

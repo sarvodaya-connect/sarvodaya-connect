@@ -82,7 +82,7 @@ export default async function AlertsPage({ searchParams }: PageProps<"/notificat
         </div>
         {alerts.meta.unreadCount > 0 && (
           <form action={markAllAlertsRead}>
-            <button className={secondaryButtonClass} type="submit">Mark all read</button>
+            <button className={secondaryButtonClass} type="submit">Mark All Read</button>
           </form>
         )}
       </div>

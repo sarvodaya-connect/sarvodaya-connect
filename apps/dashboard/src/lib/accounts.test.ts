@@ -38,12 +38,12 @@ describe("V5 D16 account rows", () => {
 
   it("says when HQ set the password, never the password itself", () => {
     expect(passwordLabel(account({}))).toBe("Set by HQ · 18 Oct");
-    expect(passwordLabel(account({ passwordSetCount: 2 }))).toBe("Set again by HQ · 18 Oct");
-    expect(passwordLabel(account({ passwordSetAt: null, passwordSetCount: 0 }))).toBe("Not set yet");
+    expect(passwordLabel(account({ passwordSetCount: 2 }))).toBe("Set Again by HQ · 18 Oct");
+    expect(passwordLabel(account({ passwordSetAt: null, passwordSetCount: 0 }))).toBe("Not Set Yet");
   });
 
   it("labels older accounts that still need a password", () => {
-    expect(statusLabel(account({ status: "PENDING" }))).toEqual({ label: "Needs a password", tone: "pending" });
+    expect(statusLabel(account({ status: "PENDING" }))).toEqual({ label: "Needs a Password", tone: "pending" });
   });
 });
 
@@ -74,5 +74,14 @@ describe("suggestUsername", () => {
   it("suggests a username from the full name", () => {
     expect(suggestUsername("P. Jayaweera")).toBe("p.jayaweera");
     expect(suggestUsername("  Sunethra  Karunaratne ")).toBe("sunethra.karunaratne");
+  });
+
+  it("joins every run of other characters with one dot and trims the ends", () => {
+    expect(suggestUsername("...P. -- Jayaweera!!")).toBe("p.jayaweera");
+    expect(suggestUsername("A..B")).toBe("a.b");
+    expect(suggestUsername("Dulanjalī")).toBe("dulanjali");
+    expect(suggestUsername("!!! ???")).toBe("");
+    // Long runs collapse to one dot before trimming, so no step rescans them.
+    expect(suggestUsername(`a${".".repeat(50_000)} ${"-".repeat(50_000)}b`)).toBe("a.b");
   });
 });

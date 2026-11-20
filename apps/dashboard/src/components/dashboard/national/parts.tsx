@@ -21,6 +21,7 @@ export function Breadcrumb({ current, home }: { current: string; home?: string }
   );
 }
 
+/** The page's one main heading, with its description and controls. */
 export function PageTitle({ actions, description, title }: { actions?: ReactNode; description: ReactNode; title: string }) {
   return (
     <div className="mt-2 flex flex-wrap items-end justify-between gap-3">

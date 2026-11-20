@@ -1,23 +1,30 @@
 "use client";
 
-import type { Map as MapboxMap, MapOptions } from "mapbox-gl";
+import type { Map as MapLibreMap, MapOptions } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
-import { MAP_STYLE, PAN_BOUNDS, SRI_LANKA_BOUNDS } from "@/lib/mapbox";
+import { MAP_STYLE, PAN_BOUNDS, SRI_LANKA_BOUNDS } from "@/lib/map-settings";
 
-export type Mapbox = typeof import("mapbox-gl");
+export type MapLibre = typeof import("maplibre-gl");
 export type MapPhase = "loading" | "ready" | "error";
 
 /**
- * Starts a Mapbox map in `container` bounded to Sri Lanka, then runs `setup`
- * once the style has loaded. Mapbox's logo and attribution stay on (the
- * defaults). A failure before the map is ready, including a refused token,
- * ends in "error"; `retry` starts again.
+ * MapLibre draws in a web worker. Its own way of finding the worker file does
+ * not survive bundling, so the bundler copies the file and the map is told
+ * where it is.
  */
-export function useMapbox(
-  token: string,
-  setup: (mapbox: Mapbox, map: MapboxMap) => void | Promise<void>,
-  options: Partial<Omit<MapOptions, "container" | "accessToken" | "style">> = {},
+const workerUrl = () => new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href;
+
+/**
+ * Issue #181: starts a MapLibre map in `container` bounded to Sri Lanka, with
+ * OpenFreeMap's background map, then runs `setup` once the style has loaded.
+ * The credit for OpenFreeMap, OpenMapTiles and OpenStreetMap stays on (the
+ * default). A failure before the map is ready, such as no connection, ends in
+ * "error"; `retry` starts again.
+ */
+export function useMap(
+  setup: (maplibre: MapLibre, map: MapLibreMap) => void | Promise<void>,
+  options: Partial<Omit<MapOptions, "container" | "style">> = {},
 ) {
   const container = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<MapPhase>("loading");
@@ -30,21 +37,19 @@ export function useMapbox(
     const element = container.current;
     if (!element) return;
     let cancelled = false;
-    let map: MapboxMap | undefined;
+    let map: MapLibreMap | undefined;
     const fail = () => {
       if (!cancelled) setPhase("error");
     };
     (async () => {
-      // mapbox-gl is a UMD bundle: depending on the bundler the classes are on the module or on its default export.
-      const bundle = await import("mapbox-gl");
-      const mapbox = (bundle as unknown as { default?: Mapbox }).default ?? bundle;
+      const maplibre: MapLibre = await import("maplibre-gl");
       if (cancelled) return;
-      map = new mapbox.Map({
+      if (!maplibre.getWorkerUrl()) maplibre.setWorkerUrl(workerUrl());
+      map = new maplibre.Map({
         bounds: SRI_LANKA_BOUNDS,
         fitBoundsOptions: { padding: 12 },
         maxBounds: PAN_BOUNDS,
         ...latest.current.options,
-        accessToken: token,
         container: element,
         style: MAP_STYLE,
       });
@@ -55,7 +60,7 @@ export function useMapbox(
       map.on("load", async () => {
         loaded = true;
         try {
-          await latest.current.setup(mapbox, map!);
+          await latest.current.setup(maplibre, map!);
           if (!cancelled) setPhase("ready");
         } catch {
           fail();
@@ -66,7 +71,7 @@ export function useMapbox(
       cancelled = true;
       map?.remove();
     };
-  }, [token, attempt]);
+  }, [attempt]);
 
   return {
     container,

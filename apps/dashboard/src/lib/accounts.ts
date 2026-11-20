@@ -65,10 +65,10 @@ export function scopeLabel(account: AccountSummary, options: ScopeOptions): stri
     case "HQ_ADMIN":
       return "National";
     case "DISTRICT_MANAGER":
-      return district ? `${district} District` : "No district assigned";
+      return district ? `${district} District` : "No District Assigned";
     case "SOCIETY_OFFICER": {
       const society = options.societies.find((item) => item.id === account.societyIds[0]);
-      return society?.nameEn ?? "No society assigned";
+      return society?.nameEn ?? "No Society Assigned";
     }
     default: {
       const count = account.societyIds.length;
@@ -82,14 +82,17 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "sh
 
 /** V5 D16 Password column. The password itself is never sent to the dashboard. */
 export function passwordLabel(account: AccountSummary): string {
-  if (!account.passwordSetAt) return "Not set yet";
+  if (!account.passwordSetAt) return "Not Set Yet";
   const when = dateFormat.format(new Date(account.passwordSetAt));
-  return `${account.passwordSetCount > 1 ? "Set again by HQ" : "Set by HQ"} · ${when}`;
+  return `${account.passwordSetCount > 1 ? "Set Again by HQ" : "Set by HQ"} · ${when}`;
 }
 
 export function statusLabel(account: AccountSummary): { label: string; tone: "active" | "inactive" | "pending" } {
   if (account.status === "ACTIVE") return { label: "Active", tone: "active" };
   if (account.status === "INACTIVE") return { label: "Inactive", tone: "inactive" };
   // Accounts made before V5 that never had a password set by HQ.
-  return { label: "Needs a password", tone: "pending" };
+  return { label: "Needs a Password", tone: "pending" };
 }
+
+/** The word HQ types to confirm Delete Account, exactly as shown (the API checks it too). */
+export const DELETE_CONFIRMATION = "delete";

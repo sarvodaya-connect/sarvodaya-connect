@@ -35,6 +35,7 @@ export default function DashboardError({
   return (
     <section className="rounded-xl border border-[#dfe5dc] bg-white shadow-[0_8px_26px_rgba(24,56,35,0.04)]">
       <ErrorState
+        heading="h1"
         description={t("err.dashboard")}
         onRetry={reset}
         reference={error.digest}

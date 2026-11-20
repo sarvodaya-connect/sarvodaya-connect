@@ -7,6 +7,7 @@ import { Icon } from "@/components/dashboard/icon";
 import {
   ChangeRoleDialog,
   CreateAccountDrawer,
+  DeleteAccountDialog,
   DisableAccountDialog,
   SetPasswordDialog,
 } from "@/components/dashboard/identity-forms";
@@ -57,7 +58,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       <AdministrationTabs current="accounts" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-ink">Accounts</h2>
+          <h1 className="text-xl font-bold text-ink">Accounts</h1>
           <p className="mt-0.5 text-xs text-ink-soft">
             {total.toLocaleString("en-GB")} {total === 1 ? "account" : "accounts"} · usernames, passwords, roles and scopes are set here
           </p>
@@ -84,7 +85,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       <form action="/accounts" className="flex flex-wrap items-center gap-2.5" role="search">
         {filters.tab !== "all" && <input name="tab" type="hidden" value={filters.tab} />}
         <label className="relative w-full max-w-[280px]">
-          <span className="sr-only">Name or username</span>
+          <span className="sr-only">Name or Username</span>
           <Icon className="absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
           <input
             className="h-[38px] w-full rounded-[10px] border border-line bg-surface pl-[34px] pr-3 text-xs outline-none focus:border-brand-leaf focus:ring-3 focus:ring-brand-mint"
@@ -119,7 +120,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
         <button className={secondaryButtonClass} type="submit">Apply</button>
         {hasFilters && (
           <Link className="text-xs font-semibold text-brand-action underline underline-offset-2" href={filters.tab === "all" ? "/accounts" : `/accounts?tab=${filters.tab}`}>
-            Clear filters
+            Clear Filters
           </Link>
         )}
       </form>
@@ -152,7 +153,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                         {scope}
                         {account.temporaryDistrictView && (
                           <span className="mt-1 flex w-fit items-center gap-1 rounded-md bg-[var(--banner-temporary-bg)] px-1.5 text-[10.5px] font-semibold text-[var(--banner-temporary-text)]">
-                            <span aria-hidden="true">●</span> Temporary view: district
+                            <span aria-hidden="true">●</span> Temporary View: District
                           </span>
                         )}
                       </td>
@@ -182,6 +183,10 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                           {account.id !== viewer.id && account.status !== "INACTIVE" && (
                             <DisableAccountDialog account={account} />
                           )}
+                          {/* HQ cannot delete itself; the API also refuses the last active HQ administrator. */}
+                          {account.id !== viewer.id && (
+                            <DeleteAccountDialog account={{ ...account, scopeLabel: `${ROLE_LABELS[account.role]} · ${scope}` }} />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -192,7 +197,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
           </div>
         ) : hasFilters || filters.tab !== "all" ? (
           <EmptyState
-            action={<Link className={secondaryButtonClass} href="/accounts">Clear all filters</Link>}
+            action={<Link className={secondaryButtonClass} href="/accounts">Clear All Filters</Link>}
             description="No account matches this name, role or district."
             icon="search"
             title="No Accounts Match"

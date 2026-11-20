@@ -136,6 +136,23 @@ describe("Edit Exco form", () => {
     expect(screen.getByText(/Saving completes the Exco/)).toBeInTheDocument();
   });
 
+  it("starts on seat 1's office only when opened from Change office bearers", () => {
+    const { rerender } = render(
+      <ExcoEditForm action={vi.fn(async () => ({}))} focusOffices members={members(["President"])} societyId="s1" />,
+    );
+    const firstOffice = screen.getByRole("combobox", { name: /seat 1\b/i });
+    expect(firstOffice).toHaveFocus();
+    // A later re-render (for example after typing elsewhere) must not pull focus back.
+    screen.getByRole("button", { name: "Save Exco" }).focus();
+    rerender(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices members={members(["President"])} societyId="s1" />);
+    expect(firstOffice).not.toHaveFocus();
+  });
+
+  it("leaves focus alone when opened to edit the whole Exco", () => {
+    render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President"])} societyId="s1" />);
+    expect(screen.getByRole("combobox", { name: /seat 1\b/i })).not.toHaveFocus();
+  });
+
   it("lets the officer save a partial Exco", () => {
     render(<ExcoEditForm action={vi.fn(async () => ({}))} focusOffices={false} members={members(["President"]).slice(0, 4)} societyId="s1" />);
     expect(screen.getByRole("button", { name: "Save Exco" })).toBeEnabled();
@@ -166,12 +183,12 @@ describe("D05a assign responsible staff", () => {
     render(<AssignStaffPanel action={vi.fn(async () => ({}))} options={options} record={record} />);
 
     expect(screen.getByText("R. Fernando · Kurunegala")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save assignments" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save Assignments" })).toBeDisabled();
     await user.selectOptions(screen.getByLabelText(/Society Program Coordinator/), "spc2");
     expect(screen.getByText(/Changing from M. Herath\./)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText(/^Society Officer/), "so");
     expect(screen.getByRole("option", { name: /N. Wijesinghe · n.wijesinghe \(moves from another society\)/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save assignments" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save Assignments" })).toBeEnabled();
   });
 });
 
@@ -188,12 +205,12 @@ describe("D22r decision", () => {
     const decide = vi.fn(async () => ({}));
     render(<GradeReviewDecision decide={decide} request={request} />);
 
-    expect(screen.getByRole("button", { name: /Approve grade A/ })).toBeEnabled();
-    await user.click(screen.getByRole("radio", { name: /Reject · keep grade B/ }));
-    expect(screen.getByRole("button", { name: /Reject and keep B/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Approve Grade A/ })).toBeEnabled();
+    await user.click(screen.getByRole("radio", { name: /Reject · Keep Grade B/ }));
+    expect(screen.getByRole("button", { name: /Reject and Keep B/ })).toBeDisabled();
     expect(screen.getByText("Enter a reason for rejecting. The requester will see it.")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox"), "Audit report missing");
-    await user.click(screen.getByRole("button", { name: /Reject and keep B/ }));
+    await user.click(screen.getByRole("button", { name: /Reject and Keep B/ }));
     expect(decide).toHaveBeenCalledWith("REJECT", "Audit report missing");
   });
 });
@@ -209,18 +226,18 @@ describe("D05n create a society", () => {
     expect(screen.queryAllByRole("textbox", { name: /full name/ })).toHaveLength(0);
     expect(screen.getByText(/The Exco is entered later\./)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Save and assign staff" }));
+    await user.click(screen.getByRole("button", { name: "Save and Assign Staff" }));
     expect(screen.getByText("Enter the S number, for example S-104233.")).toBeInTheDocument();
     expect(screen.getByText("Choose the district.")).toBeInTheDocument();
     expect(action).not.toHaveBeenCalled();
 
-    await user.type(screen.getByLabelText(/Society name/), "Fictional Wellawa Society");
-    await user.type(screen.getByLabelText(/^S number/), "S-777001");
+    await user.type(screen.getByLabelText(/Society Name/), "Fictional Wellawa Society");
+    await user.type(screen.getByLabelText(/^S Number/), "S-777001");
     await user.selectOptions(screen.getByLabelText(/^District/), "d1");
-    await user.type(screen.getByLabelText(/^DS division/), "Fictional DS");
+    await user.type(screen.getByLabelText(/^DS Division/), "Fictional DS");
     await user.type(screen.getByLabelText(/^Address/), "Fictional Road");
-    await user.type(screen.getByLabelText(/^Number of members/), "164");
-    await user.click(screen.getByRole("button", { name: "Save and assign staff" }));
+    await user.type(screen.getByLabelText(/^Number of Members/), "164");
+    await user.click(screen.getByRole("button", { name: "Save and Assign Staff" }));
 
     expect(action).toHaveBeenCalledTimes(1);
     const form = (action.mock.calls[0] as unknown as [unknown, FormData])[1];
@@ -258,7 +275,7 @@ describe("D24 log helpers", () => {
     const row = csv.split("\r\n")[1]!;
     expect(row).toContain(`"'=HYPERLINK(""x"")"`);
     expect(row).toContain('"Pahala, Kosgama"');
-    expect(row).toContain('"Society edit"');
+    expect(row).toContain('"Society Edit"');
     expect(row).toContain('"Said ""hello"""');
   });
 });

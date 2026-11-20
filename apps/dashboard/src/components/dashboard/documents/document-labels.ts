@@ -2,17 +2,17 @@ import type { RegistrarDocumentType } from "@sarvodaya-connect/api-contracts";
 
 /** V5 order and wording of the four annual Registrar documents. */
 export const REGISTRAR_LABELS: Record<RegistrarDocumentType, { title: string; note: string }> = {
-  AUDIT_REPORT: { title: "Audit Report", note: "Certified by a registered auditor" },
-  AGM_MINUTES: { title: "AGM Minutes", note: "Annual General Meeting record" },
+  AUDIT_REPORT: { title: "Audit Report", note: "Certified by a Registered Auditor" },
+  AGM_MINUTES: { title: "AGM Minutes", note: "Annual General Meeting Record" },
   OFFICE_BEARER_LIST: { title: "Office-Bearer List", note: "President, Secretary, Treasurer" },
-  MEMBERS_LIST: { title: "Members List", note: "Signed file · only DM and HQ can open" },
+  MEMBERS_LIST: { title: "Members List", note: "Signed File · Only DM and HQ Can Open" },
 };
 
 export const OTHER_DOCUMENT_LABELS: Record<string, string> = {
   REGISTRATION: "Registration",
   ACTIVITY_EVIDENCE: "Activity Evidence",
-  OTHER: "Other document",
-  FINANCE: "Finance document",
+  OTHER: "Other Document",
+  FINANCE: "Finance Document",
 };
 
 export function documentTypeLabel(type: string) {
