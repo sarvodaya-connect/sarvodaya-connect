@@ -107,6 +107,25 @@ describe('AssistantService', () => {
     expect(JSON.stringify(createMessage.mock.calls[1][0])).toContain('Office-bearer list');
   });
 
+  it('keeps the model comparison when more than one overview is used', async () => {
+    const { service, run } = setup([
+      toolUse('get_society_overview', { societyCode: 'TEST-A01', financialYear: 2024 }),
+      toolUse('get_society_overview', { societyCode: 'TEST-A01', financialYear: 2025 }),
+      final({ kind: 'ANSWER', summary: 'Total profit rose from LKR 100 in FY 2024/25 to LKR 200 in FY 2025/26.', options: [] }),
+    ]);
+    const overview = (label: string): ToolOutcome => ({
+      content: '{}',
+      answer: { summary: `TEST-A01 overview for ${label}.`, details: { recordsUsed: [`Society overview for ${label}`] } },
+    });
+    run.mockResolvedValueOnce(overview('FY 2024/25')).mockResolvedValueOnce(overview('FY 2025/26'));
+
+    const answer = await service.ask(hq, 'Compare TEST-A01 between FY 2024/25 and FY 2025/26', [], now);
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(answer.summary).toBe('Total profit rose from LKR 100 in FY 2024/25 to LKR 200 in FY 2025/26.');
+    expect(answer.details.recordsUsed).toEqual(['Society overview for FY 2024/25', 'Society overview for FY 2025/26']);
+  });
+
   it('sends earlier turns for follow-ups and shows no data when asking to clarify', async () => {
     const { service, createMessage } = setup([final({ kind: 'CLARIFY', summary: 'Which do you mean?', options: ['In each year', 'In at least one year', 'Combined'] })]);
 

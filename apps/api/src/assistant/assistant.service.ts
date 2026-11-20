@@ -124,6 +124,8 @@ export class AssistantService {
           }
           const data = lastData && {
             ...lastData,
+            // A tool's fixed summary covers only its own result; a multi-result answer keeps the model's synthesis.
+            summary: answers.length === 1 ? lastData.summary : undefined,
             details: { ...lastData.details, recordsUsed: [...recordsUsed], sources: [...evidence.values()].slice(0, 50) },
           };
           return this.finish(principal, toolsUsed, now, parsed, data);
