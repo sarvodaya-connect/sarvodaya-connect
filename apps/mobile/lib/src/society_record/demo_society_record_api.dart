@@ -1082,6 +1082,7 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     WorkPlanActivity a, {
     required ActivityStatus status,
     List<int> sdgs = const [],
+    ActivityClassification? classification,
     String? comment,
   }) => WorkPlanActivity(
     id: a.id,
@@ -1095,6 +1096,7 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     status: status,
     dimension: a.dimension,
     sdgs: sdgs,
+    classification: classification,
     femaleParticipants: a.femaleParticipants,
     maleParticipants: a.maleParticipants,
     youthParticipants: a.youthParticipants,
@@ -1131,8 +1133,10 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
   @override
   Future<ActivityDetail> approveActivity(
     String activityId,
-    List<int> sdgs,
-  ) async {
+    List<int> sdgs, {
+    ActivityClassification? classification,
+    DateTime? reviewedSubmittedAt,
+  }) async {
     await _wait();
     if (sdgs.isEmpty) {
       throw const SocietyRecordException(
@@ -1146,12 +1150,40 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
         status: 400,
       );
     }
+    if (classification != null &&
+        (classification.dimensions.isEmpty ||
+            classification.categories.isEmpty ||
+            classification.dimensions.toSet().length !=
+                classification.dimensions.length ||
+            classification.categories.toSet().length !=
+                classification.categories.length)) {
+      throw const SocietyRecordException(
+        'Choose at least one dimension and category without duplicates',
+        status: 400,
+      );
+    }
     final found = _reviewable(activityId);
+    final current = found.society.workPlan[found.index];
+    // Like the server: approve only the version the SPC reviewed.
+    if (reviewedSubmittedAt != null &&
+        current.submittedAt?.isAtSameMomentAs(reviewedSubmittedAt) != true) {
+      throw const SocietyRecordException(
+        'This activity was changed while you were reviewing it. Check it again before approving',
+        status: 409,
+      );
+    }
     final sorted = sdgs.toSet().toList()..sort();
     final activity = _decide(
-      found.society.workPlan[found.index],
+      current,
       status: ActivityStatus.approved,
-      sdgs: sorted,
+      sdgs: List.unmodifiable(sorted),
+      // A copy, so the caller cannot change the saved decision afterwards.
+      classification: classification == null
+          ? null
+          : ActivityClassification(
+              dimensions: List.unmodifiable(classification.dimensions),
+              categories: List.unmodifiable(classification.categories),
+            ),
     );
     found.society.workPlan = [...found.society.workPlan]
       ..[found.index] = activity;

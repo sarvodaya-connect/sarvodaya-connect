@@ -7,6 +7,7 @@ import {
   ValidateIf,
   IsIn,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -135,6 +136,18 @@ export class ApproveActivityDto {
   @Min(1, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   @Max(17, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   sdgs!: number[];
+
+  /**
+   * The submittedAt of the version the SPC reviewed. Every Society Officer edit
+   * resets it, so approval is refused if the activity changed during review.
+   * Optional so older clients keep working.
+   */
+  @IsOptional()
+  @IsISO8601(
+    { strict: true },
+    { message: 'reviewedSubmittedAt must be the activity’s submittedAt time' },
+  )
+  reviewedSubmittedAt?: string;
 }
 
 /** M51b: what the Society Officer should change. */

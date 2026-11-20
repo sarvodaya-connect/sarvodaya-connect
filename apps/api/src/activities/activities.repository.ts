@@ -176,7 +176,14 @@ export class ActivitiesRepository {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         const decided = await tx.workPlanActivity.updateMany({
-          where: { id: activityId, status: 'WAITING_FOR_SPC' },
+          where: {
+            id: activityId,
+            status: 'WAITING_FOR_SPC',
+            // Approve only the version the SPC reviewed: each officer edit resets submittedAt.
+            ...(input.reviewedSubmittedAt
+              ? { submittedAt: new Date(input.reviewedSubmittedAt) }
+              : {}),
+          },
           data: {
             status: 'APPROVED',
             spcDimensions: input.dimensions,
@@ -188,8 +195,14 @@ export class ActivitiesRepository {
           },
         });
         if (decided.count === 0) {
+          const current = await tx.workPlanActivity.findUnique({
+            where: { id: activityId },
+            select: { status: true },
+          });
           throw new ConflictException(
-            'This activity is no longer waiting for approval',
+            current?.status === 'WAITING_FOR_SPC'
+              ? 'This activity was changed while you were reviewing it. Check it again before approving'
+              : 'This activity is no longer waiting for approval',
           );
         }
         await tx.workPlanActivitySdg.deleteMany({ where: { activityId } });
