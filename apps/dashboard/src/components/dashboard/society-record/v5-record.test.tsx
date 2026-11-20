@@ -278,4 +278,23 @@ describe("D24 log helpers", () => {
     expect(row).toContain('"Society Edit"');
     expect(row).toContain('"Said ""hello"""');
   });
+
+  it("also blocks a formula behind a leading tab or carriage return (#156)", () => {
+    const row = auditCsv([
+      {
+        id: "2",
+        createdAt: "2026-11-02T08:00:00.000Z",
+        action: "SOCIETY_PROFILE_UPDATED",
+        type: "SOCIETY",
+        actor: { displayName: "\t=1+1", role: "HQ_ADMIN" },
+        scope: "\r@cmd",
+        societyId: null,
+        detail: "-5 members",
+        approvedBy: null,
+      },
+    ]).split("\r\n")[1]!;
+    expect(row).toContain(`"'\t=1+1"`);
+    expect(row).toContain(`"'\r@cmd"`);
+    expect(row).toContain(`"'-5 members"`);
+  });
 });

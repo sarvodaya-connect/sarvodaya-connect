@@ -133,4 +133,34 @@ describe('V5 PR 5 national rules', () => {
       '﻿District,Active\r\nKurunegala,98\r\n"Say ""hi"", world",1\r\n',
     );
   });
+
+  it('writes a sector typed by a field user as text, not a formula (#156)', () => {
+    const csv = toCsv(
+      [
+        { key: 'sector', label: 'Sector' },
+        { key: 'completed', label: 'Completed', numeric: true },
+        { key: 'profit', label: 'Total profit (LKR)', numeric: true },
+      ],
+      [
+        { sector: '=1+1', completed: 3, profit: '-1500.00' },
+        { sector: '+SUM(A1:A9)', completed: -2, profit: '412500.00' },
+        { sector: '-2+3', completed: 0, profit: -75 },
+        { sector: '@cmd', completed: 1, profit: '0.00' },
+        { sector: '\tTabbed', completed: 1, profit: '1.50' },
+        { sector: '\r=1+1', completed: 1, profit: '2' },
+        { sector: '=HYPERLINK("x","y")', completed: 1, profit: '3' },
+        { sector: 'Agriculture', completed: 1, profit: '=1+1' },
+      ],
+    );
+    const rows = csv.slice(1).split('\r\n');
+    expect(rows[1]).toBe("'=1+1,3,-1500.00");
+    expect(rows[2]).toBe("'+SUM(A1:A9),-2,412500.00");
+    expect(rows[3]).toBe("'-2+3,0,-75");
+    expect(rows[4]).toBe("'@cmd,1,0.00");
+    expect(rows[5]).toBe("'\tTabbed,1,1.50");
+    expect(rows[6]).toBe(`"'\r=1+1",1,2`);
+    expect(rows[7]).toBe(`"'=HYPERLINK(""x"",""y"")",1,3`);
+    // A numeric column only passes plain numbers through; anything else is text.
+    expect(rows[8]).toBe("Agriculture,1,'=1+1");
+  });
 });

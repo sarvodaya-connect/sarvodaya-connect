@@ -55,18 +55,34 @@ const DOCUMENT_LABELS: Record<string, string> = {
 type Row = Record<string, string | number>;
 type Column = { key: string; label: string; numeric?: boolean };
 
+/** A leading character that makes Excel or Sheets read a cell as a formula. */
+const FORMULA_START = /^[=+\-@\t\r]/;
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+
+/**
+ * One CSV cell. Text that could start a formula gets a leading `'`, so a value
+ * typed by a field user (an activity's sector, say) opens as text in HQ's
+ * spreadsheet. Numbers, and plain numbers in numeric columns, stay as they
+ * are so negative figures still add up.
+ */
+export function csvCell(value: string | number | undefined, numeric = false) {
+  const raw = String(value ?? '');
+  const isNumber =
+    typeof value === 'number' || (numeric && PLAIN_NUMBER.test(raw));
+  const text = !isNumber && FORMULA_START.test(raw) ? `'${raw}` : raw;
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 /** Writes a report as CSV that Excel opens directly (UTF-8 with a byte order mark). */
 export function toCsv(columns: Column[], rows: Row[]) {
-  const cell = (value: string | number | undefined) => {
-    const text = String(value ?? '');
-    return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-  };
   return (
     '﻿' +
-    [columns.map((column) => cell(column.label)).join(',')]
+    [columns.map((column) => csvCell(column.label)).join(',')]
       .concat(
         rows.map((row) =>
-          columns.map((column) => cell(row[column.key])).join(','),
+          columns
+            .map((column) => csvCell(row[column.key], column.numeric))
+            .join(','),
         ),
       )
       .join('\r\n') +
