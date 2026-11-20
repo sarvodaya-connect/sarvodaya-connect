@@ -11,7 +11,10 @@ export const CONNECTION_WITH_CREDENTIALS =
 export function scrubAssistantText(value: string): string {
   return value
     .replace(CONNECTION_WITH_CREDENTIALS, '[REDACTED CONNECTION]')
-    .replace(/\b(?:Bearer\s+\S+|(?:AKIA|ASIA)[A-Z0-9]{16}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/gi, '[REDACTED TOKEN]')
+    .replace(
+      /\b(?:(Office-bearer list)|Bearer\s+\S+|(?:AKIA|ASIA)[A-Z0-9]{16}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\b/gi,
+      (_match: string, documentLabel: string | undefined) => documentLabel ?? '[REDACTED TOKEN]',
+    )
     .replace(/\b(?:password|passwd|secret|api[_ -]?key|access[_ -]?token)\s*[:=]\s*[^\s,;]+/gi, '[REDACTED SECRET]')
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[REDACTED EMAIL]')
     .replace(/\b(?:\d{9}[vVxX]|\d{12})\b/g, '[REDACTED IDENTIFIER]')
