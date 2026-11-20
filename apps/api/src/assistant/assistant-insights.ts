@@ -71,10 +71,20 @@ export class AssistantInsights {
         recentApprovedActivities: activities.map((item) => ({ name: item.name, year: item.year, month: item.month, updatedAt: item.updatedAt.toISOString() })),
         note: 'Activity list is the five most recently updated approved records across all years, not a total or a list restricted to the selected financial year. Activity year/month are plan dates; approval does not establish completion or outcomes. Profile timestamp is not a timestamp for all related records. Null figures are missing, not zero. Current Exco seat count counts active named rows, not a validation of committee composition. Upload completeness does not establish document approval or legal compliance.',
       };
+      const uploads = missing.length === 0
+        ? 'All required Registrar uploads are recorded.'
+        : `Missing ${missing.length} Registrar ${missing.length === 1 ? 'upload' : 'uploads'} (${missing.join(', ')}).`;
+      const profit = data.totalProfitLkr === null
+        ? 'unavailable'
+        : `LKR ${data.totalProfitLkr.toLocaleString('en-US')}`;
+      const expenses = data.totalExpensesLkr === null
+        ? 'unavailable'
+        : `LKR ${data.totalExpensesLkr.toLocaleString('en-US')}`;
       return {
         content: JSON.stringify(data),
         answer: {
-          scope: { financialYears: [financialYear(year).label], district: society.district.nameEn, societiesIncluded: 1 },
+          summary: `${societyCode} (${society.nameEn}) is ${society.status.toLowerCase()}${society.grade ? ` and has grade ${society.grade}` : ''}. For ${data.financialYear}, total profit is ${profit} and total expenses are ${expenses}. ${uploads}`,
+          scope: { financialYears: [data.financialYear], district: society.district.nameEn, societiesIncluded: 1 },
           table: { columns: ['Check', 'Recorded result'], rows: [
             ['Status', society.status], ['Grade', society.grade], ['Current Exco seats', excoSeats],
             ['Missing Registrar uploads', missing.join(', ') || 'None'],

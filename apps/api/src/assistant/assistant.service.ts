@@ -200,6 +200,9 @@ export class AssistantService {
     await this.audit(principal, toolsUsed, answer.kind);
     return {
       ...answer,
+      summary: answer.kind === 'ANSWER' && data?.summary
+        ? scrubAssistantText(data.summary).slice(0, MAX_SUMMARY)
+        : answer.summary,
       scope: showData ? data?.scope : undefined,
       table: answer.kind === 'ANSWER' ? data?.table : undefined,
       details: showData && data ? data.details : { recordsUsed: [] },
