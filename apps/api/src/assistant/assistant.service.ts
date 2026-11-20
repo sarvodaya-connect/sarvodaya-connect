@@ -4,7 +4,7 @@ import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableExcep
 import { hasRole, type Principal } from '../auth/principal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { financialYear, latestCompletedFinancialYear } from '../societies/financial-year.js';
-import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError, DisabledAssistantModel, type ModelRequest } from './assistant-model.js';
+import { ASSISTANT_MODEL, type AssistantModel, AssistantNotConfiguredError, DisabledAssistantModel, HAIKU_55_MODEL_ID, type ModelRequest } from './assistant-model.js';
 import { SpendingBlockedError } from './assistant-cost.js';
 import { scrubAssistantPayload, scrubAssistantText } from './assistant-privacy.js';
 import { AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
@@ -97,7 +97,10 @@ export class AssistantService {
               messages: conversation,
               // Disable extended thinking to preserve the spending reservation bound.
               thinking: { type: 'disabled' },
-              output_config: { effort: 'medium', format: { type: 'json_schema', schema: ANSWER_SCHEMA } },
+              output_config: {
+                ...(this.model.modelId === HAIKU_55_MODEL_ID ? { effort: 'medium' } : {}),
+                format: { type: 'json_schema', schema: ANSWER_SCHEMA },
+              },
             },
             signal,
           ),

@@ -49,7 +49,10 @@ Parameters:
     Default: 'false'
   SarvoAiModelId:
     Type: String
-    Default: global.anthropic.claude-haiku-5-5
+    AllowedValues:
+      - global.anthropic.claude-haiku-4-5-20251001-v1:0
+      - global.anthropic.claude-haiku-5-5
+    Default: global.anthropic.claude-haiku-4-5-20251001-v1:0
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
@@ -186,13 +189,17 @@ Resources:
                 Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
               - Effect: Allow
                 Action: bedrock:InvokeModel
-                Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}::foundation-model/anthropic.claude-haiku-5-5
+                Resource: !Sub
+                  - arn:${AWS::Partition}:bedrock:${SarvoAiRegion}::foundation-model/${FoundationModelId}
+                  - FoundationModelId: !Select [1, !Split ['global.', !Ref SarvoAiModelId]]
                 Condition:
                   StringEquals:
                     bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
               - Effect: Allow
                 Action: bedrock:InvokeModel
-                Resource: !Sub arn:${AWS::Partition}:bedrock:::foundation-model/anthropic.claude-haiku-5-5
+                Resource: !Sub
+                  - arn:${AWS::Partition}:bedrock:::foundation-model/${FoundationModelId}
+                  - FoundationModelId: !Select [1, !Split ['global.', !Ref SarvoAiModelId]]
                 Condition:
                   StringEquals:
                     aws:RequestedRegion: unspecified
