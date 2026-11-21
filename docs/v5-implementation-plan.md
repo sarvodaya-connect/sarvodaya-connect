@@ -189,3 +189,4 @@ These are not decided in V5 or the confirmed requirements. No PR invents an answ
 - HQ Districts (M65) on the phone reuses the D03b endpoint `/national/districts` (decided in PR 5).
 - How long a temporary DDM grant may last and whether it can be renewed (PR 7).
 - The existing demo-only offline banners and queued submissions on the phone: offline editing is out of scope, so they will be removed with the screens that show them (PR 3, PR 4, PR 8).
+  - **Later change:** the client asked for offline work again. Rapid assessments are saved on the phone and retried again from issue #125 ([docs/mobile-offline-assessments.md](mobile-offline-assessments.md)); other offline flows are tracked in #126 and #127.

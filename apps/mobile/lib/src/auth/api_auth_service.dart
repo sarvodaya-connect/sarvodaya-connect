@@ -85,8 +85,16 @@ class IdentityApi {
 
     /// Sign-in only: the new token being checked, before it is kept.
     String? bearer,
+
+    /// Checked just before the request leaves: false when the account that
+    /// started this work has since signed out, so its request is never sent
+    /// with the next account's sign-in.
+    bool Function()? stillSignedIn,
   }) async {
     if (bearer == null) await _freshToken();
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IdentityError(401, 'Sign in again to send this.');
+    }
     final request = http.Request(method, Uri.parse('$baseUrl$path'));
     request.headers['Content-Type'] = 'application/json';
     final authorization = bearer ?? token;

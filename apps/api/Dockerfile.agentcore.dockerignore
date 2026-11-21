@@ -1,0 +1,15 @@
+**
+!apps/
+!apps/api/
+!apps/api/package.json
+!apps/api/package-lock.json
+!apps/api/prisma7.config.ts
+!apps/api/prisma/
+!apps/api/prisma/**
+!apps/api/nest-cli.json
+!apps/api/tsconfig*.json
+!apps/api/src/
+!apps/api/src/**
+apps/api/src/generated/
+!apps/api/scripts/
+!apps/api/scripts/agentcore-runtime.mjs

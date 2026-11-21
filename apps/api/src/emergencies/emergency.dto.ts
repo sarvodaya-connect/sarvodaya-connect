@@ -179,4 +179,10 @@ export class CreateEvidenceDto {
   contentType: keyof typeof ALLOWED_CONTENT_TYPES;
   @IsInt() @Min(1) sizeBytes: number;
   @IsOptional() @Matches(SHA256_BASE64) checksumSha256?: string;
+  /**
+   * Issue #125: the phone's id for this photo, the same on every retry. A
+   * retry then confirms or resumes that photo instead of adding another.
+   * Optional, so released clients that do not send it work as before.
+   */
+  @IsOptional() @IsUUID() clientUploadId?: string;
 }

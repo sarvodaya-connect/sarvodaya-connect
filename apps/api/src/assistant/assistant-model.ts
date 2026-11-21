@@ -15,7 +15,9 @@ export const ASSISTANT_MODEL = Symbol('ASSISTANT_MODEL');
 /** Below the API's 29-second Lambda timeout, so a slow call is reconciled, not cut off. */
 export const MODEL_TIMEOUT_MS = 25_000;
 
-export const DEFAULT_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
+export const HAIKU_45_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
+export const HAIKU_55_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
+export const DEFAULT_MODEL_ID = HAIKU_45_MODEL_ID;
 export const DEFAULT_REGION = 'ap-southeast-1';
 
 export class AssistantNotConfiguredError extends Error {}
@@ -29,11 +31,7 @@ export class DisabledAssistantModel implements AssistantModel {
   }
 }
 
-/**
- * Claude on Amazon Bedrock through the bedrock-runtime endpoint (InvokeModel). In Singapore,
- * Claude Haiku 5.5 is served only through the global inference profile on this endpoint, not on
- * bedrock-mantle. Requests are signed with the default AWS credential chain (the task's IAM role).
- */
+// InvokeModel uses the default AWS credential chain, including the Lambda execution role.
 export class BedrockAssistantModel implements AssistantModel {
   private readonly client: AnthropicBedrock;
 

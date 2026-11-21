@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SarvoAI AgentCore Runtime for the Singapore TEST environment
+
+Parameters:
+  RuntimeImageDigest:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^sha256:[0-9a-f]{64}$'
+    Description: Create the ECR repository first, then supply the digest of the Linux ARM64 runtime image.
+
+Conditions:
+  HasImage: !Not [!Equals [!Ref RuntimeImageDigest, '']]
+
+Resources:
+  RuntimeRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+  RuntimeRole:
+    Type: AWS::IAM::Role
+    Condition: HasImage
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*'
+      Policies:
+        - PolicyName: AgentCoreRuntimeImageAndLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !GetAtt RuntimeRepository.Arn
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogStreams
+                  - logs:PutResourcePolicy
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_test-*'
+              - Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_test-*:log-stream:*'
+
+  SarvoAiRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Condition: HasImage
+    Properties:
+      AgentRuntimeName: sarvoai_test
+      RoleArn: !GetAtt RuntimeRole.Arn
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+      ProtocolConfiguration: HTTP
+      AgentRuntimeArtifact:
+        ContainerConfiguration:
+          ContainerUri: !Sub '${RuntimeRepository.RepositoryUri}@${RuntimeImageDigest}'
+
+Outputs:
+  RepositoryUri:
+    Value: !GetAtt RuntimeRepository.RepositoryUri
+  RuntimeArn:
+    Condition: HasImage
+    Value: !GetAtt SarvoAiRuntime.AgentRuntimeArn

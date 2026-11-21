@@ -1,6 +1,10 @@
 import type Anthropic from '@anthropic-ai/sdk';
 
-import type { ModelRequest } from './assistant-model.js';
+import {
+  HAIKU_45_MODEL_ID,
+  HAIKU_55_MODEL_ID,
+  type ModelRequest,
+} from './assistant-model.js';
 
 /** Largest limit accepted, so a typing slip such as 20000 cannot remove the protection. */
 export const MAX_MONTHLY_LIMIT_USD = 1000;
@@ -12,7 +16,7 @@ export const DEFAULT_MONTHLY_LIMIT_USD = '20';
  * assertBillableRequest. A new model or inference profile needs a code review here as well
  * as a fresh pricing approval.
  */
-const REVIEWED_MODELS = new Set(['global.anthropic.claude-haiku-5-5']);
+const REVIEWED_MODELS = new Set([HAIKU_45_MODEL_ID, HAIKU_55_MODEL_ID]);
 /** The longest a pricing approval may last, so prices are looked at again each month. */
 export const MAX_APPROVAL_DAYS = 31;
 /** Added to the measured request for the tool-use framing the provider adds. */
@@ -196,25 +200,33 @@ export function pricingApproval(
     fields(approval.standard, 'standard', TIER_FIELDS),
     'standard',
   );
-  const long = fields(approval.longPrompt, 'longPrompt', [
-    'aboveTokens',
-    ...TIER_FIELDS,
-  ]);
-  const longPrompt = priceTier(long, 'longPrompt');
-  const aboveTokens = long.aboveTokens;
-  if (!Number.isSafeInteger(aboveTokens) || (aboveTokens as number) <= 0)
-    throw new SpendingBlockedError(
-      'longPrompt.aboveTokens must be a whole number of tokens',
-    );
+  let longPrompt = standard;
+  let aboveTokens = Infinity;
   if (
-    longPrompt.input < standard.input ||
-    longPrompt.output < standard.output ||
-    longPrompt.cacheWrite < standard.cacheWrite ||
-    longPrompt.cacheRead < standard.cacheRead
-  )
-    throw new SpendingBlockedError(
-      'longPrompt prices must not be below the standard prices',
-    );
+    expected.modelId === HAIKU_55_MODEL_ID ||
+    approval.longPrompt !== undefined
+  ) {
+    const long = fields(approval.longPrompt, 'longPrompt', [
+      'aboveTokens',
+      ...TIER_FIELDS,
+    ]);
+    longPrompt = priceTier(long, 'longPrompt');
+    const threshold = long.aboveTokens;
+    if (!Number.isSafeInteger(threshold) || (threshold as number) <= 0)
+      throw new SpendingBlockedError(
+        'longPrompt.aboveTokens must be a whole number of tokens',
+      );
+    if (
+      longPrompt.input < standard.input ||
+      longPrompt.output < standard.output ||
+      longPrompt.cacheWrite < standard.cacheWrite ||
+      longPrompt.cacheRead < standard.cacheRead
+    )
+      throw new SpendingBlockedError(
+        'longPrompt prices must not be below the standard prices',
+      );
+    aboveTokens = threshold as number;
+  }
 
   const through = approval.overageReviewedThrough;
   if (through !== undefined) {
@@ -232,7 +244,7 @@ export function pricingApproval(
   return {
     standard,
     longPrompt,
-    aboveTokens: aboveTokens as number,
+    aboveTokens,
     overageReviewedThrough: (through as string | undefined) ?? null,
   };
 }
