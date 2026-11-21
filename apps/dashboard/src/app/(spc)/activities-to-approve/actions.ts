@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import type { ActivityApprovalInput } from "@sarvodaya-connect/api-contracts";
+
+import type { ApproveResult } from "@/components/dashboard/activities/activity-review";
 import { asSpc } from "@/lib/activities-api";
 import { getSpcViewer } from "@/lib/current-viewer";
-import { platformApi } from "@/lib/platform-api";
+import { PlatformApiError, platformApi } from "@/lib/platform-api";
 
 function withSpc(init: RequestInit): RequestInit {
   const demo = asSpc();
@@ -13,17 +16,46 @@ function withSpc(init: RequestInit): RequestInit {
 }
 
 /**
- * V5 SP07: the SPC approves with the UN SDGs they chose. The API checks that
- * the SPC is assigned to the society, needs at least one goal and refuses a
- * second decision.
+ * V6 SP07r: the SPC approves with the Sarvodaya dimensions, categories and UN
+ * SDGs they chose. The API checks that the SPC is assigned to the society,
+ * needs at least one of each and refuses a second decision.
+ *
+ * `reviewedSubmittedAt` is the activity's submittedAt when the SPC opened it.
+ * Every Society Officer edit resets it, so the API refuses (409) an approval of
+ * a version the SPC did not see; that comes back as `stale`.
  */
-export async function approveActivity(id: string, sdgs: number[]): Promise<{ error?: string }> {
+export async function approveActivity(
+  id: string,
+  reviewedSubmittedAt: string | undefined,
+  input: ActivityApprovalInput,
+): Promise<ApproveResult> {
   await getSpcViewer();
-  if (sdgs.length === 0) return { error: "Choose at least one UN SDG to approve." };
+  if (input.dimensions.length === 0 || input.categories.length === 0 || input.sdgs.length === 0) {
+    return { kind: "invalid", error: "Choose at least one Sarvodaya dimension, one Sarvodaya category and one UN SDG." };
+  }
   try {
-    await platformApi(`/activities/${id}/approve`, withSpc({ method: "POST", body: JSON.stringify({ sdgs }) }));
+    await platformApi(
+      `/activities/${id}/approve`,
+      withSpc({
+        method: "POST",
+        body: JSON.stringify({
+          sdgs: input.sdgs,
+          dimensions: input.dimensions,
+          categories: input.categories,
+          ...(reviewedSubmittedAt ? { reviewedSubmittedAt } : {}),
+        }),
+      }),
+    );
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The approval could not be saved. Try again." };
+    if (error instanceof PlatformApiError) {
+      // Decided, changed or no longer ours: nothing was saved, so show the activity as it is now.
+      if ([403, 404, 409].includes(error.status)) {
+        revalidatePath(`/activities-to-approve/${id}`);
+        return { kind: "stale", error: error.message };
+      }
+      if (error.status === 400) return { kind: "invalid", error: error.message };
+    }
+    return { kind: "failed" };
   }
   revalidatePath("/activities-to-approve", "layout");
   redirect(`/activities-to-approve?approved=${id}`);

@@ -1,4 +1,4 @@
-import type { ActivityDimension, ActivityQueueItem, WorkPlanActivity } from "@sarvodaya-connect/api-contracts";
+import type { ActivityCategory, ActivityDimension, ActivityQueueItem, WorkPlanActivity } from "@sarvodaya-connect/api-contracts";
 
 import { formatDate, waitingLabel } from "./society-record-format";
 
@@ -16,6 +16,30 @@ export const MONTH_NAMES = [
   "November",
   "December",
 ];
+
+/**
+ * The server-defined approval catalogue, in its order. The browser bundle only
+ * takes types from @sarvodaya-connect/api-contracts, so the values are copied
+ * here; the type checks below and activity-format.test.ts keep them equal.
+ */
+export const ACTIVITY_DIMENSIONS = ["SOCIAL", "ECONOMIC", "GOVERNANCE"] as const satisfies readonly ActivityDimension[];
+export const ACTIVITY_CATEGORIES = [
+  "COMMUNITY_EDUCATION",
+  "CHILD_WELLBEING",
+  "CULTURE",
+  "ECONOMY",
+  "GOVERNANCE",
+  "HEALTH_AND_NUTRITION",
+  "HOUSING_AND_INFRASTRUCTURE",
+  "SPIRITUAL_DEVELOPMENT",
+  "AGRICULTURE",
+  "ENVIRONMENT",
+] as const satisfies readonly ActivityCategory[];
+// Fails to compile if the contracts gain a value missing here.
+const everyDimension: Exclude<ActivityDimension, (typeof ACTIVITY_DIMENSIONS)[number]> extends never ? true : never = true;
+const everyCategory: Exclude<ActivityCategory, (typeof ACTIVITY_CATEGORIES)[number]> extends never ? true : never = true;
+void everyDimension;
+void everyCategory;
 
 export const DIMENSION_LABELS: Record<ActivityDimension, string> = {
   SOCIAL: "Social",

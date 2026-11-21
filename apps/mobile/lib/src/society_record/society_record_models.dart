@@ -888,6 +888,51 @@ const sarvodayaSectors = [
   'Environment',
 ];
 
+/// SPC-approved categories, ordered independently of the selected dimensions.
+enum ActivityCategory {
+  communityEducation('COMMUNITY_EDUCATION'),
+  childWellbeing('CHILD_WELLBEING'),
+  culture('CULTURE'),
+  economy('ECONOMY'),
+  governance('GOVERNANCE'),
+  healthAndNutrition('HEALTH_AND_NUTRITION'),
+  housingAndInfrastructure('HOUSING_AND_INFRASTRUCTURE'),
+  spiritualDevelopment('SPIRITUAL_DEVELOPMENT'),
+  agriculture('AGRICULTURE'),
+  environment('ENVIRONMENT');
+
+  const ActivityCategory(this.api);
+  final String api;
+}
+
+class ActivityClassification {
+  const ActivityClassification({
+    required this.dimensions,
+    required this.categories,
+  });
+
+  factory ActivityClassification.fromJson(Map<String, dynamic> json) {
+    final dimensions = json['dimensions'] as List? ?? const [];
+    final categories = json['categories'] as List? ?? const [];
+    return ActivityClassification(
+      dimensions: ActivityDimension.values
+          .where((item) => dimensions.contains(item.api))
+          .toList(),
+      categories: ActivityCategory.values
+          .where((item) => categories.contains(item.api))
+          .toList(),
+    );
+  }
+
+  final List<ActivityDimension> dimensions;
+  final List<ActivityCategory> categories;
+
+  Map<String, dynamic> toJson() => {
+    'dimensions': [for (final item in dimensions) item.api],
+    'categories': [for (final item in categories) item.api],
+  };
+}
+
 const monthNames = [
   'January',
   'February',
@@ -982,6 +1027,7 @@ class WorkPlanActivity {
     this.status = ActivityStatus.approved,
     this.dimension,
     this.sdgs = const [],
+    this.classification,
     this.femaleParticipants,
     this.maleParticipants,
     this.youthParticipants,
@@ -998,6 +1044,7 @@ class WorkPlanActivity {
   });
 
   factory WorkPlanActivity.fromJson(Map<String, dynamic> json) {
+    final classification = json['classification'] as Map<String, dynamic>?;
     final review = json['review'] as Map<String, dynamic>?;
     return WorkPlanActivity(
       id: json['id'] as String,
@@ -1011,6 +1058,9 @@ class WorkPlanActivity {
       status: ActivityStatus.fromApi(json['status']),
       dimension: ActivityDimension.fromApi(json['dimension']),
       sdgs: [for (final sdg in json['sdgs'] as List? ?? const []) sdg as int],
+      classification: classification == null
+          ? null
+          : ActivityClassification.fromJson(classification),
       femaleParticipants: _int(json['femaleParticipants']),
       maleParticipants: _int(json['maleParticipants']),
       youthParticipants: _int(json['youthParticipants']),
@@ -1042,6 +1092,7 @@ class WorkPlanActivity {
   final ActivityStatus status;
   final ActivityDimension? dimension;
   final List<int> sdgs;
+  final ActivityClassification? classification;
   final int? femaleParticipants;
   final int? maleParticipants;
   final int? youthParticipants;

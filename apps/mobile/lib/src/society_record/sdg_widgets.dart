@@ -143,15 +143,19 @@ class _SdgTile extends StatelessWidget {
 
 /// The goal number in its colour and the full title, e.g. on M50 and M52.
 class SdgChip extends StatelessWidget {
-  const SdgChip(this.sdg, {super.key});
+  const SdgChip(this.sdg, {super.key, this.title});
 
   final int sdg;
+
+  /// The goal's name in the reader's language; English when not given.
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     final colour = sdgColour(sdg);
+    final name = title ?? sdgTitle(sdg);
     return Semantics(
-      label: 'SDG $sdg: ${sdgTitle(sdg)}',
+      label: 'SDG $sdg: $name',
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(2, 2, 9, 2),
@@ -178,7 +182,7 @@ class SdgChip extends StatelessWidget {
             const SizedBox(width: 5),
             Flexible(
               child: Text(
-                sdgTitle(sdg),
+                name,
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
