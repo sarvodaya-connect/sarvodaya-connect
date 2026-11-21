@@ -219,6 +219,11 @@ void main() {
           find.bySemanticsLabel('SDG 17: Partnerships for the Goals'),
           findsOneWidget,
         );
+        // Screen readers can select a goal, not only touch.
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('SDG 1: No Poverty')),
+          isSemantics(isButton: true, hasTapAction: true),
+        );
 
         await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
         expect(
@@ -346,6 +351,50 @@ void main() {
         reviewedSubmittedAt: reviewed.submittedAt,
       );
       expect(approved.activity.status, ActivityStatus.approved);
+    });
+
+    test('an edit with the same clock still makes the review stale', () async {
+      // The demo clock is fixed, so an edit lands on the reviewed timestamp.
+      final store = _store(UserRole.programmeCoordinator);
+      final queue = await store.societyRecords.fetchActivityQueue();
+      final id = queue.waiting.first.id;
+      final detail = await store.societyRecords.fetchActivity(id);
+      final reviewed = detail.activity;
+
+      store.switchDemoRole(UserRole.societyOfficer);
+      final edited = await store.societyRecords.updateActivity(
+        detail.societyId,
+        id,
+        ActivityInput(
+          year: reviewed.year,
+          month: reviewed.month,
+          name: 'Road repairs',
+          description: 'Patch the potholes on the temple road.',
+          sector: 'Infrastructure',
+          dimension: ActivityDimension.economic,
+          allocatedCost: 25000,
+        ),
+      );
+      expect(
+        edited.activity.submittedAt!.isAfter(reviewed.submittedAt!),
+        isTrue,
+      );
+
+      store.switchDemoRole(UserRole.programmeCoordinator);
+      await expectLater(
+        store.societyRecords.approveActivity(
+          id,
+          [4],
+          classification: const ActivityClassification(
+            dimensions: [ActivityDimension.social],
+            categories: [ActivityCategory.communityEducation],
+          ),
+          reviewedSubmittedAt: reviewed.submittedAt,
+        ),
+        throwsA(
+          isA<SocietyRecordException>().having((e) => e.status, 'status', 409),
+        ),
+      );
     });
 
     test('the saved classification cannot be changed by the caller', () async {

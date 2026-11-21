@@ -134,7 +134,6 @@ export class ActivitiesRepository {
           data: {
             ...activityFields(input),
             status: 'WAITING_FOR_SPC',
-            submittedAt: new Date(),
             updatedByName: principal.displayName,
             updatedByRole: principal.roles[0] ?? null,
           },
@@ -144,6 +143,16 @@ export class ActivitiesRepository {
             'This activity is already approved and can no longer be changed',
           );
         }
+        // Approval compares submittedAt to the version the SPC reviewed, so every
+        // edit must move it forward, even within the same millisecond. The row is
+        // locked by the update above, so concurrent edits also step forward.
+        await tx.$executeRaw`
+          UPDATE "work_plan_activities"
+          SET "submitted_at" = GREATEST(
+            ${new Date()}::timestamptz,
+            "submitted_at" + INTERVAL '1 millisecond'
+          )
+          WHERE "id" = ${activityId}::uuid`;
         await tx.platformAuditEvent.create({
           data: {
             ...actorFields(principal),

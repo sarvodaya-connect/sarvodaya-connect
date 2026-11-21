@@ -920,6 +920,7 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     String id,
     ActivityInput input, {
     ActorRef? createdBy,
+    DateTime? previousSubmittedAt,
   }) => WorkPlanActivity(
     id: id,
     year: input.year,
@@ -940,8 +941,16 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
     resourcesNeeded: input.resourcesNeeded,
     volunteerHours: input.volunteerHours,
     createdBy: createdBy ?? _actor,
-    submittedAt: clock(),
+    submittedAt: _nextSubmittedAt(previousSubmittedAt),
   );
+
+  /// Each edit must move submittedAt forward, because approval compares it to
+  /// the version the SPC reviewed. Matches the API, even with a fixed clock.
+  DateTime _nextSubmittedAt(DateTime? previous) {
+    final now = clock();
+    if (previous == null || now.isAfter(previous)) return now;
+    return previous.add(const Duration(milliseconds: 1));
+  }
 
   void _checkActivity(ActivityInput input) {
     if ((input.youthParticipants ?? 0) > input.totalParticipants) {
@@ -1016,6 +1025,7 @@ class DemoSocietyRecordApi implements SocietyRecordApi {
       activityId,
       input,
       createdBy: existing.createdBy,
+      previousSubmittedAt: existing.submittedAt,
     );
     society.workPlan = [...society.workPlan]..[index] = activity;
     return _detail(society, activity);

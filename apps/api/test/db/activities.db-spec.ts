@@ -314,6 +314,14 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
     await api(tokens.spc!.token)
       .post(`/activities/${id}/approve`, { sdgs: [4], ...classification, reviewedSubmittedAt: 'yesterday' })
       .expect(400);
+    // Valid ISO 8601 that Date cannot parse is refused before it reaches the database.
+    await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, {
+        sdgs: [4],
+        ...classification,
+        reviewedSubmittedAt: '2026-11-01T04:30:00,123Z',
+      })
+      .expect(400);
     const approved = await api(tokens.spc!.token)
       .post(`/activities/${id}/approve`, {
         sdgs: [9],
@@ -322,6 +330,37 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
       })
       .expect(200);
     expect(approved.body).toMatchObject({ status: 'APPROVED', name: 'Fictional road repairs', sdgs: [9] });
+  });
+
+  it('moves submittedAt forward on every edit, even within the same millisecond', async () => {
+    const { body } = await api(tokens.so!.token)
+      .post(`/societies/${societyId}/activities`, {
+        ...activity,
+        name: 'Fictional tree planting',
+      })
+      .expect(201);
+    const id = body.id as string;
+    // A reviewed version stamped ahead of the server clock: an edit at "now"
+    // would otherwise reuse or precede it.
+    const ahead = new Date(Date.now() + 60_000);
+    await db.workPlanActivity.update({ where: { id }, data: { submittedAt: ahead } });
+
+    const edited = await api(tokens.so!.token)
+      .put(`/societies/${societyId}/activities/${id}`, {
+        ...activity,
+        name: 'Fictional tree nursery',
+      })
+      .expect(200);
+    expect(new Date(edited.body.submittedAt).getTime()).toBe(ahead.getTime() + 1);
+
+    await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, {
+        sdgs: [15],
+        dimensions: ['SOCIAL'],
+        categories: ['COMMUNITY_EDUCATION'],
+        reviewedSubmittedAt: ahead.toISOString(),
+      })
+      .expect(409);
   });
 
   it('lets only the assigned SPC approve, with at least one UN SDG, once', async () => {

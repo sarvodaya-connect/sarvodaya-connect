@@ -1115,7 +1115,8 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
   });
 
   void _next(ActivityDetail detail) {
-    if (_saving || !detail.canReview) return;
+    // Step 4 is the review; a second quick tap must not move past it.
+    if (_saving || !detail.canReview || _step >= 4) return;
     final l10n = context.l10n;
     final error = switch (_step) {
       1 when _dimensions.isEmpty => l10n.approvalChooseDimension,

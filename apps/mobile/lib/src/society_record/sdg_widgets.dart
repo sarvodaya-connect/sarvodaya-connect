@@ -80,6 +80,8 @@ class _SdgTile extends StatelessWidget {
     selected: selected,
     enabled: onTap != null,
     label: sdgTileLabel(sdg, selected: selected),
+    // excludeSemantics drops the InkWell's tap, so expose it here for screen readers.
+    onTap: onTap,
     excludeSemantics: true,
     child: InkWell(
       borderRadius: BorderRadius.circular(8),
