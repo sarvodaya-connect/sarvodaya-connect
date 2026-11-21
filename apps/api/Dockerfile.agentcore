@@ -3,7 +3,8 @@ WORKDIR /app
 COPY apps/api/package.json apps/api/package-lock.json ./
 COPY apps/api/prisma ./prisma
 COPY apps/api/prisma7.config.ts ./
-RUN npm ci
+# Lifecycle scripts stay off; the only one the image needs is Prisma client generation.
+RUN npm ci --ignore-scripts && npx prisma generate
 COPY apps/api/nest-cli.json apps/api/tsconfig*.json ./
 COPY apps/api/src ./src
 RUN npm run build && npm prune --omit=dev
