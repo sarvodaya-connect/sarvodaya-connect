@@ -56,11 +56,11 @@ describe('AssistantService', () => {
     expect(createMessage).not.toHaveBeenCalled();
   });
 
-  it('rejects an unapproved operation at the backend boundary before querying records', () => {
+  it('rejects an unapproved operation at the backend boundary before querying records', async () => {
     const { operations, run, spending } = setup([]);
     const bound = operations.forQuestion(hq, now, new AbortController().signal);
 
-    expect(() => bound.runTool('delete_society', {})).toThrow('SarvoAI tool is not approved');
+    await expect(bound.runTools([{ type: 'tool_use', name: 'delete_society', id: 'unknown-tool', input: {} }])).rejects.toThrow('SarvoAI tool is not approved');
     expect(run).not.toHaveBeenCalled();
     expect(spending.reserve).not.toHaveBeenCalled();
   });

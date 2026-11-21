@@ -52,12 +52,30 @@ class SarvoAiGuardrails(unittest.TestCase):
 
     def test_model_permission_only_when_enabled(self):
         policies = self.template['Resources']['ApiFunction']['Properties']['Policies']
-        bedrock = [p for p in policies if isinstance(p, dict) and 'bedrock' in str(p)]
+        bedrock = [p for p in policies if isinstance(p, dict) and 'bedrock:InvokeModel' in str(p)]
         self.assertEqual(len(bedrock), 1)
         self.assertEqual(bedrock[0]['If'][0], 'SarvoAiOn')
         self.assertEqual(bedrock[0]['If'][2], {'Ref': 'AWS::NoValue'})
         actions = {s['Action'] for s in bedrock[0]['If'][1]['Statement']}
         self.assertEqual(actions, {'bedrock:InvokeModel'})
+
+    def test_agentcore_requires_test_mode_and_a_specific_runtime(self):
+        self.assertEqual(self.template['Parameters']['SarvoAiAgentCoreRuntimeArn']['Default'], '')
+        self.assertEqual(self.env['SARVOAI_AGENTCORE_RUNTIME_ARN'], {
+            'If': ['SarvoAiAgentCoreOn', {'Ref': 'SarvoAiAgentCoreRuntimeArn'}, ''],
+        })
+        self.assertEqual(self.template['Conditions']['SarvoAiAgentCoreOn'], {'And': [
+            {'Condition': 'IsTest'},
+            {'Condition': 'SarvoAiOn'},
+            {'Not': [{'Equals': [{'Ref': 'SarvoAiAgentCoreRuntimeArn'}, '']}]},
+        ]})
+        policies = self.template['Resources']['ApiFunction']['Properties']['Policies']
+        agentcore = [p['If'] for p in policies if 'InvokeAgentRuntimeWithWebSocketStream' in str(p)]
+        self.assertEqual(agentcore[0][0], 'SarvoAiAgentCoreOn')
+        self.assertEqual(agentcore[0][1]['Statement'][0]['Resource'], [
+            {'Ref': 'SarvoAiAgentCoreRuntimeArn'},
+            {'Sub': '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'},
+        ])
 
 class FoundationSafety(unittest.TestCase):
     @classmethod

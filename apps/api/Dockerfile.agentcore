@@ -1,0 +1,20 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY apps/api/package.json apps/api/package-lock.json ./
+COPY apps/api/prisma ./prisma
+COPY apps/api/prisma7.config.ts ./
+RUN npm ci
+COPY apps/api/nest-cli.json apps/api/tsconfig*.json ./
+COPY apps/api/src ./src
+RUN npm run build && npm prune --omit=dev
+
+FROM node:24-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist/assistant ./dist/assistant
+COPY apps/api/scripts/agentcore-runtime.mjs ./scripts/
+USER node
+EXPOSE 8080
+CMD ["node", "scripts/agentcore-runtime.mjs"]

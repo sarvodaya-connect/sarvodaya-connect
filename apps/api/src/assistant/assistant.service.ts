@@ -3,6 +3,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 
 import type { Principal } from '../auth/principal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AssistantAgentCore } from './assistant-agentcore.js';
 import { AssistantNotConfiguredError } from './assistant-model.js';
 import { approvedAssistantToolNames, AssistantOperations } from './assistant-operations.js';
 import { SpendingBlockedError } from './assistant-cost.js';
@@ -10,7 +11,7 @@ import { scrubAssistantText } from './assistant-privacy.js';
 import { SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { ToolOutcome } from './assistant-tools.js';
 import { ASSISTANT_ANSWER_KINDS, type AssistantAnswer, type AssistantAnswerKind, type AssistantTurn } from './assistant.types.js';
-import { runAssistantWorkflow } from './assistant-workflow.js';
+import { type AssistantWorkflowInput, runAssistantWorkflow } from './assistant-workflow.js';
 
 /** Longest summary and suggestion the screens show (V5 PR 10 output limits). */
 const MAX_SUMMARY = 1200;
@@ -26,6 +27,7 @@ export class AssistantService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly operations: AssistantOperations,
+    private readonly agentCore?: AssistantAgentCore,
   ) {}
 
   async ask(principal: Principal, question: string, history: AssistantTurn[] = [], now = new Date()): Promise<AssistantAnswer> {
@@ -39,13 +41,14 @@ export class AssistantService {
     const toolsUsed: string[] = [];
 
     try {
-      const { response, answers } = await runAssistantWorkflow({
+      const workflow: AssistantWorkflowInput = {
         messages,
         signal,
         approvedToolNames: approvedAssistantToolNames,
         ...operations,
         onToolsUsed: (names) => toolsUsed.push(...names),
-      });
+      };
+      const { response, answers } = await (this.agentCore?.run(workflow) ?? runAssistantWorkflow(workflow));
 
       if (response?.stop_reason === 'refusal') {
         return this.finish(principal, toolsUsed, now, { kind: 'UNSUPPORTED', summary: 'SarvoAI can’t answer this question.', options: [] });

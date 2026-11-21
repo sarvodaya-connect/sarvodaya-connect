@@ -102,12 +102,14 @@ export class AssistantOperations {
           },
           signal,
         ),
-      runTool: (name: string, input: unknown) => {
+      runTools: async (calls: Anthropic.ToolUseBlock[]) => {
         signal.throwIfAborted();
-        if (!approvedAssistantToolNames.has(name)) {
+        if (calls.some((call) => !approvedAssistantToolNames.has(call.name))) {
           throw new BadRequestException('SarvoAI tool is not approved');
         }
-        return this.tools.run(name, input, now);
+        return Promise.all(
+          calls.map((call) => this.tools.run(call.name, call.input, now)),
+        );
       },
     };
   }
