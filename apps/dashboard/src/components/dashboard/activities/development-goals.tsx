@@ -98,6 +98,7 @@ export function DimensionPicker({
             >
               <input
                 aria-describedby={errorId}
+                aria-invalid={errorId ? true : undefined}
                 aria-label={dimensionLabel(t, dimension)}
                 checked={checked}
                 className="peer sr-only"
@@ -157,6 +158,7 @@ export function CategoryPicker({
             >
               <input
                 aria-describedby={errorId}
+                aria-invalid={errorId ? true : undefined}
                 checked={checked}
                 className="size-4 accent-[#2f6b45]"
                 disabled={disabled}

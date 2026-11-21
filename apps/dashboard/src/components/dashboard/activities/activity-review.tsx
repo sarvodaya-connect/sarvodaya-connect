@@ -44,8 +44,15 @@ function toggle<T>(list: T[], item: T) {
   return list.includes(item) ? list.filter((value) => value !== item) : [...list, item];
 }
 
-/** Keeps keyboard focus inside an open dialog and lets Escape close it. */
-function useDialogKeys(ref: React.RefObject<HTMLDivElement | null>, open: boolean, onEscape: () => void) {
+/**
+ * Keeps keyboard focus inside an open dialog and lets Escape close it. While a
+ * decision is being sent every control is disabled, so the dialog itself
+ * (`tabIndex={-1}`) holds focus until they are enabled again.
+ */
+function useDialogKeys(ref: React.RefObject<HTMLDivElement | null>, open: boolean, busy: boolean, onEscape: () => void) {
+  useEffect(() => {
+    if (open && busy) ref.current?.focus();
+  }, [ref, open, busy]);
   useEffect(() => {
     const node = ref.current;
     if (!open || !node) return;
@@ -57,10 +64,16 @@ function useDialogKeys(ref: React.RefObject<HTMLDivElement | null>, open: boolea
       }
       if (event.key !== "Tab") return;
       const focusable = [...node.querySelectorAll<HTMLElement>("button:not([disabled]), textarea:not([disabled])")];
-      if (focusable.length === 0) return;
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
+      if (document.activeElement === node) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -105,6 +118,8 @@ export function ActivityReview({
   const [showErrors, setShowErrors] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [approveResult, setApproveResult] = useState<ApproveResult>();
+  // Changed or decided elsewhere: no further decision until the activity is reloaded.
+  const [stale, setStale] = useState(false);
   const [pending, setPending] = useState<"approve" | "send-back">();
   const [sendingBack, setSendingBack] = useState(false);
   const [sendBackError, setSendBackError] = useState<string>();
@@ -136,8 +151,8 @@ export function ActivityReview({
     setSendBackError(undefined);
     sendBackButton.current?.focus();
   }, []);
-  useDialogKeys(confirmRef, confirming, closeConfirm);
-  useDialogKeys(sendBackRef, sendingBack, closeSendBack);
+  useDialogKeys(confirmRef, confirming, busy, closeConfirm);
+  useDialogKeys(sendBackRef, sendingBack, busy, closeSendBack);
 
   useEffect(() => {
     if (confirming) confirmRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
@@ -162,7 +177,7 @@ export function ActivityReview({
   }
 
   function approve() {
-    if (inFlight.current || !complete) return;
+    if (inFlight.current || stale || !complete) return;
     inFlight.current = true;
     setPending("approve");
     setApproveResult(undefined);
@@ -179,12 +194,21 @@ export function ActivityReview({
         setPending(undefined);
       }
       // On success the action redirects; only problems come back here.
+      if (result?.kind === "stale") setStale(true);
       if (result && (result.error || result.kind)) setApproveResult(result);
     });
   }
 
+  function reload() {
+    startTransition(() => {
+      router.refresh();
+      setStale(false);
+      setApproveResult(undefined);
+    });
+  }
+
   function sendBack() {
-    if (inFlight.current) return;
+    if (inFlight.current || stale) return;
     inFlight.current = true;
     setPending("send-back");
     setSendBackError(undefined);
@@ -192,6 +216,10 @@ export function ActivityReview({
       try {
         const result = await actions.sendBack(comment);
         if (result?.error) setSendBackError(result.error);
+      } catch (error) {
+        // A redirect after a successful send-back is not a failure.
+        if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;
+        setSendBackError("The activity could not be sent back. Try again.");
       } finally {
         inFlight.current = false;
         setPending(undefined);
@@ -199,7 +227,6 @@ export function ActivityReview({
     });
   }
 
-  const stale = approveResult?.kind === "stale";
   const failedMessage =
     approveResult && !stale ? (approveResult.kind === "invalid" && approveResult.error ? approveResult.error : t("goals.failed")) : undefined;
 
@@ -208,15 +235,27 @@ export function ActivityReview({
       <div className="flex flex-wrap items-start justify-between gap-3">
         {heading}
         <div className="flex flex-wrap gap-2">
-          <button className={secondaryButton} disabled={busy} onClick={() => setSendingBack(true)} ref={sendBackButton} type="button">
+          <button className={secondaryButton} disabled={busy || stale} onClick={() => setSendingBack(true)} ref={sendBackButton} type="button">
             {t("goals.sendBack")}
           </button>
-          <button className={primaryButton} disabled={busy} onClick={review} ref={reviewButton} type="button">
+          <button className={primaryButton} disabled={busy || stale} onClick={review} ref={reviewButton} type="button">
             {approveIcon}
             {t("goals.reviewApprove")}
           </button>
         </div>
       </div>
+
+      {stale && !confirming && (
+        <div
+          className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#ead9a7] bg-warn-bg px-3 py-2 text-[12px] font-semibold text-warn-text"
+          role="alert"
+        >
+          <span>{t("goals.stale")}</span>
+          <button className={secondaryButton} onClick={reload} type="button">
+            {t("goals.reload")}
+          </button>
+        </div>
+      )}
 
       {showErrors && !complete && (
         <p
@@ -298,9 +337,10 @@ export function ActivityReview({
             aria-describedby="confirm-note"
             aria-labelledby="confirm-title"
             aria-modal="true"
-            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-card bg-surface p-5 shadow-xl"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-card bg-surface p-5 shadow-xl outline-none"
             ref={confirmRef}
             role="dialog"
+            tabIndex={-1}
           >
             <h2 className="text-[17px] font-bold text-ink" id="confirm-title">{t("goals.confirmTitle", { name: activityName })}</h2>
             {subtitle && <p className="mt-0.5 text-[12px] text-ink-soft">{subtitle}</p>}
@@ -327,7 +367,7 @@ export function ActivityReview({
                 {t("goals.backToEdit")}
               </button>
               {stale ? (
-                <button className={primaryButton} data-autofocus onClick={() => router.refresh()} type="button">
+                <button className={primaryButton} data-autofocus onClick={reload} type="button">
                   {t("goals.reload")}
                 </button>
               ) : (
@@ -346,9 +386,10 @@ export function ActivityReview({
           <div
             aria-labelledby="send-back-title"
             aria-modal="true"
-            className="w-full max-w-md rounded-card bg-surface p-5 shadow-xl"
+            className="w-full max-w-md rounded-card bg-surface p-5 shadow-xl outline-none"
             ref={sendBackRef}
             role="dialog"
+            tabIndex={-1}
           >
             <h2 className="text-[16px] font-bold text-ink" id="send-back-title">Send Back to {officerName}?</h2>
             <p className="mt-1 text-[12px] text-ink-soft">

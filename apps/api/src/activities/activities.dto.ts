@@ -7,6 +7,7 @@ import {
   ValidateIf,
   IsIn,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -126,7 +127,6 @@ export class ApproveActivityDto {
   @IsIn(Object.values(ActivityCategory), { each: true })
   categories?: ActivityCategory[];
 
-
   @ArrayMinSize(1, { message: 'Choose at least one UN SDG to approve' })
   @ArrayMaxSize(17)
   @ArrayUnique({ message: 'Choose each UN SDG only once' })
@@ -135,6 +135,14 @@ export class ApproveActivityDto {
   @Min(1, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   @Max(17, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   sdgs!: number[];
+
+  /**
+   * The submission the SPC reviewed. When sent, the approval is refused if the
+   * Society Officer has changed and resent the activity since.
+   */
+  @IsOptional()
+  @IsISO8601({ strict: true }, { message: 'submittedAt must be an ISO date and time' })
+  submittedAt?: string;
 }
 
 /** M51b: what the Society Officer should change. */

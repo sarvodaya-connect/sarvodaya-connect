@@ -121,6 +121,8 @@ describe("V6 SP07 Development Goals approval", () => {
     expect(screen.getByText("Choose at least one Sarvodaya category.")).toBeInTheDocument();
     expect(screen.getByText("Choose at least one UN SDG to approve.")).toBeInTheDocument();
     expect(category("Community Education")).toHaveAccessibleDescription(/Choose at least one Sarvodaya category/);
+    expect(category("Community Education")).toHaveAttribute("aria-invalid", "true");
+    expect(dimension("Economic")).not.toHaveAttribute("aria-invalid");
     expect(dimension("Economic")).toBeChecked();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(approve).not.toHaveBeenCalled();
@@ -200,9 +202,39 @@ describe("V6 SP07 Development Goals approval", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("alert")).toHaveTextContent("nothing was approved");
     expect(within(dialog).queryByRole("button", { name: /Approve|Try Again/ })).not.toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Reload Activity" }));
+    // Closing the dialog keeps the activity blocked until it is reloaded.
+    await userEvent.click(within(dialog).getByRole("button", { name: "Back to Edit" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review and Approve" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send Back" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("nothing was approved");
+    await userEvent.click(screen.getByRole("button", { name: "Reload Activity" }));
     expect(refresh).toHaveBeenCalled();
     expect(approve).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps keyboard focus in the dialog while the approval is being sent", async () => {
+    const approve = vi.fn<(input: ActivityApprovalInput) => Promise<ApproveResult>>().mockReturnValue(new Promise(() => {}));
+    renderReview(approve);
+    await chooseAll();
+    await userEvent.click(screen.getByRole("button", { name: "Review and Approve" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approve Activity" }));
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => expect(dialog).toHaveFocus());
+    await userEvent.tab();
+    expect(dialog).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(dialog).toHaveFocus();
+  });
+
+  it("says so when the send-back request itself fails", async () => {
+    const sendBack = vi.fn<(comment: string) => Promise<{ error?: string }>>().mockRejectedValue(new Error("network"));
+    renderReview(undefined, sendBack);
+    await userEvent.click(screen.getByRole("button", { name: "Send Back" }));
+    const dialog = screen.getByRole("dialog", { name: "Send Back to N. Wijesinghe?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Send Back" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("could not be sent back");
+    expect(within(dialog).getByRole("button", { name: "Send Back" })).toBeEnabled();
   });
 
   it("sends back with an optional note to the Society Officer", async () => {
