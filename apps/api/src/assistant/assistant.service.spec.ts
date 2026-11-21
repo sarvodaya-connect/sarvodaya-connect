@@ -13,6 +13,7 @@ import { assertBillableRequest, SpendingBlockedError } from './assistant-cost.js
 import { type AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
+import { AssistantOperations } from './assistant-operations.js';
 import { AssistantService } from './assistant.service.js';
 import { AssistantInsights } from './assistant-insights.js';
 
@@ -33,8 +34,9 @@ function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content:
   const prisma = { platformAuditEvent: { create: auditCreate } } as unknown as PrismaService;
   const reservation = { id: 'reservation-1' };
   const spending = { reserve: vi.fn().mockResolvedValue(reservation), settle: vi.fn().mockResolvedValue(undefined), failed: vi.fn().mockResolvedValue(undefined) };
-  const service = new AssistantService(prisma, { run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
-  return { service, createMessage, run, auditCreate, spending, reservation };
+  const operations = new AssistantOperations({ run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
+  const service = new AssistantService(prisma, operations);
+  return { service, operations, createMessage, run, auditCreate, spending, reservation };
 }
 
 const averageOutcome: ToolOutcome = {
@@ -52,6 +54,15 @@ describe('AssistantService', () => {
     const { service, createMessage } = setup([]);
     await expect(service.ask({ ...hq, roles: ['DISTRICT_MANAGER'] }, 'Average profit?', [], now)).rejects.toThrow(ForbiddenException);
     expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unapproved operation at the backend boundary before querying records', () => {
+    const { operations, run, spending } = setup([]);
+    const bound = operations.forQuestion(hq, now, new AbortController().signal);
+
+    expect(() => bound.runTool('delete_society', {})).toThrow('SarvoAI tool is not approved');
+    expect(run).not.toHaveBeenCalled();
+    expect(spending.reserve).not.toHaveBeenCalled();
   });
 
   it('runs the tools the model asks for and returns figures from the tool result, not the model', async () => {
@@ -191,7 +202,8 @@ describe('AssistantService', () => {
 
     const prisma = { platformAuditEvent: { create: vi.fn() } } as unknown as PrismaService;
     const reserve = vi.fn();
-    const off = new AssistantService(prisma, { run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel(), { reserve } as unknown as AssistantSpendingService);
+    const operations = new AssistantOperations({ run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel(), { reserve } as unknown as AssistantSpendingService);
+    const off = new AssistantService(prisma, operations);
     await expect(off.ask(hq, 'Average profit?', [], now)).rejects.toThrow('not switched on');
     expect(reserve).not.toHaveBeenCalled();
   });
