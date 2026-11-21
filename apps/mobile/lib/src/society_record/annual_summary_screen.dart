@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -106,6 +107,8 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
   }
 
   Future<void> _save() async {
+    // One submission at a time, whichever control started it.
+    if (_saving) return;
     setState(() {
       _changed = true;
       _saveError = null;
@@ -238,149 +241,157 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                     )
                   : summary == null
                   ? const LoadingSkeleton(label: 'Loading the yearly summary')
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                      children: [
-                        const FieldLabel('Financial year', required: true),
-                        DropdownButtonFormField<int>(
-                          initialValue: _year,
-                          isExpanded: true,
-                          style: recordInputStyle,
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                          items: [
-                            for (final year in _result!.financialYears)
-                              DropdownMenuItem(
-                                value: year.startYear,
-                                child: Text(
-                                  '${year.label} · ${formatDate(year.startsOn).replaceFirst(RegExp(r'^0'), '')} – ${formatDate(year.endsOn)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                  : MotionEntrance(
+                      id: 'annual.${widget.record.id}',
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                        children: [
+                          const FieldLabel('Financial year', required: true),
+                          DropdownButtonFormField<int>(
+                            initialValue: _year,
+                            isExpanded: true,
+                            style: recordInputStyle,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
                               ),
-                          ],
-                          onChanged: _dirty
-                              ? null
-                              : (year) {
-                                  if (year == null) return;
-                                  _year = year;
-                                  _load();
-                                },
-                        ),
-                        const SizedBox(height: 14),
-                        _amountField(
-                          'Total profit for the year (LKR)',
-                          _profit,
-                          summary.totalProfit,
-                          summary.profitChange,
-                          '412500',
-                          loss: true,
-                        ),
-                        _amountField(
-                          'Total expenses for the year (LKR)',
-                          _expenses,
-                          summary.totalExpenses,
-                          summary.expensesChange,
-                          '1286000',
-                        ),
-                        const FieldLabel('Audit report for this year'),
-                        RecordCard(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        summary.auditReport?.fileName ??
-                                            'Not uploaded yet',
-                                        style: RecordStyle.value,
-                                      ),
-                                      if (summary.auditReport != null)
-                                        Text(
-                                          'Uploaded ${formatWhen(summary.auditReport!.uploadedAt, DemoScope.of(context).now)} by ${summary.auditReport!.uploadedBy.displayName}',
-                                          style: RecordStyle.caption,
-                                        ),
-                                    ],
+                            ),
+                            items: [
+                              for (final year in _result!.financialYears)
+                                DropdownMenuItem(
+                                  value: year.startYear,
+                                  child: Text(
+                                    '${year.label} · ${formatDate(year.startsOn).replaceFirst(RegExp(r'^0'), '')} – ${formatDate(year.endsOn)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                if (summary.auditReport != null)
-                                  const RecordChip(
-                                    'Uploaded',
-                                    tone: ChipTone.success,
-                                  )
-                                else if (record
-                                    .permissions
-                                    .canUploadAuditReport)
-                                  OutlinedButton.icon(
-                                    style: compactOutlinedStyle,
-                                    onPressed: () async {
-                                      final uploaded =
-                                          await Navigator.of(context)
-                                              .push<bool>(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      DocumentUploadScreen(
-                                                        record: record,
-                                                        documentType:
-                                                            'AUDIT_REPORT',
-                                                        financialYear: _year,
-                                                      ),
-                                                ),
-                                              );
-                                      if (uploaded == true &&
-                                          mounted &&
-                                          !_dirty) {
-                                        _load();
-                                      }
-                                    },
-                                    icon: const Icon(
-                                      Icons.upload_outlined,
-                                      size: 14,
+                            ],
+                            onChanged: _dirty
+                                ? null
+                                : (year) {
+                                    if (year == null) return;
+                                    _year = year;
+                                    _load();
+                                  },
+                          ),
+                          const SizedBox(height: 14),
+                          _amountField(
+                            'Total profit for the year (LKR)',
+                            _profit,
+                            summary.totalProfit,
+                            summary.profitChange,
+                            '412500',
+                            loss: true,
+                          ),
+                          _amountField(
+                            'Total expenses for the year (LKR)',
+                            _expenses,
+                            summary.totalExpenses,
+                            summary.expensesChange,
+                            '1286000',
+                          ),
+                          const FieldLabel('Audit report for this year'),
+                          RecordCard(
+                            padding: const EdgeInsets.all(12),
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          summary.auditReport?.fileName ??
+                                              'Not uploaded yet',
+                                          style: RecordStyle.value,
+                                        ),
+                                        if (summary.auditReport != null)
+                                          Text(
+                                            'Uploaded ${formatWhen(summary.auditReport!.uploadedAt, DemoScope.of(context).now)} by ${summary.auditReport!.uploadedBy.displayName}',
+                                            style: RecordStyle.caption,
+                                          ),
+                                      ],
                                     ),
-                                    label: const Text('Upload'),
-                                  )
-                                else
-                                  const RecordChip(
-                                    'Missing',
-                                    tone: ChipTone.danger,
                                   ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        const RecordNote(
-                          icon: Icons.info_outline,
-                          tone: NoteTone.warning,
-                          dashed: true,
-                          message: 'Only two yearly totals are kept, with the audit report. The app records no transactions, loans, savings, payments, sales or accounts.',
-                        ),
-                        const SizedBox(height: 8),
-                        const RecordNote(
-                          icon: Icons.history,
-                          tone: NoteTone.success,
-                          message: 'Saving adds the old and new values to the society history, with your name and the time.',
-                        ),
-                        if (_saveError != null) ...[
+                                  const SizedBox(width: 8),
+                                  if (summary.auditReport != null)
+                                    const RecordChip(
+                                      'Uploaded',
+                                      tone: ChipTone.success,
+                                    )
+                                  else if (record
+                                      .permissions
+                                      .canUploadAuditReport)
+                                    OutlinedButton.icon(
+                                      style: compactOutlinedStyle,
+                                      onPressed: () async {
+                                        final uploaded =
+                                            await Navigator.of(context)
+                                                .push<bool>(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        DocumentUploadScreen(
+                                                          record: record,
+                                                          documentType:
+                                                              'AUDIT_REPORT',
+                                                          financialYear: _year,
+                                                        ),
+                                                  ),
+                                                );
+                                        if (uploaded == true &&
+                                            mounted &&
+                                            !_dirty) {
+                                          _load();
+                                        }
+                                      },
+                                      icon: const Icon(
+                                        Icons.upload_outlined,
+                                        size: 14,
+                                      ),
+                                      label: const Text('Upload'),
+                                    )
+                                  else
+                                    const RecordChip(
+                                      'Missing',
+                                      tone: ChipTone.danger,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const RecordNote(
+                            icon: Icons.info_outline,
+                            tone: NoteTone.warning,
+                            dashed: true,
+                            message: 'Only two yearly totals are kept, with the audit report. The app records no transactions, loans, savings, payments, sales or accounts.',
+                          ),
                           const SizedBox(height: 8),
-                          NoticeBanner(
-                            icon: Icons.error_outline,
-                            tone: NoticeTone.error,
-                            title: 'Not Saved',
-                            message: _saveError,
+                          const RecordNote(
+                            icon: Icons.history,
+                            tone: NoteTone.success,
+                            message: 'Saving adds the old and new values to the society history, with your name and the time.',
+                          ),
+                          // Appears at full size at once; only the space opens smoothly.
+                          MotionSize(
+                            child: _saveError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: NoticeBanner(
+                                      icon: Icons.error_outline,
+                                      tone: NoticeTone.error,
+                                      title: 'Not Saved',
+                                      message: _saveError,
+                                    ),
+                                  )
+                                : const SizedBox(width: double.infinity),
                           ),
                         ],
-                      ],
+                      ),
                     ),
             ),
           ],
@@ -390,9 +401,12 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
             onPressed: () => Navigator.of(context).maybePop(),
             child: const Text('Cancel'),
           ),
-          primary: FilledButton(
-            onPressed: _dirty && valid && !_saving ? _save : null,
-            child: Text(_saving ? 'Saving…' : 'Save'),
+          primary: MotionPress(
+            enabled: _dirty && valid && !_saving,
+            child: FilledButton(
+              onPressed: _dirty && valid && !_saving ? _save : null,
+              child: Text(_saving ? 'Saving…' : 'Save'),
+            ),
           ),
         ),
       ),

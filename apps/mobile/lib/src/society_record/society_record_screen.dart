@@ -6,6 +6,7 @@ import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
 import '../models/society.dart';
 import '../models/user.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/street_map.dart';
@@ -354,7 +355,8 @@ class _OverviewTab extends StatelessWidget {
     return ListView(
       key: const PageStorageKey('record.overview'),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-      children: [
+      // The first sections enter once per society; refreshes and tab returns do not replay them.
+      children: motionBlocks('record.${record.id}.overview', [
         // 1. Society information, with the staff responsible for it.
         RecordCard(
           key: const ValueKey('overview.society'),
@@ -526,7 +528,7 @@ class _OverviewTab extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ],
+      ]),
     );
   }
 }
@@ -944,7 +946,7 @@ class _ExcoTabState extends State<_ExcoTab> {
       ..sort((a, b) => a.seatNumber.compareTo(b.seatNumber));
     final canEdit = record.permissions.canEdit;
     // Issue #143: the society's members come first, then the 25 Exco seats.
-    final membership = [
+    final membership = motionBlocks('record.${record.id}.membersExco', [
       MembershipCard(
         record: record,
         onEdit: canEdit
@@ -957,7 +959,7 @@ class _ExcoTabState extends State<_ExcoTab> {
         child: Text(l.memExcoSection, style: RecordStyle.sectionLabel),
       ),
       const SizedBox(height: 8),
-    ];
+    ]);
     if (members.isEmpty && !canEdit) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
@@ -1220,9 +1222,13 @@ class _AsyncTab<T> extends StatefulWidget {
     required this.builder,
     required this.loadingLabel,
     required this.errorTitle,
+    required this.motionId,
   });
 
   final Future<T> Function(SocietyRecordApi api) load;
+
+  /// Stable entrance id: the loaded content enters once, not on refresh.
+  final String motionId;
   final Widget Function(BuildContext context, T data, VoidCallback reload)
   builder;
   final String loadingLabel;
@@ -1273,9 +1279,12 @@ class _AsyncTabState<T> extends State<_AsyncTab<T>>
     }
     final data = _data;
     if (data == null) return LoadingSkeleton(label: widget.loadingLabel);
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: widget.builder(context, data, _load),
+    return MotionEntrance(
+      id: widget.motionId,
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: widget.builder(context, data, _load),
+      ),
     );
   }
 }
@@ -1287,6 +1296,7 @@ class _WorkPlanTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _AsyncTab<WorkPlan>(
+    motionId: 'record.${record.id}.workPlan',
     load: (api) => api.fetchWorkPlan(record.id),
     loadingLabel: 'Loading the work plan',
     errorTitle: "Couldn't load the work plan",
@@ -1316,6 +1326,7 @@ class _DocumentsTab extends StatelessWidget {
     final now = DemoScope.of(context).now;
     final canUpload = uploadableDocumentTypes(record.permissions).isNotEmpty;
     return _AsyncTab<(RegistrarDocuments, List<RecordDocument>)>(
+      motionId: 'record.${record.id}.documents',
       load: (api) async => (
         await api.fetchRegistrarDocuments(record.id),
         await api.fetchDocuments(record.id),
@@ -1589,6 +1600,7 @@ class _HistoryTabState extends State<_HistoryTab> {
         Expanded(
           child: _AsyncTab<List<HistoryEvent>>(
             key: ValueKey(_category),
+            motionId: 'record.${widget.societyId}.history.$_category',
             load: (api) =>
                 api.fetchHistory(widget.societyId, category: _category),
             loadingLabel: l.recHistoryLoading,

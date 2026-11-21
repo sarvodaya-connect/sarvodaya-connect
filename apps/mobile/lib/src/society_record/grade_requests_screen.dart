@@ -4,6 +4,7 @@ import '../format.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -84,22 +85,26 @@ class _GradeRequestsScreenState extends State<GradeRequestsScreen> {
               title: l.gradeReqNoneTitle,
               message: l.gradeReqNoneBody,
             )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-                children: [
-                  for (final request in open!) _RequestCard(request: request),
-                  if (earlier!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
-                      child: Text(
-                        l.gradeReqEarlier,
-                        style: RecordStyle.sectionLabel,
+          : MotionEntrance(
+              id: 'gradeRequests.${widget.record.id}',
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                  children: [
+                    for (final request in open!) _RequestCard(request: request),
+                    if (earlier!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
+                        child: Text(
+                          l.gradeReqEarlier,
+                          style: RecordStyle.sectionLabel,
+                        ),
                       ),
-                    ),
-                  for (final request in earlier) _RequestCard(request: request),
-                ],
+                    for (final request in earlier)
+                      _RequestCard(request: request),
+                  ],
+                ),
               ),
             ),
     );
