@@ -47,12 +47,12 @@ export function RecordHeader({
         <span aria-current="page">{record.nameEn}</span>
       </nav>
 
-      <section className="mb-4 mt-3 rounded-card border border-line bg-surface px-5 py-4">
+      <section className="mb-4 mt-3 rounded-card border border-line bg-surface-wash p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span
               aria-label={record.grade ? t("n.gradeOf", { grade: record.grade }) : t("n.gradeNotSet")}
-              className={`grid size-10 shrink-0 place-items-center rounded-lg text-base font-bold ${
+              className={`grid size-12 shrink-0 place-items-center rounded-card text-xl font-bold ${
                 record.grade ? gradeBadgeClass[record.grade] : "bg-[#eef1ec] text-muted"
               }`}
             >
@@ -60,7 +60,7 @@ export function RecordHeader({
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[20px] font-bold tracking-[-0.015em] text-ink">{record.nameEn}</h1>
+                <h1 className="break-words text-2xl font-bold tracking-tight text-brand-pine sm:text-3xl">{record.nameEn}</h1>
                 <Pill tone={record.status === "ACTIVE" ? "on-time" : "inactive"}>
                   <span className="capitalize">{statusName(t, record.status)}</span>
                 </Pill>
@@ -75,7 +75,7 @@ export function RecordHeader({
                   </Pill>
                 )}
               </div>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-sm text-muted">
                 {record.nameLocal && <span className="text-ink-soft">{record.nameLocal} · </span>}
                 {location}
               </p>
