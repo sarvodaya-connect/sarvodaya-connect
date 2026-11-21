@@ -372,6 +372,39 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
     expect(approved.body).toMatchObject({ status: 'APPROVED', classification: null, sdgs: [4] });
   });
 
+  it('refuses an approval for a submission the officer has since changed and resent', async () => {
+    const { body } = await api(tokens.so!.token)
+      .post(`/societies/${societyId}/activities`, {
+        ...activity,
+        name: 'Fictional well cleaning',
+      })
+      .expect(201);
+    const id = body.id as string;
+    const reviewed = body.submittedAt as string;
+    await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, { sdgs: [6], submittedAt: 'yesterday' })
+      .expect(400);
+    // The officer changes the activity while the SPC is still reviewing it.
+    const resent = await api(tokens.so!.token)
+      .put(`/societies/${societyId}/activities/${id}`, {
+        ...activity,
+        name: 'Fictional well cleaning',
+        femaleParticipants: 12,
+      })
+      .expect(200);
+    expect(resent.body.submittedAt).not.toBe(reviewed);
+    await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, { sdgs: [6], submittedAt: reviewed })
+      .expect(409);
+    const approved = await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, {
+        sdgs: [6],
+        submittedAt: resent.body.submittedAt,
+      })
+      .expect(200);
+    expect(approved.body).toMatchObject({ status: 'APPROVED', femaleParticipants: 12 });
+  });
+
   it('sends an activity back with a comment, and the officer can change and resend it', async () => {
     const { body } = await api(tokens.so!.token)
       .post(`/societies/${societyId}/activities`, {

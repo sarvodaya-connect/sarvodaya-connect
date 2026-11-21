@@ -176,7 +176,14 @@ export class ActivitiesRepository {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         const decided = await tx.workPlanActivity.updateMany({
-          where: { id: activityId, status: 'WAITING_FOR_SPC' },
+          where: {
+            id: activityId,
+            status: 'WAITING_FOR_SPC',
+            // Refuse when the activity was changed and resent after this review began.
+            ...(input.submittedAt
+              ? { submittedAt: new Date(input.submittedAt) }
+              : {}),
+          },
           data: {
             status: 'APPROVED',
             spcDimensions: input.dimensions,
