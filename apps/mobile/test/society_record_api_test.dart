@@ -130,6 +130,72 @@ void main() {
     expect(record.lastChangeBy!.label, 'N. Wijesinghe (Society Officer)');
   });
 
+  test(
+    'posts SPC dimensions, categories and SDGs and reads the saved decision',
+    () async {
+      const classification = ActivityClassification(
+        dimensions: [ActivityDimension.social, ActivityDimension.economic],
+        categories: [
+          ActivityCategory.communityEducation,
+          ActivityCategory.governance,
+        ],
+      );
+      final api = HttpSocietyRecordApi(
+        IdentityApi(
+          baseUrl: _base,
+          client: MockClient((request) async {
+            expect(request.method, 'POST');
+            expect(request.url.path, '/api/v1/activities/activity-1/approve');
+            final payload = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(payload, {
+              'sdgs': [4, 16],
+              'dimensions': ['SOCIAL', 'ECONOMIC'],
+              'categories': ['COMMUNITY_EDUCATION', 'GOVERNANCE'],
+              'reviewedSubmittedAt': '2026-11-01T04:30:00.000Z',
+            });
+            return http.Response(
+              jsonEncode({
+                'id': 'activity-1',
+                'year': 2026,
+                'month': 11,
+                'name': 'Community workshop',
+                'allocatedCost': 100,
+                'status': 'APPROVED',
+                'sdgs': [4, 16],
+                'classification': {
+                  'dimensions': payload['dimensions'],
+                  'categories': payload['categories'],
+                },
+                'society': {'id': _id, 'name': 'Pahala Kosgama SSS'},
+                'permissions': {'canEdit': false, 'canReview': false},
+              }),
+              200,
+            );
+          }),
+        )..token = 'session',
+      );
+
+      final saved = await api.approveActivity(
+        'activity-1',
+        [4, 16],
+        classification: classification,
+        // Sent in UTC, whatever the phone's time zone.
+        reviewedSubmittedAt: DateTime.parse('2026-11-01T10:00:00+05:30'),
+      );
+      expect(saved.activity.status, ActivityStatus.approved);
+      expect(
+        saved.activity.classification?.dimensions,
+        classification.dimensions,
+      );
+      expect(
+        saved.activity.classification?.categories,
+        classification.categories,
+      );
+      expect(saved.activity.sdgs, [4, 16]);
+      expect(saved.canReview, isFalse);
+    },
+  );
+
   test('uploads the audit report through the signed link and confirms it', () async {
     final calls = <String>[];
     final client = MockClient((request) async {

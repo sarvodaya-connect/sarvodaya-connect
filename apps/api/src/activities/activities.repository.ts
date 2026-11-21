@@ -134,7 +134,6 @@ export class ActivitiesRepository {
           data: {
             ...activityFields(input),
             status: 'WAITING_FOR_SPC',
-            submittedAt: new Date(),
             updatedByName: principal.displayName,
             updatedByRole: principal.roles[0] ?? null,
           },
@@ -144,6 +143,16 @@ export class ActivitiesRepository {
             'This activity is already approved and can no longer be changed',
           );
         }
+        // Approval compares submittedAt to the version the SPC reviewed, so every
+        // edit must move it forward, even within the same millisecond. The row is
+        // locked by the update above, so concurrent edits also step forward.
+        await tx.$executeRaw`
+          UPDATE "work_plan_activities"
+          SET "submitted_at" = GREATEST(
+            ${new Date()}::timestamptz,
+            "submitted_at" + INTERVAL '1 millisecond'
+          )
+          WHERE "id" = ${activityId}::uuid`;
         await tx.platformAuditEvent.create({
           data: {
             ...actorFields(principal),
@@ -176,7 +185,14 @@ export class ActivitiesRepository {
     return executeDatabaseOperation(() =>
       this.prisma.$transaction(async (tx) => {
         const decided = await tx.workPlanActivity.updateMany({
-          where: { id: activityId, status: 'WAITING_FOR_SPC' },
+          where: {
+            id: activityId,
+            status: 'WAITING_FOR_SPC',
+            // Approve only the version the SPC reviewed: each officer edit resets submittedAt.
+            ...(input.reviewedSubmittedAt
+              ? { submittedAt: new Date(input.reviewedSubmittedAt) }
+              : {}),
+          },
           data: {
             status: 'APPROVED',
             spcDimensions: input.dimensions,
@@ -188,8 +204,14 @@ export class ActivitiesRepository {
           },
         });
         if (decided.count === 0) {
+          const current = await tx.workPlanActivity.findUnique({
+            where: { id: activityId },
+            select: { status: true },
+          });
           throw new ConflictException(
-            'This activity is no longer waiting for approval',
+            current?.status === 'WAITING_FOR_SPC'
+              ? 'This activity was changed while you were reviewing it. Check it again before approving'
+              : 'This activity is no longer waiting for approval',
           );
         }
         await tx.workPlanActivitySdg.deleteMany({ where: { activityId } });

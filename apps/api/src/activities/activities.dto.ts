@@ -7,10 +7,12 @@ import {
   ValidateIf,
   IsIn,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
   Max,
+  Matches,
   MaxLength,
   Min,
   MinLength,
@@ -18,6 +20,9 @@ import {
 
 import { ActivityCategory, ActivityDimension } from '../generated/prisma/enums.js';
 import { MAX_YEARLY_AMOUNT } from '../societies/dto/society-record.dto.js';
+
+/** A UTC timestamp such as 2026-11-01T04:30:00.123Z, as the activity API returns it. */
+const REVIEWED_SUBMITTED_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$/;
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -135,6 +140,23 @@ export class ApproveActivityDto {
   @Min(1, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   @Max(17, { each: true, message: 'Each UN SDG is a number from 1 to 17' })
   sdgs!: number[];
+
+  /**
+   * The submittedAt of the version the SPC reviewed. Every Society Officer edit
+   * resets it, so approval is refused if the activity changed during review.
+   * Optional so older clients keep working.
+   */
+  @IsOptional()
+  @IsISO8601(
+    { strict: true },
+    { message: 'reviewedSubmittedAt must be the activity’s submittedAt time' },
+  )
+  // ISO 8601 also allows forms Date cannot parse (e.g. a comma before the
+  // fraction), so accept only the UTC form the activity API returns.
+  @Matches(REVIEWED_SUBMITTED_AT, {
+    message: 'reviewedSubmittedAt must be the activity’s submittedAt time',
+  })
+  reviewedSubmittedAt?: string;
 }
 
 /** M51b: what the Society Officer should change. */

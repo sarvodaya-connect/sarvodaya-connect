@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/activity_screens.dart';
+import 'package:sarvodaya_connect_mobile/src/society_record/sdg_widgets.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/society_record_api.dart';
+import 'package:sarvodaya_connect_mobile/src/society_record/society_record_models.dart';
 import 'package:sarvodaya_connect_mobile/src/society_record/society_record_screen.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
@@ -11,9 +13,8 @@ import 'test_helpers.dart';
 
 const _pahala = 'society-pahala-kosgama';
 
-DemoStore _store(UserRole role) =>
-    DemoStore(loadDelay: Duration.zero, clock: () => demoNow)
-      ..switchDemoRole(role);
+DemoStore _store(UserRole role, {Duration loadDelay = Duration.zero}) =>
+    DemoStore(loadDelay: loadDelay, clock: () => demoNow)..switchDemoRole(role);
 
 Future<DemoStore> _pump(
   WidgetTester tester,
@@ -21,13 +22,14 @@ Future<DemoStore> _pump(
   UserRole role = UserRole.societyOfficer,
   Size size = const Size(412, 2400),
   double textScale = 1,
+  Duration loadDelay = Duration.zero,
 }) async {
   tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-  final store = _store(role);
+  final store = _store(role, loadDelay: loadDelay);
   await tester.pumpWidget(
     DemoScope(
       store: store,
@@ -144,7 +146,7 @@ void main() {
     );
   });
 
-  group('M50–M52 SPC approval', () {
+  group('M50–M57 SPC approval', () {
     testWidgets('lists waiting activities for the SPC only', (tester) async {
       await _pump(
         tester,
@@ -162,7 +164,7 @@ void main() {
     });
 
     testWidgets(
-      'the SPC must choose at least one UN SDG, then approves (M51, M52)',
+      'the SPC validates each step and approves multiple classifications',
       (tester) async {
         final store = await _pump(
           tester,
@@ -172,14 +174,58 @@ void main() {
         await _tap(tester, find.text('Youth leadership camp'));
         expect(find.text('Review Activity'), findsOneWidget);
 
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          find.text('Choose at least one Sarvodaya dimension.'),
+          findsOneWidget,
+        );
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Economic'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          find.text('Choose at least one Sarvodaya category.'),
+          findsOneWidget,
+        );
+        await _tap(
+          tester,
+          find.widgetWithText(CheckboxListTile, 'Community education'),
+        );
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Governance'));
+        await _tap(tester, find.widgetWithText(OutlinedButton, 'Back'));
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Social'),
+              )
+              .value,
+          isTrue,
+        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(
+          tester
+              .widget<CheckboxListTile>(
+                find.widgetWithText(CheckboxListTile, 'Governance'),
+              )
+              .value,
+          isTrue,
+        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+
         // All 17 official goals, each named for screen readers.
         expect(find.bySemanticsLabel('SDG 1: No Poverty'), findsOneWidget);
         expect(
           find.bySemanticsLabel('SDG 17: Partnerships for the Goals'),
           findsOneWidget,
         );
+        // Screen readers can select a goal, not only touch.
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('SDG 1: No Poverty')),
+          isSemantics(isButton: true, hasTapAction: true),
+        );
 
-        await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
         expect(
           find.text('Choose at least one UN SDG to approve.'),
           findsOneWidget,
@@ -196,12 +242,19 @@ void main() {
             'SDG 16: Peace, Justice and Strong Institutions',
           ),
         );
-        expect(
-          find.text('Tap every goal that applies (2 chosen)'),
-          findsOneWidget,
-        );
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        expect(find.text('Check and approve'), findsOneWidget);
+        expect(find.text('Social · Economic'), findsOneWidget);
+        expect(find.text('Community education · Governance'), findsOneWidget);
 
+        store.offline = true;
         await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
+        expect(find.textContaining('You are offline.'), findsOneWidget);
+        expect(find.text('Activity approved'), findsNothing);
+        expect(find.text('Community education · Governance'), findsOneWidget);
+
+        store.offline = false;
+        await _tap(tester, find.widgetWithText(FilledButton, 'Try again'));
         expect(find.text('Activity approved'), findsOneWidget);
         expect(find.text('SDG 4 · Quality Education'), findsOneWidget);
         expect(
@@ -215,6 +268,14 @@ void main() {
           (a) => a.name == 'Youth leadership camp',
         );
         expect(camp.sdgs, [4, 16]);
+        expect(camp.classification?.dimensions, [
+          ActivityDimension.social,
+          ActivityDimension.economic,
+        ]);
+        expect(camp.classification?.categories, [
+          ActivityCategory.communityEducation,
+          ActivityCategory.governance,
+        ]);
         expect(
           () => store.societyRecords.approveActivity(camp.id, [4]),
           throwsA(isA<SocietyRecordException>()),
@@ -255,6 +316,230 @@ void main() {
       );
     });
 
+    test('approval is refused for a version the SPC did not review', () async {
+      final store = _store(UserRole.programmeCoordinator);
+      final queue = await store.societyRecords.fetchActivityQueue();
+      final id = queue.waiting.first.id;
+      final reviewed = (await store.societyRecords.fetchActivity(id)).activity;
+      const classification = ActivityClassification(
+        dimensions: [ActivityDimension.social],
+        categories: [ActivityCategory.communityEducation],
+      );
+      await expectLater(
+        store.societyRecords.approveActivity(
+          id,
+          [4],
+          classification: classification,
+          reviewedSubmittedAt: reviewed.submittedAt!.subtract(
+            const Duration(minutes: 1),
+          ),
+        ),
+        throwsA(
+          isA<SocietyRecordException>()
+              .having((e) => e.status, 'status', 409)
+              .having((e) => e.message, 'message', contains('changed while')),
+        ),
+      );
+      expect(
+        (await store.societyRecords.fetchActivity(id)).activity.status,
+        ActivityStatus.waitingForSpc,
+      );
+      final approved = await store.societyRecords.approveActivity(
+        id,
+        [4],
+        classification: classification,
+        reviewedSubmittedAt: reviewed.submittedAt,
+      );
+      expect(approved.activity.status, ActivityStatus.approved);
+    });
+
+    test('an edit with the same clock still makes the review stale', () async {
+      // The demo clock is fixed, so an edit lands on the reviewed timestamp.
+      final store = _store(UserRole.programmeCoordinator);
+      final queue = await store.societyRecords.fetchActivityQueue();
+      final id = queue.waiting.first.id;
+      final detail = await store.societyRecords.fetchActivity(id);
+      final reviewed = detail.activity;
+
+      store.switchDemoRole(UserRole.societyOfficer);
+      final edited = await store.societyRecords.updateActivity(
+        detail.societyId,
+        id,
+        ActivityInput(
+          year: reviewed.year,
+          month: reviewed.month,
+          name: 'Road repairs',
+          description: 'Patch the potholes on the temple road.',
+          sector: 'Infrastructure',
+          dimension: ActivityDimension.economic,
+          allocatedCost: 25000,
+        ),
+      );
+      expect(
+        edited.activity.submittedAt!.isAfter(reviewed.submittedAt!),
+        isTrue,
+      );
+
+      store.switchDemoRole(UserRole.programmeCoordinator);
+      await expectLater(
+        store.societyRecords.approveActivity(
+          id,
+          [4],
+          classification: const ActivityClassification(
+            dimensions: [ActivityDimension.social],
+            categories: [ActivityCategory.communityEducation],
+          ),
+          reviewedSubmittedAt: reviewed.submittedAt,
+        ),
+        throwsA(
+          isA<SocietyRecordException>().having((e) => e.status, 'status', 409),
+        ),
+      );
+    });
+
+    test('the saved classification cannot be changed by the caller', () async {
+      final store = _store(UserRole.programmeCoordinator);
+      final queue = await store.societyRecords.fetchActivityQueue();
+      final id = queue.waiting.first.id;
+      final dimensions = [ActivityDimension.social];
+      final categories = [ActivityCategory.culture];
+      final approved = await store.societyRecords.approveActivity(
+        id,
+        [4],
+        classification: ActivityClassification(
+          dimensions: dimensions,
+          categories: categories,
+        ),
+      );
+      dimensions.clear();
+      categories.clear();
+      final saved = (await store.societyRecords.fetchActivity(id)).activity;
+      expect(saved.classification?.dimensions, [ActivityDimension.social]);
+      expect(saved.classification?.categories, [ActivityCategory.culture]);
+      expect(
+        () => approved.activity.classification!.dimensions.clear(),
+        throwsUnsupportedError,
+      );
+    });
+
+    testWidgets(
+      'a retry that finds the activity already approved shows the saved decision',
+      (tester) async {
+        final store = await _pump(
+          tester,
+          const ActivitiesToApproveScreen(),
+          role: UserRole.programmeCoordinator,
+        );
+        await _tap(tester, find.text('Youth leadership camp'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Culture'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.bySemanticsLabel('SDG 4: Quality Education'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+
+        // An earlier attempt went through, but its answer was lost.
+        final queue = await store.societyRecords.fetchActivityQueue();
+        final camp = queue.waiting.firstWhere(
+          (a) => a.name == 'Youth leadership camp',
+        );
+        await store.societyRecords.approveActivity(
+          camp.id,
+          [4],
+          classification: const ActivityClassification(
+            dimensions: [ActivityDimension.social],
+            categories: [ActivityCategory.culture],
+          ),
+        );
+
+        await _tap(tester, find.widgetWithText(FilledButton, 'Approve'));
+        expect(find.text('Activity approved'), findsNothing);
+        expect(
+          find.text('This activity is no longer waiting for approval.'),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          find.byType(SdgChip),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.textContaining('Approved by'), findsOneWidget);
+        expect(find.text('Culture'), findsOneWidget);
+        // The card reads as one: who approved, the classification and the goals.
+        expect(
+          find.bySemanticsLabel(
+            RegExp(r'^Approved by .*SDG 4: Quality Education$', dotAll: true),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('a category left empty says why, above the buttons', (
+      tester,
+    ) async {
+      final store = _store(UserRole.programmeCoordinator);
+      final queue = await store.societyRecords.fetchActivityQueue();
+      await _pump(
+        tester,
+        ActivityReviewScreen(activityId: queue.waiting.first.id),
+        role: UserRole.programmeCoordinator,
+        size: const Size(320, 568),
+      );
+      await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+      await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+      await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Choose at least one Sarvodaya category.').hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.text('Step 2 of 4'), findsOneWidget);
+    });
+
+    testWidgets('sending back says so while it is sent', (tester) async {
+      // Slow answers, so the in-progress label can be seen.
+      Future<void> wait() async {
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+      }
+
+      await _pump(
+        tester,
+        const ActivitiesToApproveScreen(),
+        role: UserRole.programmeCoordinator,
+        loadDelay: const Duration(milliseconds: 300),
+      );
+      await wait();
+      await tester.tap(find.text('Youth leadership camp'));
+      await wait();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Send back'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Send back'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Sending…'), findsOneWidget);
+      expect(find.text('Approving…'), findsNothing);
+      await wait();
+    });
+
+    testWidgets('an SDG chip can show the goal in the reader’s language', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: SdgChip(4, title: 'ගුණාත්මක අධ්‍යාපනය')),
+        ),
+      );
+      expect(find.text('ගුණාත්මක අධ්‍යාපනය'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('SDG 4: ගුණාත්මක අධ්‍යාපනය'),
+        findsOneWidget,
+      );
+    });
+
     for (final (label, size, scale) in [
       ('a small phone', const Size(320, 568), 1.0),
       ('large text', const Size(375, 667), 1.3),
@@ -273,6 +558,13 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         await tester.drag(find.byType(ListView).first, const Offset(0, -1500));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await _tap(tester, find.widgetWithText(CheckboxListTile, 'Social'));
+        expect(tester.takeException(), isNull);
+        await _tap(tester, find.widgetWithText(FilledButton, 'Continue'));
+        await tester.drag(find.byType(ListView).first, const Offset(0, -700));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       });
