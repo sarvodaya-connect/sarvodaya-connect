@@ -40,11 +40,10 @@ export async function approveActivity(
     );
   } catch (error) {
     if (error instanceof PlatformApiError) {
-      // Decided, changed or no longer ours: nothing was saved, so show the activity as it is now.
-      if ([403, 404, 409].includes(error.status)) {
-        revalidatePath(`/activities-to-approve/${id}`);
-        return { kind: "stale", error: error.message };
-      }
+      // Decided, changed or no longer ours: nothing was saved. The page is not
+      // revalidated here, so the reviewer keeps their choices and is blocked
+      // until they choose Reload Activity.
+      if ([403, 404, 409].includes(error.status)) return { kind: "stale", error: error.message };
       if (error.status === 400) return { kind: "invalid", error: error.message };
     }
     return { kind: "failed" };
