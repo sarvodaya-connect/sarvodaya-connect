@@ -72,9 +72,12 @@ def prepare_signing(directory):
     write_base64(profile_path, 'APPLE_PROVISIONING_PROFILE_BASE64')
     profile = plistlib.loads(subprocess.check_output(['security', 'cms', '-D', '-i', str(profile_path)]))
     entitlements = profile.get('Entitlements', {})
+    application_ids = {
+        f'{prefix}.{BUNDLE_ID}' for prefix in profile.get('ApplicationIdentifierPrefix', ())
+    }
     if (team not in profile.get('TeamIdentifier', ())
             or entitlements.get('com.apple.developer.team-identifier') != team
-            or entitlements.get('application-identifier') != f'{team}.{BUNDLE_ID}'
+            or entitlements.get('application-identifier') not in application_ids
             or entitlements.get('get-task-allow') is not False
             or 'ProvisionedDevices' in profile
             or profile.get('ProvisionsAllDevices')):
