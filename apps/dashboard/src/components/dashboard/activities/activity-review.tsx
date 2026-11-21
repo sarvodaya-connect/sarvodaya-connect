@@ -77,7 +77,9 @@ function useDialogKeys(ref: React.RefObject<HTMLDivElement | null>, open: boolea
  * V6 SP07g–SP07x: the SPC chooses the Sarvodaya dimensions, the Sarvodaya
  * categories and the UN SDGs, checks them in a dialog and approves, or sends
  * the activity back with an optional note (M51b). Choices are kept after a
- * blocked or failed save, and only one decision is sent at a time.
+ * blocked or failed save, and only one decision is sent at a time. After a
+ * stale result the only way on is Reload Activity, which starts a new review
+ * session, so an approval never carries choices made on an earlier version.
  */
 export function ActivityReview({
   actions,
@@ -124,12 +126,15 @@ export function ActivityReview({
   const missing = { dimension: orderedDimensions.length === 0, category: orderedCategories.length === 0, sdg: sdgs.length === 0 };
   const complete = !missing.dimension && !missing.category && !missing.sdg;
 
+  const stale = approveResult?.kind === "stale";
+
   const closeConfirm = useCallback(() => {
-    if (inFlight.current) return;
+    // A stale result can only be left through Reload Activity.
+    if (inFlight.current || stale) return;
     setConfirming(false);
     setApproveResult(undefined);
     reviewButton.current?.focus();
-  }, []);
+  }, [stale]);
   const closeSendBack = useCallback(() => {
     if (inFlight.current) return;
     setSendingBack(false);
@@ -183,6 +188,18 @@ export function ActivityReview({
     });
   }
 
+  /** Drops this review session and fetches the current version to review afresh. */
+  function reload() {
+    if (inFlight.current) return;
+    setDimensions([]);
+    setCategories([]);
+    setSdgs(initialSdgs);
+    setShowErrors(false);
+    setApproveResult(undefined);
+    setConfirming(false);
+    router.refresh();
+  }
+
   function sendBack() {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -199,7 +216,6 @@ export function ActivityReview({
     });
   }
 
-  const stale = approveResult?.kind === "stale";
   const failedMessage =
     approveResult && !stale ? (approveResult.kind === "invalid" && approveResult.error ? approveResult.error : t("goals.failed")) : undefined;
 
@@ -323,11 +339,13 @@ export function ActivityReview({
             <p className="mt-3 text-[12px] text-ink-soft" id="confirm-note">{t("goals.confirmNote", { officer: officerName })}</p>
 
             <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button className={secondaryButton} disabled={busy} onClick={closeConfirm} type="button">
-                {t("goals.backToEdit")}
-              </button>
+              {!stale && (
+                <button className={secondaryButton} disabled={busy} onClick={closeConfirm} type="button">
+                  {t("goals.backToEdit")}
+                </button>
+              )}
               {stale ? (
-                <button className={primaryButton} data-autofocus onClick={() => router.refresh()} type="button">
+                <button className={primaryButton} data-autofocus onClick={reload} type="button">
                   {t("goals.reload")}
                 </button>
               ) : (

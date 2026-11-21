@@ -200,8 +200,20 @@ describe("V6 SP07 Development Goals approval", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("alert")).toHaveTextContent("nothing was approved");
     expect(within(dialog).queryByRole("button", { name: /Approve|Try Again/ })).not.toBeInTheDocument();
+    // Reload Activity is the only way on: no Back to Edit, and Escape does not dismiss it.
+    expect(within(dialog).queryByRole("button", { name: "Back to Edit" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Back to Edit" })).not.toBeInTheDocument();
+
     await userEvent.click(within(dialog).getByRole("button", { name: "Reload Activity" }));
     expect(refresh).toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // A new review session: the earlier choices are not carried over to the reloaded version.
+    expect(dimension("Social")).not.toBeChecked();
+    expect(category("Community Education")).not.toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Review and Approve" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(approve).toHaveBeenCalledTimes(1);
   });
 

@@ -148,11 +148,13 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
         <ApprovalRuleNotice />
       </div>
       <div className="mt-4">
+        {/* Keyed by revision: a newer version mounts a new review session, so its approval carries the timestamp the SPC reviewed. */}
         <ActivityReview
           actions={{ approve: approveActivity.bind(null, activity.id, activity.submittedAt), sendBack: sendBackActivity.bind(null, activity.id) }}
           activityName={activity.name}
           details={<ActivityDetails activity={activity} />}
           heading={heading}
+          key={`${activity.id}:${activity.submittedAt ?? ""}`}
           officerName={officer?.displayName ?? "the Society Officer"}
           subtitle={subtitle}
         />
