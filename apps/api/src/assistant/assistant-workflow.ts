@@ -4,7 +4,7 @@ import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { scrubAssistantText } from './assistant-privacy.js';
 import type { ToolOutcome } from './assistant-tools.js';
 
-const MAX_ROUNDS = 6;
+export const MAX_ASSISTANT_ROUNDS = 6;
 const MAX_TOOLS_PER_ROUND = 4;
 
 const WorkflowState = Annotation.Root({
@@ -12,13 +12,54 @@ const WorkflowState = Annotation.Root({
   runTools: Annotation<boolean>,
 });
 
-interface WorkflowInput {
+export interface AssistantWorkflowInput {
   messages: Anthropic.MessageParam[];
   signal: AbortSignal;
   approvedToolNames: ReadonlySet<string>;
-  callModel: (messages: Anthropic.MessageParam[]) => Promise<Anthropic.Message>;
-  runTool: (name: string, input: unknown) => Promise<ToolOutcome>;
+  callModel: (
+    messages: Anthropic.MessageParam[],
+  ) => Promise<AssistantModelTurn>;
+  runTools: (calls: Anthropic.ToolUseBlock[]) => Promise<ToolOutcome[]>;
   onToolsUsed: (names: string[]) => void;
+}
+
+export type AssistantModelTurn = Pick<
+  Anthropic.Message,
+  'content' | 'stop_reason'
+>;
+
+export function assistantToolCalls(
+  response: AssistantModelTurn,
+  approvedToolNames: ReadonlySet<string>,
+) {
+  if (response.stop_reason !== 'tool_use') return [];
+  const calls = response.content.filter(
+    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
+  );
+  return calls.length <= MAX_TOOLS_PER_ROUND &&
+    calls.every((call) => approvedToolNames.has(call.name)) &&
+    new Set(calls.map((call) => call.id)).size === calls.length
+    ? calls
+    : [];
+}
+
+export function appendAssistantToolResults(
+  messages: Anthropic.MessageParam[],
+  response: AssistantModelTurn,
+  calls: Anthropic.ToolUseBlock[],
+  outcomes: ToolOutcome[],
+): Anthropic.MessageParam[] {
+  const results = calls.map((call, index): Anthropic.ToolResultBlockParam => ({
+    type: 'tool_result',
+    tool_use_id: call.id,
+    content: scrubAssistantText(outcomes[index].content),
+    is_error: outcomes[index].isError,
+  }));
+  return [
+    ...messages,
+    { role: 'assistant', content: response.content },
+    { role: 'user', content: results },
+  ];
 }
 
 /** The graph carries routing data only. Prompts, tool results and provider errors stay request-local. */
@@ -27,11 +68,10 @@ export async function runAssistantWorkflow({
   signal,
   approvedToolNames,
   callModel,
-  runTool,
+  runTools,
   onToolsUsed,
-}: WorkflowInput) {
-  let response: Anthropic.Message | undefined;
-  let modelContent: Anthropic.ContentBlock[] = [];
+}: AssistantWorkflowInput) {
+  let response: AssistantModelTurn | undefined;
   let calls: Anthropic.ToolUseBlock[] = [];
   const answers: NonNullable<ToolOutcome['answer']>[] = [];
   let failure: { error: unknown } | undefined;
@@ -46,42 +86,24 @@ export async function runAssistantWorkflow({
         return { runTools: false };
       }
 
-      modelContent = response.content;
-      calls = modelContent.filter(
-        (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use',
-      );
-      return {
-        round: round + 1,
-        runTools:
-          response.stop_reason === 'tool_use' &&
-          calls.length > 0 &&
-          calls.length <= MAX_TOOLS_PER_ROUND &&
-          calls.every((call) => approvedToolNames.has(call.name)),
-      };
+      calls = assistantToolCalls(response, approvedToolNames);
+      return { round: round + 1, runTools: calls.length > 0 };
     })
     .addNode('retrieveInformation', async () => {
       try {
         signal.throwIfAborted();
-        const outcomes = await Promise.all(
-          calls.map((call) => runTool(call.name, call.input)),
-        );
+        if (!response) throw new Error('Missing SarvoAI model turn');
+        const outcomes = await runTools(calls);
         onToolsUsed(calls.map((call) => call.name));
         for (const { answer } of outcomes) {
           if (answer) answers.push(answer);
         }
-        const results = calls.map(
-          (call, index): Anthropic.ToolResultBlockParam => ({
-            type: 'tool_result',
-            tool_use_id: call.id,
-            content: scrubAssistantText(outcomes[index].content),
-            is_error: outcomes[index].isError,
-          }),
+        messages = appendAssistantToolResults(
+          messages,
+          response,
+          calls,
+          outcomes,
         );
-        messages = [
-          ...messages,
-          { role: 'assistant', content: modelContent },
-          { role: 'user', content: results },
-        ];
       } catch (error) {
         failure = { error };
         return { runTools: false };
@@ -93,13 +115,13 @@ export async function runAssistantWorkflow({
       runTools ? 'retrieveInformation' : END,
     )
     .addConditionalEdges('retrieveInformation', ({ round, runTools }) =>
-      runTools && round < MAX_ROUNDS ? 'callModel' : END,
+      runTools && round < MAX_ASSISTANT_ROUNDS ? 'callModel' : END,
     )
     .compile();
 
   await graph.invoke(
     { round: 0, runTools: false },
-    { recursionLimit: 2 * MAX_ROUNDS + 1 },
+    { recursionLimit: 2 * MAX_ASSISTANT_ROUNDS + 1 },
   );
   if (failure) throw failure.error;
   return { response, answers };
