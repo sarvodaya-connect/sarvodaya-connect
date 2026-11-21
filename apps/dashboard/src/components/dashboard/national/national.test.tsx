@@ -342,4 +342,19 @@ describe("V5 D15 Reports", () => {
   it("downloads CSV that Excel opens", () => {
     expect(reportCsv(report)).toBe("﻿District,Active,Total profit (LKR)\r\nKurunegala,98,412500.00\r\n");
   });
+
+  it("downloads a field user's text as text, never as a spreadsheet formula (#156)", () => {
+    const csv = reportCsv({
+      columns: [
+        { key: "sector", label: "Sector" },
+        { key: "profit", label: "Total profit (LKR)", numeric: true },
+      ],
+      rows: [
+        { sector: "=1+1", profit: "-1500.00" },
+        { sector: "@cmd", profit: -75 },
+        { sector: "\tTabbed", profit: "=1+1" },
+      ],
+    });
+    expect(csv.slice(1).split("\r\n").slice(1, 4)).toEqual(["'=1+1,-1500.00", "'@cmd,-75", "'\tTabbed,'=1+1"]);
+  });
 });

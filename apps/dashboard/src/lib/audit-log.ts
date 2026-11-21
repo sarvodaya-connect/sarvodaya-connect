@@ -1,5 +1,6 @@
 import type { AuditLogEntry, AuditType, UserRole } from "@sarvodaya-connect/api-contracts";
 
+import { FORMULA_START } from "./reports";
 import { ROLE_LABELS } from "./society-record-format";
 
 /** V5 D24 "What" column. Unknown actions fall back to a readable form of the code. */
@@ -100,7 +101,8 @@ export function roleLabel(role: UserRole | null) {
 
 /** One CSV row per entry, quoted so commas and quotes in details are safe. */
 export function auditCsv(entries: AuditLogEntry[]) {
-  const cell = (value: string) => `"${value.replaceAll('"', '""').replace(/^[=+\-@]/, "'$&")}"`;
+  // Every cell is text, so any formula start (including a tab or carriage return) gets a leading '.
+  const cell = (value: string) => `"${(FORMULA_START.test(value) ? `'${value}` : value).replaceAll('"', '""')}"`;
   const header = ["When", "Who", "Role", "What", "Society or scope", "Details", "Approved by"];
   const rows = entries.map((entry) =>
     [
