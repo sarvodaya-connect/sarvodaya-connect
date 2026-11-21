@@ -1,3 +1,4 @@
+import { DevelopmentGoals } from "@/components/dashboard/activities/development-goals";
 import Link from "next/link";
 import type { NationalProgrammes, ScopedProgrammes } from "@sarvodaya-connect/api-contracts";
 
@@ -219,8 +220,7 @@ export function ProgrammesView({ programmes, role, t, demo, activityId }: Props)
                 <li className="flex h-full flex-col rounded-tile bg-[#f6eff9] px-3 py-2"><span className="text-[10px] text-[#7a3f96]">{t("prog.femaleMale")}</span><strong className="text-[16px] text-ink">{n(selected.femaleParticipants)} / {n(selected.maleParticipants)}</strong></li>
                 <li className="flex h-full flex-col rounded-tile bg-[#eef6ef] px-3 py-2"><span className="text-[10px] text-brand-forest">{t("prog.households")}</span><strong className="text-[16px] text-ink">{n(selected.householdsBenefited)}</strong></li>
               </ul>
-              <p className="mt-2 text-[11px] text-ink">{selected.sector ? sectorLabel(selected.sector, t) : t("prog.noSector")} · {t(`dimension.${selected.dimension}`)}</p>
-              <div className="mt-2"><SdgChips sdgs={selected.sdgs} t={t} /></div>
+              <DevelopmentGoals activity={{ ...selected, status: "APPROVED" }} embedded t={t} />
               {selected.completed === false && <NotCompletedYet month={selected.month} t={t} year={selected.year} />}
               <p className="mt-2 text-[11px] text-muted">
                 {selected.createdBy ? `${t("prog.createdBy", { name: selected.createdBy })} ` : ""}

@@ -137,7 +137,11 @@ export default async function ActivitiesToApprovePage({ searchParams }: PageProp
               <tbody className="divide-y divide-line-soft">
                 {queue.approvedRecently.map((item) => (
                   <tr key={item.id}>
-                    <td className={td}>{item.name}</td>
+                    <td className={td}>
+                      <Link className="font-semibold text-brand-forest underline underline-offset-2" href={`/activities-to-approve/${item.id}`} prefetch={false}>
+                        {item.name}
+                      </Link>
+                    </td>
                     <td className={td}>{item.society.name}</td>
                     <td className={td}>{approvedLabel(item.approvedAt, now)}</td>
                     <td className={td}><SdgChips sdgs={item.sdgs} /></td>

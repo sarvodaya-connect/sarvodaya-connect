@@ -36,4 +36,30 @@ describe("temporary district view brought back with the Back button", () => {
     expect(screen.getByText("Your own societies")).toBeInTheDocument();
     expect(refresh).toHaveBeenCalledTimes(1);
   });
+
+  it("checks a saved copy that comes back while the page stays mounted", () => {
+    refresh.mockClear();
+    // Activity A, then activity B: only the search params change, so the page stays mounted.
+    const view = render(
+      <RecheckOnReturn token="activity-a">
+        <p>Activity A</p>
+      </RecheckOnReturn>,
+    );
+    view.rerender(
+      <RecheckOnReturn token="activity-b">
+        <p>Activity B</p>
+      </RecheckOnReturn>,
+    );
+    expect(refresh).not.toHaveBeenCalled();
+
+    // Back to A: the router brings back A's saved render.
+    view.rerender(
+      <RecheckOnReturn token="activity-a">
+        <p>Activity A</p>
+      </RecheckOnReturn>,
+    );
+    expect(screen.queryByText("Activity A")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking Your Access…");
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
 });

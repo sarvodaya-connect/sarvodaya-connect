@@ -78,7 +78,13 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
                 <tr key={activity.id}>
                   <td className="px-4 py-2.5 text-ink-soft">{MONTHS[activity.month - 1]}</td>
                   <td className="px-4 py-2.5 font-bold text-ink">
-                    {activity.name}
+                    <Link
+                      className="text-brand-forest underline underline-offset-2"
+                      href={`/societies/${societyId}/work-plan/${activity.id}`}
+                      prefetch={false}
+                    >
+                      {activity.name}
+                    </Link>
                     {activity.datesLabel && <span className="block text-[10px] font-normal text-muted">{activity.datesLabel}</span>}
                   </td>
                   <td className="px-4 py-2.5 text-ink-soft">{activity.description}</td>

@@ -2906,28 +2906,6 @@ String programmeSectorLabel(AppLocalizations l, String sector) =>
       _ => sector,
     };
 
-/// A UN SDG's title in the reader's language.
-String programmeSdgLabel(AppLocalizations l, int sdg) => switch (sdg) {
-  1 => l.progSdg1,
-  2 => l.progSdg2,
-  3 => l.progSdg3,
-  4 => l.progSdg4,
-  5 => l.progSdg5,
-  6 => l.progSdg6,
-  7 => l.progSdg7,
-  8 => l.progSdg8,
-  9 => l.progSdg9,
-  10 => l.progSdg10,
-  11 => l.progSdg11,
-  12 => l.progSdg12,
-  13 => l.progSdg13,
-  14 => l.progSdg14,
-  15 => l.progSdg15,
-  16 => l.progSdg16,
-  17 => l.progSdg17,
-  _ => sdgTitle(sdg),
-};
-
 String _dimensionLabel(AppLocalizations l, String dimension) =>
     switch (dimension) {
       'SOCIAL' => l.progDimSocial,

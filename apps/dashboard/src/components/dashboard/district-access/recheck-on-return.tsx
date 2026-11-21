@@ -16,9 +16,19 @@ const SHOWN = new Set<string>();
  * hides it before it is painted and asks the server, which then sends the
  * current page: the view itself, or the DDM's own societies once access ended.
  *
- * `token` must be new on every server render (a random id).
+ * `token` must be new on every server render (a random id). The guard is keyed
+ * by it: Next.js keeps a page mounted when only its search params change, so
+ * without the key a saved copy brought back by Back would skip the check.
  */
 export function RecheckOnReturn({ children, token }: { children: ReactNode; token: string }) {
+  return (
+    <Guard key={token} token={token}>
+      {children}
+    </Guard>
+  );
+}
+
+function Guard({ children, token }: { children: ReactNode; token: string }) {
   const { t } = useI18n();
   const router = useRouter();
   // Decided on the first render only: a token this tab has shown before is a saved copy.
