@@ -3,8 +3,12 @@ import base64
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from release_metadata import release_defines, validated_notes  # noqa: E402
 
 
 def required(name):
@@ -41,9 +45,8 @@ def main():
         raise SystemExit('Version name must be major.minor.patch, e.g. 0.1.1.')
     if not re.fullmatch(r'[1-9]\d{0,9}', code) or int(code) > 2100000000:
         raise SystemExit('Version code must be an integer from 1 to 2100000000.')
-    notes = required('RELEASE_NOTES').strip()
-    if not notes or len(notes) > 500:
-        raise SystemExit('Release notes must contain 1-500 characters.')
+    # The same text publish_internal.py sends to Google Play.
+    notes = validated_notes(required('RELEASE_NOTES'))
     url = required('API_BASE_URL')
     parsed = urlparse(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
@@ -86,6 +89,8 @@ def main():
         'COGNITO_CLIENT_ID': client,
         'SC_DEMO_MODE': 'false',
         'SC_SHOW_UNREVIEWED_TRANSLATIONS': os.environ.get('TRANSLATION_REVIEW', 'false'),
+        # Issue #161: shown once in the app after this update (What's new).
+        **release_defines(version, code, notes),
     }
     if os.environ.get('MAPBOX_TOKEN'):
         config['MAPBOX_TOKEN'] = os.environ['MAPBOX_TOKEN']

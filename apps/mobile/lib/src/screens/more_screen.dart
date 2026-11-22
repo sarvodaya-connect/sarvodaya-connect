@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/app_language.dart';
 import '../models/user.dart';
+import '../release/whats_new_screen.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/demo_options_sheet.dart';
@@ -153,6 +154,18 @@ class MoreScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const IncidentsScreen(),
+                  ),
+                ),
+              ),
+              _MenuRow(
+                icon: Icons.update,
+                title: l10n.moreWhatsNew,
+                chevron: true,
+                trailing: store.release?.version,
+                // Reopening the notes never changes what was acknowledged.
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => WhatsNewScreen(release: store.release),
                   ),
                 ),
               ),

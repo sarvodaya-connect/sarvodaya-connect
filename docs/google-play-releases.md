@@ -16,6 +16,8 @@ a release.
 2. In **Actions -> Android internal release -> Run workflow**, select **main**.
 3. Enter a version name such as `0.1.1`, a new integer version code such as `2`
    (only if higher than every previous Play upload), and 1-500 characters of notes.
+   The same notes are shown in the app once after the update (**What's new**); see
+   [mobile-whats-new.md](mobile-whats-new.md) for how they are embedded and previewed.
 4. Leave Publish off for a signed build artifact only, or turn it on to distribute
    through the existing **internal testing** track. Enable translation review only
    when internal testers should see unreviewed Sinhala/Tamil.
