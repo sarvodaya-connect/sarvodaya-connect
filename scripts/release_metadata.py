@@ -9,11 +9,11 @@ newlines and any script reach the app byte for byte; they are never placed in
 shell code or read as markup.
 """
 import base64
-import os
 import re
+from pathlib import Path
 
 MAX_NOTE_CHARACTERS = 500
-REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
+REPO_ROOT = Path(__file__).resolve().parent.parent
 _CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
 
 
@@ -27,18 +27,19 @@ def validated_notes(raw):
     return notes
 
 
-def repo_file(path, root=REPO_ROOT):
-    """The real path of a file inside the repository; anything outside it is rejected.
+def read_repo_text(path, root=REPO_ROOT):
+    """The text of a file inside the repository; any path outside it is rejected.
 
-    Symlinks and '..' are resolved first, so neither can point the script outside the checkout.
+    The path is resolved ('..' and symlinks followed) against the repository root and
+    checked to stay within it before the file is opened.
     """
-    root = os.path.realpath(root)
-    resolved = os.path.realpath(os.path.join(root, path))
-    if os.path.commonpath([root, resolved]) != root:
+    root = Path(root).resolve()
+    resolved = (root / path).resolve()
+    if not resolved.is_relative_to(root):
         raise SystemExit(f'--notes-file must be inside the repository ({root}).')
-    if not os.path.isfile(resolved):
+    if not resolved.is_file():
         raise SystemExit(f'--notes-file is not a file: {path}')
-    return resolved
+    return resolved.read_text(encoding='utf-8')
 
 
 def release_defines(version, build, notes):
@@ -68,8 +69,7 @@ def main(argv=None):
     parser.add_argument('--build', required=True, type=int)
     parser.add_argument('--notes-file', required=True)
     args = parser.parse_args(argv)
-    with open(repo_file(args.notes_file), encoding='utf-8') as stream:
-        notes = validated_notes(stream.read())
+    notes = validated_notes(read_repo_text(args.notes_file))
     json.dump(release_defines(args.version, args.build, notes), sys.stdout)
     sys.stdout.write('\n')
 
