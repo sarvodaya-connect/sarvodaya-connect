@@ -5,6 +5,7 @@ import { ENGLISH } from "@/i18n/english";
 import type { Translator } from "@/i18n/translate";
 
 import { Icon, type IconName } from "./icon";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 /*
  * The shared states take `t` for their default wording. Server components pass
@@ -39,7 +40,7 @@ export function TableSkeleton({
     <div
       aria-busy="true"
       aria-live="polite"
-      className="rounded-card border border-line bg-surface p-4"
+      className={`${surface.card} p-4`}
       role="status"
     >
       <span className="sr-only">{label ?? t("st.loadingSocieties")}…</span>

@@ -10,6 +10,7 @@ import { actorName, recordDate } from "@/i18n/society-record";
 import type { Translator } from "@/i18n/translate";
 import type { RecordDocument } from "@/lib/society-record-api";
 import { formatDate, ROLE_LABELS } from "@/lib/society-record-format";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 const DOCUMENT_LABELS: Record<string, string> = {
   AUDIT_REPORT: "Audit Report",
@@ -23,14 +24,14 @@ const DOCUMENT_LABELS: Record<string, string> = {
 };
 
 function Empty({ children }: { children: string }) {
-  return <p className="mt-4 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">{children}</p>;
+  return <p className={`mt-4 ${surface.card} px-5 py-8 text-center text-[12px] text-muted`}>{children}</p>;
 }
 
 /** Documents tab: every uploaded file, with Open and Download through short-lived links. */
 export function DocumentsList({ documents, societyId }: { documents: RecordDocument[]; societyId: string }) {
   if (documents.length === 0) return <Empty>No documents have been uploaded for this society yet.</Empty>;
   return (
-    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+    <div className={`mt-4 overflow-x-auto ${surface.card}`}>
       <table className="w-full min-w-[720px] text-left text-[11px]">
         <thead className="bg-[#f6f7f4] text-[10px] text-muted">
           <tr>
@@ -103,7 +104,7 @@ export function GradeRequestList({
     )}
     <ul className="mt-4 space-y-3">
       {requests.map((request) => (
-        <li className="rounded-card border border-line bg-surface px-4 py-3" key={request.id}>
+        <li className={`${surface.card} px-4 py-3`} key={request.id}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] font-bold text-ink">
               {request.fromGrade ?? "–"} → {request.toGrade}
@@ -175,7 +176,7 @@ export function HistoryList({
       {events.length === 0 ? (
         <Empty>{t("sr.hi.none")}</Empty>
       ) : (
-        <ol className="mt-4 rounded-card border border-line bg-surface px-5 py-3">
+        <ol className={`mt-4 ${surface.card} px-5 py-3`}>
           {events.map((event) => (
             <li className="relative border-l border-line py-2 pl-5" key={event.id}>
               <span aria-hidden="true" className={`absolute -left-[5px] top-3 size-2.5 rounded-full border-2 bg-surface ${event.category === "GRADE" ? "border-orange-changed" : "border-brand-forest"}`} />

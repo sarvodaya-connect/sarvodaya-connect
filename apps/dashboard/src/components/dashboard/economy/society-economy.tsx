@@ -29,11 +29,12 @@ import {
 } from "@/lib/economy-format";
 
 import { RecordsTable } from "./economy-overview";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 function BusinessCard({ business, t }: { business: SocietyBusiness; t: Translator }) {
   const updater = business.updatedBy ?? business.createdBy;
   return (
-    <li className="flex h-full flex-col rounded-card border border-line bg-surface p-4" data-testid={`business-${business.id}`}>
+    <li className={`flex h-full flex-col ${surface.card} p-4`} data-testid={`business-${business.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <Eyebrow>{industryLabel(business.industry, t, business.otherIndustry)}</Eyebrow>
@@ -102,7 +103,7 @@ export function SocietyEconomy({ profile, records, returnTo, t }: Props) {
       </div>
       <p className="-mt-3 text-[12px] text-ink-soft">{t("eco.society.readOnly")}</p>
 
-      <section aria-labelledby="economy-description" className="rounded-card border border-line bg-surface p-4">
+      <section aria-labelledby="economy-description" className={`${surface.card} p-4`}>
         <h3 className="text-[13px] font-bold text-ink" id="economy-description">{t("eco.society.description")}</h3>
         <p className="mt-1 whitespace-pre-line text-[12px] text-ink">{profile.businessDescription ?? t("eco.society.noDescription")}</p>
         <p className="mt-1 text-[10.5px] text-muted">{t("eco.society.descriptionNote")}</p>
@@ -111,7 +112,7 @@ export function SocietyEconomy({ profile, records, returnTo, t }: Props) {
       <section aria-labelledby="economy-businesses">
         <h3 className="text-[14px] font-bold text-ink" id="economy-businesses">{t("eco.society.businesses")}</h3>
         {profile.businesses.length === 0 ? (
-          <div className="mt-2 rounded-card border border-line bg-surface">
+          <div className={`mt-2 ${surface.card}`}>
             <EmptyState description={t("eco.society.noBusinessesBody")} title={t("eco.society.noBusinesses")} />
           </div>
         ) : (
@@ -124,7 +125,7 @@ export function SocietyEconomy({ profile, records, returnTo, t }: Props) {
       </section>
 
       {profile.businesses.length > 0 && (
-        <section aria-labelledby="economy-records" className="min-w-0 rounded-card border border-line bg-surface p-4">
+        <section aria-labelledby="economy-records" className={`min-w-0 ${surface.card} p-4`}>
           <h3 className="text-[14px] font-bold text-ink" id="economy-records">{t("eco.table.title")}</h3>
           <p className="text-[11px] text-muted">
             {t("eco.records.note")} {t("eco.selfReportedNote")}
@@ -168,7 +169,7 @@ export function RecordHistory({
       <Link className="w-fit text-[12px] font-semibold text-brand-forest underline" href={backHref}>
         ← {t("eco.history.back")}
       </Link>
-      <section aria-labelledby="history-heading" className="rounded-card border border-line bg-surface p-4">
+      <section aria-labelledby="history-heading" className={`${surface.card} p-4`}>
         <Eyebrow>{outputLabel}</Eyebrow>
         <h2 className="text-[17px] font-bold text-ink" id="history-heading">{t("eco.history.title")}</h2>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-ink-soft">

@@ -11,6 +11,7 @@ import { useI18n } from "@/i18n/provider";
 import { excoMissing, officeName } from "@/i18n/society-record";
 import { formatDate } from "@/i18n/translate";
 import { excoProgress } from "@/lib/society-record-format";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 const OFFICES = ["President", "Secretary", "Treasurer"];
 const HIDE_AFTER_SECONDS = 30;
@@ -153,11 +154,11 @@ export function ExcoTable({
         </div>
       )}
       {active.length === 0 ? (
-        <p className="mt-3 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
+        <p className={`mt-3 ${surface.card} px-5 py-8 text-center text-[12px] text-muted`}>
           {editHref ? t("sr.ex.noneEnteredEditable") : t("sr.ex.noneEntered")}
         </p>
       ) : (
-        <div className="mt-3 overflow-x-auto rounded-card border border-line bg-surface">
+        <div className={`mt-3 overflow-x-auto ${surface.card}`}>
           <table className="w-full min-w-[1080px] text-left text-[12.5px]">
             <thead className="bg-surface-muted text-[11.5px] text-ink-soft">
               <tr>

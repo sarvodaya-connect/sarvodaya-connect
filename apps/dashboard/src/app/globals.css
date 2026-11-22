@@ -148,7 +148,7 @@
   --color-state-danger: var(--state-danger);
   --color-danger-dot: var(--danger-dot);
 
-  --radius-card: 14px;
+  --radius-card: 16px;  /* #179: the HQ and role home cards */
   --radius-tile: 16px;
   --radius-button: 9px;
   --radius-input: 10px;

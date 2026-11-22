@@ -10,6 +10,7 @@ import { secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { SocietyLocationMap } from "../maps/society-location-map";
 import { Pill } from "../ui/pill";
+import { SectionCard } from "../ui/section-card";
 import { excoProgress, formatLkr, gradeBadgeClass } from "@/lib/society-record-format";
 
 import { AnnualSummaryCards } from "./annual-summary-cards";
@@ -17,10 +18,7 @@ import { AnnualSummaryCards } from "./annual-summary-cards";
 const STAFF_ORDER = ["DISTRICT_MANAGER", "DEPUTY_DISTRICT_MANAGER", "PROGRAMME_COORDINATOR", "SOCIETY_OFFICER"] as const;
 const OFFICES = ["President", "Secretary", "Treasurer"];
 
-function Eyebrow({ children }: { children: string }) {
-  return <p className="text-[9px] font-bold tracking-[0.14em] text-brand-leaf">{children}</p>;
-}
-
+/** A record section in the shared modern card: small green label above the title (issue #179). */
 function Card({
   action,
   children,
@@ -33,16 +31,9 @@ function Card({
   title: string;
 }) {
   return (
-    <section className="rounded-card border border-line bg-surface">
-      <header className="flex items-start justify-between gap-3 border-b border-line-soft px-4 py-3">
-        <div>
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <h3 className="mt-0.5 text-[13px] font-bold text-ink">{title}</h3>
-        </div>
-        {action}
-      </header>
-      <div className="px-4 py-3.5">{children}</div>
-    </section>
+    <SectionCard action={action} eyebrow={eyebrow} headingLevel={3} title={title}>
+      {children}
+    </SectionCard>
   );
 }
 

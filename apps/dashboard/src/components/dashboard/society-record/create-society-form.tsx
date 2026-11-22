@@ -13,6 +13,7 @@ import { submitWithoutReset } from "@/lib/use-form-submit";
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { SocietyLocationMap } from "../maps/society-location-map";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 const inputClass =
   "mt-1.5 h-10 w-full rounded-input border border-line bg-surface px-3 text-[13px] font-normal text-ink outline-none focus:border-brand-leaf focus:ring-2 focus:ring-brand-mint-ring aria-[invalid=true]:border-danger-dot";
@@ -154,7 +155,7 @@ export function CreateSocietyForm({
       )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <section className="rounded-card border border-line bg-surface p-5">
+        <section className={`${surface.card} p-5`}>
           <h3 className="text-[16px] font-bold text-ink">{t("sr.ov.details")}</h3>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {field("nameEn", t("sr.cr.nameEn"), { required: true })}
@@ -191,7 +192,7 @@ export function CreateSocietyForm({
             {field("businessDescription", t("sr.cr.business"), { hint: t("sr.ed.businessHint") })}
           </div>
         </section>
-        <section className="rounded-card border border-line bg-surface p-5">
+        <section className={`${surface.card} p-5`}>
           <h3 className="text-[16px] font-bold text-ink">{t("sr.ed.mapLocation")}</h3>
           <div className="mt-3">
             <SocietyLocationMap

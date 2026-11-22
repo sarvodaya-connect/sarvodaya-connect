@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { AnnualFinancialSummary, SocietyStaffMember } from "@sarvodaya-connect/api-contracts";
 
 import { Icon } from "../icon";
+import surface from "../ui/surface.module.css";
 import { actorLabel, formatDate, formatLkr } from "@/lib/society-record-format";
 
 /**
@@ -59,7 +60,7 @@ export function AnnualSummaryCards({
           value={summary.totalExpenses}
         />
         <div
-          className={`flex gap-3 rounded-card border px-4 py-3.5 ${
+          className={`${surface.tile} flex-row gap-3 px-4 py-3.5 ${
             auditReport ? "border-line bg-surface" : "border-dashed border-[#efc4bd] bg-[#fdf6f5]"
           }`}
         >
@@ -150,7 +151,7 @@ function AmountCard({
       ? "border-[#bcdcc4] bg-[#f1f8f2]"
       : "border-[#ecd9a4] bg-[#fdf8ea]";
   return (
-    <div className={`rounded-card border px-4 py-3.5 ${style}`}>
+    <div className={`${surface.tile} px-4 py-3.5 ${style}`}>
       <p className="text-[11px] text-muted">{label}</p>
       {missing ? (
         <>

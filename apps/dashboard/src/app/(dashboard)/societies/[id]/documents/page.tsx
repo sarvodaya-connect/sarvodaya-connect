@@ -9,6 +9,7 @@ import { getAnnualSummary, getSocietyDocuments, getSocietyRecord } from "@/lib/s
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
 import { completeDocumentUpload, startDocumentUpload } from "../record-actions";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 /** V5 D05 Documents tab and D12 for one society: the Registrar documents first, then every file. */
 export default async function SocietyDocumentsPage({ params, searchParams }: PageProps<"/societies/[id]/documents">) {
@@ -52,7 +53,7 @@ export default async function SocietyDocumentsPage({ params, searchParams }: Pag
             start={startDocumentUpload.bind(null, id)}
           />
         ) : (
-          <p className="rounded-card border border-line bg-surface p-4 text-[12px] text-ink-soft">
+          <p className={`${surface.card} p-4 text-[12px] text-ink-soft`}>
             Documents are uploaded by the society&apos;s Society Officer or SPC. HQ can open and download them; the signed
             members list is visible only to District Managers and HQ.
           </p>

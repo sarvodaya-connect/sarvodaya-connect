@@ -1,13 +1,16 @@
 import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
+import styles from "./surface.module.css";
+
 /**
  * Thin table primitives. Not a data-grid — just the shared chrome so every
  * screen's table has the same borders, row height, hover tint, and header
- * typography. Compose with regular `<table>` semantics.
+ * typography. Compose with regular `<table>` semantics. Issue #179: framed
+ * like the home dashboards' cards; wide tables scroll sideways inside it.
  */
 export function DataTable({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`overflow-hidden rounded-card border border-line bg-surface ${className}`}>
+    <div className={`${styles.frame} ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">{children}</table>
       </div>
