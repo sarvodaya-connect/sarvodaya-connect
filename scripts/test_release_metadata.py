@@ -1,9 +1,11 @@
 """Run with: python3 -m unittest discover -s scripts -p 'test_*.py'"""
 import base64
 import json
+import os
+import tempfile
 import unittest
 
-from release_metadata import release_defines, validated_notes
+from release_metadata import release_defines, repo_file, validated_notes
 
 # The same text and base64 as apps/mobile/test/whats_new_test.dart.
 TRICKY = (
@@ -44,6 +46,34 @@ class ReleaseMetadataTest(unittest.TestCase):
     def test_identity_is_version_and_build(self):
         defines = release_defines('0.2.0', 7, 'x')
         self.assertEqual((defines['SC_RELEASE_VERSION'], defines['SC_RELEASE_BUILD']), ('0.2.0', '7'))
+
+
+class RepoFileTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = os.path.realpath(os.path.join(self.tmp.name, 'repo'))
+        os.makedirs(os.path.join(self.root, 'notes'))
+        self.inside = os.path.join(self.root, 'notes', 'release.txt')
+        self.outside = os.path.join(self.tmp.name, 'secret.txt')
+        for path in (self.inside, self.outside):
+            with open(path, 'w', encoding='utf-8') as stream:
+                stream.write('x')
+
+    def test_files_inside_the_repository_are_allowed(self):
+        self.assertEqual(repo_file('notes/release.txt', self.root), self.inside)
+        self.assertEqual(repo_file(self.inside, self.root), self.inside)
+
+    def test_paths_outside_the_repository_are_rejected(self):
+        os.symlink(self.outside, os.path.join(self.root, 'link.txt'))
+        for bad in ['../secret.txt', 'notes/../../secret.txt', self.outside, 'link.txt', '/etc/passwd']:
+            with self.assertRaises(SystemExit, msg=bad):
+                repo_file(bad, self.root)
+
+    def test_missing_files_and_directories_are_rejected(self):
+        for bad in ['notes', 'missing.txt']:
+            with self.assertRaises(SystemExit, msg=bad):
+                repo_file(bad, self.root)
 
 
 if __name__ == '__main__':

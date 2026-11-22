@@ -31,8 +31,9 @@ The screen's labels are in English, Sinhala or Tamil like the rest of the app. T
 ## Preview locally
 
 ```bash
-printf 'Rapid assessments are saved on the phone.\nSPCs choose Development Goals.\n' > /tmp/notes.txt
-python3 scripts/release_metadata.py --version 0.2.0 --build 7 --notes-file /tmp/notes.txt > /tmp/whats-new.json
+printf 'Rapid assessments are saved on the phone.\nSPCs choose Development Goals.\n' > notes.txt
+python3 scripts/release_metadata.py --version 0.2.0 --build 7 --notes-file notes.txt > /tmp/whats-new.json
+rm notes.txt
 cd apps/mobile && flutter run --dart-define-from-file=/tmp/whats-new.json
 ```
 
