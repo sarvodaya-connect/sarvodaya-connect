@@ -14,7 +14,7 @@ from pathlib import Path
 
 MAX_NOTE_CHARACTERS = 500
 REPO_ROOT = Path(__file__).resolve().parent.parent
-_CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+_CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')
 
 
 def validated_notes(raw):

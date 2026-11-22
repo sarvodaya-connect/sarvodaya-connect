@@ -37,7 +37,7 @@ class ReleaseMetadataTest(unittest.TestCase):
         self.assertEqual(decoded, raw.strip())
 
     def test_notes_must_be_1_to_500_plain_characters(self):
-        for bad in ['', '   ', 'a' * 501, 'bell\x07', 'nul\x00']:
+        for bad in ['', '   ', 'a' * 501, 'bell\x07', 'nul\x00', 'c1\x80', 'nel\x85end', 'csi\x9b']:
             with self.assertRaises(SystemExit, msg=repr(bad)):
                 validated_notes(bad)
         self.assertEqual(validated_notes('a' * 500), 'a' * 500)

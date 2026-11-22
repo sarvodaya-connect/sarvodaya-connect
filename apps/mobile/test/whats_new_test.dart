@@ -72,6 +72,10 @@ void main() {
       expect(parse('0.2.0', '7', 'not base64 !!'), isNull);
       expect(parse('0.2.0', '7', '/w=='), isNull); // not UTF-8
       expect(parse('0.2.0', '7', 'AA=='), isNull); // a control character
+      // C1 control characters (U+0080, U+0085, U+009B).
+      for (final c1 in ['\u0080', 'a\u0085b', 'a\u009Bb']) {
+        expect(parse('0.2.0', '7', base64.encode(utf8.encode(c1))), isNull);
+      }
       expect(parse('0.2.0', '7', 'ICAg'), isNull); // only spaces
       final tooLong = 'a' * 501;
       expect(parse('0.2.0', '7', base64Of(tooLong)), isNull);
@@ -117,6 +121,35 @@ void main() {
       expect(store.whatsNewPending, isFalse);
       expect(preference.acknowledged(), release.id);
     });
+
+    test('a failed save is retried without re-showing the notes', () async {
+      final preference = _FlakyWhatsNewPreference(
+        failures: 2,
+        previous: '0.1.0+3',
+      );
+      final store = _store(preference: preference);
+      expect(store.whatsNewPending, isTrue);
+      expect(await store.acknowledgeWhatsNew(), isTrue);
+      expect(store.whatsNewPending, isFalse);
+      expect(preference.attempts, 3);
+      expect(preference.acknowledged(), release.id);
+    });
+
+    test(
+      'a save that keeps failing never throws or re-shows the notes',
+      () async {
+        final preference = _FlakyWhatsNewPreference(
+          failures: 99,
+          previous: '0.1.0+3',
+        );
+        final store = _store(preference: preference);
+        expect(await store.acknowledgeWhatsNew(), isFalse);
+        expect(store.whatsNewPending, isFalse);
+        expect(preference.attempts, DemoStore.whatsNewSaveAttempts);
+        // Not saved, so the next launch shows the notes once more.
+        expect(_store(preference: preference).whatsNewPending, isTrue);
+      },
+    );
 
     test('a build without notes never asks', () {
       final store = _store(installed: null);
@@ -317,3 +350,24 @@ Widget _app(
     home: home,
   ),
 );
+
+/// Fails the first [failures] saves, as a full disk would.
+class _FlakyWhatsNewPreference implements WhatsNewPreference {
+  _FlakyWhatsNewPreference({required this.failures, String? previous})
+    : _saved = previous;
+
+  final int failures;
+  int attempts = 0;
+  String? _saved;
+
+  @override
+  String? acknowledged() => _saved;
+
+  @override
+  Future<bool> acknowledge(String releaseId) async {
+    attempts++;
+    if (attempts <= failures) return false;
+    _saved = releaseId;
+    return true;
+  }
+}

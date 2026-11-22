@@ -161,7 +161,8 @@ class MoreScreen extends StatelessWidget {
                 icon: Icons.update,
                 title: l10n.moreWhatsNew,
                 chevron: true,
-                trailing: store.release?.version,
+                // A subtitle wraps, so a long version never overflows.
+                subtitle: store.release?.version,
                 // Reopening the notes never changes what was acknowledged.
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(

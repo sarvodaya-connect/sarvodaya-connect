@@ -31,7 +31,7 @@ class ReleaseInfo {
   static final _version = RegExp(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$');
   static final _build = RegExp(r'^[1-9]\d{0,9}$');
   static final _control = RegExp(
-    r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]',
+    r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]',
   );
 
   /// Release notes allowed by the workflows (1–500 characters).
@@ -71,7 +71,10 @@ class ReleaseInfo {
 /// to the phone, not the account: signing out and in does not ask again.
 abstract interface class WhatsNewPreference {
   String? acknowledged();
-  void acknowledge(String releaseId);
+
+  /// Saves [releaseId] as acknowledged. Completes with whether it was saved;
+  /// never throws.
+  Future<bool> acknowledge(String releaseId);
 }
 
 /// Forgets on restart: for tests and screens pumped alone.
@@ -84,7 +87,10 @@ class MemoryWhatsNewPreference implements WhatsNewPreference {
   String? acknowledged() => _acknowledged;
 
   @override
-  void acknowledge(String releaseId) => _acknowledged = releaseId;
+  Future<bool> acknowledge(String releaseId) async {
+    _acknowledged = releaseId;
+    return true;
+  }
 }
 
 class DeviceWhatsNewPreference implements WhatsNewPreference {
@@ -97,8 +103,12 @@ class DeviceWhatsNewPreference implements WhatsNewPreference {
   String? acknowledged() => _preferences.getString(_key);
 
   @override
-  void acknowledge(String releaseId) {
-    _preferences.setString(_key, releaseId);
+  Future<bool> acknowledge(String releaseId) async {
+    try {
+      return await _preferences.setString(_key, releaseId);
+    } catch (_) {
+      return false;
+    }
   }
 }
 
