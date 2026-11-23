@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install CloudFormation linter
@@ -29,13 +29,13 @@ jobs:
         run: cfn-lint infrastructure/aws/template.yaml infrastructure/aws/agentcore-test.yaml bootstrap.rendered.yaml foundation.rendered.yaml retained.import.yaml
       - name: Check foundation safety settings
         run: python infrastructure/aws/test/test_foundation.py
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: Check secure parameter custom resource without AWS access
         run: node --test infrastructure/aws/test/secure-parameters.test.cjs
       - name: Save validated foundation for manual review
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sarvodaya-test-foundation
           path: |
@@ -59,8 +59,8 @@ jobs:
       # was interrupted before its shell trap completed.
       COMPOSE_PROJECT_NAME: aws-smoke-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
