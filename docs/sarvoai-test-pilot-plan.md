@@ -1,16 +1,13 @@
 # SarvoAI TEST pilot: deployment plan
 
-A plan for review. **Nothing here has been run.** The pull request that adds this plan
-does not enable SarvoAI, deploy anything, change the database or call a model.
-Every step below is done by the project owner (or someone they authorise) after
-the plan is approved.
+Deployment checklist for the TEST pilot. The project owner or someone they authorise runs the steps below.
 
 ## What the pilot is
 
 | | |
 | --- | --- |
 | Environment | AWS TEST only: stack with `Stage=test`, function `sarvodaya-api-test`, `ap-southeast-1` |
-| Model | Claude Haiku 5.5 through the global inference profile `global.anthropic.claude-haiku-5-5`. Bedrock reports `agreementAvailability=AVAILABLE` in `ap-southeast-1` |
+| Model | Claude Haiku 4.5 through `global.anthropic.claude-haiku-4-5-20251001-v1:0` from Singapore |
 | Processing | Global: requests can be processed in any supported AWS commercial Region. The owner approved this for fictional TEST data only |
 | Who can ask | `HQ_ADMIN` only. The route and the service both refuse every other role with 403 before any data or model is touched |
 | What it can see | `SARVOAI_FICTIONAL_ONLY=true`, which the template forces for `Stage=test`: only societies whose S number starts `TEST-` **and** whose district code is `TEST-ONLY`. Personal Exco lookups are off |
@@ -31,7 +28,7 @@ If any gate fails, stop: SarvoAI stays off.
 | 5 | **Fictional-only scope.** District `TEST-ONLY` exists; every society SarvoAI can see is fictional; nothing real is in that district | Checks 4–6 of the same script, reviewed row by row |
 | 6 | **Lambda capacity validated** for issue #104. PR #105's settings are deployed; the full two-tester and phone check has **not** been reported yet. See "Capacity" below | The reported two-tester and phone results, and the agreed limit on concurrent SarvoAI questions |
 | 7 | **Bedrock access.** Anthropic's first-use form and the Marketplace subscription are done by an administrator in the console (no model call needed to check) | Console screenshot or note |
-| 8 | **AWS Budgets** alert covers the Claude Haiku 5.5 Marketplace charges, as in `sarvoai-aws-setup.md` step 4 | Budget name and thresholds |
+| 8 | **AWS Budgets** alert covers the Claude Haiku 4.5 Marketplace charges, as in `sarvoai-aws-setup.md` step 4 | Budget name and thresholds |
 
 If check 2 shows a missing privilege, the owner grants exactly the missing ones as
 the database owner, for example:
@@ -82,39 +79,20 @@ Before deploying:
 
 ## Pricing approval
 
-Prices verified against the AWS Price List, AmazonBedrockFoundationModels,
-publication `2026-10-12T08:40:08Z`, Global standard-tier SKUs, US dollars per
-million tokens:
+The [AWS Singapore Price List](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/current/ap-southeast-1/index.json)
+published on 20 November 2026 lists Haiku 4.5 Global standard rates in US dollars
+per million tokens.
 
-| Price | Standard | Prompts over 100,000 tokens |
-| --- | ---: | ---: |
-| Input | 0.10 | 0.50 |
-| Output | 0.50 | 2.50 |
-| 5-minute cache write | 0.125 | 0.625 |
-| Cache read | 0.01 | 0.05 |
+| Input | Output | 5-minute cache write | Cache read |
+| ---: | ---: | ---: | ---: |
+| 1.00 | 5.00 | 1.25 | 0.10 |
 
-The us-east-1 file (the source below) and the ap-southeast-1 file show the same
-Global prices. The Price List does not state the 100,000-token threshold; it is
-Anthropic's published long-context rule for this model.
-
-The deployment value, one line. Write it on the day of deployment, with that day as
-`reviewedOn` and an `expiresOn` at most 31 days later. These dates are an example:
+Use this approval shape after rechecking the rates. Set `reviewedOn` to the
+review date and `expiresOn` to a date at most 31 days later.
 
 ```json
-{"modelId":"global.anthropic.claude-haiku-5-5","region":"ap-southeast-1","reviewedOn":"2026-11-05","expiresOn":"2026-12-05","source":"https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/current/us-east-1/index.json","standard":{"inputUsdPerMTok":"0.10","outputUsdPerMTok":"0.50","cacheWriteUsdPerMTok":"0.125","cacheReadUsdPerMTok":"0.01"},"longPrompt":{"aboveTokens":100000,"inputUsdPerMTok":"0.50","outputUsdPerMTok":"2.50","cacheWriteUsdPerMTok":"0.625","cacheReadUsdPerMTok":"0.05"}}
+{"modelId":"global.anthropic.claude-haiku-4-5-20251001-v1:0","region":"ap-southeast-1","reviewedOn":"2026-11-20","expiresOn":"2026-12-20","source":"https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrockFoundationModels/current/ap-southeast-1/index.json","standard":{"inputUsdPerMTok":"1.00","outputUsdPerMTok":"5.00","cacheWriteUsdPerMTok":"1.25","cacheReadUsdPerMTok":"0.10"}}
 ```
-
-This exact line was checked locally with the application's own parser
-(`pricingApproval` in `assistant-cost.ts`): accepted the day after `reviewedOn`,
-refused before it and from `expiresOn`.
-
-**Worst-case cost, from the application's reservation rule with these prices.** One
-model call reserves at most USD 0.009345 (the largest allowed request, 66,536 tokens
-at the cache-write price, plus 2,048 output tokens). A question can make 6 calls, so
-it reserves at most about USD 0.056. A USD 20 monthly limit therefore allows at
-least about 356 questions in the worst case, and a USD 5 limit about 89. Real
-questions are usually far smaller, and successful calls settle at their actual
-token cost. A smaller pilot limit than the USD 20 default is the owner's choice.
 
 ## Deployment steps (owner)
 
@@ -132,6 +110,7 @@ token cost. A smaller pilot limit than the USD 20 default is the owner's choice.
 
    ```text
    SarvoAiEnabled=true
+   SarvoAiModelId=global.anthropic.claude-haiku-4-5-20251001-v1:0
    SarvoAiPricingApproval=<the one-line approval>
    SarvoAiMonthlyLimitUsd=<the approved limit>
    ```
@@ -139,8 +118,9 @@ token cost. A smaller pilot limit than the USD 20 default is the owner's choice.
    Use `sam deploy --no-execute-changeset` (or the console's "Use existing value"
    for the other parameters).
 4. Review the change set. Expected: the API function's environment
-   (`SARVOAI_ENABLED`, `SARVOAI_PRICING_APPROVAL`, `SARVOAI_MONTHLY_LIMIT_USD`), its
-   role gaining the one Bedrock `InvokeModel` policy, and a new function version. No
+   (`SARVOAI_ENABLED`, `SARVOAI_MODEL_ID`, `SARVOAI_PRICING_APPROVAL`,
+   `SARVOAI_MONTHLY_LIMIT_USD`), the execution role policy scoped to the selected
+   model profile, and updated function code. No
    change to API Gateway, concurrency, the database, Cognito or S3 unless the
    reviewed `main` intentionally changed them. Anything else: stop.
 5. Execute the change set.

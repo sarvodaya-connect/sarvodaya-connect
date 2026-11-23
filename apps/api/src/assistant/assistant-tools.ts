@@ -33,7 +33,7 @@ const ANSWER_ROWS = 50;
 export interface ToolOutcome {
   content: string;
   isError?: boolean;
-  answer?: { scope?: AssistantScope; table?: AssistantTable; details: AssistantDetails };
+  answer?: { summary?: string; scope?: AssistantScope; table?: AssistantTable; details: AssistantDetails };
 }
 
 const yearProperty = { type: 'integer', description: 'Start year of the financial year: 2025 means FY 2025/26 (1 Apr 2025 to 31 Mar 2026).' };

@@ -1,5 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sarvodaya_connect_mobile/src/incidents/assessment_queue.dart';
+import 'package:sarvodaya_connect_mobile/src/incidents/assessment_queue_card.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/demo_incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_api.dart';
 import 'package:sarvodaya_connect_mobile/src/incidents/incident_format.dart';
@@ -7,26 +12,159 @@ import 'package:sarvodaya_connect_mobile/src/incidents/incident_screens.dart';
 import 'package:sarvodaya_connect_mobile/src/models/user.dart';
 import 'package:sarvodaya_connect_mobile/src/state/demo_store.dart';
 import 'package:sarvodaya_connect_mobile/src/theme/app_theme.dart';
+import 'package:sarvodaya_connect_mobile/src/widgets/state_views.dart';
 
 import 'test_helpers.dart';
 
-/// The API is unreachable when the assessment is sent.
+/// The API is unreachable until [online] is set, or refuses with [refusal].
+/// Like the real API, one clientMutationId is recorded once.
 class _OfflineIncidentApi extends DemoIncidentApi {
   _OfflineIncidentApi({required super.clock});
   int attempts = 0;
+  bool online = false;
+  IncidentException? refusal;
+  final ids = <String>[];
+  final _seen = <String>{};
+  int get received => _seen.length;
 
   @override
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
     attempts++;
-    throw const IncidentException(
-      "You're offline or the server did not answer. Your answers stay on this screen; send them when you're back online.",
-      offline: true,
+    ids.add(clientMutationId);
+    if (refusal != null) throw refusal!;
+    if (!online) {
+      throw const IncidentException(
+        "You're offline or the server did not answer.",
+        offline: true,
+      );
+    }
+    _seen.add(clientMutationId);
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
+      stillSignedIn: stillSignedIn,
     );
+  }
+}
+
+/// The first list of incidents waits for [firstList]; later ones answer at once.
+class _SlowFirstListApi extends DemoIncidentApi {
+  _SlowFirstListApi({required super.clock});
+  final firstList = Completer<List<IncidentSummary>>();
+  var _calls = 0;
+
+  @override
+  Future<List<IncidentSummary>> active() =>
+      _calls++ == 0 ? firstList.future : super.active();
+}
+
+/// Runs [onSend] inside each send, to sign out part-way.
+class _SignOutIncidentApi extends DemoIncidentApi {
+  _SignOutIncidentApi({required super.clock});
+  void Function()? onSend;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    onSend?.call();
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
+      stillSignedIn: stillSignedIn,
+    );
+  }
+}
+
+/// Sending a saved assessment hangs until [release] completes, like a large
+/// photo or a stalled upload.
+class _StalledIncidentApi extends DemoIncidentApi {
+  _StalledIncidentApi({required super.clock});
+  final release = Completer<void>();
+  int sends = 0;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    sends++;
+    await release.future;
+    return super.sendAssessment(
+      incidentId,
+      societyId,
+      clientMutationId,
+      answers,
+      stillSignedIn: stillSignedIn,
+    );
+  }
+}
+
+/// Offline: nothing about incidents can be loaded or sent.
+class _DownIncidentApi extends DemoIncidentApi {
+  _DownIncidentApi({required super.clock});
+  static const _offline = IncidentException(
+    "You're offline or the server did not answer.",
+    offline: true,
+  );
+
+  @override
+  Future<List<IncidentSummary>> active() async => throw _offline;
+
+  @override
+  Future<IncidentDetail> detail(String id) async => throw _offline;
+
+  @override
+  Future<String> sendAssessment(
+    String incidentId,
+    String societyId,
+    String clientMutationId,
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async => throw _offline;
+}
+
+/// Incidents never finish loading, and sending is offline.
+class _LoadingIncidentApi extends _DownIncidentApi {
+  _LoadingIncidentApi({required super.clock});
+
+  @override
+  Future<List<IncidentSummary>> active() =>
+      Completer<List<IncidentSummary>>().future;
+
+  @override
+  Future<IncidentDetail> detail(String id) =>
+      Completer<IncidentDetail>().future;
+}
+
+/// The phone's storage fills up after [writes] successful queue writes.
+class _FillingStorage extends MemoryQueueStorage {
+  _FillingStorage({required this.writes});
+  int writes;
+
+  @override
+  Future<void> writeQueue(String accountId, String json) async {
+    if (writes-- <= 0) {
+      throw const FileSystemException('No space left on device');
+    }
+    return super.writeQueue(accountId, json);
   }
 }
 
@@ -34,6 +172,7 @@ Future<DemoStore> _pump(
   WidgetTester tester,
   Widget home, {
   IncidentApi? api,
+  QueueStorage? assessmentStorage,
   UserRole role = UserRole.societyOfficer,
 }) async {
   tester.view.physicalSize = const Size(402 * 3, 1400 * 3);
@@ -43,6 +182,7 @@ Future<DemoStore> _pump(
     loadDelay: Duration.zero,
     clock: () => demoNow,
     incidentApi: api ?? DemoIncidentApi(clock: () => demoNow),
+    assessmentStorage: assessmentStorage,
   )..switchDemoRole(role);
   await tester.pumpWidget(
     DemoScope(
@@ -157,11 +297,11 @@ void main() {
   });
 
   testWidgets(
-    'offline: nothing is queued or sent later, and the answers stay on screen',
+    'offline: the assessment is saved on the phone and sent once on retry',
     (tester) async {
       final api = _OfflineIncidentApi(clock: () => demoNow);
       final detail = await api.detail('incident-demo');
-      await _pump(
+      final store = await _pump(
         tester,
         RapidAssessmentScreen(
           incident: detail.incident,
@@ -176,12 +316,388 @@ void main() {
       await _tap(tester, find.text('Check answers'));
       await _tap(tester, find.text('Send assessment'));
       expect(api.attempts, 1);
-      expect(find.textContaining("You're offline"), findsOneWidget);
-      expect(find.text('Check Before Sending'), findsOneWidget);
-      expect(find.text('Critical'), findsOneWidget);
-      // Sending again is a person's choice, with the same answers.
-      await _tap(tester, find.text('Send assessment'));
+      // Issue #125: saved first, and the screen says it has not been sent.
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.textContaining('Waiting for a connection.'), findsOneWidget);
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(store.assessments.items, hasLength(1));
+      final id = store.assessments.items.single.clientMutationId;
+
+      // The Incident tab shows it and retries it while still offline.
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const IncidentsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(api.attempts, 2);
+      expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+      // Back online: Retry sends it once, with the same id.
+      api.online = true;
+      await _tap(tester, find.text('Retry sending'));
+      expect(find.text('1 saved assessment sent.'), findsOneWidget);
+      expect(find.text('1 assessment saved on this phone'), findsNothing);
+      expect(store.assessments.items, isEmpty);
+      expect(api.ids, [id, id, id]);
+      expect(api.received, 1);
+    },
+  );
+
+  testWidgets(
+    'a storage error while sending still shows the assessment as saved',
+    (tester) async {
+      final api = DemoIncidentApi(clock: () => demoNow);
+      final detail = await api.detail('incident-demo');
+      final store = await _pump(
+        tester,
+        RapidAssessmentScreen(
+          incident: detail.incident,
+          societies: detail.assessableSocieties,
+        ),
+        api: api,
+        // The save works; recording progress afterwards does not.
+        assessmentStorage: _FillingStorage(writes: 1),
+      );
+      await _tap(tester, find.text('Critical'));
+      for (var i = 0; i < 9; i++) {
+        await _tap(tester, find.text('Next'));
+      }
+      await _tap(tester, find.text('Check answers'));
+      await _tap(tester, find.text('Send assessment'));
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(store.assessments.items, hasLength(1));
+    },
+  );
+
+  testWidgets('a stalled send does not hold up Disaster Response', (
+    tester,
+  ) async {
+    final api = _StalledIncidentApi(clock: () => demoNow);
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(tester, const SizedBox(), api: api);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await tester.pumpWidget(
+      DemoScope(
+        store: store,
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const IncidentsScreen(),
+        ),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // Still sending, yet the incidents and response actions are there.
+    expect(api.sends, 1);
+    expect(store.assessments.syncing, isTrue);
+    expect(find.text('Report an incident'), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+    api.release.complete();
+    await tester.pumpAndSettle();
+    expect(store.assessments.items, isEmpty);
+    expect(api.sends, 1);
+  });
+
+  testWidgets('saved assessments stay visible when incidents cannot load', (
+    tester,
+  ) async {
+    final api = _DownIncidentApi(clock: () => demoNow);
+    final detail = await DemoIncidentApi(clock: () => demoNow)
+        .detail('incident-demo');
+    final store = await _pump(tester, const IncidentsScreen(), api: api);
+    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+    expect(find.text('Remove from this phone'), findsOneWidget);
+    expect(find.text('Retry sending'), findsOneWidget);
+
+    // The incident's own page keeps them in reach too.
+    await tester.pumpWidget(
+      DemoScope(
+        store: store,
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const IncidentScreen(incidentId: 'incident-demo'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Can't open this incident"), findsOneWidget);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+    expect(find.text('Remove from this phone'), findsOneWidget);
+  });
+
+  group('many saved assessments on a small phone with large text', () {
+    // A 4-inch phone at twice the text size, with more saved assessments
+    // than fit on the screen.
+    Future<DemoStore> pumpSmall(
+      WidgetTester tester,
+      Widget home,
+      IncidentApi api,
+    ) async {
+      tester.view.physicalSize = const Size(320 * 2, 568 * 2);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final detail = await DemoIncidentApi(clock: () => demoNow)
+          .detail('incident-demo');
+      final store = DemoStore(
+        loadDelay: Duration.zero,
+        clock: () => demoNow,
+        incidentApi: api,
+      )..switchDemoRole(UserRole.societyOfficer);
+      for (var i = 0; i < 8; i++) {
+        await store.assessments.save(
+          incident: detail.incident,
+          societyId: detail.assessableSocieties.first.id,
+          societyName: 'Fictional Society ${i + 1}',
+          clientMutationId: newClientMutationId(),
+          answers: AssessmentAnswers()..impact = 'CRITICAL',
+        );
+      }
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(theme: AppTheme.light(), home: home),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return store;
+    }
+
+    final page = find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    Future<void> scrollTo(WidgetTester tester, Finder target) async {
+      await tester.scrollUntilVisible(target, 120, scrollable: page);
+      await tester.pumpAndSettle();
+      final screen = Offset.zero & tester.view.physicalSize / 2;
+      expect(screen.contains(tester.getCenter(target)), isTrue);
+    }
+
+    Future<void> expectAllReachable(
+      WidgetTester tester,
+      DemoStore store,
+      Finder content,
+    ) async {
+      expect(tester.takeException(), isNull);
+      expect(find.text('8 assessments saved on this phone'), findsOneWidget);
+      // The card alone is taller than the screen.
+      expect(
+        tester.getSize(find.byType(PendingAssessmentsCard)).height,
+        greaterThan(568),
+      );
+      await scrollTo(tester, find.textContaining('Fictional Society 8'));
+      await scrollTo(tester, find.text('Remove from this phone').last);
+      await scrollTo(tester, find.text('Retry sending'));
+      // Retry sending works from there; offline, every item is kept.
+      await tester.tap(find.text('Retry sending'));
+      await tester.pumpAndSettle();
+      expect(store.assessments.items, hasLength(8));
+      await scrollTo(tester, content);
+      expect(tester.takeException(), isNull);
+    }
+
+    testWidgets('Disaster Response, when incidents cannot load', (
+      tester,
+    ) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentsScreen(),
+        _DownIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.text('Try again'));
+      expect(find.text("Couldn't load incidents"), findsOneWidget);
+    });
+
+    testWidgets('Disaster Response, while incidents load', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentsScreen(),
+        _LoadingIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.byType(LoadingSkeleton));
+    });
+
+    testWidgets('the incident page, when it cannot load', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentScreen(incidentId: 'incident-demo'),
+        _DownIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.text('Try again'));
+      expect(find.text("Can't open this incident"), findsOneWidget);
+    });
+
+    testWidgets('the incident page, while it loads', (tester) async {
+      final store = await pumpSmall(
+        tester,
+        const IncidentScreen(incidentId: 'incident-demo'),
+        _LoadingIncidentApi(clock: () => demoNow),
+      );
+      await expectAllReachable(tester, store, find.byType(LoadingSkeleton));
+    });
+
+    testWidgets('with nothing saved, the error still fills the screen', (
+      tester,
+    ) async {
+      final store = await _pump(
+        tester,
+        const IncidentsScreen(),
+        api: _DownIncidentApi(clock: () => demoNow),
+      );
+      expect(store.assessments.items, isEmpty);
+      // Centred in the space below the bar, as before.
+      final screen = tester.getSize(find.byType(Scaffold));
+      final message = tester.getCenter(find.text("Couldn't load incidents"));
+      expect((message.dy - screen.height / 2).abs(), lessThan(120));
+    });
+  });
+
+  testWidgets('a saved assessment that is only waiting can be removed', (
+    tester,
+  ) async {
+    final api = _OfflineIncidentApi(clock: () => demoNow);
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(tester, const IncidentsScreen(), api: api);
+    await store.assessments.save(
+      incident: detail.incident,
+      societyId: detail.assessableSocieties.first.id,
+      societyName: detail.assessableSocieties.first.name,
+      clientMutationId: newClientMutationId(),
+      answers: AssessmentAnswers()..impact = 'CRITICAL',
+    );
+    await store.assessments.sync();
+    await tester.pumpAndSettle();
+    expect(store.assessments.items.single.blocked, isFalse);
+    expect(find.text('1 assessment saved on this phone'), findsOneWidget);
+
+    await _tap(tester, find.text('Remove from this phone'));
+    await _tap(tester, find.widgetWithText(FilledButton, 'Remove'));
+    expect(store.assessments.items, isEmpty);
+    expect(find.text('1 assessment saved on this phone'), findsNothing);
+  });
+
+  testWidgets('a closed incident keeps the assessment and explains why', (
+    tester,
+  ) async {
+    final api = _OfflineIncidentApi(clock: () => demoNow)
+      ..refusal = const IncidentException(
+        'This incident is closed',
+        status: 409,
+      );
+    final detail = await api.detail('incident-demo');
+    final store = await _pump(
+      tester,
+      RapidAssessmentScreen(
+        incident: detail.incident,
+        societies: detail.assessableSocieties,
+      ),
+      api: api,
+    );
+    await _tap(tester, find.text('Critical'));
+    for (var i = 0; i < 9; i++) {
+      await _tap(tester, find.text('Next'));
+    }
+    await _tap(tester, find.text('Check answers'));
+    await _tap(tester, find.text('Send assessment'));
+    expect(find.text("Saved, but It Can't Be Sent Yet"), findsOneWidget);
+    expect(
+      find.textContaining('The incident was closed before this arrived.'),
+      findsOneWidget,
+    );
+    expect(store.assessments.items.single.blocked, isTrue);
+  });
+
+  testWidgets(
+    'a sign-out while sending never shows the assessment as sent (#128 review)',
+    (tester) async {
+      final api = _SignOutIncidentApi(clock: () => demoNow);
+      final detail = await api.detail('incident-demo');
+      final store = await _pump(
+        tester,
+        RapidAssessmentScreen(
+          incident: detail.incident,
+          societies: detail.assessableSocieties,
+        ),
+        api: api,
+      );
+      // As in the app: the API answers 401, which signs the user out and
+      // hides their saved items without sending them.
+      api.onSend = () {
+        store.signOut();
+        throw const IncidentException('Sign in again', status: 401);
+      };
+      await _tap(tester, find.text('Critical'));
+      for (var i = 0; i < 9; i++) {
+        await _tap(tester, find.text('Next'));
+      }
+      await _tap(tester, find.text('Check answers'));
+      await _tap(tester, find.text('Send assessment'));
+      expect(find.text('Assessment Sent'), findsNothing);
+      expect(find.text('Saved on This Phone'), findsOneWidget);
+      expect(find.textContaining('Sign in again to send it.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a slow first load never replaces the refresh after a delivery (#128 review)',
+    (tester) async {
+      final api = _SlowFirstListApi(clock: () => demoNow);
+      final store = await _pump(tester, const SizedBox(), api: api);
+      final detail = await api.detail('incident-demo');
+      await store.assessments.save(
+        incident: detail.incident,
+        societyId: detail.assessableSocieties.first.id,
+        societyName: detail.assessableSocieties.first.name,
+        clientMutationId: newClientMutationId(),
+        answers: AssessmentAnswers()..impact = 'CRITICAL',
+      );
+      await tester.pumpWidget(
+        DemoScope(
+          store: store,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const IncidentsScreen(),
+          ),
+        ),
+      );
+      // The saved assessment is sent, so the screen reloads (fast) while the
+      // first load is still waiting.
+      await tester.pumpAndSettle();
+      expect(find.text(detail.incident.title), findsWidgets);
+      // The first load now answers with what it saw before the delivery.
+      api.firstList.complete(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(detail.incident.title), findsWidgets);
     },
   );
 

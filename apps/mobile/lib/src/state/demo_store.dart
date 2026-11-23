@@ -8,6 +8,7 @@ import '../society_admin/society_admin_api.dart'
 import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
+import '../incidents/assessment_queue.dart';
 import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
@@ -87,6 +88,7 @@ class DemoStore extends ChangeNotifier {
     HomeApi? homeApi,
     DistrictAccessApi? districtAccessApi,
     IncidentApi? incidentApi,
+    QueueStorage? assessmentStorage,
     EconomyApi? economyApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
@@ -155,8 +157,18 @@ class DemoStore extends ChangeNotifier {
     incidents =
         incidentApi ??
         (isDemo
-            ? DemoIncidentApi(clock: _clock)
+            ? DemoIncidentApi(clock: _clock, isOnline: () => !offline)
             : HttpIncidentApi(this.identityApi));
+    // Issue #125: each account's saved assessments. Demonstration mode keeps
+    // them in memory; a real build encrypts them on the phone.
+    assessments = AssessmentQueue(
+      storage:
+          assessmentStorage ??
+          (isDemo ? MemoryQueueStorage() : EncryptedFileQueueStorage()),
+      accountId: () => _user?.id,
+      api: () => incidents,
+      clock: _clock,
+    );
     economy =
         economyApi ??
         (isDemo
@@ -218,6 +230,9 @@ class DemoStore extends ChangeNotifier {
 
   /// V5 PR 8 disaster response (M40–M49). Sent online only.
   late final IncidentApi incidents;
+
+  /// Issue #125: rapid assessments saved on this phone until the API has them.
+  late final AssessmentQueue assessments;
 
   /// Issue #146 Village Economic Profile (#145 API): only the assigned
   /// Society Officer writes on the server.
@@ -448,6 +463,9 @@ class DemoStore extends ChangeNotifier {
     }
     identityApi.token = null;
     _user = null;
+    // The saved assessments stay encrypted on the phone for this account;
+    // nothing of them is kept in memory for the next person to sign in.
+    assessments.forget();
     _selectedTab = 0;
     _startNotificationSession();
     notifyListeners();
