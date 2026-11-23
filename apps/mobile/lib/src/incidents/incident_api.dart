@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 
 import '../auth/api_auth_service.dart';
@@ -384,6 +386,23 @@ class AssessmentAnswers {
   bool confirmedWithPresident = false;
   final List<PickedDocument> photos = [];
 
+  AssessmentAnswers();
+
+  /// Saved answers back from `toJson` (issue #125). Photos travel separately.
+  factory AssessmentAnswers.fromJson(Map<String, dynamic> json) =>
+      AssessmentAnswers()
+        ..impact = json['impact'] as String
+        ..families = json['families'] as int
+        ..people = json['people'] as int
+        ..housesFully = json['housesFully'] as int
+        ..housesPartly = json['housesPartly'] as int
+        ..injured = json['injured'] as int
+        ..displaced = json['displaced'] as int
+        ..roadAccess = json['roadAccess'] as String
+        ..needs.addAll((json['needs'] as List).cast<String>())
+        ..note = json['note'] as String
+        ..confirmedWithPresident = json['confirmedWithPresident'] as bool;
+
   Map<String, dynamic> toJson(String clientMutationId, String societyId) => {
     'clientMutationId': clientMutationId,
     'societyId': societyId,
@@ -454,11 +473,15 @@ class IncidentNotification {
 }
 
 class IncidentException implements Exception {
-  const IncidentException(this.message, {this.offline = false});
+  const IncidentException(this.message, {this.offline = false, this.status});
   final String message;
 
-  /// The phone could not reach the server. Answers stay on the screen.
+  /// The phone could not reach the server.
   final bool offline;
+
+  /// The API's HTTP status, when it answered (issue #125 decides what a
+  /// saved assessment does next from it).
+  final int? status;
 
   @override
   String toString() => message;
@@ -472,13 +495,26 @@ abstract class IncidentApi {
 
   /// Sends one assessment online, then its photos. A retry with the same
   /// [clientMutationId] returns the update already received.
+  ///
+  /// [stillSignedIn] is checked before each request: when it is false the
+  /// account that saved the work has signed out, and nothing more is sent.
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  );
-  Future<void> addPhoto(String assessmentId, PickedDocument photo);
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  });
+
+  /// [clientUploadId] is the phone's id for this one photo, the same on
+  /// every retry (issue #125). With it, a retry resumes the same photo, or is
+  /// confirmed when the photo already arrived, instead of adding another.
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+    String? clientUploadId,
+  });
   Future<void> updateDelivery(
     String helperId, {
     required HelperStatus status,
@@ -501,28 +537,41 @@ abstract class IncidentApi {
 }
 
 class HttpIncidentApi implements IncidentApi {
-  HttpIncidentApi(this._api, {http.Client? uploadClient})
-    : _uploadClient = uploadClient ?? http.Client();
+  HttpIncidentApi(
+    this._api, {
+    http.Client? uploadClient,
+    this.uploadTimeout = const Duration(minutes: 2),
+  }) : _uploadClient = uploadClient ?? http.Client();
   final IdentityApi _api;
   final http.Client _uploadClient;
+
+  /// How long one photo may take to reach storage before it counts as lost.
+  final Duration uploadTimeout;
 
   Future<dynamic> _call(
     String path, {
     String method = 'GET',
     Map<String, dynamic>? body,
+    bool Function()? stillSignedIn,
   }) async {
     try {
-      return await _api.request(path, method: method, body: body);
+      return await _api.request(
+        path,
+        method: method,
+        body: body,
+        stillSignedIn: stillSignedIn,
+      );
     } on IdentityError catch (error) {
-      throw IncidentException(error.message);
+      throw IncidentException(error.message, status: error.status);
     } on AuthNetworkException {
       throw const IncidentException(
-        "You're offline or the server did not answer. Your answers stay on this screen; send them when you're back online.",
+        "You're offline or the server did not answer.",
         offline: true,
       );
     } on AuthServiceException {
       throw const IncidentException(
         'Something went wrong on the server. Try again.',
+        status: 500,
       );
     }
   }
@@ -567,18 +616,25 @@ class HttpIncidentApi implements IncidentApi {
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
     final sent = await _call(
       '/emergencies/incidents/$incidentId/assessments',
       method: 'POST',
       body: answers.toJson(clientMutationId, societyId),
+      stillSignedIn: stillSignedIn,
     ) as Map<String, dynamic>;
     return sent['id'] as String;
   }
 
   /// Pre-signed upload straight to storage, then the API checks the size.
-  Future<void> _upload(String path, PickedDocument file) async {
+  Future<void> _upload(
+    String path,
+    PickedDocument file, {
+    bool Function()? stillSignedIn,
+    String? clientUploadId,
+  }) async {
     final created = await _call(
       path,
       method: 'POST',
@@ -586,40 +642,101 @@ class HttpIncidentApi implements IncidentApi {
         'contentType': file.contentType,
         'sizeBytes': file.sizeBytes,
         'checksumSha256': sha256Base64(file.bytes),
+        'clientUploadId': ?clientUploadId,
       },
+      stillSignedIn: stillSignedIn,
     ) as Map<String, dynamic>;
     final evidence = created['evidence'] as Map<String, dynamic>;
+    // Issue #125: this photo already arrived and was completed, and only the
+    // answer was lost. Nothing to upload or complete again.
+    if (created['upload'] == null && evidence['uploaded'] == true) return;
     final upload = created['upload'] as Map<String, dynamic>;
-    final request = http.Request(
+    // At the deadline the request is aborted, not just abandoned, so a
+    // retry never runs alongside an earlier upload still holding the photo.
+    final abort = Completer<void>();
+    void stop() {
+      if (!abort.isCompleted) abort.complete();
+    }
+
+    final request = http.AbortableRequest(
       upload['method'] as String? ?? 'PUT',
       Uri.parse(upload['url'] as String),
+      abortTrigger: abort.future,
     )..bodyBytes = file.bytes;
     (upload['headers'] as Map? ?? const {}).forEach(
       (key, value) => request.headers['$key'] = '$value',
     );
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again to send this.', status: 401);
+    }
+    const unreachable = IncidentException(
+      'The photo did not reach storage. Check your connection and try again.',
+      offline: true,
+    );
+    final deadline = Timer(uploadTimeout, stop);
     try {
-      final response = await _uploadClient.send(request);
+      // A stalled upload ends, so the queue can mark it and retry later.
+      final response = await _uploadClient
+          .send(request)
+          .timeout(
+            uploadTimeout,
+            onTimeout: () {
+              stop();
+              throw TimeoutException('Upload timed out', uploadTimeout);
+            },
+          );
+      // Read (and so release) the response on success and on failure, within
+      // the same deadline; storage sends little or nothing back.
+      await response.stream.drain<void>().timeout(
+        uploadTimeout,
+        onTimeout: () {
+          stop();
+          throw TimeoutException('Upload response timed out', uploadTimeout);
+        },
+      );
       if (response.statusCode >= 300) {
         throw const IncidentException(
           'The photo did not reach storage. Try again.',
+          status: 502,
         );
       }
     } on http.ClientException {
-      throw const IncidentException(
-        'The photo did not reach storage. Check your connection and try again.',
-        offline: true,
-      );
+      // Includes RequestAbortedException when the deadline aborted it.
+      throw unreachable;
+    } on TimeoutException {
+      throw unreachable;
+    } finally {
+      deadline.cancel();
     }
-    await _call(
-      '/emergencies/evidence/${evidence['id']}/complete',
-      method: 'POST',
-      body: const {},
-    );
+    try {
+      await _call(
+        '/emergencies/evidence/${evidence['id']}/complete',
+        method: 'POST',
+        body: const {},
+        stillSignedIn: stillSignedIn,
+      );
+    } on IncidentException catch (error) {
+      // An API from before issue #125 answers a second completion of this
+      // same record with 409; the photo is there.
+      final done =
+          error.status == 409 &&
+          error.message.toLowerCase().contains('already been uploaded');
+      if (!done) rethrow;
+    }
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) =>
-      _upload('/emergencies/assessments/$assessmentId/evidence', photo);
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+    String? clientUploadId,
+  }) => _upload(
+    '/emergencies/assessments/$assessmentId/evidence',
+    photo,
+    stillSignedIn: stillSignedIn,
+    clientUploadId: clientUploadId,
+  );
 
   @override
   Future<void> updateDelivery(

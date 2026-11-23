@@ -1,6 +1,6 @@
 # SarvoAI: AWS setup
 
-SarvoAI is the HQ-only question assistant (`POST /api/v1/assistant/questions`). It calls Claude Haiku 5.5 on Amazon Bedrock. These steps are done once per AWS account by someone with administrator access. The code needs no AWS keys: it signs requests with the API task's IAM role.
+SarvoAI is the HQ-only question assistant (`POST /api/v1/assistant/questions`). It calls Claude on Amazon Bedrock. For the current Haiku 4.5 configuration and deployment steps, follow the [TEST pilot guide](sarvoai-test-pilot-plan.md). The model and pricing examples below describe the earlier Haiku 5.5 configuration. These steps are done once per AWS account by someone with administrator access. The code needs no AWS keys: it signs requests with the API task's IAM role.
 
 ## Reviewed scope
 
@@ -73,7 +73,7 @@ In Singapore, Claude Haiku 5.5 is available only through the **global** inferenc
 
 ## 2. Give the API role permission
 
-Attach [`infrastructure/aws/sarvoai-bedrock-policy.json`](../infrastructure/aws/sarvoai-bedrock-policy.json) to the IAM role the API code runs as (for example an ECS task role or an App Runner instance role; not a role used only to pull images or start the service). Replace `ACCOUNT_ID` with the 12-digit account ID first.
+The SAM template grants model access to the Lambda execution role when SarvoAI is enabled. For a manually managed Haiku 4.5 role, use the [example IAM policy](../infrastructure/aws/sarvoai-bedrock-policy.json) with the deployment account ID.
 
 The policy has the three parts AWS requires for a global inference profile and allows only this one model:
 
@@ -181,7 +181,7 @@ To review the prices:
 |---|---|
 | `expiresOn` | Calls stop at 00:00 UTC on this date. It may be at most 31 days after `reviewedOn`, so the prices are checked again each month |
 | `modelId`, `region` | Must match `SARVOAI_MODEL_ID` and `SARVOAI_AWS_REGION`, so changing either needs a fresh review |
-| Supported models | Only `global.anthropic.claude-haiku-5-5`. Another model or profile also needs a code review of `assistant-cost.ts`, because its thinking and billing rules can differ |
+| Supported models | Global Claude Haiku 4.5 and 5.5. Haiku 4.5 accepts a standard pricing tier alone. Haiku 5.5 also requires its long-prompt tier. Another model or profile needs a billing review in `assistant-cost.ts` |
 | `source` | Must be an https address on an AWS domain |
 | Prices | Written as text, all above zero. Long-prompt prices may not be below the standard ones. Unknown fields are refused, so a misspelt field cannot be ignored |
 

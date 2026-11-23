@@ -8,12 +8,14 @@ import { REQUIRED_ROLES } from '../auth/require-roles.decorator.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type Anthropic from '@anthropic-ai/sdk';
 
-import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, MODEL_TIMEOUT_MS } from './assistant-model.js';
+import { type AssistantModel, assistantModelFromConfig, BedrockAssistantModel, DisabledAssistantModel, HAIKU_45_MODEL_ID, MODEL_TIMEOUT_MS } from './assistant-model.js';
 import { assertBillableRequest, SpendingBlockedError } from './assistant-cost.js';
 import { type AssistantSpendingService, SpendingLimitReachedException } from './assistant-spending.service.js';
 import type { AssistantTools, ToolOutcome } from './assistant-tools.js';
 import { AssistantController } from './assistant.controller.js';
+import { AssistantOperations } from './assistant-operations.js';
 import { AssistantService } from './assistant.service.js';
+import { AssistantInsights } from './assistant-insights.js';
 
 const hq: Principal = { id: 'hq-1', displayName: 'Fictional HQ admin', roles: ['HQ_ADMIN'], districtIds: [], societyIds: [] };
 const now = new Date('2026-11-02T04:00:00Z');
@@ -23,17 +25,18 @@ const message = (stop_reason: Anthropic.StopReason, content: object[]) => ({ sto
 const toolUse = (name: string, input: object) => message('tool_use', [{ type: 'tool_use', id: `call-${name}`, name, input }]);
 const final = (answer: object) => message('end_turn', [{ type: 'text', text: JSON.stringify(answer) }]);
 
-function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content: '{}' }) {
+function setup(responses: Anthropic.Message[], outcome: ToolOutcome = { content: '{}' }, modelId = 'fake') {
   const createMessage = vi.fn();
   for (const response of responses) createMessage.mockResolvedValueOnce(response);
-  const model: AssistantModel = { modelId: 'fake', createMessage };
+  const model: AssistantModel = { modelId, createMessage };
   const run = vi.fn().mockResolvedValue(outcome);
   const auditCreate = vi.fn().mockResolvedValue({});
   const prisma = { platformAuditEvent: { create: auditCreate } } as unknown as PrismaService;
   const reservation = { id: 'reservation-1' };
   const spending = { reserve: vi.fn().mockResolvedValue(reservation), settle: vi.fn().mockResolvedValue(undefined), failed: vi.fn().mockResolvedValue(undefined) };
-  const service = new AssistantService(prisma, { run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
-  return { service, createMessage, run, auditCreate, spending, reservation };
+  const operations = new AssistantOperations({ run } as unknown as AssistantTools, model, spending as unknown as AssistantSpendingService);
+  const service = new AssistantService(prisma, operations);
+  return { service, operations, createMessage, run, auditCreate, spending, reservation };
 }
 
 const averageOutcome: ToolOutcome = {
@@ -51,6 +54,15 @@ describe('AssistantService', () => {
     const { service, createMessage } = setup([]);
     await expect(service.ask({ ...hq, roles: ['DISTRICT_MANAGER'] }, 'Average profit?', [], now)).rejects.toThrow(ForbiddenException);
     expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unapproved operation at the backend boundary before querying records', async () => {
+    const { operations, run, spending } = setup([]);
+    const bound = operations.forQuestion(hq, now, new AbortController().signal);
+
+    await expect(bound.runTools([{ type: 'tool_use', name: 'delete_society', id: 'unknown-tool', input: {} }])).rejects.toThrow('SarvoAI tool is not approved');
+    expect(run).not.toHaveBeenCalled();
+    expect(spending.reserve).not.toHaveBeenCalled();
   });
 
   it('runs the tools the model asks for and returns figures from the tool result, not the model', async () => {
@@ -71,6 +83,60 @@ describe('AssistantService', () => {
     expect(auditCreate.mock.calls[0][0].data).toMatchObject({ action: 'SARVOAI_QUESTION', actorId: 'hq-1' });
   });
 
+  it('uses overview records for the summary when the model gives a different upload count', async () => {
+    const { service, run, createMessage } = setup([
+      toolUse('get_society_overview', { societyCode: 'TEST-A01', financialYear: 2025 }),
+      final({ kind: 'ANSWER', summary: 'Three uploads are missing.', options: [] }),
+    ]);
+    const db = {
+      society: { findFirst: async () => ({
+        id: 'test-a01', nameEn: 'Fictional Test Society A01', societyCode: 'TEST-A01',
+        district: { nameEn: 'Fictional District' }, status: 'ACTIVE', grade: 'B', updatedAt: now,
+      }) },
+      societyDocument: { findMany: async () => [] },
+      annualFinancialSummary: { findUnique: async () => ({
+        totalProfit: 0, totalExpenses: null, updatedAt: now,
+      }) },
+      workPlanActivity: { findMany: async () => [] },
+      gradeChangeRequest: { count: async () => 0 },
+      informationRequestSociety: { count: async () => 0 },
+      societyCouncilMember: { count: async () => 0 },
+    };
+    const prisma = { $transaction: async (operation: (client: typeof db) => unknown) => operation(db) };
+    const insights = new AssistantInsights(prisma as unknown as PrismaService, true);
+    run.mockImplementation(async (_name: string, input: { societyCode: string; financialYear: number }) =>
+      insights.overview(input.societyCode, input.financialYear, now),
+    );
+
+    const answer = await service.ask(hq, 'Give me an overview of TEST-A01 for FY 2025/26', [], now);
+
+    const labels = 'Audit report, AGM minutes, Office-bearer list, Members list';
+    expect(answer.summary).toContain(`Missing 4 Registrar uploads (${labels}).`);
+    expect(answer.summary).toContain('total profit is LKR 0 and total expenses are unavailable');
+    expect(answer.table?.rows).toContainEqual(['Missing Registrar uploads', labels]);
+    expect(answer.details.sources).toContainEqual(expect.objectContaining({ label: 'Registrar uploads' }));
+    expect(JSON.stringify(createMessage.mock.calls[1][0])).toContain('Office-bearer list');
+  });
+
+  it('keeps the model comparison when more than one overview is used', async () => {
+    const { service, run } = setup([
+      toolUse('get_society_overview', { societyCode: 'TEST-A01', financialYear: 2024 }),
+      toolUse('get_society_overview', { societyCode: 'TEST-A01', financialYear: 2025 }),
+      final({ kind: 'ANSWER', summary: 'Total profit rose from LKR 100 in FY 2024/25 to LKR 200 in FY 2025/26.', options: [] }),
+    ]);
+    const overview = (label: string): ToolOutcome => ({
+      content: '{}',
+      answer: { summary: `TEST-A01 overview for ${label}.`, details: { recordsUsed: [`Society overview for ${label}`] } },
+    });
+    run.mockResolvedValueOnce(overview('FY 2024/25')).mockResolvedValueOnce(overview('FY 2025/26'));
+
+    const answer = await service.ask(hq, 'Compare TEST-A01 between FY 2024/25 and FY 2025/26', [], now);
+
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(answer.summary).toBe('Total profit rose from LKR 100 in FY 2024/25 to LKR 200 in FY 2025/26.');
+    expect(answer.details.recordsUsed).toEqual(['Society overview for FY 2024/25', 'Society overview for FY 2025/26']);
+  });
+
   it('sends earlier turns for follow-ups and shows no data when asking to clarify', async () => {
     const { service, createMessage } = setup([final({ kind: 'CLARIFY', summary: 'Which do you mean?', options: ['In each year', 'In at least one year', 'Combined'] })]);
 
@@ -80,6 +146,45 @@ describe('AssistantService', () => {
     expect(answer.options).toHaveLength(3);
     expect(answer.table).toBeUndefined();
     expect(createMessage.mock.calls[0][0].messages.map((message: { role: string }) => message.role)).toEqual(['user', 'assistant', 'user']);
+  });
+
+  it('keeps tool results separate when HQ questions run concurrently', async () => {
+    const { service, createMessage, run } = setup([]);
+    createMessage.mockImplementation(async ({ messages }: { messages: Anthropic.MessageParam[] }) => {
+      const question = messages[0].content;
+      if (typeof question !== 'string') throw new Error('Expected a text question');
+      if (messages.length === 1) return toolUse('list_districts', { question });
+      return final({
+        kind: 'ANSWER',
+        summary: JSON.stringify(messages.at(-1)?.content),
+        options: [],
+      });
+    });
+    run.mockImplementation(async (_name: string, input: { question: string }) => ({
+      content: input.question,
+    }));
+
+    const [first, second] = await Promise.all([
+      service.ask(hq, 'First fictional district', [], now),
+      service.ask(hq, 'Second fictional district', [], now),
+    ]);
+
+    expect(JSON.parse(first.summary)).toMatchObject([{ content: 'First fictional district' }]);
+    expect(JSON.parse(second.summary)).toMatchObject([{ content: 'Second fictional district' }]);
+  });
+
+  it('reserves and sends structured output without the unsupported Haiku 4.5 effort field', async () => {
+    const { service, spending, createMessage } = setup(
+      [final({ kind: 'CLARIFY', summary: 'Which district?', options: [] })],
+      undefined,
+      HAIKU_45_MODEL_ID,
+    );
+    await service.ask(hq, 'Show the totals', [], now);
+
+    const request = createMessage.mock.calls[0][0];
+    expect(request.output_config.format.type).toBe('json_schema');
+    expect(request.output_config).not.toHaveProperty('effort');
+    expect(spending.reserve).toHaveBeenCalledWith(HAIKU_45_MODEL_ID, request);
   });
 
   it('answers UNSUPPORTED when the model refuses', async () => {
@@ -97,7 +202,8 @@ describe('AssistantService', () => {
 
     const prisma = { platformAuditEvent: { create: vi.fn() } } as unknown as PrismaService;
     const reserve = vi.fn();
-    const off = new AssistantService(prisma, { run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel(), { reserve } as unknown as AssistantSpendingService);
+    const operations = new AssistantOperations({ run: vi.fn() } as unknown as AssistantTools, new DisabledAssistantModel(), { reserve } as unknown as AssistantSpendingService);
+    const off = new AssistantService(prisma, operations);
     await expect(off.ask(hq, 'Average profit?', [], now)).rejects.toThrow('not switched on');
     expect(reserve).not.toHaveBeenCalled();
   });
@@ -352,9 +458,9 @@ describe('assistantModelFromConfig', () => {
     expect(assistantModelFromConfig(config({ SARVOAI_ENABLED: 'yes' }))).toBeInstanceOf(DisabledAssistantModel);
   });
 
-  it('defaults to Claude Haiku 5.5 through the global profile from Singapore', () => {
+  it('defaults to Claude Haiku 4.5 through the global profile from Singapore', () => {
     const model = assistantModelFromConfig(config({ SARVOAI_ENABLED: 'true' }));
     expect(model).toBeInstanceOf(BedrockAssistantModel);
-    expect(model.modelId).toBe('global.anthropic.claude-haiku-5-5');
+    expect(model.modelId).toBe(HAIKU_45_MODEL_ID);
   });
 });

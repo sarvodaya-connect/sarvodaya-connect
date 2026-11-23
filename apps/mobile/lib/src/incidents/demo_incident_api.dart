@@ -4,7 +4,11 @@ import 'incident_api.dart';
 /// Fictional sample incident for demonstration mode and widget tests. The
 /// screens label it "Sample data". Nothing here is real.
 class DemoIncidentApi implements IncidentApi {
-  DemoIncidentApi({required this.clock, this.societyId = 'society-demo'}) {
+  DemoIncidentApi({
+    required this.clock,
+    this.societyId = 'society-demo',
+    bool Function()? isOnline,
+  }) : _isOnline = isOnline ?? _always {
     final now = clock();
     _incident = IncidentSummary(
       id: 'incident-demo',
@@ -178,27 +182,90 @@ class DemoIncidentApi implements IncidentApi {
     String societyId,
   ) async => _updates.reversed.toList();
 
+  static bool _always() => true;
+  final bool Function() _isOnline;
+
+  /// Like the API: a retry with the same id returns the update already received.
+  final _byMutation = <String, String>{};
+
+  /// Like the API: one evidence record per clientUploadId, per assessment.
+  final _uploadIds = <String, Set<String>>{};
+
+  void _requireOnline() {
+    if (!_isOnline()) {
+      throw const IncidentException(
+        "You're offline or the server did not answer.",
+        offline: true,
+      );
+    }
+  }
+
+  /// As the real API: nothing is sent once the account has signed out.
+  void _requireSignedIn(bool Function()? stillSignedIn) {
+    if (stillSignedIn != null && !stillSignedIn()) {
+      throw const IncidentException('Sign in again to send this.', status: 401);
+    }
+  }
+
   @override
   Future<String> sendAssessment(
     String incidentId,
     String societyId,
     String clientMutationId,
-    AssessmentAnswers answers,
-  ) async {
+    AssessmentAnswers answers, {
+    bool Function()? stillSignedIn,
+  }) async {
+    _requireSignedIn(stillSignedIn);
+    _requireOnline();
+    final replay = _byMutation[clientMutationId];
+    if (replay != null) return replay;
+    // Like the API: a replay is still confirmed, but nothing new is taken
+    // once the incident is closed (the queue shows it as closed).
+    if (_incident.isClosed) {
+      throw const IncidentException(
+        'This incident is closed. No new assessments can be added.',
+        status: 409,
+      );
+    }
     final id = 'update-${_updates.length + 1}';
+    _byMutation[clientMutationId] = id;
     _updates.add(
       AssessmentUpdate(
         id: id,
         number: _updates.length + 1,
         sentAt: clock(),
-        photos: answers.photos.length,
+        // Photos are counted as each one arrives through addPhoto.
+        photos: 0,
       ),
     );
     return id;
   }
 
   @override
-  Future<void> addPhoto(String assessmentId, PickedDocument photo) async {}
+  Future<void> addPhoto(
+    String assessmentId,
+    PickedDocument photo, {
+    bool Function()? stillSignedIn,
+    String? clientUploadId,
+  }) async {
+    _requireSignedIn(stillSignedIn);
+    _requireOnline();
+    final index = _updates.indexWhere((u) => u.id == assessmentId);
+    if (index < 0) return;
+    // A retry of a photo already received confirms it without counting it
+    // again. Calls without an id (older apps) count every time, as before.
+    if (clientUploadId != null &&
+        !(_uploadIds[assessmentId] ??= {}).add(clientUploadId)) {
+      return;
+    }
+    final update = _updates[index];
+    _updates[index] = AssessmentUpdate(
+      id: update.id,
+      number: update.number,
+      sentAt: update.sentAt,
+      photos: update.photos + 1,
+    );
+  }
 
   @override
   Future<void> updateDelivery(

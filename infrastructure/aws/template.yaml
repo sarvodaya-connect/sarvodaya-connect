@@ -49,7 +49,15 @@ Parameters:
     Default: 'false'
   SarvoAiModelId:
     Type: String
-    Default: global.anthropic.claude-haiku-5-5
+    AllowedValues:
+      - global.anthropic.claude-haiku-4-5-20251001-v1:0
+      - global.anthropic.claude-haiku-5-5
+    Default: global.anthropic.claude-haiku-4-5-20251001-v1:0
+  SarvoAiAgentCoreRuntimeArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:aws:bedrock-agentcore:ap-southeast-1:[0-9]{12}:runtime/[A-Za-z0-9_-]+$'
+    Description: Optional Singapore AgentCore runtime ARN for SarvoAI in TEST.
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
@@ -81,6 +89,10 @@ Rules:
 Conditions:
   IsTest: !Equals [!Ref Stage, test]
   SarvoAiOn: !Equals [!Ref SarvoAiEnabled, 'true']
+  SarvoAiAgentCoreOn: !And
+    - !Condition IsTest
+    - !Condition SarvoAiOn
+    - !Not [!Equals [!Ref SarvoAiAgentCoreRuntimeArn, '']]
 
 Globals:
   Function:
@@ -134,6 +146,7 @@ Resources:
           DISTRICT_ACCESS_MAX_DAYS: '14'
           SARVOAI_ENABLED: !Ref SarvoAiEnabled
           SARVOAI_FICTIONAL_ONLY: !If [IsTest, 'true', 'false']
+          SARVOAI_AGENTCORE_RUNTIME_ARN: !If [SarvoAiAgentCoreOn, !Ref SarvoAiAgentCoreRuntimeArn, '']
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
           SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd
@@ -186,17 +199,31 @@ Resources:
                 Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
               - Effect: Allow
                 Action: bedrock:InvokeModel
-                Resource: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}::foundation-model/anthropic.claude-haiku-5-5
+                Resource: !Sub
+                  - arn:${AWS::Partition}:bedrock:${SarvoAiRegion}::foundation-model/${FoundationModelId}
+                  - FoundationModelId: !Select [1, !Split ['global.', !Ref SarvoAiModelId]]
                 Condition:
                   StringEquals:
                     bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
               - Effect: Allow
                 Action: bedrock:InvokeModel
-                Resource: !Sub arn:${AWS::Partition}:bedrock:::foundation-model/anthropic.claude-haiku-5-5
+                Resource: !Sub
+                  - arn:${AWS::Partition}:bedrock:::foundation-model/${FoundationModelId}
+                  - FoundationModelId: !Select [1, !Split ['global.', !Ref SarvoAiModelId]]
                 Condition:
                   StringEquals:
                     aws:RequestedRegion: unspecified
                     bedrock:InferenceProfileArn: !Sub arn:${AWS::Partition}:bedrock:${SarvoAiRegion}:${AWS::AccountId}:inference-profile/${SarvoAiModelId}
+          - !Ref AWS::NoValue
+        - !If
+          - SarvoAiAgentCoreOn
+          - Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock-agentcore:InvokeAgentRuntimeWithWebSocketStream
+                Resource:
+                  - !Ref SarvoAiAgentCoreRuntimeArn
+                  - !Sub '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'
           - !Ref AWS::NoValue
       Events:
         Api:

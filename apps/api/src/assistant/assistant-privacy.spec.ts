@@ -26,6 +26,11 @@ describe('SarvoAI best-effort privacy scrubbing', () => {
     expect(scrubAssistantText('TEST-A01: profit LKR 298,400; Fictional Person')).toBe('TEST-A01: profit LKR 298,400; Fictional Person');
   });
 
+  it('preserves the Registrar document label and still redacts a bearer credential nearby', () => {
+    expect(scrubAssistantText('Office-bearer list. Authorization: Bearer fictional-token'))
+      .toBe('Office-bearer list. Authorization: [REDACTED TOKEN]');
+  });
+
   it('scrubs nested strings without mutating the request or its schema structure', () => {
     const payload = { max_tokens: 2048, messages: [{ content: [{ type: 'tool_result', content: '{"email":"person@example.invalid"}' }] }] };
     const safe = scrubAssistantPayload(payload);

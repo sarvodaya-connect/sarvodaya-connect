@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -10,6 +10,8 @@ import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/count_field.dart';
 import '../widgets/state_views.dart';
+import 'assessment_queue.dart';
+import 'assessment_queue_card.dart';
 import 'incident_api.dart';
 import 'incident_format.dart';
 
@@ -390,18 +392,27 @@ class IncidentHomeSection extends StatefulWidget {
 class _IncidentHomeSectionState extends State<IncidentHomeSection> {
   IncidentDetail? _detail;
 
+  /// Only the newest load may update the screen, so a slow first load never
+  /// replaces the refresh after a delivery.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
-    final api = DemoScope.read(context).incidents;
+  Future<void> _load({bool send = true}) async {
+    final store = DemoScope.read(context);
+    final api = store.incidents;
+    final generation = ++_generation;
+    if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
       final active = await api.active();
       final detail = active.isEmpty ? null : await api.detail(active.first.id);
-      if (mounted) setState(() => _detail = detail);
+      if (mounted && generation == _generation) {
+        setState(() => _detail = detail);
+      }
     } on IncidentException {
       // The home still works without the incident card; the Incident tab shows the error.
     }
@@ -410,7 +421,9 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
   @override
   Widget build(BuildContext context) {
     final detail = _detail;
-    if (detail == null) return const SizedBox.shrink();
+    if (detail == null) {
+      return PendingAssessmentsCard(onSent: () => _load(send: false));
+    }
     final store = DemoScope.of(context);
     final mine = widget.societyId == null
         ? const <ResponseAction>[]
@@ -418,6 +431,7 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        PendingAssessmentsCard(onSent: () => _load(send: false)),
         ActiveIncidentCard(
           incident: detail.incident,
           now: store.now,
@@ -449,6 +463,47 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
     );
   }
 }
+
+/// Issue #125: sends assessments saved on this phone when a disaster screen
+/// opens or is refreshed. Problems are kept on each saved item and shown in
+/// its card; they never stop the screen loading.
+///
+/// It runs alongside loading the screen, never before it: large photos or a
+/// stalled upload must not keep anyone from the incident and its response
+/// actions. When something was sent, [onSent] reloads the screen once so
+/// its counts include it.
+void _sendSavedThen(DemoStore store, void Function() onSent) {
+  unawaited(
+    store.assessments.sync().then(
+      (result) {
+        if (result.sent > 0) onSent();
+      },
+      onError: (Object error) {
+        debugPrint('Saved assessments were not sent: $error');
+      },
+    ),
+  );
+}
+
+/// Saved assessments stay in reach while the screen loads or cannot load,
+/// for example offline: their state, Retry sending and Remove.
+///
+/// One scroll view holds both, so however many items are saved and however
+/// large the text, every item, Retry sending and the loading or error content
+/// below can be scrolled to. The content fills the space under the card as
+/// before, and grows to its full height rather than scrolling on its own.
+Widget _withSavedAssessments(Widget child, VoidCallback onSent) =>
+    CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          sliver: SliverToBoxAdapter(
+            child: PendingAssessmentsCard(onSent: onSent),
+          ),
+        ),
+        SliverFillRemaining(hasScrollBody: false, child: child),
+      ],
+    );
 
 Future<void> openIncident(BuildContext context, String id) => Navigator.of(
   context,
@@ -482,28 +537,36 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
   List<IncidentNotification> _alerts = const [];
   String? _error;
 
+  /// Only the newest load may update the screen.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
-    final api = DemoScope.read(context).incidents;
+  Future<void> _load({bool send = true}) async {
+    final store = DemoScope.read(context);
+    final api = store.incidents;
+    final generation = ++_generation;
     setState(() => _error = null);
+    if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
       final incidents = await api.active();
       final alerts = await api.notifications().catchError(
         (_) => const <IncidentNotification>[],
       );
-      if (mounted) {
+      if (mounted && generation == _generation) {
         setState(() {
           _incidents = incidents;
           _alerts = alerts;
         });
       }
     } on IncidentException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && generation == _generation) {
+        setState(() => _error = error.message);
+      }
     }
   }
 
@@ -527,23 +590,30 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
         subtitle: 'Live incidents for your societies',
       ),
       body: _error != null
-          ? StateMessage(
-              icon: Icons.error_outline,
-              tone: StateTone.error,
-              isAlert: true,
-              title: "Couldn't load incidents",
-              message: _error!,
-              primaryLabel: 'Try again',
-              onPrimary: _load,
+          ? _withSavedAssessments(
+              StateMessage(
+                icon: Icons.error_outline,
+                tone: StateTone.error,
+                isAlert: true,
+                title: "Couldn't load incidents",
+                message: _error!,
+                primaryLabel: 'Try again',
+                onPrimary: _load,
+              ),
+              () => _load(send: false),
             )
           : incidents == null
-          ? const LoadingSkeleton(label: 'Loading incidents')
+          ? _withSavedAssessments(
+              const LoadingSkeleton(label: 'Loading incidents'),
+              () => _load(send: false),
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
+                  PendingAssessmentsCard(onSent: () => _load(send: false)),
                   if (incidents.isEmpty)
                     const _Card(
                       child: Text(
@@ -658,20 +728,34 @@ class _IncidentScreenState extends State<IncidentScreen> {
   String? _error;
   bool _closing = false;
 
+  /// Only the newest load may update the screen.
+  var _generation = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool send = true}) async {
+    final generation = ++_generation;
     setState(() => _error = null);
+    if (send) {
+      _sendSavedThen(
+        DemoScope.read(context),
+        () => mounted ? _load(send: false) : null,
+      );
+    }
     try {
       final detail = await DemoScope.read(context).incidents
           .detail(widget.incidentId);
-      if (mounted) setState(() => _detail = detail);
+      if (mounted && generation == _generation) {
+        setState(() => _detail = detail);
+      }
     } on IncidentException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted && generation == _generation) {
+        setState(() => _error = error.message);
+      }
     }
   }
 
@@ -810,22 +894,29 @@ class _IncidentScreenState extends State<IncidentScreen> {
         ],
       ),
       body: _error != null
-          ? StateMessage(
-              icon: Icons.lock_outline,
-              tone: StateTone.noAccess,
-              title: "Can't open this incident",
-              message: _error!,
-              primaryLabel: 'Try again',
-              onPrimary: _load,
+          ? _withSavedAssessments(
+              StateMessage(
+                icon: Icons.lock_outline,
+                tone: StateTone.noAccess,
+                title: "Can't open this incident",
+                message: _error!,
+                primaryLabel: 'Try again',
+                onPrimary: _load,
+              ),
+              () => _load(send: false),
             )
           : detail == null
-          ? const LoadingSkeleton(label: 'Loading the incident')
+          ? _withSavedAssessments(
+              const LoadingSkeleton(label: 'Loading the incident'),
+              () => _load(send: false),
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
+                  PendingAssessmentsCard(onSent: () => _load(send: false)),
                   _Card(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1120,18 +1211,11 @@ class _Choice extends StatelessWidget {
   );
 }
 
-String _newClientMutationId() {
-  final random = Random.secure();
-  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
-}
-
 /// V5 M41–M43: a rapid assessment, one question at a time, then "Check before
-/// sending" and "Assessment sent". The answers stay on this screen until they
-/// are sent; they are never saved for later or sent offline.
+/// sending" and "Assessment sent". Issue #125: sending first saves the
+/// assessment on this phone, encrypted for the signed-in account, then sends
+/// it. When the connection fails it stays saved and is sent later while the
+/// app is open; the same id on every retry means it is never recorded twice.
 class RapidAssessmentScreen extends StatefulWidget {
   const RapidAssessmentScreen({
     super.key,
@@ -1151,7 +1235,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
   final _answers = AssessmentAnswers();
   late final _note = TextEditingController();
   // One id per assessment: sending again after a dropped connection is safe.
-  final _clientMutationId = _newClientMutationId();
+  final _clientMutationId = newClientMutationId();
   late String? _societyId =
       widget.societies.any((s) => s.id == widget.initialSocietyId)
       ? widget.initialSocietyId
@@ -1192,6 +1276,9 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
   List<AssessmentUpdate>? _sent;
   String _status = '';
 
+  /// Saved on the phone but not (fully) sent yet.
+  QueuedAssessment? _saved;
+
   static const _questions = 10;
 
   @override
@@ -1219,46 +1306,100 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
   Future<void> _send() async {
     final society = _society;
     if (society == null) return;
-    final api = DemoScope.read(context).incidents;
+    final l = context.l10n;
+    final store = DemoScope.read(context);
+    final queue = store.assessments;
     _answers.note = _note.text;
     setState(() {
       _sending = true;
       _error = null;
-      _status = 'Sending…';
+      _status = l.aqSaving;
     });
+    final QueuedAssessment saved;
     try {
-      final id = await api.sendAssessment(
-        widget.incident.id,
-        society.id,
-        _clientMutationId,
-        _answers,
+      // Saved before any attempt to send, so a dropped connection loses nothing.
+      saved = await queue.save(
+        incident: widget.incident,
+        societyId: society.id,
+        societyName: society.name,
+        clientMutationId: _clientMutationId,
+        answers: _answers,
       );
-      var failed = 0;
-      for (final (index, photo) in _answers.photos.indexed) {
-        setState(
-          () => _status =
-              'Adding photo ${index + 1} of ${_answers.photos.length}…',
-        );
-        try {
-          await api.addPhoto(id, photo);
-        } on IncidentException {
-          failed++;
-        }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          _status = '';
+          _error = l.aqSaveFailed('$error');
+        });
       }
-      final updates = await api.updates(widget.incident.id, society.id);
-      if (!mounted) return;
-      setState(() {
-        _sent = updates;
-        _status = failed == 0
-            ? ''
-            : '$failed ${failed == 1 ? 'photo' : 'photos'} could not be added. Send them with the next update.';
-      });
-    } on IncidentException catch (error) {
-      if (mounted) setState(() => _error = error.message);
-    } finally {
-      if (mounted) setState(() => _sending = false);
+      return;
     }
+    if (!mounted) return;
+    setState(() => _status = l.aqSyncing);
+    // A failure while sending (for example, the phone's storage is full) is
+    // not a failure to save: the answers are on the phone already.
+    var syncFailed = false;
+    try {
+      await queue.sync();
+    } catch (error) {
+      debugPrint('The saved assessment was not sent: $error');
+      syncFailed = true;
+    }
+    if (!mounted) return;
+    // "Sent" only once the API confirmed this assessment and every photo.
+    // Missing from the queue is not enough: a sign-out during sending hides
+    // the account's saved items without sending them.
+    if (syncFailed || !queue.delivered(_clientMutationId)) {
+      final current = queue.items
+          .where((item) => item.clientMutationId == _clientMutationId)
+          .firstOrNull;
+      setState(() {
+        _saved =
+            current ??
+            (store.user == null
+                ? saved.copyWith(
+                    problem: QueueProblem.signIn,
+                    message: 'Sign in again to send this.',
+                  )
+                : saved);
+        _sending = false;
+        _status = '';
+      });
+      return;
+    }
+    List<AssessmentUpdate> updates;
+    try {
+      updates = await store.incidents.updates(widget.incident.id, society.id);
+    } on IncidentException {
+      // It arrived; only the list of earlier updates could not be loaded.
+      updates = const [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _sent = updates;
+      _status = '';
+      _sending = false;
+    });
   }
+
+  Widget _savedView(String subtitle) => Scaffold(
+    appBar: _TitledBar(
+      title: 'Rapid Assessment',
+      subtitle: subtitle,
+      close: true,
+    ),
+    body: ListView(
+      padding: const EdgeInsets.all(16),
+      children: [SavedAssessmentNotice(item: _saved!)],
+    ),
+    bottomNavigationBar: BottomActionBar(
+      primary: OutlinedButton(
+        onPressed: () => Navigator.of(context).pop(true),
+        child: const Text('Done'),
+      ),
+    ),
+  );
 
   Widget _question() {
     final a = _answers;
@@ -1410,6 +1551,7 @@ class _RapidAssessmentScreenState extends State<RapidAssessmentScreen> {
     final subtitle =
         '${society?.name ?? 'Choose a society'} · ${widget.incident.reference}';
     if (_sent != null) return _sentView(subtitle);
+    if (_saved != null) return _savedView(subtitle);
     final reviewing = _step == _questions;
     return Scaffold(
       appBar: _TitledBar(
