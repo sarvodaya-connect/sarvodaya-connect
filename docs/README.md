@@ -22,3 +22,4 @@ This directory contains the technical and project documentation for Sarvodaya Co
 - Do not include passwords, access tokens, private keys, or confidential client data.
 - Reference the relevant Jira work item where appropriate.
 - Review major architectural changes with the team before approval.
+<!-- Controlled docs-only CI verification for #155 -->
