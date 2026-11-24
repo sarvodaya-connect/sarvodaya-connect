@@ -130,3 +130,6 @@ test("SPC categories use stable codes in prototype order", () => {
     "AGRICULTURE", "ENVIRONMENT",
   ]);
 });
+
+import assert from "node:assert/strict";
+assert.fail("Intentional controlled failure for #155 verification");
