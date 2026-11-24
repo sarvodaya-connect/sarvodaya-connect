@@ -26,9 +26,17 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          TextButton(
-            onPressed: unread == 0 ? null : store.markAllNotificationsRead,
-            child: const Text('Mark all read'),
+          // Keep the action inside its own area: at large text on a small
+          // phone it must not grow over the Back button.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: TextButton(
+              onPressed: unread == 0 ? null : store.markAllNotificationsRead,
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Mark all read', maxLines: 1),
+              ),
+            ),
           ),
         ],
       ),
