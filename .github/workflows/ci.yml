@@ -58,7 +58,7 @@ jobs:
                   node=true ;;
               esac
               case "$file" in
-                apps/mobile/* | scripts/play/* | .github/workflows/mobile-ci.yml | .github/workflows/play-internal-release.yml)
+                apps/mobile/* | scripts/play/* | scripts/ios/* | .github/workflows/ios-testflight-release.yml | .github/workflows/mobile-ci.yml | .github/workflows/play-internal-release.yml)
                   mobile=true ;;
               esac
               case "$file" in

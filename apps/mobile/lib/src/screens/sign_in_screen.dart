@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../motion/app_motion.dart';
 
@@ -19,6 +20,10 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  static final _privacyPolicyUrl = Uri.tryParse(
+    const String.fromEnvironment('PRIVACY_POLICY_URL'),
+  );
+
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
@@ -64,6 +69,18 @@ class _SignInScreenState extends State<SignInScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _openPrivacyPolicy(Uri uri) async {
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Show the same message if the platform throws or returns false.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.signInPrivacyOpenFailed)),
+    );
   }
 
   void _useDemoAccount() {
@@ -217,6 +234,14 @@ class _SignInScreenState extends State<SignInScreen> {
                       fontSize: 12,
                     ),
                   ),
+                  if (_privacyPolicyUrl case final uri?
+                      when uri.scheme == 'https' && uri.hasAuthority)
+                    Center(
+                      child: TextButton(
+                        onPressed: () => _openPrivacyPolicy(uri),
+                        child: Text(l10n.signInPrivacyPolicy),
+                      ),
+                    ),
                   if (DemoStore.demoMode) ...[
                     const SizedBox(height: 24),
                     NoticeBanner(

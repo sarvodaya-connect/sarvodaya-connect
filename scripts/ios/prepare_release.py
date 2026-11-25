@@ -1,4 +1,4 @@
-"""Prepare the TEST build configuration and validate Apple signing inputs."""
+"""Prepare the mobile build configuration and validate Apple signing inputs."""
 import base64
 import binascii
 import json
@@ -42,6 +42,8 @@ def prepare_build(directory):
     parsed = urlsplit(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise SystemExit('API_BASE_URL must be an HTTPS API URL without credentials, query or fragment.')
+    if os.environ.get('RELEASE_TARGET') == 'production' and parsed.path.rstrip('/') != '/api/v1':
+        raise SystemExit('Production API_BASE_URL must end in /api/v1.')
     pool = required('COGNITO_USER_POOL_ID')
     client = required('COGNITO_CLIENT_ID')
     if not re.fullmatch(r'[a-z]{2}-[a-z]+-[0-9]_[A-Za-z0-9]+', pool):
@@ -56,6 +58,12 @@ def prepare_build(directory):
         'SC_DEMO_MODE': 'false',
         'SC_SHOW_UNREVIEWED_TRANSLATIONS': required('TRANSLATION_REVIEW'),
     }
+    if os.environ.get('RELEASE_TARGET') == 'production':
+        policy = required('PRIVACY_POLICY_URL')
+        parsed_policy = urlsplit(policy)
+        if parsed_policy.scheme != 'https' or not parsed_policy.hostname or parsed_policy.username or parsed_policy.password:
+            raise SystemExit('PRIVACY_POLICY_URL must be a public HTTPS URL without credentials.')
+        config['PRIVACY_POLICY_URL'] = policy
     if os.environ.get('MAPBOX_TOKEN'):
         config['MAPBOX_TOKEN'] = os.environ['MAPBOX_TOKEN']
     (directory / 'defines.json').write_text(json.dumps(config), encoding='utf-8')
@@ -108,7 +116,7 @@ def prepare_signing(directory):
         'signingCertificate': 'Apple Distribution',
         'provisioningProfiles': {BUNDLE_ID: uuid},
         'manageAppVersionAndBuildNumber': False,
-        'testFlightInternalTestingOnly': True,
+        'testFlightInternalTestingOnly': os.environ.get('RELEASE_TARGET') != 'production',
     }
     for destination in ('export', 'upload'):
         (directory / f'{destination}.plist').write_bytes(plistlib.dumps({**options, 'destination': destination}))
