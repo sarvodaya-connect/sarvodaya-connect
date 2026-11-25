@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 
 import { REGISTRAR_DOCUMENT_TYPES } from "@/lib/v5-constants";
 
-import { OTHER_DOCUMENT_LABELS, REGISTRAR_LABELS, formatSize } from "./document-labels";
+import { useI18n } from "@/i18n/provider";
+
+import { REGISTRAR_LABELS, documentTypeLabel, formatSize } from "./document-labels";
 
 type Start = (input: {
   documentType: string;
@@ -49,6 +51,7 @@ export function DocumentUpload({
   financialYears: { startYear: number; label: string }[];
   start: Start;
 }) {
+  const { t } = useI18n();
   const registrarTypes = REGISTRAR_DOCUMENT_TYPES.filter((value) => allowAuditReport || value !== "AUDIT_REPORT");
   const [type, setType] = useState<string>(registrarTypes[0]!);
   const [year, setYear] = useState(financialYears[0]?.startYear);
@@ -62,10 +65,10 @@ export function DocumentUpload({
   async function upload(event: React.FormEvent) {
     event.preventDefault();
     setError(undefined);
-    if (!file) return setError("Choose a PDF or photo to upload.");
-    if (!ACCEPTED.includes(file.type)) return setError("Choose a PDF, JPG or PNG file.");
-    if (file.size > MAX_BYTES) return setError("The file is larger than 10 MB. Choose a smaller PDF or photo.");
-    if (!isYearly && !title.trim()) return setError("Give the document a name, for example Registration certificate.");
+    if (!file) return setError(t("rd.fileRequired"));
+    if (!ACCEPTED.includes(file.type)) return setError(t("rd.fileFormat"));
+    if (file.size > MAX_BYTES) return setError(t("rd.fileTooLarge"));
+    if (!isYearly && !title.trim()) return setError(t("rd.titleRequired"));
     setState("uploading");
     try {
       const started = await start({
@@ -77,9 +80,9 @@ export function DocumentUpload({
         sizeBytes: file.size,
         checksumSha256: await sha256(file),
       });
-      if (started.error || !started.upload || !started.documentId) throw new Error(started.error ?? "The upload could not be started.");
+      if (started.error || !started.upload || !started.documentId) throw new Error(started.error ?? t("rd.startFailed"));
       const response = await fetch(started.upload.url, { method: "PUT", headers: started.upload.headers, body: file });
-      if (!response.ok) throw new Error("The file did not reach storage. Check your connection and try again.");
+      if (!response.ok) throw new Error(t("rd.storageFailed"));
       const done = await complete(started.documentId);
       if (done.error) throw new Error(done.error);
       setState("done");
@@ -88,29 +91,29 @@ export function DocumentUpload({
       if (input.current) input.current.value = "";
     } catch (failure) {
       setState("idle");
-      setError(failure instanceof Error ? failure.message : "The upload failed. Try again.");
+      setError(failure instanceof Error ? failure.message : t("rd.uploadFailed"));
     }
   }
 
   const uploading = state === "uploading";
   return (
     <form className="rounded-card border border-line bg-surface p-4" onSubmit={upload}>
-      <h3 className="text-[14px] font-bold text-ink">Upload a Document</h3>
+      <h3 className="text-[14px] font-bold text-ink">{t("rd.uploadTitle")}</h3>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-[12px] font-semibold text-ink">
-          Document Type <span className="text-danger-text">*</span>
+          {t("rd.documentType")} <span className="text-danger-text">*</span>
           <select className={fieldClass} disabled={uploading} onChange={(event) => setType(event.target.value)} value={type}>
             {registrarTypes.map((value) => (
-              <option key={value} value={value}>{REGISTRAR_LABELS[value].title}</option>
+              <option key={value} value={value}>{documentTypeLabel(value, t)}</option>
             ))}
             {["REGISTRATION", "ACTIVITY_EVIDENCE", "OTHER"].map((value) => (
-              <option key={value} value={value}>{OTHER_DOCUMENT_LABELS[value]}</option>
+              <option key={value} value={value}>{documentTypeLabel(value, t)}</option>
             ))}
           </select>
         </label>
         {isYearly ? (
           <label className="text-[12px] font-semibold text-ink">
-            Financial Year <span className="text-danger-text">*</span>
+            {t("rd.financialYear")} <span className="text-danger-text">*</span>
             <select className={fieldClass} disabled={uploading} onChange={(event) => setYear(Number(event.target.value))} value={year}>
               {financialYears.map((option) => (
                 <option key={option.startYear} value={option.startYear}>{option.label}</option>
@@ -119,13 +122,13 @@ export function DocumentUpload({
           </label>
         ) : (
           <label className="text-[12px] font-semibold text-ink">
-            Name <span className="text-danger-text">*</span>
+            {t("rd.name")} <span className="text-danger-text">*</span>
             <input className={fieldClass} disabled={uploading} maxLength={150} onChange={(event) => setTitle(event.target.value)} value={title} />
           </label>
         )}
       </div>
       <label className="mt-3 block text-[12px] font-semibold text-ink">
-        File <span className="text-danger-text">*</span>
+        {t("rd.file")} <span className="text-danger-text">*</span>
         <input
           accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
           className="mt-1 block w-full text-[12px] text-ink-soft file:mr-3 file:rounded-button file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-[12px] file:font-semibold"
@@ -138,7 +141,7 @@ export function DocumentUpload({
           type="file"
         />
         <span className="mt-1 block text-[11px] font-normal text-muted">
-          {file ? `${file.name} · ${formatSize(file.size)}` : "PDF or photo, up to 10 MB."}
+          {file ? `${file.name} · ${formatSize(file.size, t)}` : t("rd.fileHint")}
         </span>
       </label>
       {error && (
@@ -148,7 +151,7 @@ export function DocumentUpload({
       )}
       {state === "done" && (
         <p className="mt-3 rounded-lg bg-success-bg px-3 py-2 text-[12px] font-semibold text-success-text" role="status">
-          Uploaded. The document is on the society record.
+          {t("rd.uploadDone")}
         </p>
       )}
       <div className="mt-3 flex items-center gap-3">
@@ -160,9 +163,9 @@ export function DocumentUpload({
           {uploading && (
             <span aria-hidden className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           )}
-          {uploading ? "Uploading…" : "Upload"}
+          {uploading ? t("rd.uploading") : t("rd.upload")}
         </button>
-        {uploading && <span className="sr-only" role="status">Uploading…</span>}
+        {uploading && <span className="sr-only" role="status">{t("rd.uploading")}</span>}
       </div>
     </form>
   );

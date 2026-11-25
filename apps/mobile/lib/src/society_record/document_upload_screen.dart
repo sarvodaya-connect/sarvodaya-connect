@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../format.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
@@ -13,13 +16,16 @@ const maxDocumentBytes = 10000000;
 const _allowedTypes = {'application/pdf', 'image/jpeg', 'image/png'};
 
 /// Plain-language problem with a chosen file, or null when it can be sent.
-String? validateDocument(PickedDocument file) {
+String? validateDocument(PickedDocument file, [AppLocalizations? l]) {
   if (!_allowedTypes.contains(file.contentType)) {
-    return 'Choose a PDF or a photo (JPG or PNG).';
+    return l?.rdInvalidFile ?? 'Choose a PDF or a photo (JPG or PNG).';
   }
-  if (file.sizeBytes == 0) return 'This file is empty. Choose another file.';
+  if (file.sizeBytes == 0) {
+    return l?.rdEmptyFile ?? 'This file is empty. Choose another file.';
+  }
   if (file.sizeBytes > maxDocumentBytes) {
-    return 'This file is ${formatFileSize(file.sizeBytes)}. Choose a file up to 10 MB.';
+    return l?.rdLargeFile(l.recordFileSize(file.sizeBytes)) ??
+        'This file is ${formatFileSize(file.sizeBytes)}. Choose a file up to 10 MB.';
   }
   return null;
 }
@@ -73,7 +79,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   final _title = TextEditingController();
 
   bool get _yearly => registrarDocumentTypes.contains(_type);
-  String get _label => documentTypeLabels[_type] ?? 'Document';
 
   @override
   void dispose() {
@@ -82,7 +87,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   }
 
   PickedDocument? _file;
-  String? _fileError;
   String? _uploadError;
   double? _progress;
   bool _submitted = false;
@@ -98,18 +102,18 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     if (!mounted || file == null) return;
     setState(() {
       _file = file;
-      _fileError = validateDocument(file);
       _uploadError = null;
     });
   }
 
   Future<void> _upload() async {
+    final l = context.l10n;
     setState(() {
       _submitted = true;
       _uploadError = null;
     });
     final file = _file;
-    if (file == null || _fileError != null) return;
+    if (file == null || validateDocument(file, l) != null) return;
     if (!_yearly && _title.text.trim().isEmpty) return;
     setState(() => _progress = 0);
     try {
@@ -125,11 +129,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '$_label uploaded. HQ can open it from the society record.',
-          ),
-        ),
+        SnackBar(content: Text(l.rdUploadSuccess(l.documentType(_type)))),
       );
       Navigator.of(context).pop(true);
     } on SocietyRecordException catch (error) {
@@ -137,8 +137,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         setState(() {
           _progress = null;
           _uploadError = error.offline
-              ? 'You are offline. The file was not uploaded. Try again when you are connected.'
-              : '${error.message} The file you chose is still selected.';
+              ? l.rdOffline
+              : l.rdSelectedFile(error.message);
         });
       }
     }
@@ -146,22 +146,22 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final store = DemoScope.of(context);
     final uploading = _progress != null;
     final file = _file;
+    final fileError = file == null ? null : validateDocument(file, l);
     return Scaffold(
       appBar: recordFormAppBar(
         context,
-        title: _type == 'AUDIT_REPORT'
-            ? 'Upload audit report'
-            : 'Upload document',
-        subtitle: '${widget.record.nameEn} · Documents',
+        title: _type == 'AUDIT_REPORT' ? l.rdUploadAudit : l.rdUploadDocument,
+        subtitle: l.rdDocumentsCaption(widget.record.nameEn),
         onClose: uploading ? () {} : null,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         children: [
-          const FieldLabel('Document type', required: true),
+          FieldLabel(l.rdDocumentType, required: true),
           DropdownButtonFormField<String>(
             initialValue: _type,
             isExpanded: true,
@@ -171,10 +171,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               for (final type in _types)
                 DropdownMenuItem(
                   value: type,
-                  child: Text(
-                    documentTypeLabels[type] ?? type,
-                    style: recordInputStyle,
-                  ),
+                  child: Text(l.documentType(type), style: recordInputStyle),
                 ),
             ],
             onChanged: uploading
@@ -183,24 +180,24 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           ),
           const SizedBox(height: 12),
           if (!_yearly) ...[
-            const FieldLabel('Name', required: true),
+            FieldLabel(l.rdName, required: true),
             TextField(
               controller: _title,
               enabled: !uploading,
               maxLength: 150,
               style: recordInputStyle,
               decoration: _dense.copyWith(
-                hintText: 'For example Registration certificate',
+                hintText: l.rdTitleHint,
                 counterText: '',
                 errorText: _submitted && _title.text.trim().isEmpty
-                    ? 'Give the document a name.'
+                    ? l.rdEnterName
                     : null,
               ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
           ],
-          if (_yearly) const FieldLabel('Financial year', required: true),
+          if (_yearly) FieldLabel(l.rdFinancialYear, required: true),
           if (_yearly)
             DropdownButtonFormField<int>(
               initialValue: _year,
@@ -219,16 +216,16 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   : (year) => setState(() => _year = year ?? _year),
             ),
           const SizedBox(height: 12),
-          const FieldLabel('File', required: true),
+          FieldLabel(l.rdFile, required: true),
           Semantics(
             button: true,
-            label: file == null ? 'Choose a PDF or photo' : 'Change the file',
+            label: file == null ? l.rdChooseFile : l.rdChangeFile,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: uploading ? null : _choose,
               child: RecordCard(
                 padding: const EdgeInsets.all(12),
-                borderColor: (_submitted && file == null) || _fileError != null
+                borderColor: (_submitted && file == null) || fileError != null
                     ? AppColors.danger
                     : AppColors.line,
                 children: [
@@ -245,29 +242,29 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              file?.name ?? 'Choose a PDF or photo',
+                              file?.name ?? l.rdChooseFile,
                               style: RecordStyle.value,
                             ),
                             if (file != null)
                               Text(
-                                '${file.contentType == 'application/pdf' ? 'PDF' : 'Photo'} · ${formatFileSize(file.sizeBytes)}',
+                                '${file.contentType == 'application/pdf' ? 'PDF' : l.rdPhoto} · ${l.recordFileSize(file.sizeBytes)}',
                                 style: RecordStyle.caption,
                               ),
                             if (uploading) ...[
                               const SizedBox(height: 7),
                               // A real loading state: a small spinner and text, no bar.
-                              const Row(
+                              Row(
                                 children: [
-                                  SizedBox.square(
+                                  const SizedBox.square(
                                     dimension: 14,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: AppColors.forest,
                                     ),
                                   ),
-                                  SizedBox(width: 7),
+                                  const SizedBox(width: 7),
                                   Text(
-                                    'Uploading…',
+                                    l.rdUploading,
                                     style: RecordStyle.caption,
                                   ),
                                 ],
@@ -279,10 +276,10 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       const SizedBox(width: 8),
                       Text(
                         uploading
-                            ? '${(_progress! * 100).round()}%'
+                            ? '${l.number((_progress! * 100).round())}%'
                             : file == null
-                            ? 'Choose'
-                            : 'Change',
+                            ? l.rdChoose
+                            : l.rdChange,
                         style: uploading
                             ? RecordStyle.caption
                             : RecordStyle.link,
@@ -295,11 +292,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            _fileError ??
+            fileError ??
                 (_submitted && file == null
-                    ? 'Choose the file to upload.'
-                    : 'PDF or photo, up to 10 MB. You need a connection to upload.'),
-            style: _fileError != null || (_submitted && file == null)
+                    ? l.rdFileRequired
+                    : l.rdUploadHint),
+            style: fileError != null || (_submitted && file == null)
                 ? RecordStyle.caption.copyWith(
                     color: AppColors.danger,
                     fontWeight: FontWeight.w600,
@@ -311,23 +308,19 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
             padding: const EdgeInsets.all(12),
             children: [
               KeyValueGrid([
-                KeyValue('Uploaded by', store.user?.displayName ?? '—'),
-                KeyValue('Upload date', formatDate(store.now)),
+                KeyValue(l.rdUploader, store.user?.displayName ?? '—'),
+                KeyValue(l.rdUploadDate, l.date(store.now)),
               ]),
             ],
           ),
           const SizedBox(height: 10),
-          const RecordNote(
-            icon: Icons.info_outline,
-            message:
-                'HQ can open and download this report from the society record.',
-          ),
+          RecordNote(icon: Icons.info_outline, message: l.rdHqAccess),
           if (_uploadError != null) ...[
             const SizedBox(height: 10),
             RecordNote(
               icon: Icons.error_outline,
               tone: NoteTone.error,
-              title: 'Not Uploaded',
+              title: l.rdNotUploaded,
               message: _uploadError!,
             ),
           ],
@@ -336,11 +329,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       bottomNavigationBar: BottomActionBar(
         secondary: OutlinedButton(
           onPressed: uploading ? null : () => Navigator.of(context).maybePop(),
-          child: const Text('Cancel'),
+          child: Text(l.rdCancel),
         ),
         primary: FilledButton(
           onPressed: uploading ? null : _upload,
-          child: Text(uploading ? 'Uploading…' : 'Upload'),
+          child: Text(uploading ? l.rdUploading : l.rdUpload),
         ),
       ),
     );

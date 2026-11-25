@@ -3607,5 +3607,261 @@
         "type": "int"
       }
     }
-  }
+  },
+  "rdYearlySummary": "Yearly Summary",
+  "rdEnterTotal": "Enter the total, for example {example}.",
+  "@rdEnterTotal": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "rdNumbersOnly": "Use numbers only, for example {example}.",
+  "@rdNumbersOnly": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "rdSaved": "Saved. The old and new values are in the society history.",
+  "rdKeptFigures": "{error} Your figures are still here.",
+  "@rdKeptFigures": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rdLeave": "Leave Without Saving?",
+  "rdLeaveFigures": "You changed the yearly figures. If you leave now, these changes are lost.",
+  "rdKeepEditing": "Keep editing",
+  "rdDiscard": "Discard changes",
+  "rdWas": "Was {amount}",
+  "@rdWas": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rdLastChanged": "Last changed by {actor} · {date}",
+  "@rdLastChanged": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "rdSummaryError": "Couldn't load the yearly summary",
+  "rdRetry": "Try again",
+  "rdLoadingSummary": "Loading the yearly summary",
+  "rdFinancialYear": "Financial year",
+  "rdProfitField": "Total profit for the year (LKR)",
+  "rdExpensesField": "Total expenses for the year (LKR)",
+  "rdAuditThisYear": "Audit report for this year",
+  "rdNotUploadedYet": "Not uploaded yet",
+  "rdMissing": "Missing",
+  "rdAnnualOnly": "Only two yearly totals are kept, with the audit report. The app records no transactions, loans, savings, payments, sales or accounts.",
+  "rdSavingHistory": "Saving adds the old and new values to the society history, with your name and the time.",
+  "rdNotSaved": "Not Saved",
+  "rdCancel": "Cancel",
+  "rdSaving": "Saving…",
+  "rdSave": "Save",
+  "rdAnnualCardTitle": "Annual Financial Summary · {year}",
+  "@rdAnnualCardTitle": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "rdNotAddedYet": "Not added yet",
+  "rdNotAddedBadge": "Not added",
+  "rdEditFigures": "Edit the yearly figures",
+  "rdAuditCard": "Audit Report {year}",
+  "@rdAuditCard": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "rdPhoto": "Photo",
+  "rdAddFigures": "Add figures",
+  "rdUploadAudit": "Upload audit report",
+  "rdLastUpdated": "Updated by {actor} · {date} · two yearly totals only",
+  "@rdLastUpdated": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "rdLoadingDocs": "Loading documents",
+  "rdDocumentsError": "Couldn't load documents",
+  "rdAnnualDocs": "Annual Documents · {year}",
+  "@rdAnnualDocs": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "rdUploadedCount": "{count} of {total} uploaded",
+  "@rdUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "rdNoOthers": "No other documents yet.",
+  "rdPrivateDocs": "Uploads are stored privately for the society record. Nothing here needs District approval.",
+  "rdOnlyDmHq": "Only the DM and HQ can open this file",
+  "rdInvalidFile": "Choose a PDF or a photo (JPG or PNG).",
+  "rdEmptyFile": "This file is empty. Choose another file.",
+  "rdLargeFile": "This file is {size}. Choose a file up to 10 MB.",
+  "@rdLargeFile": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "rdUploadSuccess": "{document} uploaded. HQ can open it from the society record.",
+  "@rdUploadSuccess": {
+    "placeholders": {
+      "document": {
+        "type": "String"
+      }
+    }
+  },
+  "rdOffline": "You are offline. The file was not uploaded. Try again when you are connected.",
+  "rdSelectedFile": "{error} The file you chose is still selected.",
+  "@rdSelectedFile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rdUploadDocument": "Upload document",
+  "rdDocumentsCaption": "{society} · Documents",
+  "@rdDocumentsCaption": {
+    "placeholders": {
+      "society": {
+        "type": "String"
+      }
+    }
+  },
+  "rdDocumentType": "Document type",
+  "rdTitleHint": "For example Registration certificate",
+  "rdEnterName": "Give the document a name.",
+  "rdChooseFile": "Choose a PDF or photo",
+  "rdChangeFile": "Change the file",
+  "rdChoose": "Choose",
+  "rdChange": "Change",
+  "rdFileRequired": "Choose the file to upload.",
+  "rdUploadHint": "PDF or photo, up to 10 MB. You need a connection to upload.",
+  "rdUploader": "Uploaded by",
+  "rdUploadDate": "Upload date",
+  "rdHqAccess": "HQ can open and download this report from the society record.",
+  "rdAuditSubtitle": "Audit report and Registrar documents",
+  "rdAuditShortDue": "Due 30 Sep",
+  "rdAuditShortPast": "After 30 Sep",
+  "rdAuditAllFour": "{count} societies have all four · {percent}%",
+  "@rdAuditAllFour": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "rdProfitTitle": "Profit & Expenses",
+  "rdProfitSubtitle": "The only two yearly figures societies enter",
+  "rdSampleYear": "Demonstration data · {year}",
+  "@rdSampleYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "rdProfitScope": "{year} · from {count} active societies",
+  "@rdProfitScope": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "rdFiguresCoverage": "{count} of {total} societies submitted both figures — {percent}% · {missing} not submitted",
+  "@rdFiguresCoverage": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      },
+      "missing": {
+        "type": "String"
+      }
+    }
+  },
+  "rdTwoTotals": "Two Yearly Totals Only",
+  "rdTwoTotalsDetail": "Each society enters only its total profit and total expenses, with its audit report. No other financial details are kept.",
+  "rdFiguresMissing": "Not Added Yet · {count}",
+  "@rdFiguresMissing": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "rdProfit": "Total Profit for the Year",
+  "rdExpenses": "Total Expenses for the Year",
+  "rdUploadedBy": "Uploaded {date} by {actor}",
+  "@rdUploadedBy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "rdAll": "All Documents",
+  "rdSubmitted": "Not submitted",
+  "rdDocument": "Document",
+  "rdFile": "File",
+  "rdName": "Name",
+  "rdUploading": "Uploading…",
+  "rdUpload": "Upload",
+  "rdRegistration": "Registration",
+  "rdEvidence": "Activity Evidence",
+  "rdFinance": "Finance Document",
+  "rdOther": "Other Document",
+  "rdNotUploaded": "Not Uploaded"
 }

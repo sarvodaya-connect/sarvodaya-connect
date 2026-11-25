@@ -1,13 +1,16 @@
 import Link from "next/link";
 
+import { ENGLISH } from "@/i18n/english";
+import type { Translator } from "@/i18n/translate";
+
 /** V5 D16 / D24: the two Administration pages share these tabs. */
-export function AdministrationTabs({ current }: { current: "accounts" | "log" }) {
+export function AdministrationTabs({ current, t = ENGLISH }: { current: "accounts" | "log"; t?: Translator }) {
   const tabs = [
-    { key: "accounts", href: "/accounts", label: "Accounts" },
-    { key: "log", href: "/audit", label: "Change & Access Log" },
+    { key: "accounts", href: "/accounts", label: t("al.type.ACCOUNTS") },
+    { key: "log", href: "/audit", label: t("al.title") },
   ] as const;
   return (
-    <nav aria-label="Administration" className="flex gap-6 border-b border-line">
+    <nav aria-label={t("nav.administration")} className="flex gap-6 border-b border-line">
       {tabs.map((tab) => (
         <Link
           aria-current={tab.key === current ? "page" : undefined}

@@ -1,3 +1,5 @@
+import { ta as tamil } from "@/i18n/messages/ta";
+import { createTranslator } from "@/i18n/translate";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -132,6 +134,14 @@ describe("V5 M13 / D05 Registrar documents", () => {
     expect(screen.getAllByText("Not submitted")).toHaveLength(2);
     expect(screen.getAllByText("Uploaded")).toHaveLength(2);
     expect(screen.getByText(/Audit_Report_FY2025-26.pdf · 1.8 MB · uploaded 22 Oct 2026 by N. Wijesinghe \(Society Officer\)/)).toBeInTheDocument();
+  });
+
+  it("translates Registrar labels while preserving filenames and access rules", () => {
+    render(<RegistrarDocumentsList registrar={registrar} societyId="s1" t={createTranslator(tamil, "ta")} />);
+    expect(screen.getByText(tamil["doc.AUDIT_REPORT"])).toBeInTheDocument();
+    expect(screen.getByText(/Audit_Report_FY2025-26\.pdf/)).toBeInTheDocument();
+    expect(screen.getByText(tamil["rd.restricted"])).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: tamil["rd.open"] })).toHaveLength(1);
   });
 
   it("does not offer the signed members list to roles that cannot open it", () => {

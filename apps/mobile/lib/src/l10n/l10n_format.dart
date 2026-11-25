@@ -48,6 +48,15 @@ extension LocalizedFormat on AppLocalizations {
     }
   }
 
+  String recordFileSize(int bytes) {
+    if (_english) return english.formatFileSize(bytes);
+    if (bytes >= 1000000) {
+      final precision = NumberFormat('0.0', localeName);
+      return '${precision.format(bytes / 1000000)} MB';
+    }
+    return '${number((bytes / 1000).round())} KB';
+  }
+
   /// "01 Oct 2026"
   String date(DateTime value) =>
       _date('dd MMM y', value, () => english.formatDate(value));

@@ -1,5 +1,8 @@
 import type { AuditLogEntry, AuditType, UserRole } from "@sarvodaya-connect/api-contracts";
 
+import type { MessageKey } from "@/i18n/messages/en";
+import type { Translator } from "@/i18n/translate";
+
 import { ROLE_LABELS } from "./society-record-format";
 
 /** V5 D24 "What" column. Unknown actions fall back to a readable form of the code. */
@@ -39,8 +42,9 @@ const ACTION_LABELS: Record<string, string> = {
   INCIDENT_CLOSED: "Incident Closed",
 };
 
-export function actionLabel(action: string) {
-  return ACTION_LABELS[action] ?? action.toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
+export function actionLabel(action: string, t?: Translator) {
+  if (Object.hasOwn(ACTION_LABELS, action)) return t ? t(`al.action.${action}` as MessageKey) : ACTION_LABELS[action];
+  return action.toLowerCase().replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
 
 /** Actions shown as coloured chips in V5 D24. */

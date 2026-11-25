@@ -1,62 +1,58 @@
 import Link from "next/link";
 
-import type { GradeChangeRequest, SocietyHistoryCategory, SocietyHistoryEvent } from "@sarvodaya-connect/api-contracts";
+import type { GradeChangeRequest, SocietyHistoryCategory, SocietyHistoryEvent, UserRole } from "@sarvodaya-connect/api-contracts";
 
 import { Pill } from "../ui/pill";
 import { type DecideGradeRequest, GradeDecisionActions } from "./grade-decision";
 import { ENGLISH } from "@/i18n/english";
 import type { MessageKey } from "@/i18n/messages/en";
+import { documentTypeLabel } from "../documents/document-labels";
 import { actorName, recordDate } from "@/i18n/society-record";
 import type { Translator } from "@/i18n/translate";
 import type { RecordDocument } from "@/lib/society-record-api";
-import { formatDate, ROLE_LABELS } from "@/lib/society-record-format";
-
-const DOCUMENT_LABELS: Record<string, string> = {
-  AUDIT_REPORT: "Audit Report",
-  AGM_MINUTES: "AGM Minutes",
-  OFFICE_BEARER_LIST: "Office-Bearer List",
-  MEMBERS_LIST: "Signed members list",
-  REGISTRATION: "Registration",
-  FINANCE: "Finance document",
-  ACTIVITY_EVIDENCE: "Activity Evidence",
-  OTHER: "Document",
-};
+import { ROLE_LABELS } from "@/lib/society-record-format";
 
 function Empty({ children }: { children: string }) {
   return <p className="mt-4 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">{children}</p>;
 }
 
 /** Documents tab: every uploaded file, with Open and Download through short-lived links. */
-export function DocumentsList({ documents, societyId }: { documents: RecordDocument[]; societyId: string }) {
-  if (documents.length === 0) return <Empty>No documents have been uploaded for this society yet.</Empty>;
+export function DocumentsList({ documents, societyId, t = ENGLISH }: { documents: RecordDocument[]; societyId: string; t?: Translator }) {
+  if (documents.length === 0) return <Empty>{t("rd.emptySociety")}</Empty>;
   return (
     <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
       <table className="w-full min-w-[720px] text-left text-[11px]">
         <thead className="bg-[#f6f7f4] text-[10px] text-muted">
           <tr>
-            {["Document", "Type", "Year", "Uploaded", ""].map((heading) => (
-              <th className="px-4 py-2 font-medium" key={heading}>{heading}</th>
+            {(["rd.document", "rd.type", "rd.year", "au.uploaded", ""] as const).map((heading) => (
+              <th className="px-4 py-2 font-medium" key={heading}>{heading && t(heading)}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-line-soft">
           {documents.map((document) => {
             const href = `/societies/${societyId}/documents/${document.id}/download`;
+            const role = document.uploadedByRole;
+            const actor = role && Object.hasOwn(ROLE_LABELS, role)
+              ? actorName(t, { displayName: document.uploadedBy, role: role as UserRole })
+              : role ? `${document.uploadedBy} (${role})` : document.uploadedBy;
             return (
               <tr key={document.id}>
                 <td className="px-4 py-2.5">
                   <span className="block font-bold text-ink">{document.title}</span>
                   <span className="text-[10px] text-muted">{document.fileName}</span>
                 </td>
-                <td className="px-4 py-2.5 text-ink-soft">{DOCUMENT_LABELS[document.documentType] ?? document.documentType}</td>
+                <td className="px-4 py-2.5 text-ink-soft">{documentTypeLabel(document.documentType, t)}</td>
                 <td className="px-4 py-2.5 text-ink-soft">{document.financialYear?.label ?? "—"}</td>
                 <td className="px-4 py-2.5 text-ink-soft">
-                  {document.uploadedAt ? formatDate(document.uploadedAt) : "—"} by {document.uploadedBy}
-                  {document.uploadedByRole && ` (${ROLE_LABELS[document.uploadedByRole as keyof typeof ROLE_LABELS] ?? document.uploadedByRole})`}
+                  {t("rd.dateBy", {
+                    date: document.uploadedAt ? recordDate(t, document.uploadedAt) : "—",
+                    actor,
+                  })}
                 </td>
                 <td className="space-x-2 whitespace-nowrap px-4 py-2.5 text-right">
-                  <a className="font-semibold text-brand-leaf underline underline-offset-2" href={href} rel="noopener" target="_blank">Open</a>
-                  <a className="font-semibold text-brand-leaf underline underline-offset-2" download={document.fileName} href={href}>Download</a>
+                  <a className="font-semibold text-brand-leaf underline underline-offset-2" href={href} rel="noopener" target="_blank">{t("rd.open")}</a>
+                  <a className="font-semibold text-brand-leaf underline underline-offset-2" download={document.fileName} href={href}>{t("rd.download")}</a>
                 </td>
               </tr>
             );

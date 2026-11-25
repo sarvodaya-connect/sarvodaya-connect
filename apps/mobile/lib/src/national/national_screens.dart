@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../home/home_api.dart';
 import '../l10n/l10n.dart';
@@ -2695,187 +2696,228 @@ class AuditAgmScreen extends StatelessWidget {
   const AuditAgmScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Audit & AGM',
-    subtitle: 'Audit report and Registrar documents',
-    body: _Loader<NationalOverview>(
-      load: (api) => api.fetchOverview(),
-      builder: (context, overview, _) {
-        final audit = overview.auditReport;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(text: 'Demonstration data · ${overview.year.label}'),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${sharePercent(audit.submitted, overview.active)}%',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.leaf,
-                    ),
-                  ),
-                  Text(
-                    '${count(audit.submitted)} of ${count(overview.active)} active societies have uploaded an audit report for ${overview.year.label}.',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  const SizedBox(height: 8),
-                  _Pair(
-                    _Figure(
-                      'Uploaded',
-                      count(audit.submitted),
-                      overview.year.label,
-                      colour: AppColors.leaf,
-                    ),
-                    _Figure(
-                      overview.auditPastDue ? 'Past due' : 'Not yet',
-                      count(audit.missing),
-                      overview.auditPastDue ? 'After 30 Sep' : 'Due 30 Sep',
-                      colour: overview.auditPastDue
-                          ? AppColors.danger
-                          : AppColors.warning,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Eyebrow('4 Registrar Documents · ${overview.year.label}'),
-                  for (final row in overview.documentCounts)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              documentTypeLabels[row.documentType] ??
-                                  row.documentType,
-                            ),
-                          ),
-                          Text(
-                            '${count(row.submitted)} · ${sharePercent(row.submitted, overview.active)}%',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ],
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.roleAuditsTitle,
+      subtitle: l.rdAuditSubtitle,
+      body: _Loader<NationalOverview>(
+        load: (api) => api.fetchOverview(),
+        builder: (context, overview, _) {
+          final audit = overview.auditReport;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              SampleLabel(text: l.rdSampleYear(overview.year.label)),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${l.number(sharePercent(audit.submitted, overview.active))}%',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.leaf,
                       ),
                     ),
-                  Text(
-                    '${count(overview.allFour)} societies have all four · ${sharePercent(overview.allFour, overview.active)}%',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
+                    Text(
+                      l.roleAuditsUploadedLine(
+                        audit.submitted,
+                        overview.active,
+                        overview.year.label,
+                      ),
+                      style: const TextStyle(fontSize: 13),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    _Pair(
+                      _Figure(
+                        l.roleAuditsUploaded,
+                        l.number(audit.submitted),
+                        overview.year.label,
+                        colour: AppColors.leaf,
+                      ),
+                      _Figure(
+                        overview.auditPastDue
+                            ? l.roleAuditsPastDue
+                            : l.roleAuditsNotYet,
+                        l.number(audit.missing),
+                        overview.auditPastDue
+                            ? l.rdAuditShortPast
+                            : l.rdAuditShortDue,
+                        colour: overview.auditPastDue
+                            ? AppColors.danger
+                            : AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
+              const SizedBox(height: 8),
+              _Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Eyebrow(l.roleAuditsDocuments(overview.year.label)),
+                    for (final row in overview.documentCounts)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(l.documentType(row.documentType)),
+                            ),
+                            Text(
+                              '${l.number(row.submitted)} · ${l.number(sharePercent(row.submitted, overview.active))}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Text(
+                      l.rdAuditAllFour(
+                        l.number(overview.allFour),
+                        l.number(
+                          sharePercent(overview.allFour, overview.active),
+                        ),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// V5 M62b Profit & expenses: the only two yearly figures societies enter.
+String _yearlyTotal(AppLocalizations l, num value) {
+  if (l.localeName == 'en') return lkr(value);
+  final formatted = value.abs() >= 1000000
+      ? NumberFormat.compact(locale: l.localeName).format(value)
+      : l.number(value.round());
+  return 'LKR $formatted';
+}
+
 class ProfitExpensesScreen extends StatelessWidget {
   const ProfitExpensesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => _Page(
-    title: 'Profit & Expenses',
-    subtitle: 'The only two yearly figures societies enter',
-    body: _Loader<(NationalOverview, FiguresNotAdded)>(
-      load: (api) async =>
-          (await api.fetchOverview(), await api.fetchFiguresNotAdded()),
-      builder: (context, data, _) {
-        final (overview, missing) = data;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            SampleLabel(text: 'Demonstration data · ${overview.year.label}'),
-            _Figure(
-              'Total Profit for the Year',
-              lkr(overview.totalProfit),
-              '${overview.year.label} · from ${count(overview.societiesWithBoth)} active societies',
-              colour: AppColors.leaf,
-              background: const Color(0xFFEEF6EF),
-              border: const Color(0xFFCFE3D3),
-            ),
-            const SizedBox(height: 8),
-            _Figure(
-              'Total Expenses for the Year',
-              lkr(overview.totalExpenses),
-              '${overview.year.label} · from ${count(overview.societiesWithBoth)} active societies',
-              colour: const Color(0xFF9A4F12),
-              background: const Color(0xFFFDF3EA),
-              border: const Color(0xFFF0D9C4),
-            ),
-            const SizedBox(height: 8),
-            _Card(
-              child: Text(
-                '${count(overview.societiesWithBoth)} of ${count(overview.active)} societies submitted both figures — ${sharePercent(overview.societiesWithBoth, overview.active)}% · ${count(missing.total)} not submitted',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return _Page(
+      title: l.rdProfitTitle,
+      subtitle: l.rdProfitSubtitle,
+      body: _Loader<(NationalOverview, FiguresNotAdded)>(
+        load: (api) async =>
+            (await api.fetchOverview(), await api.fetchFiguresNotAdded()),
+        builder: (context, data, _) {
+          final (overview, missing) = data;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              SampleLabel(text: l.rdSampleYear(overview.year.label)),
+              _Figure(
+                l.rdProfit,
+                _yearlyTotal(l, overview.totalProfit),
+                l.rdProfitScope(
+                  overview.year.label,
+                  l.number(overview.societiesWithBoth),
+                ),
+                colour: AppColors.leaf,
+                background: const Color(0xFFEEF6EF),
+                border: const Color(0xFFCFE3D3),
               ),
-            ),
-            const SizedBox(height: 8),
-            const NoticeBanner(
-              icon: Icons.info_outline,
-              title: 'Two Yearly Totals Only',
-              message: 'Each society enters only its total profit and total expenses, with its audit report. No other financial details are kept.',
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Not Added Yet · ${count(missing.total)}',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.muted,
-                letterSpacing: 0.6,
+              const SizedBox(height: 8),
+              _Figure(
+                l.rdExpenses,
+                _yearlyTotal(l, overview.totalExpenses),
+                l.rdProfitScope(
+                  overview.year.label,
+                  l.number(overview.societiesWithBoth),
+                ),
+                colour: const Color(0xFF9A4F12),
+                background: const Color(0xFFFDF3EA),
+                border: const Color(0xFFF0D9C4),
               ),
-            ),
-            const SizedBox(height: 6),
-            for (final (id, name, district) in missing.societies) ...[
+              const SizedBox(height: 8),
               _Card(
-                onTap: () =>
-                    _push(context, SocietySummaryScreen(societyId: id)),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            district,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.muted,
-                            ),
-                          ),
-                        ],
-                      ),
+                child: Text(
+                  l.rdFiguresCoverage(
+                    l.number(overview.societiesWithBoth),
+                    l.number(overview.active),
+                    l.number(
+                      sharePercent(overview.societiesWithBoth, overview.active),
                     ),
-                    const _Pill('Not added'),
-                  ],
+                    l.number(missing.total),
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 8),
+              NoticeBanner(
+                icon: Icons.info_outline,
+                title: l.rdTwoTotals,
+                message: l.rdTwoTotalsDetail,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l.rdFiguresMissing(l.number(missing.total)),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.muted,
+                  letterSpacing: 0.6,
                 ),
               ),
               const SizedBox(height: 6),
+              for (final (id, name, district) in missing.societies) ...[
+                _Card(
+                  onTap: () =>
+                      _push(context, SocietySummaryScreen(societyId: id)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              district,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const _Pill('Not added'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
             ],
-          ],
-        );
-      },
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// The financial year in progress (issue #131), then the latest one that has
