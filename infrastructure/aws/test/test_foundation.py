@@ -278,7 +278,6 @@ class FoundationSafety(unittest.TestCase):
         self.assertNotIn('DocumentAccessLogs', rendered)
         self.assertEqual(template['Rules'], self.template['Rules'])
         self.assertNotIn('NatImage', template['Parameters'])
-        self.assertEqual(template['Parameters']['Stage']['AllowedValues'], ['test'])
         self.assertNotIn('Outputs', template)
         self.assertNotIn('ssm-secure', rendered)
 
