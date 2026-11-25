@@ -1,8 +1,12 @@
 # AWS configuration
 
-**TEST environment:** [aws-test-environment.md](aws-test-environment.md) defines the approved low-cost test shape: direct private RDS, a NAT instance and standard Parameter Store SecureStrings. Use `Stage=test`; the settings below describing RDS Proxy/Secrets Manager apply to the earlier staging/production shape. The test configuration remains undeployed until review and account preflight are complete.
+**TEST environment:** [aws-test-environment.md](aws-test-environment.md) defines the approved low-cost test shape: direct private RDS, a NAT instance and standard Parameter Store SecureStrings. Use `Stage=test`; the settings below describing RDS Proxy/Secrets Manager apply to the earlier staging shape.
 
-How the platform is configured for the agreed AWS shape: the Next.js 15 dashboard on AWS Amplify, the NestJS API on AWS Lambda behind API Gateway, PostgreSQL on Amazon RDS (through RDS Proxy) with Prisma, Cognito for production identity, and a private S3 bucket for documents. Reviewed infrastructure templates describe resources for owner-driven deployment; no workflow deploys them or stores AWS credentials. The test foundation is documented in `infrastructure/aws/test/README.md`.
+The [production foundation](production-foundation.md) uses the same direct
+private RDS layout as TEST, in a separate stack. The Next.js dashboard runs on
+Amplify, the NestJS API runs on Lambda behind API Gateway, and the application
+uses Prisma, Cognito and a private S3 bucket. The legacy staging configuration
+can still use RDS Proxy. Templates are deployed by an authorized operator.
 
 Every setting is an environment variable with a safe development default (`.env.example`). **Secret** values come from AWS Secrets Manager in production; **config** values are plain Lambda or Amplify environment variables.
 
@@ -10,10 +14,10 @@ Every setting is an environment variable with a safe development default (`.env.
 
 | Variable | Kind | Default (development) | Purpose |
 |---|---|---|---|
-| `DATABASE_URL` | Secret | local PostgreSQL | PostgreSQL URL; direct private RDS for test, earlier RDS Proxy shape for other deployed stages |
+| `DATABASE_URL` | Secret | local PostgreSQL | PostgreSQL URL; direct private RDS for test and production, RDS Proxy for legacy staging |
 | `CONFIG_PARAMETER_PREFIX` | Config | unset | Lambda test: `/sarvodaya-connect/test`; cold-start loading of the two encrypted settings described in `aws-test-environment.md`. Leave unset locally |
-| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; test uses 1 with reserved concurrency 4, direct to private RDS; see the capacity budget in `aws-test-environment.md` |
-| `NODE_EXTRA_CA_CERTS` | Config | unset | Test Lambda: `/var/task/certificates/rds-ap-southeast-1.pem`; public AWS RDS CA bundle included by `package:lambda`, loaded by Node at startup |
+| `DATABASE_CONNECTION_LIMIT` | Config | `2` | Pool size per Lambda instance; test and production use 1 with reserved concurrency 4 for direct RDS |
+| `NODE_EXTRA_CA_CERTS` | Config | unset | TEST and production Lambda: `/var/task/certificates/rds-ap-southeast-1.pem`; public AWS RDS CA bundle included by `package:lambda`, loaded by Node at startup |
 | `NIC_ENCRYPTION_KEY` | Secret | — | NIC vault key (64 hex characters) |
 | `STORAGE_DRIVER` | Config | `local` (`s3` in production) | Document storage driver |
 | `S3_BUCKET` | Config | — | Private documents bucket |
@@ -179,9 +183,10 @@ SMOKE_HQ_USERNAME=<local hq> SMOKE_HQ_PASSWORD=<password> npm run smoke:local
 
 `scripts/smoke-local.ts` talks only to an API on this computer unless `SMOKE_ALLOW_REMOTE=1` is set for an agreed HTTPS test environment, follows pre-signed links only to local storage or Amazon S3 over HTTPS, refuses redirects and puts only UUIDs into request paths (`scripts/smoke-safety.ts`). It checks, in order: HQ signs in; HQ creates a fictional SPC for a seeded society; the SPC signs in; `GET /home` returns the SPC home; `GET /home` without a token is 401; the API returns a 15-minute pre-signed upload URL whose key holds only ids; the file uploads straight to storage; the same URL with a different content type is refused (403); `POST /documents/:id/complete` confirms the size; the pre-signed download returns the same bytes; an unsigned GET is refused. **All 11 checks passed** against the packaged handler, and the 128 JSON log lines contained no password, token, document content or signature.
 
-### Database: RDS through RDS Proxy
+### Database and migrations
 
-- Point `DATABASE_URL` at the **RDS Proxy** endpoint (TLS, `sslmode=require`), not the instance. Each Lambda instance opens at most `DATABASE_CONNECTION_LIMIT` connections (default 2, allowed 1–20; idle connections close after 10 s). Size the proxy's `MaxConnectionsPercent` for (expected concurrent Lambda instances × 2) plus the migration task, and set the function's reserved concurrency so that product stays inside it.
+- For legacy staging with RDS Proxy, point `DATABASE_URL` at the proxy endpoint (TLS, `sslmode=require`), not the instance. Each Lambda instance opens at most `DATABASE_CONNECTION_LIMIT` connections (default 2, allowed 1–20; idle connections close after 10 s). Size the proxy's `MaxConnectionsPercent` for (expected concurrent Lambda instances × 2) plus the migration task, and set the function's reserved concurrency so that product stays inside it.
+- TEST and production connect directly to private RDS with `sslmode=verify-full` using the bundled Singapore RDS CA. The runtime role must cover overlapping Lambda instances during deployments.
 - Migrations: `npm run prisma:deploy` from a one-off task in the VPC (CodeBuild or an ECS task), never from a developer machine. All 13 migrations applied cleanly to an empty PostgreSQL 17 database on 3 Nov 2026, and `prisma migrate diff --exit-code` reported no drift. PR 10 adds no migration.
 - Queries stay bounded: lists are paginated (at most 100 a page), national figures are grouped SQL, and no endpoint loops over societies (PR 4, 5, 8).
 
@@ -211,7 +216,7 @@ The template grants only:
 
 1. Create (outside this repository):
    - the VPC, with private subnets and a NAT gateway or VPC endpoints (S3, Bedrock runtime, and the Cognito user pool API and JWKS over HTTPS);
-   - RDS PostgreSQL 17 with RDS Proxy;
+   - private RDS PostgreSQL 17 and separate migration and application credentials; use the [production foundation](production-foundation.md) for the first production deployment;
    - the private documents bucket (block public access, default encryption, the CORS rule above);
    - the Cognito user pool and public app clients, with the settings in `cognito-setup.md`;
    - two Secrets Manager secrets (`DATABASE_URL`, `NIC_ENCRYPTION_KEY`).

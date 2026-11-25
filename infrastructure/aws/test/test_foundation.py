@@ -106,8 +106,10 @@ class FoundationSafety(unittest.TestCase):
         self.assertNotIn('ParameterRole', self.resources)
 
     def test_region_and_account_rules(self):
-        self.assertEqual(self.template['Rules'], self.bootstrap['Rules'])
         rules = self.template['Rules']
+        for name in ['ExistingAccountOnly', 'SingaporeOnly']:
+            self.assertEqual(rules[name]['Assertions'][0]['Assert'],
+                             self.bootstrap['Rules'][name]['Assertions'][0]['Assert'])
         self.assertEqual(rules['SingaporeOnly']['Assertions'][0]['Assert'],
                          {'Equals': [{'Ref': 'AWS::Region'}, 'ap-southeast-1']})
         self.assertEqual(rules['ExistingAccountOnly']['Assertions'][0]['Assert'],
@@ -121,10 +123,39 @@ class FoundationSafety(unittest.TestCase):
                                'EngineVersion': '17.11', 'StorageType': 'gp3'}.items():
             self.assertEqual(db[name], expected, name)
         self.assertNotIn('SecureParameters', self.resources)
-        password = db['MasterUserPassword']['Sub']
+        password_condition, test_password, production_password = db['MasterUserPassword']['If']
+        self.assertEqual(password_condition, 'IsTest')
+        self.assertEqual(production_password, {'Ref': 'AWS::NoValue'})
+        password = test_password['Sub']
         self.assertEqual(password[0], '{{resolve:ssm-secure:${Namespace}/database-master-password:1}}')
         self.assertEqual(password[1], {'Namespace': {'ImportValue': 'sarvodaya-connect-test-bootstrap-ConfigurationNamespace'}})
         self.assertEqual(self.resources['Database']['DeletionPolicy'], 'Snapshot')
+
+    def test_production_has_distinct_cidrs_and_master_credentials(self):
+        self.assertEqual(self.template['Parameters']['Stage']['Default'], 'test')
+        ranges = self.template['Mappings']['NetworkRanges']
+        self.assertEqual(ranges['test']['Vpc'], '10.77.0.0/16')
+        self.assertEqual(ranges['production']['Vpc'], '10.78.0.0/16')
+        self.assertEqual(self.resources['Network']['Properties']['CidrBlock'], {
+            'FindInMap': ['NetworkRanges', {'Ref': 'Stage'}, 'Vpc'],
+        })
+        db = self.resources['Database']['Properties']
+        self.assertEqual(db['DBInstanceIdentifier'], {'Sub': 'sarvodaya-connect-${Stage}-db'})
+        self.assertEqual(db['ManageMasterUserPassword']['If'], [
+            'IsProduction', True, {'Ref': 'AWS::NoValue'},
+        ])
+        self.assertEqual(self.template['Outputs']['DatabaseAdminSecretArn'], {
+            'Condition': 'IsProduction',
+            'Value': {'GetAtt': 'Database.MasterUserSecret.SecretArn'},
+        })
+
+    def test_production_document_versions_are_retained(self):
+        [conditional_rule] = self.resources['Documents']['Properties']['LifecycleConfiguration']['Rules']
+        stage, test_rule, prod_rule = conditional_rule['If']
+        self.assertEqual(stage, 'IsTest')
+        self.assertEqual(test_rule['NoncurrentVersionExpiration'], {'NoncurrentDays': 30})
+        self.assertNotIn('NoncurrentVersionExpiration', prod_rule)
+        self.assertEqual(prod_rule['AbortIncompleteMultipartUpload'], {'DaysAfterInitiation': 1})
 
     def test_no_duplicate_budget_or_unapproved_paid_products(self):
         types = {resource['Type'] for resource in self.resources.values()}
@@ -198,7 +229,7 @@ class FoundationSafety(unittest.TestCase):
         self.assertNotIn('KeyName', nat['Properties'])
         self.assertNotIn('IamInstanceProfile', nat['Properties'])
         self.assertEqual(nat['CreationPolicy']['ResourceSignal']['Timeout'], 'PT10M')
-        script = nat['Properties']['UserData']['Fn::Base64']['Sub']
+        script = nat['Properties']['UserData']['Fn::Base64']['Sub'][0]
         self.assertIn('cfn-signal', script)
         self.assertIn('iptables -F FORWARD', script)
         self.assertIn('service iptables save', script)
@@ -208,7 +239,7 @@ class FoundationSafety(unittest.TestCase):
 
     def test_disk_swap_is_enabled_before_packages_and_persists(self):
         nat = self.resources['NatInstance']['Properties']
-        script = nat['UserData']['Fn::Base64']['Sub']
+        script = nat['UserData']['Fn::Base64']['Sub'][0]
         commands = [
             'dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none',
             'chmod 600 /swapfile', 'mkswap /swapfile', 'swapon /swapfile',
@@ -229,7 +260,7 @@ class FoundationSafety(unittest.TestCase):
         self.assertTrue(self.resources['Database']['Properties']['DeletionProtection'])
 
     def test_nat_startup_script_has_valid_bash_syntax(self):
-        script = self.resources['NatInstance']['Properties']['UserData']['Fn::Base64']['Sub']
+        script = self.resources['NatInstance']['Properties']['UserData']['Fn::Base64']['Sub'][0]
         subprocess.run(['bash', '-n'], input=script, text=True, check=True)
 
     def test_recovery_import_has_only_identical_retained_bucket_and_pool_definitions(self):
@@ -247,6 +278,7 @@ class FoundationSafety(unittest.TestCase):
         self.assertNotIn('DocumentAccessLogs', rendered)
         self.assertEqual(template['Rules'], self.template['Rules'])
         self.assertNotIn('NatImage', template['Parameters'])
+        self.assertEqual(template['Parameters']['Stage']['AllowedValues'], ['test'])
         self.assertNotIn('Outputs', template)
         self.assertNotIn('ssm-secure', rendered)
 
@@ -276,6 +308,7 @@ class ApiCapacityBudget(unittest.TestCase):
         repo = ROOT.parents[2]
         template = yaml.load((ROOT.parent / 'template.yaml').read_text(), Loader=TemplateLoader)
         function = template['Resources']['ApiFunction']['Properties']
+        cls.direct_stage_condition = template['Conditions']['UsesDirectDatabase']
         cls.concurrency = function['ReservedConcurrentExecutions']['If'][1]
         cls.pool = int(function['Environment']['Variables']['DATABASE_CONNECTION_LIMIT']['If'][1])
         cls.role_limit = int(re.search(
@@ -286,6 +319,12 @@ class ApiCapacityBudget(unittest.TestCase):
             r'READ_SLOTS_PER_RENDER = (\d+);',
             (repo / 'apps/dashboard/src/lib/platform-read.ts').read_text(),
         ).group(1))
+
+    def test_direct_database_limits_cover_test_and_production(self):
+        self.assertEqual(self.direct_stage_condition, {'Or': [
+            {'Condition': 'IsTest'},
+            {'Equals': [{'Ref': 'Stage'}, 'production']},
+        ]})
 
     def test_two_testers_stay_within_lambda_concurrency(self):
         self.assertLessEqual(self.TESTERS * self.read_slots, self.concurrency)

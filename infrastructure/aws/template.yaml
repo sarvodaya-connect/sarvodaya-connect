@@ -42,7 +42,7 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
   LambdaSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: "Test: private RDS on 5432 and outbound HTTPS through the approved NAT instance; S3 gateway endpoint. Other stages use their reviewed network"
+    Description: Private database and outbound HTTPS over the stage's reviewed network
   SarvoAiEnabled:
     Type: String
     AllowedValues: ['false', 'true']
@@ -93,6 +93,9 @@ Conditions:
     - !Condition IsTest
     - !Condition SarvoAiOn
     - !Not [!Equals [!Ref SarvoAiAgentCoreRuntimeArn, '']]
+  UsesDirectDatabase: !Or
+    - !Condition IsTest
+    - !Equals [!Ref Stage, production]
 
 Globals:
   Function:
@@ -111,8 +114,8 @@ Resources:
       CodeUri: ../../apps/api/.lambda/package
       Handler: lambda.handler
       # Test capacity budget: docs/aws-test-environment.md. Raise this only with the
-      # database role limit in infrastructure/aws/test/runtime-database-role.sql.
-      ReservedConcurrentExecutions: !If [IsTest, 4, !Ref AWS::NoValue]
+      # database role limit for the stage (see docs/aws-configuration.md).
+      ReservedConcurrentExecutions: !If [UsesDirectDatabase, 4, !Ref AWS::NoValue]
       Tracing: !If [IsTest, PassThrough, Active]
       LoggingConfig:
         LogFormat: JSON
@@ -125,7 +128,7 @@ Resources:
         Variables:
           NODE_ENV: production
           # Node reads extra trust anchors at process startup, before SSM loading.
-          NODE_EXTRA_CA_CERTS: !If [IsTest, /var/task/certificates/rds-ap-southeast-1.pem, !Ref AWS::NoValue]
+          NODE_EXTRA_CA_CERTS: !If [UsesDirectDatabase, /var/task/certificates/rds-ap-southeast-1.pem, !Ref AWS::NoValue]
           AUTH_PROVIDER: cognito
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
           COGNITO_REGION: !Select [0, !Split ['_', !Ref CognitoUserPoolId]]
@@ -136,8 +139,8 @@ Resources:
           DATABASE_URL: !If [IsTest, !Ref AWS::NoValue, !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString}}']
           NIC_ENCRYPTION_KEY: !If [IsTest, !Ref AWS::NoValue, !Sub '{{resolve:secretsmanager:${NicKeySecretArn}:SecretString}}']
           CONFIG_PARAMETER_PREFIX: !If [IsTest, /sarvodaya-connect/test, !Ref AWS::NoValue]
-          # Test: one connection per active instance, direct to private RDS.
-          DATABASE_CONNECTION_LIMIT: !If [IsTest, '1', '2']
+          # Direct RDS stages use one connection per active Lambda instance.
+          DATABASE_CONNECTION_LIMIT: !If [UsesDirectDatabase, '1', '2']
           STORAGE_DRIVER: s3
           S3_BUCKET: !Ref DocumentsBucketName
           S3_REGION: !Ref AWS::Region

@@ -1,10 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Sarvodaya Connect TEST foundation, Singapore only; deploy parameter bootstrap first
+Description: Sarvodaya Connect isolated foundation in Singapore
 Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [test, production]
+    Default: test
   ExpectedAccountId:
     Type: String
     AllowedPattern: '^[0-9]{12}$'
-    Description: Existing signed-in account ID checked before deployment, not a new account
+    Description: AWS account ID confirmed by the operator before deployment
   NatImage:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
@@ -13,6 +17,18 @@ Parameters:
     Default: ''
     AllowedPattern: '^$|^https://[a-zA-Z0-9.-]+(,https://[a-zA-Z0-9.-]+)*$'
     Description: Dashboard HTTPS origins for browser signed uploads, comma-separated (for example the custom domain and the Amplify default during a switchover); blank until Amplify provides one
+Mappings:
+  NetworkRanges:
+    test:
+      Vpc: 10.77.0.0/16
+      Public: 10.77.0.0/24
+      PrivateA: 10.77.10.0/24
+      PrivateB: 10.77.11.0/24
+    production:
+      Vpc: 10.78.0.0/16
+      Public: 10.78.0.0/24
+      PrivateA: 10.78.10.0/24
+      PrivateB: 10.78.11.0/24
 Rules:
   ExistingAccountOnly:
     Assertions:
@@ -21,17 +37,29 @@ Rules:
   SingaporeOnly:
     Assertions:
       - Assert: !Equals [!Ref 'AWS::Region', ap-southeast-1]
-        AssertDescription: Deploy this TEST foundation in Singapore only
+        AssertDescription: Deploy the foundation in Singapore only
+  ProductionStackName:
+    Assertions:
+      - Assert: !Or
+          - !And
+            - !Equals [!Ref 'AWS::StackName', sarvodaya-connect-production-foundation]
+            - !Equals [!Ref Stage, production]
+          - !And
+            - !Not [!Equals [!Ref 'AWS::StackName', sarvodaya-connect-production-foundation]]
+            - !Equals [!Ref Stage, test]
+        AssertDescription: Production stage and production stack name must be selected together
 Conditions:
+  IsTest: !Equals [!Ref Stage, test]
+  IsProduction: !Equals [!Ref Stage, production]
   HasDashboardOrigin: !Not [!Equals [!Ref DashboardOrigin, '']]
 Resources:
   Network:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.77.0.0/16
+      CidrBlock: !FindInMap [NetworkRanges, !Ref Stage, Vpc]
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      Tags: [{Key: Name, Value: sarvodaya-connect-test}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}'}]
   InternetGateway:
     Type: AWS::EC2::InternetGateway
   GatewayAttachment:
@@ -43,26 +71,26 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref Network
-      CidrBlock: 10.77.0.0/24
+      CidrBlock: !FindInMap [NetworkRanges, !Ref Stage, Public]
       AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: false
-      Tags: [{Key: Name, Value: sarvodaya-connect-test-public-a}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}-public-a'}]
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref Network
-      CidrBlock: 10.77.10.0/24
+      CidrBlock: !FindInMap [NetworkRanges, !Ref Stage, PrivateA]
       AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: false
-      Tags: [{Key: Name, Value: sarvodaya-connect-test-private-a}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}-private-a'}]
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref Network
-      CidrBlock: 10.77.11.0/24
+      CidrBlock: !FindInMap [NetworkRanges, !Ref Stage, PrivateB]
       AvailabilityZone: !Select [1, !GetAZs '']
       MapPublicIpOnLaunch: false
-      Tags: [{Key: Name, Value: sarvodaya-connect-test-private-b}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}-private-b'}]
   PublicRoutes:
     Type: AWS::EC2::RouteTable
     Properties: {VpcId: !Ref Network}
@@ -88,11 +116,11 @@ Resources:
   NatSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Test NAT only; HTTP/HTTPS from private network; no SSH
+      GroupDescription: !If [IsTest, 'Test NAT only; HTTP/HTTPS from private network; no SSH', 'NAT only; HTTP/HTTPS from private network; no SSH']
       VpcId: !Ref Network
       SecurityGroupIngress:
-        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 10.77.0.0/16}
-        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 10.77.0.0/16}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: !FindInMap [NetworkRanges, !Ref Stage, Vpc]}
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: !FindInMap [NetworkRanges, !Ref Stage, Vpc]}
       SecurityGroupEgress:
         - {IpProtocol: '-1', CidrIp: 0.0.0.0/0}
   NatInstance:
@@ -114,31 +142,33 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs: {VolumeType: gp3, VolumeSize: 8, Encrypted: true, DeleteOnTermination: true}
-      Tags: [{Key: Name, Value: sarvodaya-connect-test-nat}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}-nat'}]
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          set -euo pipefail
-          trap '/opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource NatInstance --region "${AWS::Region}"' EXIT
-          # AL2023's RAM-backed zram is insufficient for dnf on 512 MB nano.
-          # Use 2 GiB on the existing encrypted root disk before any package work.
-          dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
-          chmod 600 /swapfile
-          mkswap /swapfile
-          swapon /swapfile
-          echo '/swapfile none swap sw 0 0' >> /etc/fstab
-          dnf --setopt=install_weak_deps=False install -y aws-cfn-bootstrap iptables-services
-          systemctl enable --now iptables
-          iptables -F FORWARD
-          echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-sarvodaya-nat.conf
-          sysctl --system
-          iface=$(ip route show default | awk '{print $5; exit}')
-          iptables -t nat -A POSTROUTING -o "$iface" -j MASQUERADE
-          iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-          iptables -A FORWARD -s 10.77.0.0/16 -j ACCEPT
-          iptables -P FORWARD DROP
-          service iptables save
-          systemctl enable iptables
+        Fn::Base64: !Sub
+          - |
+              #!/bin/bash
+              set -euo pipefail
+              trap '/opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource NatInstance --region "${AWS::Region}"' EXIT
+              # AL2023's RAM-backed zram is insufficient for dnf on 512 MB nano.
+              # Use 2 GiB on the existing encrypted root disk before any package work.
+              dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile none swap sw 0 0' >> /etc/fstab
+              dnf --setopt=install_weak_deps=False install -y aws-cfn-bootstrap iptables-services
+              systemctl enable --now iptables
+              iptables -F FORWARD
+              echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-sarvodaya-nat.conf
+              sysctl --system
+              iface=$(ip route show default | awk '{print $5; exit}')
+              iptables -t nat -A POSTROUTING -o "$iface" -j MASQUERADE
+              iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+              iptables -A FORWARD -s ${VpcCidr} -j ACCEPT
+              iptables -P FORWARD DROP
+              service iptables save
+              systemctl enable iptables
+          - VpcCidr: !FindInMap [NetworkRanges, !Ref Stage, Vpc]
   NatAddress:
     Type: AWS::EC2::EIP
     DependsOn: GatewayAttachment
@@ -162,7 +192,7 @@ Resources:
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Test API and temporary migration shell; no inbound access
+      GroupDescription: !If [IsTest, 'Test API and temporary migration shell; no inbound access', 'API and temporary migration shell; no inbound access']
       VpcId: !Ref Network
       SecurityGroupEgress:
         - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
@@ -170,10 +200,10 @@ Resources:
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Test PostgreSQL; inbound only from test application group
+      GroupDescription: !If [IsTest, 'Test PostgreSQL; inbound only from test application group', 'PostgreSQL; inbound only from the application group']
       VpcId: !Ref Network
       SecurityGroupEgress:
-        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 10.77.0.0/16}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: !FindInMap [NetworkRanges, !Ref Stage, Vpc]}
   DatabaseIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -185,7 +215,7 @@ Resources:
   DatabaseSubnets:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: Private subnets for Sarvodaya Connect TEST only
+      DBSubnetGroupDescription: !If [IsTest, 'Private subnets for Sarvodaya Connect TEST only', 'Private subnets for Sarvodaya Connect production']
       SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
   Database:
     Type: AWS::RDS::DBInstance
@@ -194,8 +224,8 @@ Resources:
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Properties:
-      DBInstanceIdentifier: sarvodaya-connect-test-db
-      DBName: sarvodaya_test
+      DBInstanceIdentifier: !Sub sarvodaya-connect-${Stage}-db
+      DBName: !Sub sarvodaya_${Stage}
       Engine: postgres
       EngineVersion: '17.11'
       EngineLifecycleSupport: open-source-rds-extended-support-disabled
@@ -203,10 +233,14 @@ Resources:
       AllocatedStorage: '20'
       StorageType: gp3
       StorageEncrypted: true
-      MasterUsername: sc_test_admin
-      MasterUserPassword: !Sub
-        - '{{resolve:ssm-secure:${Namespace}/database-master-password:1}}'
-        - Namespace: !ImportValue sarvodaya-connect-test-bootstrap-ConfigurationNamespace
+      MasterUsername: !Sub sc_${Stage}_admin
+      ManageMasterUserPassword: !If [IsProduction, true, !Ref 'AWS::NoValue']
+      MasterUserPassword: !If
+        - IsTest
+        - !Sub
+          - '{{resolve:ssm-secure:${Namespace}/database-master-password:1}}'
+          - Namespace: !ImportValue sarvodaya-connect-test-bootstrap-ConfigurationNamespace
+        - !Ref 'AWS::NoValue'
       DBSubnetGroupName: !Ref DatabaseSubnets
       VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
       PubliclyAccessible: false
@@ -220,13 +254,13 @@ Resources:
       MonitoringInterval: 0
       EnablePerformanceInsights: false
       CopyTagsToSnapshot: true
-      Tags: [{Key: Name, Value: sarvodaya-connect-test-db}]
+      Tags: [{Key: Name, Value: !Sub 'sarvodaya-connect-${Stage}-db'}]
   Documents:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-test-documents-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub sarvodaya-connect-${Stage}-documents-${AWS::AccountId}-${AWS::Region}
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       BucketEncryption:
@@ -246,10 +280,15 @@ Resources:
       VersioningConfiguration: {Status: Enabled}
       LifecycleConfiguration:
         Rules:
-          - Id: RemoveOldTestVersions
-            Status: Enabled
-            NoncurrentVersionExpiration: {NoncurrentDays: 30}
-            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+          - !If
+            - IsTest
+            - Id: RemoveOldTestVersions
+              Status: Enabled
+              NoncurrentVersionExpiration: {NoncurrentDays: 30}
+              AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
+            - Id: AbortIncompleteDocumentUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload: {DaysAfterInitiation: 1}
   DocumentsHttps:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -267,7 +306,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-test-access-logs-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub sarvodaya-connect-${Stage}-access-logs-${AWS::AccountId}-${AWS::Region}
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       # S3 server access logs can be delivered only to SSE-S3 encrypted buckets.
@@ -301,14 +340,14 @@ Resources:
             Action: s3:PutObject
             Resource: !Sub '${DocumentAccessLogs.Arn}/documents/*'
             Condition:
-              ArnLike: {'aws:SourceArn': !Sub 'arn:${AWS::Partition}:s3:::sarvodaya-connect-test-documents-${AWS::AccountId}-${AWS::Region}'}
+              ArnLike: {'aws:SourceArn': !Sub 'arn:${AWS::Partition}:s3:::sarvodaya-connect-${Stage}-documents-${AWS::AccountId}-${AWS::Region}'}
               StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}
   Artifacts:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-test-build-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub sarvodaya-connect-${Stage}-build-${AWS::AccountId}-${AWS::Region}
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       BucketEncryption:
@@ -330,7 +369,7 @@ Resources:
     UpdateReplacePolicy: Retain
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: sarvodaya-connect-test
+      UserPoolName: !Sub sarvodaya-connect-${Stage}
       UserPoolTier: ESSENTIALS
       UsernameConfiguration: {CaseSensitive: false}
       AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
@@ -344,12 +383,12 @@ Resources:
           RequireUppercase: false
           RequireSymbols: false
           TemporaryPasswordValidityDays: 3
-      UserPoolTags: {Project: SarvodayaConnect, Environment: test}
+      UserPoolTags: {Project: SarvodayaConnect, Environment: !Ref Stage}
   DashboardClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref UserPool
-      ClientName: sarvodaya-connect-test-dashboard
+      ClientName: !Sub sarvodaya-connect-${Stage}-dashboard
       GenerateSecret: false
       ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
       PreventUserExistenceErrors: ENABLED
@@ -362,7 +401,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref UserPool
-      ClientName: sarvodaya-connect-test-mobile
+      ClientName: !Sub sarvodaya-connect-${Stage}-mobile
       GenerateSecret: false
       ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
       PreventUserExistenceErrors: ENABLED
@@ -379,6 +418,9 @@ Outputs:
   ApplicationSecurityGroupId: {Value: !Ref AppSecurityGroup}
   DatabaseHost: {Value: !GetAtt Database.Endpoint.Address}
   DatabaseIdentifier: {Value: !Ref Database}
+  DatabaseAdminSecretArn:
+    Condition: IsProduction
+    Value: !GetAtt Database.MasterUserSecret.SecretArn
   DocumentsBucketName: {Value: !Ref Documents}
   DeploymentBucketName: {Value: !Ref Artifacts}
   DocumentAccessLogsBucketName: {Value: !Ref DocumentAccessLogs}
