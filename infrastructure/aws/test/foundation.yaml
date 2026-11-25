@@ -260,7 +260,9 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-${Stage}-documents-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub
+        - sarvodaya-connect-${BucketStage}-documents-${AWS::AccountId}-${AWS::Region}
+        - BucketStage: !If [IsTest, test, prod]
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       BucketEncryption:
@@ -306,7 +308,9 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-${Stage}-access-logs-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub
+        - sarvodaya-connect-${BucketStage}-access-logs-${AWS::AccountId}-${AWS::Region}
+        - BucketStage: !If [IsTest, test, prod]
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       # S3 server access logs can be delivered only to SSE-S3 encrypted buckets.
@@ -340,14 +344,19 @@ Resources:
             Action: s3:PutObject
             Resource: !Sub '${DocumentAccessLogs.Arn}/documents/*'
             Condition:
-              ArnLike: {'aws:SourceArn': !Sub 'arn:${AWS::Partition}:s3:::sarvodaya-connect-${Stage}-documents-${AWS::AccountId}-${AWS::Region}'}
+              ArnLike:
+                'aws:SourceArn': !Sub
+                  - 'arn:${AWS::Partition}:s3:::sarvodaya-connect-${BucketStage}-documents-${AWS::AccountId}-${AWS::Region}'
+                  - BucketStage: !If [IsTest, test, prod]
               StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}
   Artifacts:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: !Sub sarvodaya-connect-${Stage}-build-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub
+        - sarvodaya-connect-${BucketStage}-build-${AWS::AccountId}-${AWS::Region}
+        - BucketStage: !If [IsTest, test, prod]
       PublicAccessBlockConfiguration: {BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true}
       OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
       BucketEncryption:
@@ -369,7 +378,7 @@ Resources:
     UpdateReplacePolicy: Retain
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: !Sub sarvodaya-connect-${Stage}
+      UserPoolName: !If [IsTest, sarvodaya-connect-test, sarvodaya-connect-prod]
       UserPoolTier: ESSENTIALS
       UsernameConfiguration: {CaseSensitive: false}
       AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}

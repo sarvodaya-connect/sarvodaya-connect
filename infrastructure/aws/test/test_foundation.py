@@ -149,6 +149,25 @@ class FoundationSafety(unittest.TestCase):
             'Value': {'GetAtt': 'Database.MasterUserSecret.SecretArn'},
         })
 
+    def test_bucket_names_fit_s3_limits_in_both_stages(self):
+        suffixes = {
+            'Documents': 'documents',
+            'DocumentAccessLogs': 'access-logs',
+            'Artifacts': 'build',
+        }
+        for resource, suffix in suffixes.items():
+            template, variables = self.resources[resource]['Properties']['BucketName']['Sub']
+            stage_condition, test_name, prod_name = variables['BucketStage']['If']
+            self.assertEqual((stage_condition, test_name, prod_name), ('IsTest', 'test', 'prod'))
+            for stage in (test_name, prod_name):
+                with self.subTest(resource=resource, stage=stage):
+                    name = (template.replace('${BucketStage}', stage)
+                            .replace('${AWS::AccountId}', '123456789012')
+                            .replace('${AWS::Region}', 'ap-southeast-1'))
+                    self.assertEqual(name, f'sarvodaya-connect-{stage}-{suffix}-123456789012-ap-southeast-1')
+                    self.assertLessEqual(len(name), 63)
+                    self.assertRegex(name, r'^[a-z0-9][a-z0-9-]+[a-z0-9]$')
+
     def test_production_document_versions_are_retained(self):
         [conditional_rule] = self.resources['Documents']['Properties']['LifecycleConfiguration']['Rules']
         stage, test_rule, prod_rule = conditional_rule['If']
@@ -209,7 +228,9 @@ class FoundationSafety(unittest.TestCase):
         self.assertEqual(write['Condition']['StringEquals'], {'aws:SourceAccount': {'Ref': 'AWS::AccountId'}})
         # The writer is the documents bucket itself, by its exact name.
         source = write['Condition']['ArnLike']['aws:SourceArn']['Sub']
-        self.assertEqual(source.split(':::', 1)[1], documents['BucketName']['Sub'])
+        bucket_name, bucket_variables = documents['BucketName']['Sub']
+        self.assertEqual(source[0].split(':::', 1)[1], bucket_name)
+        self.assertEqual(source[1], bucket_variables)
 
     def test_cognito_admin_only_public_clients_no_users(self):
         pool = self.resources['UserPool']['Properties']
