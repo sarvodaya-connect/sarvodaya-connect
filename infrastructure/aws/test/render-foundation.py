@@ -42,7 +42,6 @@ if args.retained_import:
     start, end = header.index('Mappings:\n'), header.index('Rules:\n')
     header = header[:start] + header[end:]
     header = header.replace("  IsProduction: !Equals [!Ref Stage, production]\n", '')
-    header = header.replace('    AllowedValues: [test, production]\n', '    AllowedValues: [test]\n')
     header = re.sub(r'^Description:.*$', 'Description: Sarvodaya Connect retained-resource IMPORT only; requires approved recovery plan', header, count=1, flags=re.MULTILINE)
     source = header + 'Resources:\n' + ''.join(selected)
 sys.stdout.write(source)
