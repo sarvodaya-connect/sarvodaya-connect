@@ -59,23 +59,46 @@ class SarvoAiGuardrails(unittest.TestCase):
         actions = {s['Action'] for s in bedrock[0]['If'][1]['Statement']}
         self.assertEqual(actions, {'bedrock:InvokeModel'})
 
-    def test_agentcore_requires_test_mode_and_a_specific_runtime(self):
+    def test_agentcore_requires_supported_stage_enablement_and_a_specific_runtime(self):
         self.assertEqual(self.template['Parameters']['SarvoAiAgentCoreRuntimeArn']['Default'], '')
         self.assertEqual(self.env['SARVOAI_AGENTCORE_RUNTIME_ARN'], {
             'If': ['SarvoAiAgentCoreOn', {'Ref': 'SarvoAiAgentCoreRuntimeArn'}, ''],
         })
-        self.assertEqual(self.template['Conditions']['SarvoAiAgentCoreOn'], {'And': [
-            {'Condition': 'IsTest'},
+        conditions = self.template['Conditions']
+        self.assertEqual(conditions['IsProduction'], {'Equals': [{'Ref': 'Stage'}, 'production']})
+        self.assertEqual(conditions['SarvoAiAgentCoreOn'], {'And': [
+            {'Or': [{'Condition': 'IsTest'}, {'Condition': 'IsProduction'}]},
             {'Condition': 'SarvoAiOn'},
             {'Not': [{'Equals': [{'Ref': 'SarvoAiAgentCoreRuntimeArn'}, '']}]},
         ]})
         policies = self.template['Resources']['ApiFunction']['Properties']['Policies']
         agentcore = [p['If'] for p in policies if 'InvokeAgentRuntimeWithWebSocketStream' in str(p)]
+        self.assertEqual(len(agentcore), 1)
         self.assertEqual(agentcore[0][0], 'SarvoAiAgentCoreOn')
+        self.assertEqual(agentcore[0][2], {'Ref': 'AWS::NoValue'})
         self.assertEqual(agentcore[0][1]['Statement'][0]['Resource'], [
             {'Ref': 'SarvoAiAgentCoreRuntimeArn'},
             {'Sub': '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'},
         ])
+
+    def test_agentcore_runtime_and_log_permissions_use_the_same_stage(self):
+        template = yaml.load((ROOT.parent / 'agentcore-test.yaml').read_text(), Loader=TemplateLoader)
+        stage = template['Parameters']['Stage']
+        self.assertEqual(stage['Default'], 'test')
+        self.assertEqual(stage['AllowedValues'], ['test', 'production'])
+
+        resources = template['Resources']
+        self.assertEqual(resources['SarvoAiRuntime']['Properties']['AgentRuntimeName'],
+                         {'Sub': 'sarvoai_${Stage}'})
+        statements = resources['RuntimeRole']['Properties']['Policies'][0]['PolicyDocument']['Statement']
+        log_group = 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_${Stage}-*'
+        resources_by_action = {
+            action: statement['Resource']
+            for statement in statements
+            for action in ([statement['Action']] if isinstance(statement['Action'], str) else statement['Action'])
+        }
+        self.assertEqual(resources_by_action['logs:CreateLogGroup'], {'Sub': log_group})
+        self.assertEqual(resources_by_action['logs:PutLogEvents'], {'Sub': log_group + ':log-stream:*'})
 
 class FoundationSafety(unittest.TestCase):
     @classmethod
