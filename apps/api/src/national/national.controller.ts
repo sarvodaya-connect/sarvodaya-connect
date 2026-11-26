@@ -23,10 +23,11 @@ import {
   DirectoryQueryDto,
   MapQueryDto,
   PagedYearQueryDto,
+  ProgrammesQueryDto,
   YearQueryDto,
 } from './directory.dto.js';
 import { DirectoryService } from './directory.service.js';
-import { NationalService } from './national.service.js';
+import { classificationFilters, NationalService } from './national.service.js';
 import {
   REPORT_TYPE_VALUES,
   ReportQueryDto,
@@ -58,10 +59,15 @@ export class ScopedProgrammesController {
 
   @Get('programmes')
   programmes(
-    @Query() query: YearQueryDto,
+    @Query() query: ProgrammesQueryDto,
     @CurrentPrincipal() principal: Principal,
   ) {
-    return this.national.scopedProgrammes(principal, query.year);
+    return this.national.scopedProgrammes(
+      principal,
+      query.year,
+      new Date(),
+      classificationFilters(query),
+    );
   }
 }
 
@@ -97,8 +103,12 @@ export class NationalController {
   }
 
   @Get('national/programmes')
-  programmes(@Query() query: YearQueryDto) {
-    return this.national.programmes(query.year);
+  programmes(@Query() query: ProgrammesQueryDto) {
+    return this.national.programmes(
+      query.year,
+      new Date(),
+      classificationFilters(query),
+    );
   }
 
   @Get('national/finance')

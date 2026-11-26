@@ -148,6 +148,9 @@ describe('Issue #117 programme scope', () => {
   });
 });
 
+/** Issue #173: no classification filters. */
+const NONE = { dimensions: [], categories: [] };
+
 describe('Issue #117 scoped programme figures', () => {
   const repository = () => {
     const activities = vi.fn().mockResolvedValue({
@@ -178,7 +181,19 @@ describe('Issue #117 scoped programme figures', () => {
       societies: 2,
       districts: [{ id: NORTH, nameEn: 'Fictional North' }],
     });
-    return { activities, recentApprovedActivities, scopeSummary };
+    // Issue #173: the V6 classification figures.
+    const classification = vi.fn().mockResolvedValue({
+      classified: { planned: 0, completed: 0 },
+      unclassified: { planned: 4, completed: 2 },
+      dimensions: [],
+      categories: [],
+    });
+    return {
+      activities,
+      recentApprovedActivities,
+      scopeSummary,
+      classification,
+    };
   };
   const service = (repo: ReturnType<typeof repository>) =>
     new NationalService(repo as unknown as NationalRepository, {} as never);
@@ -188,8 +203,14 @@ describe('Issue #117 scoped programme figures', () => {
     const active = ddm({ startsAt: hours(-1), expiresAt: hours(5) });
     const result = await service(repo).scopedProgrammes(active, 2025, now);
     const within = { districtIds: [NORTH], societyIds: [SUNRISE] };
-    expect(repo.activities).toHaveBeenCalledWith(2025, now, within);
-    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(2025, 6, within);
+    expect(repo.activities).toHaveBeenCalledWith(2025, now, within, NONE);
+    expect(repo.recentApprovedActivities).toHaveBeenCalledWith(
+      2025,
+      6,
+      within,
+      NONE,
+    );
+    expect(repo.classification).toHaveBeenCalledWith(2025, now, within, NONE);
     expect(repo.scopeSummary).toHaveBeenCalledWith(within);
     expect(result).toMatchObject({
       financialYear: { startYear: 2025 },
@@ -219,10 +240,12 @@ describe('Issue #117 scoped programme figures', () => {
       undefined,
       now,
     );
-    expect(repo.activities).toHaveBeenCalledWith(2025, now, {
-      districtIds: [],
-      societyIds: [],
-    });
+    expect(repo.activities).toHaveBeenCalledWith(
+      2025,
+      now,
+      { districtIds: [], societyIds: [] },
+      NONE,
+    );
   });
 
   it('refuses a year outside the selectable range, as HQ does', async () => {
@@ -234,11 +257,12 @@ describe('Issue #117 scoped programme figures', () => {
   it('leaves HQ national: no scope is passed', async () => {
     const repo = repository();
     await service(repo).programmes(2025, now);
-    expect(repo.activities).toHaveBeenCalledWith(2025, now, undefined);
+    expect(repo.activities).toHaveBeenCalledWith(2025, now, undefined, NONE);
     expect(repo.recentApprovedActivities).toHaveBeenCalledWith(
       2025,
       6,
       undefined,
+      NONE,
     );
   });
 
@@ -268,7 +292,7 @@ describe('Issue #117 scoped programme figures', () => {
       row('november', 2026, 11),
     ]);
     const result = await service(repo).programmes(2026, now);
-    expect(repo.activities).toHaveBeenCalledWith(2026, now, undefined);
+    expect(repo.activities).toHaveBeenCalledWith(2026, now, undefined, NONE);
     expect(result.financialYear).toMatchObject({
       startYear: 2026,
       inProgress: true,

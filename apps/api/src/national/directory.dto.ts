@@ -1,5 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -10,8 +12,29 @@ import {
   Min,
 } from 'class-validator';
 
+import {
+  ActivityCategory,
+  ActivityDimension,
+} from '../generated/prisma/enums.js';
+
 const toInt = ({ value }: { value: unknown }) =>
   value === undefined || value === '' ? undefined : Number(value);
+
+/**
+ * Issue #173: a filter given once, repeated (`?dimension=SOCIAL&dimension=
+ * ECONOMIC`) or comma separated, as a list with each value once. Validation
+ * then rejects any value that is not a supported code.
+ */
+const toList = ({ value }: { value: unknown }) => {
+  if (value === undefined || value === '') return undefined;
+  const items = (Array.isArray(value) ? value : [value])
+    .flatMap((item: unknown) =>
+      typeof item === 'string' ? item.split(',') : [item],
+    )
+    .map((item: unknown) => (typeof item === 'string' ? item.trim() : item))
+    .filter((item: unknown) => item !== '');
+  return [...new Set(items)];
+};
 
 export const DIRECTORY_VIEW_VALUES = [
   'all',
@@ -29,6 +52,27 @@ export class YearQueryDto {
   @Min(2000)
   @Max(2100)
   year?: number;
+}
+
+/**
+ * Issue #173: Programmes for a financial year, optionally narrowed to
+ * activities the SPC classified with any of the given dimensions and any of
+ * the given categories.
+ */
+export class ProgrammesQueryDto extends YearQueryDto {
+  @IsOptional()
+  @Transform(toList)
+  @IsArray()
+  @ArrayMaxSize(Object.values(ActivityDimension).length)
+  @IsIn(Object.values(ActivityDimension), { each: true })
+  dimension?: ActivityDimension[];
+
+  @IsOptional()
+  @Transform(toList)
+  @IsArray()
+  @ArrayMaxSize(Object.values(ActivityCategory).length)
+  @IsIn(Object.values(ActivityCategory), { each: true })
+  category?: ActivityCategory[];
 }
 
 export class PagedYearQueryDto extends YearQueryDto {

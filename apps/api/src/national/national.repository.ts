@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 import { Prisma } from '../generated/prisma/client.js';
+import type {
+  ActivityCategory,
+  ActivityDimension,
+} from '../generated/prisma/enums.js';
 import { executeDatabaseOperation } from '../prisma/prisma-operation.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { MAP_POINT_LIMIT } from '../societies/societies.repository.js';
@@ -35,6 +39,56 @@ function activityInScope(within: SocietyScope) {
   ].filter((part) => part !== null);
   if (!parts.length) return Prisma.sql`FALSE`;
   return Prisma.sql`a.society_id IN (SELECT s.id FROM societies s WHERE ${Prisma.join(parts, ' OR ')})`;
+}
+
+/**
+ * Issue #173: the V6 SPC classification filters. Within a list any value
+ * matches; when both lists are given, both must match. Empty lists filter
+ * nothing.
+ */
+export interface ClassificationFilters {
+  dimensions: ActivityDimension[];
+  categories: ActivityCategory[];
+}
+
+export const NO_CLASSIFICATION_FILTERS: ClassificationFilters = {
+  dimensions: [],
+  categories: [],
+};
+
+export function filtering(filters: ClassificationFilters) {
+  return filters.dimensions.length > 0 || filters.categories.length > 0;
+}
+
+/** The SPC recorded a classification (the same rule as `spcClassification`). */
+const CLASSIFIED = Prisma.sql`COALESCE(cardinality(a.spc_dimensions), 0) > 0
+  AND COALESCE(cardinality(a.spc_categories), 0) > 0`;
+
+function classificationMatch(filters: ClassificationFilters) {
+  const parts = [CLASSIFIED];
+  if (filters.dimensions.length)
+    parts.push(
+      Prisma.sql`a.spc_dimensions && CAST(${filters.dimensions} AS activity_dimension[])`,
+    );
+  if (filters.categories.length)
+    parts.push(
+      Prisma.sql`a.spc_categories && CAST(${filters.categories} AS activity_category[])`,
+    );
+  return Prisma.join(parts, ' AND ');
+}
+
+function classificationWhere(
+  filters: ClassificationFilters,
+): Prisma.WorkPlanActivityWhereInput {
+  if (!filtering(filters)) return {};
+  return {
+    spcDimensions: filters.dimensions.length
+      ? { hasSome: filters.dimensions }
+      : { isEmpty: false },
+    spcCategories: filters.categories.length
+      ? { hasSome: filters.categories }
+      : { isEmpty: false },
+  };
 }
 
 function societyWhere(within: SocietyScope): Prisma.SocietyWhereInput {
@@ -231,10 +285,20 @@ export class NationalRepository {
    * SDGs. `within` limits them to some societies (issue #117); without it the
    * figures are national, for HQ.
    */
-  async activities(startYear: number, now = new Date(), within?: SocietyScope) {
-    const scope = within
-      ? Prisma.sql`${approvedInYear(startYear)} AND ${activityInScope(within)}`
-      : approvedInYear(startYear);
+  async activities(
+    startYear: number,
+    now = new Date(),
+    within?: SocietyScope,
+    filters: ClassificationFilters = NO_CLASSIFICATION_FILTERS,
+  ) {
+    const scope = Prisma.join(
+      [
+        approvedInYear(startYear),
+        ...(within ? [activityInScope(within)] : []),
+        ...(filtering(filters) ? [classificationMatch(filters)] : []),
+      ],
+      ' AND ',
+    );
     const done = completed(now);
     const [dimensions, sectors, sdgs] = await this.run(() =>
       Promise.all([
@@ -270,14 +334,72 @@ export class NationalRepository {
   }
 
   /**
+   * Issue #173: approved activities by the SPC's classification. Each activity
+   * counts once in `classified` and once in every dimension and category it
+   * has, so the breakdowns can add up to more than `classified`. Activities
+   * with no classification (approved before V6) are counted in
+   * `unclassified` over the whole period and scope, whatever the filters, and
+   * never in a breakdown or a filtered result.
+   */
+  async classification(
+    startYear: number,
+    now: Date,
+    within: SocietyScope | undefined,
+    filters: ClassificationFilters,
+  ) {
+    const base = within
+      ? Prisma.sql`${approvedInYear(startYear)} AND ${activityInScope(within)}`
+      : approvedInYear(startYear);
+    const matching = Prisma.sql`${base} AND ${classificationMatch(filters)}`;
+    const done = completed(now);
+    type Count = { planned: number; completed: number };
+    const [classified, unclassified, dimensions, categories] = await this.run(
+      () =>
+        Promise.all([
+          this.prisma.$queryRaw<Count[]>`
+            SELECT COUNT(*)::int AS planned,
+              COUNT(*) FILTER (WHERE ${done})::int AS completed
+            FROM work_plan_activities a WHERE ${matching}`,
+          this.prisma.$queryRaw<Count[]>`
+            SELECT COUNT(*)::int AS planned,
+              COUNT(*) FILTER (WHERE ${done})::int AS completed
+            FROM work_plan_activities a WHERE ${base} AND NOT (${CLASSIFIED})`,
+          this.prisma.$queryRaw<(Count & { dimension: string })[]>`
+            SELECT d::text AS dimension, COUNT(DISTINCT a.id)::int AS planned,
+              COUNT(DISTINCT a.id) FILTER (WHERE ${done})::int AS completed
+            FROM work_plan_activities a
+            CROSS JOIN LATERAL unnest(a.spc_dimensions) AS d
+            WHERE ${matching}
+            GROUP BY d`,
+          this.prisma.$queryRaw<(Count & { category: string })[]>`
+            SELECT c::text AS category, COUNT(DISTINCT a.id)::int AS planned,
+              COUNT(DISTINCT a.id) FILTER (WHERE ${done})::int AS completed
+            FROM work_plan_activities a
+            CROSS JOIN LATERAL unnest(a.spc_categories) AS c
+            WHERE ${matching}
+            GROUP BY c`,
+        ]),
+    );
+    const zero = { planned: 0, completed: 0 };
+    return {
+      classified: classified[0] ?? zero,
+      unclassified: unclassified[0] ?? zero,
+      dimensions,
+      categories,
+    };
+  }
+
+  /**
    * The latest approved activities in the financial year, by the same April to
    * March rule as `approvedInYear`, so the list never shows an activity the
-   * year's totals leave out.
+   * year's totals leave out. Issue #173: narrowed by the same classification
+   * filters as the totals.
    */
   recentApprovedActivities(
     startYear: number,
     limit: number,
     within?: SocietyScope,
+    filters: ClassificationFilters = NO_CLASSIFICATION_FILTERS,
   ) {
     return this.run(() =>
       this.prisma.workPlanActivity.findMany({
@@ -289,6 +411,7 @@ export class NationalRepository {
             { year: startYear + 1, month: { lt: 4 } },
           ],
           ...(within ? { society: societyWhere(within) } : {}),
+          ...classificationWhere(filters),
         },
         include: {
           sdgs: { orderBy: { sdg: 'asc' } },
