@@ -1,7 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: SarvoAI AgentCore Runtime for the Singapore TEST environment
+Description: SarvoAI AgentCore Runtime for the Singapore TEST or production environment
 
 Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [test, production]
+    Default: test
+    Description: Use a separate CloudFormation stack for each environment.
   RuntimeImageDigest:
     Type: String
     Default: ''
@@ -55,7 +60,7 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:DescribeLogStreams
                   - logs:PutResourcePolicy
-                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_test-*'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_${Stage}-*'
               - Effect: Allow
                 Action: logs:DescribeLogGroups
                 Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
@@ -63,13 +68,13 @@ Resources:
                 Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_test-*:log-stream:*'
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_${Stage}-*:log-stream:*'
 
   SarvoAiRuntime:
     Type: AWS::BedrockAgentCore::Runtime
     Condition: HasImage
     Properties:
-      AgentRuntimeName: sarvoai_test
+      AgentRuntimeName: !Sub 'sarvoai_${Stage}'
       RoleArn: !GetAtt RuntimeRole.Arn
       NetworkConfiguration:
         NetworkMode: PUBLIC
