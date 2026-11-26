@@ -29,6 +29,8 @@ export const API_ERROR_CODES = [
   "CONFLICT",
   "LIMIT_REACHED",
   "INTERNAL_ERROR",
+  /** A dependency, such as the database, is temporarily unavailable (503). */
+  "SERVICE_UNAVAILABLE",
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
