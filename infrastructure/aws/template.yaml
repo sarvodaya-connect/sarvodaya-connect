@@ -57,7 +57,7 @@ Parameters:
     Type: String
     Default: ''
     AllowedPattern: '^$|^arn:aws:bedrock-agentcore:ap-southeast-1:[0-9]{12}:runtime/[A-Za-z0-9_-]+$'
-    Description: Optional Singapore AgentCore runtime ARN for SarvoAI in TEST.
+    Description: Optional Singapore AgentCore runtime ARN for SarvoAI in TEST or production.
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
@@ -88,9 +88,10 @@ Rules:
 
 Conditions:
   IsTest: !Equals [!Ref Stage, test]
+  IsProduction: !Equals [!Ref Stage, production]
   SarvoAiOn: !Equals [!Ref SarvoAiEnabled, 'true']
   SarvoAiAgentCoreOn: !And
-    - !Condition IsTest
+    - !Or [!Condition IsTest, !Condition IsProduction]
     - !Condition SarvoAiOn
     - !Not [!Equals [!Ref SarvoAiAgentCoreRuntimeArn, '']]
 
