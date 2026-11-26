@@ -3607,5 +3607,42 @@
         "type": "int"
       }
     }
-  }
+  },
+  "draftSavedTitle": "Saved on this phone",
+  "draftSavedMessage": "Last saved {time}. Your changes stay here until you save them to the record or discard them.",
+  "@draftSavedMessage": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "draftReload": "Reload record",
+  "draftDiscard": "Discard draft",
+  "draftKeep": "Keep draft",
+  "draftDiscardTitle": "Discard this draft?",
+  "draftDiscardBody": "Your unsaved changes to this society will be deleted from this phone.",
+  "draftKeepLeave": "Keep draft and leave",
+  "draftChangedTitle": "Someone else changed this society",
+  "draftConflictMessage": "Your changes are kept. {count, plural, =1{1 field you edited was also changed. Check the marked field, then save again.} other{{count} fields you edited were also changed. Check the marked fields, then save again.}}",
+  "@draftConflictMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "draftNewerMessage": "Your changes are kept. Newer values were filled in for the fields you had not changed.",
+  "draftConflictField": "Also changed by someone else. Now: {value}",
+  "@draftConflictField": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "draftConnectionTitle": "Connection required",
+  "draftConnectionMessage": "Your changes are saved on this phone, not yet in the record. Try again when you're online.",
+  "draftNoAccessTitle": "You can no longer edit this society",
+  "draftNoAccessMessage": "Nothing was sent. Your draft is kept on this phone until you discard it. Ask your DM or HQ if this is wrong."
 }
