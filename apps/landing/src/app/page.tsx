@@ -155,6 +155,10 @@ type Person = {
   roundedPhoto?: boolean;
   /** LinkedIn profile URL, shown as a link under the role. */
   linkedin?: string;
+  /** Zoom the photo in (1 = none), for full-length shots. */
+  photoZoom?: number;
+  /** Where to anchor the zoom and crop, e.g. "50% 20%". */
+  photoPosition?: string;
 };
 
 // Sarvodaya staff initiating the project.
@@ -223,6 +227,8 @@ const stampxMembers: Person[] = [
     name: "Mohamed Thasreef",
     role: "Member, STAMPx",
     photo: "/team/stampx-mohamed-thasreef.png",
+    photoZoom: 1.8,
+    photoPosition: "50% 20%",
     linkedin: "https://www.linkedin.com/in/-thasreef22-/",
   },
 ];
@@ -848,13 +854,20 @@ type PlaceholderTone = "orange" | "green";
 function PersonPhoto({ person, tone }: { person: Person; tone: PlaceholderTone }) {
   if (person.photo) {
     return (
-      <Image
-        alt={person.name}
-        className={`aspect-[4/5] w-full object-cover object-bottom ${person.roundedPhoto ? "rounded-b-xl" : ""}`}
-        height={1508}
-        src={person.photo}
-        width={1336}
-      />
+      <div className="aspect-[4/5] w-full overflow-hidden">
+        <Image
+          alt={person.name}
+          className={`h-full w-full object-cover object-bottom ${person.roundedPhoto ? "rounded-b-xl" : ""}`}
+          height={1508}
+          src={person.photo}
+          style={{
+            objectPosition: person.photoPosition,
+            transform: person.photoZoom ? `scale(${person.photoZoom})` : undefined,
+            transformOrigin: person.photoPosition,
+          }}
+          width={1336}
+        />
+      </div>
     );
   }
   return (
