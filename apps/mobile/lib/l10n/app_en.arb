@@ -3607,5 +3607,26 @@
         "type": "int"
       }
     }
-  }
+  },
+  "icSavedTitle": "Showing a saved copy",
+  "icSavedListMessage": "You're offline or the server did not answer. These incidents were saved {date} and may be out of date.",
+  "@icSavedListMessage": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "icSavedIncidentMessage": "You're offline or the server did not answer. This incident was saved {date} and may be out of date. Closing it needs a connection.",
+  "@icSavedIncidentMessage": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "icNoSavedTitle": "No incidents saved on this phone",
+  "icNoSavedMessage": "You're offline or the server did not answer. Incidents load here once you're connected, and then stay readable offline.",
+  "icNoSavedIncidentTitle": "This incident isn't saved on this phone",
+  "icNoSavedIncidentMessage": "You're offline or the server did not answer. Connect to open it. Incidents you have opened stay readable offline."
 }

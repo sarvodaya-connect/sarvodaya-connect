@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
 
 import '../district_access/access_format.dart';
 import '../society_record/society_record_models.dart' show PickedDocument;
@@ -13,6 +14,7 @@ import '../widgets/state_views.dart';
 import 'assessment_queue.dart';
 import 'assessment_queue_card.dart';
 import 'incident_api.dart';
+import 'incident_cache.dart';
 import 'incident_format.dart';
 
 /// Tells the person the figures are fictional sample data (demo mode only).
@@ -408,10 +410,16 @@ class _IncidentHomeSectionState extends State<IncidentHomeSection> {
     final generation = ++_generation;
     if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
-      final active = await api.active();
-      final detail = active.isEmpty ? null : await api.detail(active.first.id);
+      // Issue #126: what loads here is saved for offline reading. A saved
+      // copy is shown on the Incident tab, with its notice, not here.
+      final active = await store.incidentCache.incidents(api);
+      if (active.cached) return;
+      final detail = active.value.isEmpty
+          ? null
+          : await store.incidentCache.incident(api, active.value.first.id);
+      if (detail?.cached ?? false) return;
       if (mounted && generation == _generation) {
-        setState(() => _detail = detail);
+        setState(() => _detail = detail?.value);
       }
     } on IncidentException {
       // The home still works without the incident card; the Incident tab shows the error.
@@ -523,6 +531,53 @@ Future<bool?> startAssessment(
   ),
 );
 
+/// Issue #126: says the screen shows a saved copy, when it was saved, and
+/// offers Try again.
+class _SavedCopyNotice extends StatelessWidget {
+  const _SavedCopyNotice({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: NoticeBanner(
+        icon: Icons.cloud_off_outlined,
+        tone: NoticeTone.warning,
+        title: l.icSavedTitle,
+        message: message,
+        action: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l.commonTryAgain),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Issue #126: offline (or no answer) with nothing saved yet. Never shown as
+/// "no incidents".
+Widget _nothingSaved(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required VoidCallback onRetry,
+}) => StateMessage(
+  icon: Icons.cloud_off_outlined,
+  tone: StateTone.offline,
+  isAlert: true,
+  title: title,
+  message: message,
+  primaryLabel: context.l10n.commonTryAgain,
+  onPrimary: onRetry,
+);
+
 /// The Incident tab: live incidents covering the user's societies, incident
 /// notifications (M48n, in the app) and "Report an incident" (M48).
 class IncidentsScreen extends StatefulWidget {
@@ -537,6 +592,12 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
   List<IncidentNotification> _alerts = const [];
   String? _error;
 
+  /// When the list shown was saved (issue #126). Null when it is fresh.
+  DateTime? _savedAt;
+
+  /// Offline or no answer, and nothing saved on this phone yet.
+  bool _nothingSavedYet = false;
+
   /// Only the newest load may update the screen.
   var _generation = 0;
 
@@ -550,22 +611,35 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     final store = DemoScope.read(context);
     final api = store.incidents;
     final generation = ++_generation;
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _nothingSavedYet = false;
+    });
     if (send) _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     try {
-      final incidents = await api.active();
-      final alerts = await api.notifications().catchError(
-        (_) => const <IncidentNotification>[],
-      );
+      final loaded = await store.incidentCache.incidents(api);
+      // Notifications are not saved; a saved list shows none.
+      final alerts = loaded.cached
+          ? const <IncidentNotification>[]
+          : await api.notifications().catchError(
+              (_) => const <IncidentNotification>[],
+            );
       if (mounted && generation == _generation) {
         setState(() {
-          _incidents = incidents;
+          _incidents = loaded.value;
+          _savedAt = loaded.savedAt;
           _alerts = alerts;
         });
       }
     } on IncidentException catch (error) {
       if (mounted && generation == _generation) {
-        setState(() => _error = error.message);
+        setState(() {
+          if (canUseSavedCopy(error)) {
+            _nothingSavedYet = true;
+          } else {
+            _error = error.message;
+          }
+        });
       }
     }
   }
@@ -583,7 +657,9 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
   @override
   Widget build(BuildContext context) {
     final store = DemoScope.of(context);
+    final l = context.l10n;
     final incidents = _incidents;
+    final savedAt = _savedAt;
     return Scaffold(
       appBar: const _TitledBar(
         title: 'Disaster Response',
@@ -602,6 +678,16 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
               ),
               () => _load(send: false),
             )
+          : _nothingSavedYet
+          ? _withSavedAssessments(
+              _nothingSaved(
+                context,
+                title: l.icNoSavedTitle,
+                message: l.icNoSavedMessage,
+                onRetry: _load,
+              ),
+              () => _load(send: false),
+            )
           : incidents == null
           ? _withSavedAssessments(
               const LoadingSkeleton(label: 'Loading incidents'),
@@ -613,6 +699,11 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
+                  if (savedAt != null)
+                    _SavedCopyNotice(
+                      message: l.icSavedListMessage(l.accessDateTime(savedAt)),
+                      onRetry: _load,
+                    ),
                   PendingAssessmentsCard(onSent: () => _load(send: false)),
                   if (incidents.isEmpty)
                     const _Card(
@@ -728,6 +819,12 @@ class _IncidentScreenState extends State<IncidentScreen> {
   String? _error;
   bool _closing = false;
 
+  /// When the page shown was saved (issue #126). Null when it is fresh.
+  DateTime? _savedAt;
+
+  /// Offline or no answer, and this incident is not saved on this phone.
+  bool _nothingSavedYet = false;
+
   /// Only the newest load may update the screen.
   var _generation = 0;
 
@@ -739,22 +836,34 @@ class _IncidentScreenState extends State<IncidentScreen> {
 
   Future<void> _load({bool send = true}) async {
     final generation = ++_generation;
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _nothingSavedYet = false;
+    });
+    final store = DemoScope.read(context);
     if (send) {
-      _sendSavedThen(
-        DemoScope.read(context),
-        () => mounted ? _load(send: false) : null,
-      );
+      _sendSavedThen(store, () => mounted ? _load(send: false) : null);
     }
     try {
-      final detail = await DemoScope.read(context).incidents
-          .detail(widget.incidentId);
+      final loaded = await store.incidentCache.incident(
+        store.incidents,
+        widget.incidentId,
+      );
       if (mounted && generation == _generation) {
-        setState(() => _detail = detail);
+        setState(() {
+          _detail = loaded.value;
+          _savedAt = loaded.savedAt;
+        });
       }
     } on IncidentException catch (error) {
       if (mounted && generation == _generation) {
-        setState(() => _error = error.message);
+        setState(() {
+          if (canUseSavedCopy(error)) {
+            _nothingSavedYet = true;
+          } else {
+            _error = error.message;
+          }
+        });
       }
     }
   }
@@ -851,6 +960,8 @@ class _IncidentScreenState extends State<IncidentScreen> {
   Widget build(BuildContext context) {
     final detail = _detail;
     final store = DemoScope.of(context);
+    final l = context.l10n;
+    final savedAt = _savedAt;
     final mySocieties = store.user?.societyIds ?? const <String>[];
     final helping = detail == null
         ? const <ResponseAction>[]
@@ -905,6 +1016,16 @@ class _IncidentScreenState extends State<IncidentScreen> {
               ),
               () => _load(send: false),
             )
+          : _nothingSavedYet
+          ? _withSavedAssessments(
+              _nothingSaved(
+                context,
+                title: l.icNoSavedIncidentTitle,
+                message: l.icNoSavedIncidentMessage,
+                onRetry: _load,
+              ),
+              () => _load(send: false),
+            )
           : detail == null
           ? _withSavedAssessments(
               const LoadingSkeleton(label: 'Loading the incident'),
@@ -916,6 +1037,13 @@ class _IncidentScreenState extends State<IncidentScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   const _SampleLabel(),
+                  if (savedAt != null)
+                    _SavedCopyNotice(
+                      message: l.icSavedIncidentMessage(
+                        l.accessDateTime(savedAt),
+                      ),
+                      onRetry: _load,
+                    ),
                   PendingAssessmentsCard(onSent: () => _load(send: false)),
                   _Card(
                     child: Column(
@@ -1026,7 +1154,8 @@ class _IncidentScreenState extends State<IncidentScreen> {
                         ),
                       ),
                     ),
-                  if (detail.canClose) ...[
+                  // Closing is never offered from a saved copy (issue #126).
+                  if (detail.canClose && savedAt == null) ...[
                     const SizedBox(height: 16),
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(

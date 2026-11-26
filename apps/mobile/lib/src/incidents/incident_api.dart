@@ -29,6 +29,21 @@ HelperStatus helperStatusFrom(String? value) => switch (value) {
   _ => HelperStatus.assigned,
 };
 
+/// Issue #126: the API's codes again, so a saved copy reads back the same.
+const _societyStateCodes = {
+  SocietyState.safe: 'SAFE',
+  SocietyState.affected: 'AFFECTED',
+  SocietyState.critical: 'CRITICAL',
+  SocietyState.notAssessed: 'NOT_ASSESSED',
+};
+
+const _actionStateCodes = {
+  ActionState.needed: 'NEEDED',
+  ActionState.assigned: 'ASSIGNED',
+  ActionState.inProgress: 'IN_PROGRESS',
+  ActionState.delivered: 'DELIVERED',
+};
+
 const helperStatusCodes = {
   HelperStatus.assigned: 'ASSIGNED',
   HelperStatus.inProgress: 'IN_PROGRESS',
@@ -56,6 +71,14 @@ class SocietyRef {
     districtName: json['districtName'] as String,
     districtId: json['districtId'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'code': code,
+    'districtName': districtName,
+    'districtId': ?districtId,
+  };
 }
 
 class IncidentSummary {
@@ -120,6 +143,26 @@ class IncidentSummary {
       assessed: json['assessed'] as int? ?? 0,
     );
   }
+
+  /// The API's shape, which [IncidentSummary.fromJson] reads back (issue #126).
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'reference': reference,
+    'title': title,
+    'type': type,
+    'status': isClosed ? 'CLOSED' : 'ACTIVE',
+    'areaDistricts': [
+      for (final name in areaNames) {'name': name},
+    ],
+    'reportingSociety': ?reportingSociety?.toJson(),
+    'openedBy': {'name': ?openedByName, 'role': ?openedByRole},
+    'openedAt': openedAt.toIso8601String(),
+    'assessmentsDueAt': ?assessmentsDueAt?.toIso8601String(),
+    'closedAt': ?closedAt?.toIso8601String(),
+    'closedBy': ?(closedByName == null ? null : {'name': closedByName}),
+    'societiesInArea': societiesInArea,
+    'assessed': assessed,
+  };
 }
 
 DateTime? _date(Object? value) =>
@@ -152,6 +195,16 @@ class SocietyRow {
     updates: json['updates'] as int? ?? 0,
     canAssess: json['canAssess'] as bool? ?? false,
   );
+
+  Map<String, dynamic> toJson() => {
+    'society': society.toJson(),
+    'state': _societyStateCodes[state],
+    'families': ?families,
+    'people': ?people,
+    'lastReceivedAt': ?lastReceivedAt?.toIso8601String(),
+    'updates': updates,
+    'canAssess': canAssess,
+  };
 }
 
 class Helper {
@@ -193,6 +246,20 @@ class Helper {
     deliveryNote: json['deliveryNote'] as String? ?? '',
     deliveredOn: json['deliveredOn'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'society': society.toJson(),
+    'quantity': quantity,
+    'deliveredQuantity': deliveredQuantity,
+    'status': helperStatusCodes[status],
+    'assignedBy': assignedBy,
+    'assignedAt': assignedAt.toIso8601String(),
+    'canUpdate': canUpdate,
+    'note': note,
+    'deliveryNote': deliveryNote,
+    'deliveredOn': ?deliveredOn,
+  };
 }
 
 class ResponseAction {
@@ -242,6 +309,19 @@ class ResponseAction {
       dueAt: _date(json['dueAt']),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'need': need,
+    'title': title,
+    'quantity': quantity,
+    'unit': unit,
+    'state': _actionStateCodes[state],
+    'delivered': delivered,
+    'helpers': [for (final helper in helpers) helper.toJson()],
+    'forSociety': ?forSociety?.toJson(),
+    'dueAt': ?dueAt?.toIso8601String(),
+  };
 }
 
 class IncidentTotals {
@@ -296,6 +376,25 @@ class IncidentTotals {
         ),
     ],
   );
+
+  Map<String, dynamic> toJson() => {
+    'affected': affected,
+    'critical': critical,
+    'families': families,
+    'people': people,
+    'housesFully': housesFully,
+    'housesPartly': housesPartly,
+    'notAssessed': notAssessed,
+    'societiesInArea': societiesInArea,
+    'actions': actions,
+    'byDistrict': [
+      for (final d in byDistrict)
+        {'name': d.name, 'affected': d.affected, 'people': d.people},
+    ],
+    'needs': [
+      for (final n in needs) {'need': n.need, 'societies': n.societies},
+    ],
+  };
 }
 
 class IncidentDetail {
@@ -349,6 +448,22 @@ class IncidentDetail {
       ],
     );
   }
+
+  /// The API's shape, which [IncidentDetail.fromJson] reads back (issue #126).
+  Map<String, dynamic> toJson() => {
+    'incident': incident.toJson(),
+    'permissions': {'canAssess': canAssess, 'canClose': canClose},
+    'totals': totals.toJson(),
+    'recentAssessments': [for (final row in recent) row.toJson()],
+    'actions': [for (final action in actions) action.toJson()],
+    'reports': [
+      for (final r in reports)
+        {'id': r.id, 'number': r.number, 'asOf': r.asOf.toIso8601String()},
+    ],
+    'assessableSocieties': [
+      for (final society in assessableSocieties) society.toJson(),
+    ],
+  };
 
   /// Response actions for one society (M45) and those it helps with (M45h).
   List<ResponseAction> forSociety(String societyId) =>

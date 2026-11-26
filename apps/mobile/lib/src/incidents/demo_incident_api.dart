@@ -136,11 +136,19 @@ class DemoIncidentApi implements IncidentApi {
   );
 
   @override
-  Future<List<IncidentSummary>> active() async =>
-      _incident.isClosed ? const [] : [_incident];
+  Future<List<IncidentSummary>> active() async {
+    // Issue #126: the demo's offline switch shows the saved copy.
+    _requireOnline();
+    return _incident.isClosed ? const [] : [_incident];
+  }
 
   @override
-  Future<IncidentDetail> detail(String id) async => IncidentDetail(
+  Future<IncidentDetail> detail(String id) async {
+    _requireOnline();
+    return _detail(id);
+  }
+
+  IncidentDetail _detail(String id) => IncidentDetail(
     incident: _incident,
     canAssess: !_incident.isClosed,
     canClose: !_incident.isClosed,
