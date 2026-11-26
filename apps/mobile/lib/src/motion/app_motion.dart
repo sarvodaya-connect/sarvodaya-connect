@@ -188,12 +188,14 @@ class MotionSize extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => AnimatedSize(
-    duration: AppMotion.duration(context, AppMotion.state),
-    curve: AppMotion.curve,
-    alignment: Alignment.topCenter,
-    child: child,
-  );
+  Widget build(BuildContext context) => AppMotion.reduced(context)
+      ? child
+      : AnimatedSize(
+          duration: AppMotion.state,
+          curve: AppMotion.curve,
+          alignment: Alignment.topCenter,
+          child: child,
+        );
 }
 
 /// Keep native route transitions/back gestures; only bypass decorative route

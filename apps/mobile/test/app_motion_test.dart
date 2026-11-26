@@ -190,6 +190,60 @@ void main() {
     expect(taps, 1);
   });
 
+  testWidgets('content size transitions use shared timing and settle cleanly', (
+    tester,
+  ) async {
+    late StateSetter update;
+    double height = 120;
+    await tester.pumpWidget(
+      host(
+        StatefulBuilder(
+          builder: (context, set) {
+            update = set;
+            return MotionSize(
+              child: SizedBox(height: height, child: const Text('Details')),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<AnimatedSize>(find.byType(AnimatedSize)).duration,
+      AppMotion.state,
+    );
+
+    update(() => height = 40);
+    await tester.pump();
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pumpAndSettle();
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('content size changes are immediate with reduced motion', (
+    tester,
+  ) async {
+    late StateSetter update;
+    double height = 120;
+    await tester.pumpWidget(
+      host(
+        StatefulBuilder(
+          builder: (context, set) {
+            update = set;
+            return MotionSize(
+              child: SizedBox(height: height, child: const Text('Details')),
+            );
+          },
+        ),
+        reduced: true,
+      ),
+    );
+    update(() => height = 40);
+    await tester.pump();
+    expect(find.byType(AnimatedSize), findsNothing);
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
   testWidgets(
     'sign-in retains typed values and ignores repeated keyboard submits',
     (tester) async {
