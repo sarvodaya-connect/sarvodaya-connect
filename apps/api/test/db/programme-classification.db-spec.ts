@@ -8,22 +8,25 @@
  * and each person's scope, including a DDM's temporary district access.
  * Every record here is fictional and removed after.
  */
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { AppModule } from '../../src/app.module.js';
-import { ApiExceptionFilter } from '../../src/common/api-exception.filter.js';
 import { byCodeUnit } from '../../src/common/compare.js';
 import type {
   ActivityCategory,
   ActivityDimension,
 } from '../../src/generated/prisma/enums.js';
-import { passwordHash } from '../../src/identity/identity.service.js';
-import { PrismaService } from '../../src/prisma/prisma.service.js';
+import type { PrismaService } from '../../src/prisma/prisma.service.js';
 import { latestCompletedFinancialYear } from '../../src/societies/financial-year.js';
+import {
+  createDbTestApp,
+  loginAll,
+  removeTestScope,
+  seedDistrictsAndSocieties,
+  testAccountFor,
+} from './support.js';
 
 const url = process.env.DATABASE_URL;
 if (!url || !['localhost', '127.0.0.1', '::1'].includes(new URL(url).hostname))
@@ -62,7 +65,7 @@ describe('Issue #173 Programmes by V6 classification (PostgreSQL)', () => {
     spc: randomUUID(),
     ddm: randomUUID(),
   };
-  const tokens = {} as Record<keyof typeof ids, string>;
+  let tokens: Record<keyof typeof ids, string>;
 
   const get = (path: string, who: keyof typeof ids) =>
     request(app.getHttpServer())
@@ -83,47 +86,17 @@ describe('Issue #173 Programmes by V6 classification (PostgreSQL)', () => {
     body.classification.byCategory.find((row) => row.category === value)!;
 
   beforeAll(async () => {
-    process.env.NIC_ENCRYPTION_KEY = '22'.repeat(32);
-    const module = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = module.createNestApplication();
-    app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.useGlobalFilters(new ApiExceptionFilter());
-    await app.init();
-    db = app.get(PrismaService);
-
-    await db.district.createMany({
-      data: [
-        { id: north, code: `N${suffix}`, nameEn: `Fictional North ${suffix}` },
-        {
-          id: central,
-          code: `C${suffix}`,
-          nameEn: `Fictional Central ${suffix}`,
-        },
+    ({ app, db } = await createDbTestApp());
+    await seedDistrictsAndSocieties(db, {
+      suffix,
+      codePrefix: 'Q',
+      north,
+      central,
+      societies: [
+        ['n1', society.n1, north],
+        ['n2', society.n2, north],
+        ['c1', society.c1, central],
       ],
-    });
-    await db.society.createMany({
-      data: (
-        [
-          ['n1', north],
-          ['n2', north],
-          ['c1', central],
-        ] as const
-      ).map(([key, districtId]) => ({
-        id: society[key],
-        societyCode: `Q${key.toUpperCase()}-${suffix}`,
-        nameEn: `Fictional ${key} ${suffix}`,
-        districtId,
-        status: 'ACTIVE' as const,
-      })),
     });
     const activity = async (
       societyId: string,
@@ -210,21 +183,7 @@ describe('Issue #173 Programmes by V6 classification (PostgreSQL)', () => {
       categories: ['CULTURE'],
     });
 
-    const account = (
-      id: string,
-      role: string,
-      opts: { districtId?: string; societyIds?: string[] } = {},
-    ) => ({
-      id,
-      username: `p173.${role.toLowerCase()}.${id.slice(0, 6)}`,
-      displayName: `Fictional ${role}`,
-      phone: '+94000000000',
-      role,
-      status: 'ACTIVE',
-      passwordHash: passwordHash('test-password-123'),
-      districtId: opts.districtId ?? null,
-      societyIds: opts.societyIds ?? [],
-    });
+    const account = testAccountFor('p173');
     await db.platformAccount.createMany({
       data: [
         account(ids.hq, 'HQ_ADMIN'),
@@ -239,32 +198,16 @@ describe('Issue #173 Programmes by V6 classification (PostgreSQL)', () => {
         }),
       ],
     });
-    for (const key of Object.keys(ids) as (keyof typeof ids)[]) {
-      const { username } = await db.platformAccount.findUniqueOrThrow({
-        where: { id: ids[key] },
-      });
-      const login = await request(app.getHttpServer())
-        .post('/api/v1/identity/login')
-        .send({ username, password: 'test-password-123' })
-        .expect(201);
-      tokens[key] = login.body.token;
-    }
+    tokens = await loginAll(app, db, ids);
   });
 
   afterAll(async () => {
-    if (db) {
-      await db.platformAuditEvent.deleteMany({
-        where: { actorId: { in: Object.values(ids) } },
+    if (db)
+      await removeTestScope(db, {
+        accountIds: Object.values(ids),
+        societyIds: Object.values(society),
+        districtIds: [north, central],
       });
-      await db.districtAccessGrant.deleteMany({ where: { deputyId: ids.ddm } });
-      await db.platformAccount.deleteMany({
-        where: { id: { in: Object.values(ids) } },
-      });
-      await db.society.deleteMany({
-        where: { id: { in: Object.values(society) } },
-      });
-      await db.district.deleteMany({ where: { id: { in: [north, central] } } });
-    }
     await app?.close();
   });
 
