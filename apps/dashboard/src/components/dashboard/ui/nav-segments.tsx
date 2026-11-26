@@ -41,6 +41,16 @@ function useIndicator(selected: string | undefined) {
   return { box, container };
 }
 
+/**
+ * True when a link leads to the address already shown (path and query).
+ * "Current" only styles a tab: a tab can be current for a nested page
+ * (/work-plan/new) or a later page of a list (?page=2) and still lead somewhere.
+ */
+function isCurrentUrl(href: string) {
+  const target = new URL(href, window.location.href);
+  return target.pathname === window.location.pathname && target.search === window.location.search;
+}
+
 /** Moves to a link inside a transition, so the indicator moves first and the page follows. */
 function useSegmentNavigation(items: SegmentItem[]) {
   const router = useRouter();
@@ -51,7 +61,7 @@ function useSegmentNavigation(items: SegmentItem[]) {
   const onClick = (item: SegmentItem) => (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault();
-    if (item.current) return;
+    if (isCurrentUrl(item.href)) return;
     setChosen(item.key);
     startTransition(() => router.push(item.href, { scroll: false }));
   };
