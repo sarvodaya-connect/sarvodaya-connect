@@ -42,6 +42,14 @@ if args.retained_import:
     start, end = header.index('Mappings:\n'), header.index('Rules:\n')
     header = header[:start] + header[end:]
     header = header.replace("  IsProduction: !Equals [!Ref Stage, production]\n", '')
+    # Recovery covers the test stack only; production stays outside it. A rule
+    # (not AllowedValues) keeps the retained definitions' Stage branches lintable.
+    header = header.replace('Conditions:\n', (
+        '  RecoveryTestOnly:\n'
+        '    Assertions:\n'
+        '      - Assert: !Equals [!Ref Stage, test]\n'
+        '        AssertDescription: Retained-resource recovery covers the test stack only\n'
+        'Conditions:\n'), 1)
     header = re.sub(r'^Description:.*$', 'Description: Sarvodaya Connect retained-resource IMPORT only; requires approved recovery plan', header, count=1, flags=re.MULTILINE)
     source = header + 'Resources:\n' + ''.join(selected)
 sys.stdout.write(source)

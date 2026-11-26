@@ -42,7 +42,10 @@ scope and cost are approved. Wait for `stack-create-complete`.
    stack. `DatabaseAdminSecretArn` identifies the RDS-managed admin credential.
    The stack outputs never contain the password itself.
 2. Use a private-VPC migration session to apply the release commit's Prisma
-   migrations to the empty `sarvodaya_production` database. Set up a dedicated
+   migrations to the empty `sarvodaya_production` database. The session reads
+   the admin credential from `DatabaseAdminSecretArn`, so its IAM principal
+   needs `secretsmanager:GetSecretValue` on that ARN (plus `kms:Decrypt` on the
+   key if the secret uses a customer-managed KMS key). Set up a dedicated
    runtime role with the required application DML and sequence permissions
    and a connection limit of 10. Create separate Secrets Manager entries for
    its database URL and the production NIC encryption key. Use the production

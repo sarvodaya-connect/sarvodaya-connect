@@ -297,7 +297,10 @@ class FoundationSafety(unittest.TestCase):
             self.assertEqual(resource, expected)
             self.assertEqual(resource['DeletionPolicy'], 'Retain')
         self.assertNotIn('DocumentAccessLogs', rendered)
-        self.assertEqual(template['Rules'], self.template['Rules'])
+        self.assertEqual(template['Rules'], {**self.template['Rules'], 'RecoveryTestOnly': {'Assertions': [{
+            'Assert': {'Equals': [{'Ref': 'Stage'}, 'test']},
+            'AssertDescription': 'Retained-resource recovery covers the test stack only',
+        }]}})
         self.assertNotIn('NatImage', template['Parameters'])
         self.assertNotIn('Outputs', template)
         self.assertNotIn('ssm-secure', rendered)
@@ -329,8 +332,11 @@ class ApiCapacityBudget(unittest.TestCase):
         template = yaml.load((ROOT.parent / 'template.yaml').read_text(), Loader=TemplateLoader)
         function = template['Resources']['ApiFunction']['Properties']
         cls.direct_stage_condition = template['Conditions']['UsesDirectDatabase']
-        cls.concurrency = function['ReservedConcurrentExecutions']['If'][1]
-        cls.pool = int(function['Environment']['Variables']['DATABASE_CONNECTION_LIMIT']['If'][1])
+        concurrency = function['ReservedConcurrentExecutions']['If']
+        pool = function['Environment']['Variables']['DATABASE_CONNECTION_LIMIT']['If']
+        cls.capacity_conditions = {concurrency[0], pool[0]}
+        cls.concurrency = concurrency[1]
+        cls.pool = int(pool[1])
         cls.role_limit = int(re.search(
             r'ALTER ROLE sc_test_app CONNECTION LIMIT (\d+);',
             (ROOT / 'runtime-database-role.sql').read_text(),
@@ -345,6 +351,7 @@ class ApiCapacityBudget(unittest.TestCase):
             {'Condition': 'IsTest'},
             {'Equals': [{'Ref': 'Stage'}, 'production']},
         ]})
+        self.assertEqual(self.capacity_conditions, {'UsesDirectDatabase'})
 
     def test_two_testers_stay_within_lambda_concurrency(self):
         self.assertLessEqual(self.TESTERS * self.read_slots, self.concurrency)
