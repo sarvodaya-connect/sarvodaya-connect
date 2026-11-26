@@ -138,7 +138,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           _progress = null;
           _uploadError = error.offline
               ? l.rdOffline
-              : l.rdSelectedFile(error.message);
+              : l.rdSelectedFile(l.recordError(error));
         });
       }
     }

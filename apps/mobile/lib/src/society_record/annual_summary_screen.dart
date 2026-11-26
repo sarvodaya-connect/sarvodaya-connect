@@ -133,7 +133,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
       if (mounted) {
         setState(() {
           _saving = false;
-          _saveError = l.rdKeptFigures(error.message);
+          _saveError = l.rdKeptFigures(l.recordError(error));
         });
       }
     }

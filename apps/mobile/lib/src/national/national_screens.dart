@@ -2906,7 +2906,7 @@ class ProfitExpensesScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const _Pill('Not added'),
+                      _Pill(l.nationalNotAdded),
                     ],
                   ),
                 ),
