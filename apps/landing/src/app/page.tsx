@@ -219,6 +219,12 @@ const stampxMembers: Person[] = [
     photo: "/team/stampx-kumaresan-piragatheesan.png",
     linkedin: "https://www.linkedin.com/in/piragatheesan/",
   },
+  {
+    name: "Mohamed Thasreef",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-mohamed-thasreef.png",
+    linkedin: "https://www.linkedin.com/in/-thasreef22-/",
+  },
 ];
 
 /** Stagger helper: sets the animation delay offset (ms) used by the motion classes. */
