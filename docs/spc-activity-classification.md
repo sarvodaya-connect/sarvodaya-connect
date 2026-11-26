@@ -15,7 +15,7 @@ For V6 reporting count only approved activities. Count each activity once in the
 - `dimension`: `SOCIAL`, `ECONOMIC` or `GOVERNANCE`.
 - `category`: one of the ten category codes in the activities contract.
 
-Repeat a parameter, or separate values with commas, for more than one (`?dimension=SOCIAL&dimension=ECONOMIC`, `?category=ECONOMY,CULTURE`). Within a parameter any value matches; when both are given an activity must match both. Unknown values are refused with 400.
+Repeat a parameter, or separate values with commas, for more than one (`?dimension=SOCIAL&dimension=ECONOMIC`, `?category=ECONOMY,CULTURE`). Within a parameter any value matches; when both are given an activity must match both. Unknown values are refused with 400. An empty or blank-only parameter (`?dimension=`, `?category=,,`) is ignored, as if it were not sent.
 
 - **Only approved activities count.** Waiting and sent-back activities never enter the figures.
 - **`planned`** is approved activities scheduled in the financial year; **`completed`** is those whose month has ended. Both come from the SPC's decisions at approval, so no planned classification value is ever inferred.

@@ -23,7 +23,8 @@ const toInt = ({ value }: { value: unknown }) =>
 /**
  * Issue #173: a filter given once, repeated (`?dimension=SOCIAL&dimension=
  * ECONOMIC`) or comma separated, as a list with each value once. Validation
- * then rejects any value that is not a supported code.
+ * then rejects any value that is not a supported code. An empty or blank-only
+ * value (`?dimension=`, `?dimension=,,`) is no filter at all.
  */
 const toList = ({ value }: { value: unknown }) => {
   if (value === undefined || value === '') return undefined;
@@ -33,7 +34,7 @@ const toList = ({ value }: { value: unknown }) => {
     )
     .map((item: unknown) => (typeof item === 'string' ? item.trim() : item))
     .filter((item: unknown) => item !== '');
-  return [...new Set(items)];
+  return items.length > 0 ? [...new Set(items)] : undefined;
 };
 
 export const DIRECTORY_VIEW_VALUES = [

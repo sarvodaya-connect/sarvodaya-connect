@@ -30,6 +30,10 @@ describe('Programmes classification filters', () => {
     const none = await parse({ year: '2025', dimension: '' });
     expect(none.dto.dimension).toBeUndefined();
     expect(none.errors).toEqual([]);
+    const blank = await parse({ dimension: ' , ,', category: ['', ' '] });
+    expect(blank.dto.dimension).toBeUndefined();
+    expect(blank.dto.category).toBeUndefined();
+    expect(blank.errors).toEqual([]);
   });
 
   it('refuses values that are not supported codes', async () => {
