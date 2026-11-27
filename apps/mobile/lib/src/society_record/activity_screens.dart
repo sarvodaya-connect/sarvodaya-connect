@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../format.dart';
 import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../motion/app_motion.dart';
+import '../national/national_screens.dart' show programmeSdgLabel;
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/count_field.dart';
@@ -587,7 +590,11 @@ class _SentScreen extends StatelessWidget {
 
 /// Loads one activity with the standard loading, error and no-access states.
 class _ActivityLoader extends StatefulWidget {
-  const _ActivityLoader({required this.activityId, required this.builder});
+  const _ActivityLoader({
+    super.key,
+    required this.activityId,
+    required this.builder,
+  });
 
   final String activityId;
   final Widget Function(
@@ -1062,15 +1069,84 @@ class ActivityReviewScreen extends StatefulWidget {
   State<ActivityReviewScreen> createState() => _ActivityReviewScreenState();
 }
 
+String _dimensionLabel(AppLocalizations l10n, ActivityDimension dimension) =>
+    switch (dimension) {
+      ActivityDimension.social => l10n.approvalSocial,
+      ActivityDimension.economic => l10n.approvalEconomic,
+      ActivityDimension.governance => l10n.approvalGovernance,
+    };
+
+String _categoryLabel(AppLocalizations l10n, ActivityCategory category) =>
+    switch (category) {
+      ActivityCategory.communityEducation => l10n.approvalCommunityEducation,
+      ActivityCategory.childWellbeing => l10n.approvalChildWellbeing,
+      ActivityCategory.culture => l10n.approvalCulture,
+      ActivityCategory.economy => l10n.approvalEconomy,
+      ActivityCategory.governance => l10n.approvalGovernance,
+      ActivityCategory.healthAndNutrition => l10n.approvalHealthAndNutrition,
+      ActivityCategory.housingAndInfrastructure =>
+        l10n.approvalHousingAndInfrastructure,
+      ActivityCategory.spiritualDevelopment =>
+        l10n.approvalSpiritualDevelopment,
+      ActivityCategory.agriculture => l10n.approvalAgriculture,
+      ActivityCategory.environment => l10n.approvalEnvironment,
+    };
+
 class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
+  final _dimensions = <ActivityDimension>{};
+  final _categories = <ActivityCategory>{};
   var _sdgs = <int>[];
+  var _step = 0;
   var _saving = false;
+  // Which decision is being sent, for the progress label.
+  var _sendingBack = false;
+  var _loadVersion = 0;
   String? _error;
   ActivityDetail? _approved;
 
+  ActivityClassification get _classification => ActivityClassification(
+    dimensions: ActivityDimension.values.where(_dimensions.contains).toList(),
+    categories: ActivityCategory.values.where(_categories.contains).toList(),
+  );
+
+  void _back() => setState(() {
+    _step--;
+    _error = null;
+  });
+
+  void _next(ActivityDetail detail) {
+    // Step 4 is the review; a second quick tap must not move past it.
+    if (_saving || !detail.canReview || _step >= 4) return;
+    final l10n = context.l10n;
+    final error = switch (_step) {
+      1 when _dimensions.isEmpty => l10n.approvalChooseDimension,
+      2 when _categories.isEmpty => l10n.approvalChooseCategory,
+      3 when _sdgs.isEmpty => l10n.approvalChooseSdg,
+      _ => null,
+    };
+    setState(() {
+      _error = error;
+      if (error == null) _step++;
+    });
+  }
+
+  void _handleDecisionError(SocietyRecordException error) => setState(() {
+    // App-written failures (offline, server) in the chosen language.
+    final failure = error.failure;
+    _error = failure == null ? error.message : context.l10n.failure(failure);
+    if (error.status == 409 || error.status == 403 || error.status == 404) {
+      _step = 0;
+      _loadVersion++;
+    }
+  });
+
   Future<void> _approve(ActivityDetail detail) async {
-    if (_sdgs.isEmpty) {
-      setState(() => _error = 'Choose at least one UN SDG to approve.');
+    if (_saving ||
+        _approved != null ||
+        !detail.canReview ||
+        _dimensions.isEmpty ||
+        _categories.isEmpty ||
+        _sdgs.isEmpty) {
       return;
     }
     setState(() {
@@ -1079,16 +1155,22 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
     });
     try {
       final approved = await DemoScope.read(context).societyRecords
-          .approveActivity(detail.activity.id, _sdgs);
+          .approveActivity(
+            detail.activity.id,
+            _sdgs,
+            classification: _classification,
+            reviewedSubmittedAt: detail.activity.submittedAt,
+          );
       if (mounted) setState(() => _approved = approved);
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) _handleDecisionError(error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _sendBack(ActivityDetail detail) async {
+    if (_saving || !detail.canReview) return;
     final officer =
         detail.activity.createdBy?.displayName ?? 'the Society Officer';
     final comment = await showModalBottomSheet<String>(
@@ -1100,6 +1182,7 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
     if (comment == null || !mounted) return;
     setState(() {
       _saving = true;
+      _sendingBack = true;
       _error = null;
     });
     try {
@@ -1110,9 +1193,14 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
           .showSnackBar(SnackBar(content: Text('Sent back to $officer.')));
       Navigator.of(context).pop();
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) _handleDecisionError(error);
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _sendingBack = false;
+        });
+      }
     }
   }
 
@@ -1125,94 +1213,332 @@ class _ActivityReviewScreenState extends State<ActivityReviewScreen> {
         waitingAfter: widget.waitingAfter,
       );
     }
-    return _ActivityLoader(
-      activityId: widget.activityId,
-      builder: (context, detail, _) => Scaffold(
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final l10n = context.l10n;
+    return PopScope(
+      canPop: !_saving && _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_saving && _step > 0) _back();
+      },
+      child: _ActivityLoader(
+        key: ValueKey(_loadVersion),
+        activityId: widget.activityId,
+        builder: (context, detail, _) => Scaffold(
+          appBar: AppBar(
+            titleSpacing: 0,
+            actions: [
+              if (_step > 0)
+                TextButton(
+                  onPressed: _saving
+                      ? null
+                      : () => setState(() {
+                          _step = 0;
+                          _error = null;
+                        }),
+                  child: Text(l10n.commonCancel),
+                ),
+            ],
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _step == 0
+                      ? l10n.approvalReview
+                      : l10n.approvalApproveActivity,
+                  style: RecordStyle.screenTitle,
+                ),
+                Text(
+                  _step == 0
+                      ? detail.societyName
+                      : '${detail.activity.name} · ${detail.societyName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: RecordStyle.screenSubtitle,
+                ),
+              ],
+            ),
+          ),
+          body: ListView(
+            key: ValueKey(_step),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
             children: [
-              const Text('Review Activity', style: RecordStyle.screenTitle),
-              Text(detail.societyName, style: RecordStyle.screenSubtitle),
+              if (_step == 0) ActivityDetailsCards(detail: detail),
+              if (!detail.canReview) ...[
+                RecordNote(
+                  icon: Icons.lock_outline,
+                  message:
+                      detail.activity.status == ActivityStatus.waitingForSpc
+                      ? l10n.approvalOnlySpc
+                      : l10n.approvalNoLongerWaiting,
+                ),
+                // For example after a retry finds an earlier approval went through:
+                // show the saved decision and who made it.
+                if (detail.activity.status == ActivityStatus.approved)
+                  _SavedDecision(activity: detail.activity),
+              ] else if (_step > 0)
+                MotionEntrance(
+                  id: '${detail.activity.id}-spc-approval-$_step',
+                  child: _selectionCard(l10n),
+                ),
+              if (_error != null && !detail.canReview) ...[
+                const SizedBox(height: 10),
+                _errorNote(),
+              ],
             ],
           ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-          children: [
-            ActivityDetailsCards(detail: detail),
-            const SizedBox(height: 10),
-            if (!detail.canReview)
-              RecordNote(
-                icon: Icons.lock_outline,
-                message: detail.activity.status == ActivityStatus.waitingForSpc
-                    ? "Only the society's SPC approves its activities."
-                    : 'This activity is no longer waiting for approval.',
-              )
-            else
-              RecordCard(
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'UN SDGs',
-                            children: [
-                              TextSpan(
-                                text: ' *',
-                                style: TextStyle(color: AppColors.danger),
-                              ),
-                            ],
-                          ),
-                          style: RecordStyle.cardTitle,
-                        ),
+          // The error sits above the buttons, so a failed Continue always shows why,
+          // however far the choices scroll.
+          bottomNavigationBar: detail.canReview
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                        child: _errorNote(),
                       ),
-                      Flexible(
+                    BottomActionBar(
+                      secondary: OutlinedButton(
+                        onPressed: _saving
+                            ? null
+                            : (_step == 0 ? () => _sendBack(detail) : _back),
                         child: Text(
-                          'Tap every goal that applies (${_sdgs.length} chosen)',
-                          textAlign: TextAlign.end,
-                          style: RecordStyle.caption,
+                          _step == 0
+                              ? l10n.approvalSendBack
+                              : l10n.approvalBack,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SdgGrid(
-                    selected: _sdgs,
-                    enabled: !_saving,
-                    onChanged: (sdgs) => setState(() {
-                      _sdgs = sdgs;
-                      _error = null;
-                    }),
-                  ),
-                ],
-              ),
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              RecordNote(
-                icon: Icons.error_outline,
-                tone: NoteTone.error,
-                message: _error!,
-              ),
-            ],
-          ],
+                      primary: FilledButton(
+                        onPressed: _saving
+                            ? null
+                            : (_step == 4
+                                  ? () => _approve(detail)
+                                  : () => _next(detail)),
+                        child: Text(
+                          _saving
+                              ? (_sendingBack
+                                    ? l10n.gradeReqSending
+                                    : l10n.approvalSaving)
+                              : _step == 4
+                              ? (_error == null
+                                    ? l10n.approvalApprove
+                                    : l10n.commonTryAgain)
+                              : l10n.approvalContinue,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : null,
         ),
-        bottomNavigationBar: detail.canReview
-            ? BottomActionBar(
-                secondary: OutlinedButton(
-                  onPressed: _saving ? null : () => _sendBack(detail),
-                  child: const Text('Send back'),
-                ),
-                primary: FilledButton.icon(
-                  onPressed: _saving ? null : () => _approve(detail),
-                  icon: const Icon(Icons.check_circle_outline, size: 18),
-                  label: Text(_saving ? 'Saving…' : 'Approve'),
-                ),
-              )
-            : null,
       ),
+    );
+  }
+
+  Widget _errorNote() => Semantics(
+    liveRegion: true,
+    child: RecordNote(
+      icon: Icons.error_outline,
+      tone: NoteTone.error,
+      message: _error!,
+    ),
+  );
+
+  Widget _selectionCard(AppLocalizations l10n) {
+    final title = switch (_step) {
+      1 => l10n.approvalDimensions,
+      2 => l10n.approvalCategories,
+      3 => l10n.approvalSdgs,
+      _ => l10n.approvalConfirm,
+    };
+    return RecordCard(
+      children: [
+        Text(l10n.approvalStep(_step), style: RecordStyle.caption),
+        const SizedBox(height: 4),
+        Semantics(
+          header: true,
+          child: Text(title, style: RecordStyle.cardTitle),
+        ),
+        const SizedBox(height: 12),
+        if (_step == 1 || _step == 2) ...[
+          Text(
+            _step == 1
+                ? l10n.approvalSelectDimensions
+                : l10n.approvalSelectCategories,
+            style: RecordStyle.body,
+          ),
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: RecordNote(
+              icon: Icons.checklist,
+              tone: NoteTone.success,
+              message: _step == 1
+                  ? l10n.approvalSelectionCount(_dimensions.length)
+                  : l10n.approvalSelectionCount(_categories.length),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_step == 1)
+          for (final dimension in ActivityDimension.values)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Card(
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: _dimensions.contains(dimension)
+                        ? AppColors.forest
+                        : AppColors.line,
+                    width: _dimensions.contains(dimension) ? 2 : 1,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: CheckboxListTile(
+                  contentPadding: const EdgeInsets.all(12),
+                  title: Text(
+                    _dimensionLabel(l10n, dimension),
+                    style: RecordStyle.cardTitle,
+                  ),
+                  subtitle: Text(
+                    _dimensions.contains(dimension)
+                        ? l10n.approvalSelected
+                        : l10n.approvalTapToSelect,
+                  ),
+                  secondary: Image.asset(
+                    'assets/development_goals/${dimension.name}.png',
+                    width: 64,
+                    height: 64,
+                    excludeFromSemantics: true,
+                  ),
+                  value: _dimensions.contains(dimension),
+                  onChanged: (selected) => setState(() {
+                    if (selected == true) {
+                      _dimensions.add(dimension);
+                    } else {
+                      _dimensions.remove(dimension);
+                    }
+                    _error = null;
+                  }),
+                ),
+              ),
+            ),
+        if (_step == 2)
+          for (final category in ActivityCategory.values)
+            Material(
+              type: MaterialType.transparency,
+              child: CheckboxListTile(
+                title: Text(_categoryLabel(l10n, category)),
+                value: _categories.contains(category),
+                onChanged: (selected) => setState(() {
+                  if (selected == true) {
+                    _categories.add(category);
+                  } else {
+                    _categories.remove(category);
+                  }
+                  _error = null;
+                }),
+              ),
+            ),
+        if (_step == 3)
+          SdgGrid(
+            selected: _sdgs,
+            enabled: !_saving,
+            onChanged: (sdgs) => setState(() {
+              _sdgs = sdgs;
+              _error = null;
+            }),
+          ),
+        if (_step == 4) ...[
+          _ClassificationSummary(classification: _classification),
+          const SizedBox(height: 12),
+          Text(l10n.approvalSdgs, style: RecordStyle.cardTitle),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final sdg in _sdgs)
+                SdgChip(sdg, title: programmeSdgLabel(l10n, sdg)),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// An approval already saved on the server, shown without claiming the
+/// current attempt made it.
+class _SavedDecision extends StatelessWidget {
+  const _SavedDecision({required this.activity});
+
+  final WorkPlanActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final reviewer = activity.reviewedBy?.displayName;
+    final classification = activity.classification;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: RecordCard(
+        children: [
+          if (reviewer != null) ...[
+            Text(
+              l10n.gradeReqApprovedBy(reviewer),
+              style: RecordStyle.cardTitle,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (classification != null)
+            _ClassificationSummary(classification: classification)
+          else
+            Text(l10n.approvalClassificationMissing),
+          if (activity.sdgs.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(l10n.approvalSdgs, style: RecordStyle.cardTitle),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final sdg in activity.sdgs)
+                  SdgChip(sdg, title: programmeSdgLabel(l10n, sdg)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ClassificationSummary extends StatelessWidget {
+  const _ClassificationSummary({required this.classification});
+
+  final ActivityClassification classification;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.approvalDimensions, style: RecordStyle.cardTitle),
+        Text(
+          classification.dimensions
+              .map((item) => _dimensionLabel(l10n, item))
+              .join(' · '),
+        ),
+        const SizedBox(height: 12),
+        Text(l10n.approvalCategories, style: RecordStyle.cardTitle),
+        Text(
+          classification.categories
+              .map((item) => _categoryLabel(l10n, item))
+              .join(' · '),
+        ),
+      ],
     );
   }
 }
@@ -1297,14 +1623,15 @@ class _ApprovedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activity = detail.activity;
-    final officer = activity.createdBy?.displayName;
+    final l10n = context.l10n;
+    final classification = activity.classification;
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Review Activity', style: RecordStyle.screenTitle),
+            Text(l10n.approvalReview, style: RecordStyle.screenTitle),
             Text(detail.societyName, style: RecordStyle.screenSubtitle),
           ],
         ),
@@ -1320,18 +1647,23 @@ class _ApprovedScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Semantics(
             liveRegion: true,
-            child: const Text(
-              'Activity approved',
+            child: Text(
+              l10n.approvalApproved,
               textAlign: TextAlign.center,
               style: RecordStyle.screenTitle,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            '${activity.name} · ${detail.societyName}.${officer == null ? '' : ' $officer is notified.'} It now counts in the activity figures for your societies, the district and HQ.',
+            '${activity.name} · ${detail.societyName}',
             textAlign: TextAlign.center,
             style: RecordStyle.body,
           ),
+          const SizedBox(height: 16),
+          if (classification != null)
+            _ClassificationSummary(classification: classification)
+          else
+            Text(l10n.approvalClassificationMissing),
           const SizedBox(height: 16),
           for (final sdg in activity.sdgs)
             Padding(
@@ -1358,12 +1690,12 @@ class _ApprovedScreen extends StatelessWidget {
         secondary: waitingAfter > 0
             ? OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Next activity ($waitingAfter left)'),
+                child: Text(l10n.approvalNextActivity),
               )
             : null,
         primary: FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: Text(l10n.approvalDone),
         ),
       ),
     );
