@@ -59,27 +59,52 @@ class SarvoAiGuardrails(unittest.TestCase):
         actions = {s['Action'] for s in bedrock[0]['If'][1]['Statement']}
         self.assertEqual(actions, {'bedrock:InvokeModel'})
 
-    def test_agentcore_requires_supported_stage_enablement_and_a_specific_runtime(self):
-        self.assertEqual(self.template['Parameters']['SarvoAiAgentCoreRuntimeArn']['Default'], '')
+    def test_agentcore_uses_only_the_runtime_for_the_selected_stage(self):
+        test_arn = 'SarvoAiAgentCoreRuntimeArn'
+        prod_arn = 'SarvoAiProductionRuntimeArn'
+        params = self.template['Parameters']
+        for parameter, stage, other in [(test_arn, 'test', 'production'), (prod_arn, 'production', 'test')]:
+            self.assertEqual(params[parameter]['Default'], '')
+            pattern = params[parameter]['AllowedPattern']
+            arn = 'arn:aws:bedrock-agentcore:ap-southeast-1:123456789012:runtime/sarvoai_'
+            self.assertRegex(arn + stage + '-AbCd123', pattern)
+            self.assertNotRegex(arn + other + '-AbCd123', pattern)
+
+        active_arn = {'If': ['IsProduction', {'Ref': prod_arn}, {'Ref': test_arn}]}
         self.assertEqual(self.env['SARVOAI_AGENTCORE_RUNTIME_ARN'], {
-            'If': ['SarvoAiAgentCoreOn', {'Ref': 'SarvoAiAgentCoreRuntimeArn'}, ''],
+            'If': ['SarvoAiAgentCoreOn', active_arn, ''],
         })
-        conditions = self.template['Conditions']
-        self.assertEqual(conditions['IsProduction'], {'Equals': [{'Ref': 'Stage'}, 'production']})
-        self.assertEqual(conditions['SarvoAiAgentCoreOn'], {'And': [
-            {'Or': [{'Condition': 'IsTest'}, {'Condition': 'IsProduction'}]},
+        self.assertEqual(self.template['Conditions']['IsProduction'], {'Equals': [{'Ref': 'Stage'}, 'production']})
+        self.assertEqual(self.template['Conditions']['SarvoAiAgentCoreOn'], {'And': [
             {'Condition': 'SarvoAiOn'},
-            {'Not': [{'Equals': [{'Ref': 'SarvoAiAgentCoreRuntimeArn'}, '']}]},
+            {'Or': [
+                {'And': [{'Condition': 'IsTest'}, {'Not': [{'Equals': [{'Ref': test_arn}, '']}]}]},
+                {'And': [{'Condition': 'IsProduction'}, {'Not': [{'Equals': [{'Ref': prod_arn}, '']}]}]},
+            ]},
         ]})
         policies = self.template['Resources']['ApiFunction']['Properties']['Policies']
-        agentcore = [p['If'] for p in policies if 'InvokeAgentRuntimeWithWebSocketStream' in str(p)]
-        self.assertEqual(len(agentcore), 1)
-        self.assertEqual(agentcore[0][0], 'SarvoAiAgentCoreOn')
-        self.assertEqual(agentcore[0][2], {'Ref': 'AWS::NoValue'})
-        self.assertEqual(agentcore[0][1]['Statement'][0]['Resource'], [
-            {'Ref': 'SarvoAiAgentCoreRuntimeArn'},
-            {'Sub': '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'},
+        [agentcore] = [p['If'] for p in policies if 'InvokeAgentRuntimeWithWebSocketStream' in str(p)]
+        self.assertEqual(agentcore[0], 'SarvoAiAgentCoreOn')
+        self.assertEqual(agentcore[1]['Statement'][0]['Resource'], [
+            active_arn,
+            {'If': [
+                'IsProduction',
+                {'Sub': '${SarvoAiProductionRuntimeArn}/runtime-endpoint/DEFAULT'},
+                {'Sub': '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'},
+            ]},
         ])
+        self.assertEqual(agentcore[2], {'Ref': 'AWS::NoValue'})
+
+    def test_production_ai_cannot_enable_without_the_production_runtime(self):
+        rule = self.template['Rules']['ProductionAgentCore']
+        self.assertEqual(rule['RuleCondition'], {'And': [
+            {'Equals': [{'Ref': 'Stage'}, 'production']},
+            {'Equals': [{'Ref': 'SarvoAiEnabled'}, 'true']},
+        ]})
+        self.assertIn(
+            {'Not': [{'Equals': [{'Ref': 'SarvoAiProductionRuntimeArn'}, '']}]},
+            [item['Assert'] for item in rule['Assertions']],
+        )
 
     def test_agentcore_runtime_and_log_permissions_use_the_same_stage(self):
         template = yaml.load((ROOT.parent / 'agentcore-test.yaml').read_text(), Loader=TemplateLoader)

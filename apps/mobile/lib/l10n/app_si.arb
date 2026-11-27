@@ -24,6 +24,8 @@
   "signInHidePassword": "මුරපදය සඟවන්න",
   "signInButton": "පිවිසෙන්න",
   "signInSigningIn": "පිවිසෙමින්",
+  "signInPrivacyPolicy": "පෞද්ගලිකත්ව ප්‍රතිපත්තිය",
+  "signInPrivacyOpenFailed": "පෞද්ගලිකත්ව ප්‍රතිපත්තිය විවෘත කළ නොහැකි විය.",
   "signInForgot": "මුරපදය අමතකද? නව මුරපදයක් සැකසීමට මූලස්ථානයෙන් ඉල්ලන්න.",
   "signInEnterUsername": "පරිශීලක නාමය ඇතුළත් කරන්න.",
   "signInEnterPassword": "මුරපදය ඇතුළත් කරන්න.",

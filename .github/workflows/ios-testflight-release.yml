@@ -3,6 +3,11 @@ name: iOS internal release
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Build for TEST or prepare a signed production store artifact'
+        type: choice
+        default: test
+        options: [test, production]
       version_name:
         description: 'Version shown to testers (e.g. 0.1.1)'
         required: true
@@ -34,27 +39,38 @@ concurrency:
 jobs:
   release:
     if: github.ref == 'refs/heads/main' && github.repository == 'sarvodaya-connect/sarvodaya-connect'
-    name: Build and optionally upload internal iOS release
+    name: Build iOS release
     runs-on: macos-26
     timeout-minutes: 45
-    environment: testflight-internal
+    environment: ${{ inputs.target == 'production' && 'app-store-production' || 'testflight-internal' }}
     env:
+      RELEASE_TARGET: ${{ inputs.target || 'test' }}
       VERSION_NAME: ${{ inputs.version_name }}
       BUILD_NUMBER: ${{ inputs.build_number }}
       RELEASE_NOTES: ${{ inputs.release_notes }}
       TRANSLATION_REVIEW: ${{ inputs.translation_review }}
     steps:
+      - name: Check release target
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+        run: |
+          if [[ "$RELEASE_TARGET" == production && ( "$PUBLISH_REQUESTED" == true || "$TRANSLATION_REVIEW" == true ) ]]; then
+            echo 'Production builds are signed artifacts for store review. Turn off Publish and Translation review.'
+            exit 1
+          fi
+
       - name: Check out exact selected main commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Prepare validated TEST build settings
+      - name: Prepare validated build settings
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
-          COGNITO_USER_POOL_ID: ${{ vars.COGNITO_USER_POOL_ID }}
-          COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+          API_BASE_URL: ${{ (inputs.target == 'production' && vars.PRODUCTION_API_BASE_URL) || (inputs.target != 'production' && vars.API_BASE_URL) || '' }}
+          COGNITO_USER_POOL_ID: ${{ (inputs.target == 'production' && vars.PRODUCTION_COGNITO_USER_POOL_ID) || (inputs.target != 'production' && vars.COGNITO_USER_POOL_ID) || '' }}
+          COGNITO_CLIENT_ID: ${{ (inputs.target == 'production' && vars.PRODUCTION_COGNITO_CLIENT_ID) || (inputs.target != 'production' && vars.COGNITO_CLIENT_ID) || '' }}
+          PRIVACY_POLICY_URL: ${{ inputs.target == 'production' && vars.PRIVACY_POLICY_URL || '' }}
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: python3 scripts/ios/prepare_release.py build
 
@@ -144,7 +160,7 @@ jobs:
       - name: Retain IPA and What to Test notes for seven days
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: sarvodaya-ios-${{ inputs.version_name }}-${{ inputs.build_number }}
+          name: sarvodaya-ios-${{ inputs.target || 'test' }}-${{ inputs.version_name }}-${{ inputs.build_number }}
           path: |
             ${{ runner.temp }}/sarvodaya-ios-release/export/*.ipa
             ${{ runner.temp }}/sarvodaya-ios-release/What to Test.txt
@@ -153,7 +169,7 @@ jobs:
           compression-level: 0
 
       - name: Upload to App Store Connect for internal TestFlight only
-        if: inputs.publish
+        if: inputs.target != 'production' && inputs.publish
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ vars.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_ISSUER_ID }}

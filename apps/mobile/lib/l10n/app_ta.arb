@@ -24,6 +24,8 @@
   "signInHidePassword": "கடவுச்சொல்லை மறை",
   "signInButton": "உள்நுழைக",
   "signInSigningIn": "உள்நுழைகிறது",
+  "signInPrivacyPolicy": "தனியுரிமைக் கொள்கை",
+  "signInPrivacyOpenFailed": "தனியுரிமைக் கொள்கையைத் திறக்க முடியவில்லை.",
   "signInForgot": "கடவுச்சொல் மறந்துவிட்டதா? புதியதை அமைக்க தலைமையகத்திடம் கேளுங்கள்.",
   "signInEnterUsername": "பயனர்பெயரை உள்ளிடவும்.",
   "signInEnterPassword": "கடவுச்சொல்லை உள்ளிடவும்.",

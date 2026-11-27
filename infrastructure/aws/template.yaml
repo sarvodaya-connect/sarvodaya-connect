@@ -56,8 +56,13 @@ Parameters:
   SarvoAiAgentCoreRuntimeArn:
     Type: String
     Default: ''
-    AllowedPattern: '^$|^arn:aws:bedrock-agentcore:ap-southeast-1:[0-9]{12}:runtime/[A-Za-z0-9_-]+$'
-    Description: Optional Singapore AgentCore runtime ARN for SarvoAI in TEST or production.
+    AllowedPattern: '^$|^arn:aws:bedrock-agentcore:ap-southeast-1:[0-9]{12}:runtime/sarvoai_test-[A-Za-z0-9]+$'
+    Description: Optional Singapore AgentCore runtime ARN for SarvoAI in TEST.
+  SarvoAiProductionRuntimeArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:aws:bedrock-agentcore:ap-southeast-1:[0-9]{12}:runtime/sarvoai_production-[A-Za-z0-9]+$'
+    Description: Singapore production AgentCore runtime ARN. Required to enable SarvoAI in production.
   SarvoAiRegion:
     Type: String
     Default: ap-southeast-1
@@ -79,6 +84,15 @@ Rules:
         AssertDescription: Staging and production require the database secret ARN
       - Assert: !Not [!Equals [!Ref NicKeySecretArn, '']]
         AssertDescription: Staging and production require the NIC key secret ARN
+  ProductionAgentCore:
+    RuleCondition: !And
+      - !Equals [!Ref Stage, production]
+      - !Equals [!Ref SarvoAiEnabled, 'true']
+    Assertions:
+      - Assert: !Not [!Equals [!Ref SarvoAiProductionRuntimeArn, '']]
+        AssertDescription: Production SarvoAI requires its own AgentCore runtime
+      - Assert: !Equals [!Ref SarvoAiRegion, ap-southeast-1]
+        AssertDescription: Production SarvoAI and its runtime must use Singapore
   # SarvoAI stays off unless a deployment sets SarvoAiEnabled=true, and then only
   # with a reviewed pricing approval. TEST pilot checks: docs/sarvoai-aws-setup.md.
   AiPricingApproved:
@@ -91,9 +105,14 @@ Conditions:
   IsProduction: !Equals [!Ref Stage, production]
   SarvoAiOn: !Equals [!Ref SarvoAiEnabled, 'true']
   SarvoAiAgentCoreOn: !And
-    - !Or [!Condition IsTest, !Condition IsProduction]
     - !Condition SarvoAiOn
-    - !Not [!Equals [!Ref SarvoAiAgentCoreRuntimeArn, '']]
+    - !Or
+      - !And
+        - !Condition IsTest
+        - !Not [!Equals [!Ref SarvoAiAgentCoreRuntimeArn, '']]
+      - !And
+        - !Condition IsProduction
+        - !Not [!Equals [!Ref SarvoAiProductionRuntimeArn, '']]
 
 Globals:
   Function:
@@ -147,7 +166,10 @@ Resources:
           DISTRICT_ACCESS_MAX_DAYS: '14'
           SARVOAI_ENABLED: !Ref SarvoAiEnabled
           SARVOAI_FICTIONAL_ONLY: !If [IsTest, 'true', 'false']
-          SARVOAI_AGENTCORE_RUNTIME_ARN: !If [SarvoAiAgentCoreOn, !Ref SarvoAiAgentCoreRuntimeArn, '']
+          SARVOAI_AGENTCORE_RUNTIME_ARN: !If
+            - SarvoAiAgentCoreOn
+            - !If [IsProduction, !Ref SarvoAiProductionRuntimeArn, !Ref SarvoAiAgentCoreRuntimeArn]
+            - ''
           SARVOAI_MODEL_ID: !Ref SarvoAiModelId
           SARVOAI_AWS_REGION: !Ref SarvoAiRegion
           SARVOAI_MONTHLY_LIMIT_USD: !Ref SarvoAiMonthlyLimitUsd
@@ -223,8 +245,11 @@ Resources:
               - Effect: Allow
                 Action: bedrock-agentcore:InvokeAgentRuntimeWithWebSocketStream
                 Resource:
-                  - !Ref SarvoAiAgentCoreRuntimeArn
-                  - !Sub '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'
+                  - !If [IsProduction, !Ref SarvoAiProductionRuntimeArn, !Ref SarvoAiAgentCoreRuntimeArn]
+                  - !If
+                    - IsProduction
+                    - !Sub '${SarvoAiProductionRuntimeArn}/runtime-endpoint/DEFAULT'
+                    - !Sub '${SarvoAiAgentCoreRuntimeArn}/runtime-endpoint/DEFAULT'
           - !Ref AWS::NoValue
       Events:
         Api:
