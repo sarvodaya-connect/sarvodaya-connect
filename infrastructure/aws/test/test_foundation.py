@@ -74,6 +74,7 @@ class SarvoAiGuardrails(unittest.TestCase):
         self.assertEqual(self.env['SARVOAI_AGENTCORE_RUNTIME_ARN'], {
             'If': ['SarvoAiAgentCoreOn', active_arn, ''],
         })
+        self.assertEqual(self.template['Conditions']['IsProduction'], {'Equals': [{'Ref': 'Stage'}, 'production']})
         self.assertEqual(self.template['Conditions']['SarvoAiAgentCoreOn'], {'And': [
             {'Condition': 'SarvoAiOn'},
             {'Or': [
@@ -104,6 +105,25 @@ class SarvoAiGuardrails(unittest.TestCase):
             {'Not': [{'Equals': [{'Ref': 'SarvoAiProductionRuntimeArn'}, '']}]},
             [item['Assert'] for item in rule['Assertions']],
         )
+
+    def test_agentcore_runtime_and_log_permissions_use_the_same_stage(self):
+        template = yaml.load((ROOT.parent / 'agentcore-test.yaml').read_text(), Loader=TemplateLoader)
+        stage = template['Parameters']['Stage']
+        self.assertEqual(stage['Default'], 'test')
+        self.assertEqual(stage['AllowedValues'], ['test', 'production'])
+
+        resources = template['Resources']
+        self.assertEqual(resources['SarvoAiRuntime']['Properties']['AgentRuntimeName'],
+                         {'Sub': 'sarvoai_${Stage}'})
+        statements = resources['RuntimeRole']['Properties']['Policies'][0]['PolicyDocument']['Statement']
+        log_group = 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/runtimes/sarvoai_${Stage}-*'
+        resources_by_action = {
+            action: statement['Resource']
+            for statement in statements
+            for action in ([statement['Action']] if isinstance(statement['Action'], str) else statement['Action'])
+        }
+        self.assertEqual(resources_by_action['logs:CreateLogGroup'], {'Sub': log_group})
+        self.assertEqual(resources_by_action['logs:PutLogEvents'], {'Sub': log_group + ':log-stream:*'})
 
 class FoundationSafety(unittest.TestCase):
     @classmethod

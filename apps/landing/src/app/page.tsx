@@ -151,6 +151,8 @@ type Person = {
   role: string;
   /** Path under public/, e.g. "/team/jane.jpg". Leave empty to show a placeholder. */
   photo?: string;
+  /** Framing for portraits with extra space around the subject. */
+  photoStyle?: CSSProperties;
   /** Round the photo's bottom corners, for photos cropped mid-body. */
   roundedPhoto?: boolean;
   /** LinkedIn profile URL, shown as a link under the role. */
@@ -218,6 +220,17 @@ const stampxMembers: Person[] = [
     role: "Member, STAMPx",
     photo: "/team/stampx-kumaresan-piragatheesan.png",
     linkedin: "https://www.linkedin.com/in/piragatheesan/",
+  },
+  {
+    name: "Mohamed Thasreef",
+    role: "Member, STAMPx",
+    photo: "/team/stampx-mohamed-thasreef-portrait.png",
+    photoStyle: {
+      objectPosition: "50% 70%",
+      transform: "scale(1.76)",
+      transformOrigin: "48% 50%",
+    },
+    linkedin: "https://www.linkedin.com/in/-thasreef22-/",
   },
 ];
 
@@ -842,13 +855,16 @@ type PlaceholderTone = "orange" | "green";
 function PersonPhoto({ person, tone }: { person: Person; tone: PlaceholderTone }) {
   if (person.photo) {
     return (
-      <Image
-        alt={person.name}
-        className={`aspect-[4/5] w-full object-cover object-bottom ${person.roundedPhoto ? "rounded-b-xl" : ""}`}
-        height={1508}
-        src={person.photo}
-        width={1336}
-      />
+      <div className={`relative aspect-[4/5] w-full overflow-hidden ${person.roundedPhoto ? "rounded-b-xl" : ""}`}>
+        <Image
+          alt={person.name}
+          className="object-cover object-bottom"
+          fill
+          sizes="(min-width: 640px) 200px, 45vw"
+          src={person.photo}
+          style={person.photoStyle}
+        />
+      </div>
     );
   }
   return (

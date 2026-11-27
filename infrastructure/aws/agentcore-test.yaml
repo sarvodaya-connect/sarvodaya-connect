@@ -1,11 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: SarvoAI AgentCore Runtime for Singapore
+Description: SarvoAI AgentCore Runtime for the Singapore TEST or production environment
 
 Parameters:
   Stage:
     Type: String
     AllowedValues: [test, production]
     Default: test
+    Description: Use a separate CloudFormation stack for each environment.
   RuntimeImageDigest:
     Type: String
     Default: ''
@@ -73,7 +74,7 @@ Resources:
     Type: AWS::BedrockAgentCore::Runtime
     Condition: HasImage
     Properties:
-      AgentRuntimeName: !Sub sarvoai_${Stage}
+      AgentRuntimeName: !Sub 'sarvoai_${Stage}'
       RoleArn: !GetAtt RuntimeRole.Arn
       NetworkConfiguration:
         NetworkMode: PUBLIC
