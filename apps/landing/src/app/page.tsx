@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { DASHBOARD_URL } from "./dashboard-url";
 import { HeroScrubFrames } from "./hero-scrub";
@@ -923,9 +924,10 @@ function SiteFooter() {
     <footer className="border-t border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-6">
         <p>© {new Date().getFullYear()} Sarvodaya Connect · Sarvodaya Shramadana Movement, Moratuwa, Sri Lanka</p>
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
           <a className="hover:text-brand-leaf" href={DASHBOARD_URL}>Dashboard</a>
           <a className="hover:text-brand-leaf" href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
+          <Link className="hover:text-brand-leaf" href="/privacy">Privacy Policy</Link>
         </div>
       </div>
     </footer>
