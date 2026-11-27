@@ -3,11 +3,12 @@ import Link from "next/link";
 import type { ActivityDetail } from "@/lib/activities-api";
 
 import { ActivityReview } from "@/components/dashboard/activities/activity-review";
+import { GoalsSummary } from "@/components/dashboard/activities/development-goals";
 import { ApprovalRuleNotice } from "@/components/dashboard/activities/approval-notice";
 import { NoAccessState, secondaryButtonClass } from "@/components/dashboard/data-states";
 import { Icon } from "@/components/dashboard/icon";
-import { SdgChips } from "@/components/dashboard/sdg/sdg-chip";
 import { Pill } from "@/components/dashboard/ui/pill";
+import { getT } from "@/i18n/server";
 import { getActivity } from "@/lib/activities-api";
 import { DIMENSION_LABELS, whenLabel } from "@/lib/activity-format";
 import { formatLkr, ROLE_LABELS } from "@/lib/society-record-format";
@@ -81,19 +82,16 @@ function ActivityDetails({ activity }: { activity: ActivityDetail }) {
   );
 }
 
-/** V5 SP07: review one activity, choose its UN SDGs and approve or send it back. */
+/** V6 SP07 / SP09: review one activity, choose its Development Goals and approve or send it back. */
 export default async function ReviewActivityPage({ params }: PageProps<"/activities-to-approve/[id]">) {
   const { id } = await params;
-  const activity = await getActivity(id);
+  const [activity, t] = await Promise.all([getActivity(id), getT()]);
   const officer = activity.createdBy;
+  const subtitle = `${activity.society.name}${officer ? ` · sent by ${officer.displayName}${officer.role ? ` (${ROLE_LABELS[officer.role]})` : ""}` : ""}${sentAt(activity.submittedAt)}`;
   const heading = (
     <div>
       <h1 className="text-[22px] font-bold text-ink">{activity.name}</h1>
-      <p className="text-[12px] text-ink-soft">
-        {activity.society.name}
-        {officer ? ` · sent by ${officer.displayName}${officer.role ? ` (${ROLE_LABELS[officer.role]})` : ""}` : ""}
-        {sentAt(activity.submittedAt)}
-      </p>
+      <p className="text-[12px] text-ink-soft">{subtitle}</p>
     </div>
   );
 
@@ -121,8 +119,10 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
               {activity.review ? ` by ${activity.review.by.displayName}` : ""}. It is no longer waiting for you.
             </p>
             {activity.status === "APPROVED" && (
-              <div className="mt-3">
-                <SdgChips sdgs={activity.sdgs} />
+              <div className="mt-3 border-t border-line-soft pt-3">
+                <h2 className="mb-2 text-[13px] font-bold text-ink">{t("goals.title")}</h2>
+                <GoalsSummary classification={activity.classification} sdgs={activity.sdgs} t={t} />
+                {activity.review && <p className="mt-3 text-[11px] text-muted">{t("goals.chosenAt", { name: activity.review.by.displayName })}</p>}
               </div>
             )}
             {activity.review?.comment && <p className="mt-2 text-[12px] text-ink">“{activity.review.comment}”</p>}
@@ -149,10 +149,16 @@ export default async function ReviewActivityPage({ params }: PageProps<"/activit
       </div>
       <div className="mt-4">
         <ActivityReview
-          actions={{ approve: approveActivity.bind(null, activity.id), sendBack: sendBackActivity.bind(null, activity.id) }}
+          actions={{
+            approve: approveActivity.bind(null, activity.id, activity.submittedAt),
+            sendBack: sendBackActivity.bind(null, activity.id),
+          }}
+          activityName={activity.name}
           details={<ActivityDetails activity={activity} />}
           heading={heading}
+          key={activity.submittedAt}
           officerName={officer?.displayName ?? "the Society Officer"}
+          subtitle={subtitle}
         />
       </div>
     </>

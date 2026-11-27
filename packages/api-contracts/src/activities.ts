@@ -73,6 +73,8 @@ export interface ActivityClassification {
 
 export interface ActivityApprovalInput extends ActivityClassification {
   sdgs: number[];
+  /** The submission the SPC reviewed; the approval is refused if it was resent since. */
+  submittedAt?: IsoDateTime;
 }
 
 export interface ActivityParticipants {
