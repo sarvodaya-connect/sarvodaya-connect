@@ -33,15 +33,15 @@ function Card({
   title: string;
 }) {
   return (
-    <section className="rounded-card border border-line bg-surface">
-      <header className="flex items-start justify-between gap-3 border-b border-line-soft px-4 py-3">
+    <section className="min-w-0 rounded-card border border-line bg-surface">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-soft px-5 py-4">
         <div>
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h3 className="mt-0.5 text-[13px] font-bold text-ink">{title}</h3>
+          <h2 className="mt-1 text-base font-bold text-ink">{title}</h2>
         </div>
         {action}
       </header>
-      <div className="px-4 py-3.5">{children}</div>
+      <div className="overflow-x-auto p-5">{children}</div>
     </section>
   );
 }
@@ -49,8 +49,8 @@ function Card({
 function Field({ label, t, value }: { label: string; t: Translator; value?: string | null }) {
   return (
     <div>
-      <dt className="text-[10px] text-muted">{label}</dt>
-      <dd className={`text-[12px] font-semibold ${value ? "text-ink" : "font-normal text-muted"}`}>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className={`text-sm font-semibold ${value ? "text-ink" : "font-normal text-muted"}`}>
         {value || t("sr.ov.notRecorded")}
       </dd>
     </div>

@@ -8,6 +8,7 @@ import { GradeBadge, GradeLine } from "@/components/dashboard/national/parts";
 import { Pagination } from "@/components/dashboard/national/links";
 import { count, first } from "@/components/dashboard/national/format";
 import { DataTable, Tbody, Td, Th, Thead, Tr } from "@/components/dashboard/ui/data-table";
+import { TabLinks } from "@/components/dashboard/ui/nav-segments";
 import { Pill } from "@/components/dashboard/ui/pill";
 import type { MessageKey } from "@/i18n/messages/en";
 import { getT } from "@/i18n/server";
@@ -35,7 +36,7 @@ const FILTER_LABELS: Record<(typeof FILTER_KEYS)[number], MessageKey> = {
   gradeRequest: "s.filterRequest",
 };
 
-const selectClass = "rounded-button border border-line bg-surface px-3 py-2 text-[12px]";
+const selectClass = "min-w-0 rounded-button border border-line bg-surface px-3 py-2 text-sm";
 
 function updatedLabel(value: string, t: Translator) {
   const date = new Date(value);
@@ -81,10 +82,10 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface-wash p-5 sm:p-6">
         <div>
-          <h1 className="text-[22px] font-bold text-ink">{t("home.societies")}</h1>
-          <p className="text-[12px] text-ink-soft">
+          <h1 className="text-2xl font-bold tracking-tight text-brand-pine sm:text-3xl">{t("home.societies")}</h1>
+          <p className="mt-1 text-sm text-ink-soft">
             {district ? t("s.activeIn", { count: count(directory.views.all), district: district.nameEn }) : t("n.activeSocietiesCount", { count: count(directory.views.all) })} · <GradeLine grades={directory.grades} />
             {isDemoMode() && <span className="ml-2"><Pill tone="preview">{t("n.demoData")}</Pill></span>}
           </p>
@@ -100,69 +101,66 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
         </div>
       </div>
 
-      <nav aria-label={t("s.lists")} className="mt-4 flex flex-wrap gap-1 border-b border-line">
-        {VIEWS.map((item) => (
-          <Link
-            aria-current={item.key === view ? "page" : undefined}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold ${
-              item.key === view ? "border-brand-forest text-ink" : "border-transparent text-ink-soft hover:text-ink"
-            }`}
-            href={href({ view: item.key })}
-            key={item.key}
-          >
-            {t(item.label)}
-            <span className="rounded-full bg-[#eef0eb] px-1.5 text-[10px] text-muted">{count(directory.views[item.key])}</span>
-          </Link>
-        ))}
-      </nav>
+      <div className="mt-5 rounded-card border border-line bg-surface p-4">
+        <TabLinks
+          label={t("s.lists")}
+          items={VIEWS.map((item) => ({
+            key: item.key,
+            label: t(item.label),
+            href: href({ view: item.key }),
+            count: count(directory.views[item.key]),
+            current: view === item.key,
+          }))}
+        />
 
-      <form className="mt-3 flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3" method="get" role="search">
-        {view !== "all" && <input name="view" type="hidden" value={view} />}
-        <label className="sr-only" htmlFor="society-search">{t("s.nameOrNumber")}</label>
-        <input className="w-56 rounded-button border border-line bg-surface px-3 py-2 text-[12px]" defaultValue={filters.q} id="society-search" name="q" placeholder={t("s.nameOrNumber")} />
-        <label className="sr-only" htmlFor="filter-district">{t("mb.district")}</label>
-        <select className={selectClass} defaultValue={filters.districtId ?? ""} id="filter-district" name="districtId">
-          <option value="">{t("s.districtAll")}</option>
-          {districts.map((item) => <option key={item.id} value={item.id}>{t("s.districtOf", { name: item.nameEn })}</option>)}
-        </select>
-        <label className="sr-only" htmlFor="filter-ds">{t("s.dsDivision")}</label>
-        <input className="w-40 rounded-button border border-line bg-surface px-3 py-2 text-[12px]" defaultValue={filters.dsDivision} id="filter-ds" name="dsDivision" placeholder={t("s.dsAll")} />
-        <label className="sr-only" htmlFor="filter-grade">{t("home.grade")}</label>
-        <select className={selectClass} defaultValue={filters.grade ?? ""} id="filter-grade" name="grade">
-          <option value="">{t("s.gradeAll")}</option>
-          <option value="A">{t("s.gradeOf", { grade: "A" })}</option>
-          <option value="B">{t("s.gradeOf", { grade: "B" })}</option>
-          <option value="C">{t("s.gradeOf", { grade: "C" })}</option>
-          <option value="NONE">{t("s.gradeNotSet")}</option>
-        </select>
-        {spcs.length > 0 && (
-          <>
-            <label className="sr-only" htmlFor="filter-spc">{t("s.filterSpc")}</label>
-            <select className={selectClass} defaultValue={filters.spcId ?? ""} id="filter-spc" name="spcId">
-              <option value="">{t("s.spcAny")}</option>
-              {spcs.map((spc) => <option key={spc.id} value={spc.id}>{t("s.spcOf", { name: spc.displayName })}</option>)}
-            </select>
-          </>
-        )}
-        <label className="sr-only" htmlFor="filter-records">{t("s.filterRecords")}</label>
-        <select className={selectClass} defaultValue={filters.records ?? ""} id="filter-records" name="records">
-          <option value="">{t("s.recordsAny")}</option>
-          <option value="recent">{t("s.recordsRecent")}</option>
-          <option value="stale">{t("s.recordsStale")}</option>
-        </select>
-        <label className="sr-only" htmlFor="filter-request">{t("s.gradeRequest")}</label>
-        <select className={selectClass} defaultValue={filters.gradeRequest ?? ""} id="filter-request" name="gradeRequest">
-          <option value="">{t("s.requestAny")}</option>
-          <option value="waiting">{t("s.requestWaiting")}</option>
-          <option value="none">{t("s.requestNone")}</option>
-        </select>
-        <button className={secondaryButtonClass} type="submit">{t("r.apply")}</button>
-        {active.length > 0 && (
-          <Link className="text-[11px] font-semibold text-brand-forest underline" href={view === "all" ? "/societies" : `/societies?view=${view}`}>
-            {t("s.clearFilters")}
-          </Link>
-        )}
-      </form>
+        <form className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" method="get" role="search">
+          {view !== "all" && <input name="view" type="hidden" value={view} />}
+          <label className="sr-only" htmlFor="society-search">{t("s.nameOrNumber")}</label>
+          <input className="min-w-0 rounded-button border border-line bg-surface px-3 py-2 text-sm" defaultValue={filters.q} id="society-search" name="q" placeholder={t("s.nameOrNumber")} />
+          <label className="sr-only" htmlFor="filter-district">{t("mb.district")}</label>
+          <select className={selectClass} defaultValue={filters.districtId ?? ""} id="filter-district" name="districtId">
+            <option value="">{t("s.districtAll")}</option>
+            {districts.map((item) => <option key={item.id} value={item.id}>{t("s.districtOf", { name: item.nameEn })}</option>)}
+          </select>
+          <label className="sr-only" htmlFor="filter-ds">{t("s.dsDivision")}</label>
+          <input className="min-w-0 rounded-button border border-line bg-surface px-3 py-2 text-sm" defaultValue={filters.dsDivision} id="filter-ds" name="dsDivision" placeholder={t("s.dsAll")} />
+          <label className="sr-only" htmlFor="filter-grade">{t("home.grade")}</label>
+          <select className={selectClass} defaultValue={filters.grade ?? ""} id="filter-grade" name="grade">
+            <option value="">{t("s.gradeAll")}</option>
+            <option value="A">{t("s.gradeOf", { grade: "A" })}</option>
+            <option value="B">{t("s.gradeOf", { grade: "B" })}</option>
+            <option value="C">{t("s.gradeOf", { grade: "C" })}</option>
+            <option value="NONE">{t("s.gradeNotSet")}</option>
+          </select>
+          {spcs.length > 0 && (
+            <>
+              <label className="sr-only" htmlFor="filter-spc">{t("s.filterSpc")}</label>
+              <select className={selectClass} defaultValue={filters.spcId ?? ""} id="filter-spc" name="spcId">
+                <option value="">{t("s.spcAny")}</option>
+                {spcs.map((spc) => <option key={spc.id} value={spc.id}>{t("s.spcOf", { name: spc.displayName })}</option>)}
+              </select>
+            </>
+          )}
+          <label className="sr-only" htmlFor="filter-records">{t("s.filterRecords")}</label>
+          <select className={selectClass} defaultValue={filters.records ?? ""} id="filter-records" name="records">
+            <option value="">{t("s.recordsAny")}</option>
+            <option value="recent">{t("s.recordsRecent")}</option>
+            <option value="stale">{t("s.recordsStale")}</option>
+          </select>
+          <label className="sr-only" htmlFor="filter-request">{t("s.gradeRequest")}</label>
+          <select className={selectClass} defaultValue={filters.gradeRequest ?? ""} id="filter-request" name="gradeRequest">
+            <option value="">{t("s.requestAny")}</option>
+            <option value="waiting">{t("s.requestWaiting")}</option>
+            <option value="none">{t("s.requestNone")}</option>
+          </select>
+          <button className={secondaryButtonClass} type="submit">{t("r.apply")}</button>
+          {active.length > 0 && (
+            <Link className="text-[11px] font-semibold text-brand-forest underline" href={view === "all" ? "/societies" : `/societies?view=${view}`}>
+              {t("s.clearFilters")}
+            </Link>
+          )}
+        </form>
+      </div>
 
       <div className="mt-3">
         {directory.data.length === 0 ? (
