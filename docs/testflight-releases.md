@@ -1,5 +1,7 @@
 # Internal iOS releases from GitHub
 
+For signed builds that use the production API and the public store submission process, see [Production launch](production-launch.md).
+
 The **iOS internal release** workflow builds Sarvodaya Connect against the TEST API. It uses the selected commit on `main`, the submitted version and build number, and the organization's Apple Distribution identity. It retains the signed IPA and a `What to Test.txt` file for seven days. Upload is optional, and uploaded builds are limited to internal TestFlight.
 
 ## One-time Apple setup

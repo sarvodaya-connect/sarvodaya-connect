@@ -23,6 +23,8 @@
   "signInHidePassword": "Hide password",
   "signInButton": "Sign in",
   "signInSigningIn": "Signing in",
+  "signInPrivacyPolicy": "Privacy policy",
+  "signInPrivacyOpenFailed": "The privacy policy could not be opened.",
   "signInForgot": "Forgot your password? Ask HQ to set a new one.",
   "signInEnterUsername": "Enter the username.",
   "signInEnterPassword": "Enter the password.",

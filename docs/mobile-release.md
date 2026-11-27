@@ -1,5 +1,7 @@
 # Phone app: internal testing release (Google Play and TestFlight)
 
+For signed builds that use the production API and the public store submission process, see [Production launch](production-launch.md).
+
 How to build the Flutter app (`apps/mobile`) for **internal testing** only: Google Play internal testing and Apple TestFlight. Manual build instructions are below. The on-demand iOS workflow and Apple/GitHub setup are documented in [TestFlight releases](testflight-releases.md). The on-demand Android internal-release workflow and one-time Google/GitHub setup are documented in [Google Play releases](google-play-releases.md). It can publish only after the release owner configures its protected environment and Google permissions. No signing keys, profiles or store credentials are committed here. Checked for V5 PR 10 on 3 Nov 2026.
 
 ## Build settings

@@ -48,6 +48,10 @@ def main():
     parsed = urlparse(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
         raise SystemExit('API_BASE_URL must be an HTTPS API URL without credentials.')
+    if os.environ.get('RELEASE_TARGET') == 'production' and (
+        parsed.path.rstrip('/') != '/api/v1' or parsed.query or parsed.fragment
+    ):
+        raise SystemExit('Production API_BASE_URL must end in /api/v1 without query or fragment.')
     pool = required('COGNITO_USER_POOL_ID')
     client = required('COGNITO_CLIENT_ID')
     if not re.fullmatch(r'[a-z]{2}-[a-z]+-\d_[A-Za-z0-9]+', pool):
@@ -57,6 +61,22 @@ def main():
     if os.environ.get('PUBLISH') == 'true':
         required('GOOGLE_WIF_PROVIDER')
         required('GOOGLE_PLAY_SERVICE_ACCOUNT')
+    config = {
+        'API_BASE_URL': url,
+        'AUTH_PROVIDER': 'cognito',
+        'COGNITO_USER_POOL_ID': pool,
+        'COGNITO_CLIENT_ID': client,
+        'SC_DEMO_MODE': 'false',
+        'SC_SHOW_UNREVIEWED_TRANSLATIONS': os.environ.get('TRANSLATION_REVIEW', 'false'),
+    }
+    if os.environ.get('RELEASE_TARGET') == 'production':
+        policy = required('PRIVACY_POLICY_URL')
+        parsed_policy = urlparse(policy)
+        if parsed_policy.scheme != 'https' or not parsed_policy.hostname or parsed_policy.username or parsed_policy.password:
+            raise SystemExit('PRIVACY_POLICY_URL must be a public HTTPS URL without credentials.')
+        config['PRIVACY_POLICY_URL'] = policy
+    if os.environ.get('MAPBOX_TOKEN'):
+        config['MAPBOX_TOKEN'] = os.environ['MAPBOX_TOKEN']
     temp = Path(required('RUNNER_TEMP'))
     keystore = temp / 'sarvodaya-upload.jks'
     key_properties = Path('apps/mobile/android/key.properties')
@@ -79,16 +99,6 @@ def main():
     with key_properties.open('x', encoding='ascii') as stream:
         stream.write('\n'.join(f'{key}={properties_escape(value)}' for key, value in props.items()) + '\n')
     key_properties.chmod(0o600)
-    config = {
-        'API_BASE_URL': url,
-        'AUTH_PROVIDER': 'cognito',
-        'COGNITO_USER_POOL_ID': pool,
-        'COGNITO_CLIENT_ID': client,
-        'SC_DEMO_MODE': 'false',
-        'SC_SHOW_UNREVIEWED_TRANSLATIONS': os.environ.get('TRANSLATION_REVIEW', 'false'),
-    }
-    if os.environ.get('MAPBOX_TOKEN'):
-        config['MAPBOX_TOKEN'] = os.environ['MAPBOX_TOKEN']
     with build_config.open('x') as stream:
         json.dump(config, stream)
     build_config.chmod(0o600)

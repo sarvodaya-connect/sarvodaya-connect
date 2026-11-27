@@ -3,6 +3,11 @@ name: Android internal release
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Build for TEST or prepare a signed production store artifact'
+        type: choice
+        default: test
+        options: [test, production]
       version_name:
         description: 'Version shown to testers (e.g. 0.1.1)'
         required: true
@@ -34,35 +39,46 @@ concurrency:
 jobs:
   release:
     if: github.ref == 'refs/heads/main' && github.repository == 'sarvodaya-connect/sarvodaya-connect'
-    name: Build and optionally publish internal Android release
+    name: Build Android release
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    environment: play-internal
+    environment: ${{ inputs.target == 'production' && 'play-production' || 'play-internal' }}
     permissions:
       contents: read
       id-token: write
     env:
+      RELEASE_TARGET: ${{ inputs.target || 'test' }}
       VERSION_NAME: ${{ inputs.version_name }}
       VERSION_CODE: ${{ inputs.version_code }}
       RELEASE_NOTES: ${{ inputs.release_notes }}
       PUBLISH: ${{ inputs.publish }}
       TRANSLATION_REVIEW: ${{ inputs.translation_review }}
     steps:
+      - name: Check release target
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+        run: |
+          if [[ "$RELEASE_TARGET" == production && ( "$PUBLISH_REQUESTED" == true || "$TRANSLATION_REVIEW" == true ) ]]; then
+            echo 'Production builds are signed artifacts for store review. Turn off Publish and Translation review.'
+            exit 1
+          fi
+
       - name: Check out exact selected main commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Prepare validated signing and TEST build settings
+      - name: Prepare validated signing and build settings
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
-          COGNITO_USER_POOL_ID: ${{ vars.COGNITO_USER_POOL_ID }}
-          COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+          API_BASE_URL: ${{ (inputs.target == 'production' && vars.PRODUCTION_API_BASE_URL) || (inputs.target != 'production' && vars.API_BASE_URL) || '' }}
+          COGNITO_USER_POOL_ID: ${{ (inputs.target == 'production' && vars.PRODUCTION_COGNITO_USER_POOL_ID) || (inputs.target != 'production' && vars.COGNITO_USER_POOL_ID) || '' }}
+          COGNITO_CLIENT_ID: ${{ (inputs.target == 'production' && vars.PRODUCTION_COGNITO_CLIENT_ID) || (inputs.target != 'production' && vars.COGNITO_CLIENT_ID) || '' }}
+          PRIVACY_POLICY_URL: ${{ inputs.target == 'production' && vars.PRIVACY_POLICY_URL || '' }}
           MAPBOX_TOKEN: ${{ vars.MAPBOX_TOKEN }}
           GOOGLE_WIF_PROVIDER: ${{ vars.GOOGLE_WIF_PROVIDER }}
           GOOGLE_PLAY_SERVICE_ACCOUNT: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
@@ -124,14 +140,14 @@ jobs:
       - name: Retain signed bundle for seven days
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: sarvodaya-android-${{ inputs.version_name }}-${{ inputs.version_code }}
+          name: sarvodaya-android-${{ inputs.target || 'test' }}-${{ inputs.version_name }}-${{ inputs.version_code }}
           path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
 
       - name: Authenticate to Google with short-lived GitHub identity
-        if: inputs.publish
+        if: inputs.target != 'production' && inputs.publish
         id: google
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
@@ -145,13 +161,13 @@ jobs:
           export_environment_variables: false
 
       - name: Publish only to Play internal testing
-        if: inputs.publish
+        if: inputs.target != 'production' && inputs.publish
         env:
           GOOGLE_PLAY_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
         run: python3 scripts/play/publish_internal.py
 
       - name: Record build-only result
-        if: '!inputs.publish'
+        if: inputs.target == 'production' || !inputs.publish
         run: |
           python3 - <<'PY'
           import hashlib, os

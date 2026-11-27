@@ -1,5 +1,7 @@
 # Google Play internal releases from GitHub
 
+For signed builds that use the production API and the public store submission process, see [Production launch](production-launch.md).
+
 Status (14 Nov 2026): Google Cloud federation and the dedicated service account are
 configured. Play Console shows the service account as Active with app-only viewing
 and testing-release permissions. The protected `play-internal` GitHub environment
