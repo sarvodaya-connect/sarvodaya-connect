@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/count_field.dart' show parseCount;
@@ -193,6 +194,8 @@ class _EditMembershipScreenState extends State<EditMembershipScreen> {
   }
 
   Future<void> _save() async {
+    // One submission at a time, whichever control started it.
+    if (_saving) return;
     setState(() {
       _submitted = true;
       _serverError = null;
@@ -273,98 +276,109 @@ class _EditMembershipScreenState extends State<EditMembershipScreen> {
       appBar: AppBar(
         title: Text(l.memEditTitle, style: RecordStyle.screenTitle),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          RecordNote(icon: Icons.info_outline, message: l.memEditIntro),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _field(
-                  _female,
-                  l.editFemale,
-                  showError: splitError != null,
-                  key: const ValueKey('membership.female'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _field(
-                  _male,
-                  l.editMale,
-                  showError: splitError != null,
-                  key: const ValueKey('membership.male'),
-                ),
-              ),
-            ],
-          ),
-          if (splitError != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                splitError,
-                style: const TextStyle(fontSize: 12, color: AppColors.danger),
-              ),
-            ),
-          const SizedBox(height: 12),
-          FieldLabel(l.editTotal),
-          Semantics(
-            label: l.editTotal,
-            value: total == null ? '—' : l.number(total),
-            liveRegion: true,
-            readOnly: true,
-            excludeSemantics: true,
-            child: ReadOnlyField(
-              total == null ? '—' : l.number(total),
-              key: const ValueKey('membership.formTotal'),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(l.editTotalHelp, style: RecordStyle.caption),
-          const SizedBox(height: 14),
-          FieldLabel(l.memUnder18),
-          TextField(
-            key: const ValueKey('membership.under18'),
-            controller: _under18,
-            enabled: !_saving,
-            keyboardType: TextInputType.number,
-            style: recordInputStyle,
-            decoration: changedDecoration(
-              changed: false,
-              helper: l.memUnder18Help,
-              error: under18Error,
-            ),
-          ),
-          if (_serverError != null) ...[
+      body: MotionEntrance(
+        id: 'membership.${widget.record.id}',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            RecordNote(icon: Icons.info_outline, message: l.memEditIntro),
             const SizedBox(height: 14),
-            RecordNote(
-              icon: Icons.error_outline,
-              tone: NoteTone.error,
-              message: _serverError!,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _field(
+                    _female,
+                    l.editFemale,
+                    showError: splitError != null,
+                    key: const ValueKey('membership.female'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _field(
+                    _male,
+                    l.editMale,
+                    showError: splitError != null,
+                    key: const ValueKey('membership.male'),
+                  ),
+                ),
+              ],
+            ),
+            if (splitError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  splitError,
+                  style: const TextStyle(fontSize: 12, color: AppColors.danger),
+                ),
+              ),
+            const SizedBox(height: 12),
+            FieldLabel(l.editTotal),
+            Semantics(
+              label: l.editTotal,
+              value: total == null ? '—' : l.number(total),
+              liveRegion: true,
+              readOnly: true,
+              excludeSemantics: true,
+              child: ReadOnlyField(
+                total == null ? '—' : l.number(total),
+                key: const ValueKey('membership.formTotal'),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(l.editTotalHelp, style: RecordStyle.caption),
+            const SizedBox(height: 14),
+            FieldLabel(l.memUnder18),
+            TextField(
+              key: const ValueKey('membership.under18'),
+              controller: _under18,
+              enabled: !_saving,
+              keyboardType: TextInputType.number,
+              style: recordInputStyle,
+              decoration: changedDecoration(
+                changed: false,
+                helper: l.memUnder18Help,
+                error: under18Error,
+              ),
+            ),
+            // Appears at full size at once; only the space opens smoothly.
+            MotionSize(
+              child: _serverError != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: RecordNote(
+                        icon: Icons.error_outline,
+                        tone: NoteTone.error,
+                        message: _serverError!,
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: _saving
+                      ? null
+                      : () => Navigator.of(context).pop(false),
+                  child: Text(l.editCancel),
+                ),
+                MotionPress(
+                  enabled: !_saving,
+                  child: FilledButton(
+                    key: const ValueKey('membership.save'),
+                    onPressed: _saving ? null : _save,
+                    child: Text(l.editSave),
+                  ),
+                ),
+              ],
             ),
           ],
-          const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              OutlinedButton(
-                onPressed: _saving
-                    ? null
-                    : () => Navigator.of(context).pop(false),
-                child: Text(l.editCancel),
-              ),
-              FilledButton(
-                key: const ValueKey('membership.save'),
-                onPressed: _saving ? null : _save,
-                child: Text(l.editSave),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

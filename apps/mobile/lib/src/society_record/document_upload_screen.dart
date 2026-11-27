@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -104,6 +105,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   }
 
   Future<void> _upload() async {
+    // One submission at a time, whichever control started it.
+    if (_progress != null) return;
     setState(() {
       _submitted = true;
       _uploadError = null;
@@ -158,189 +161,200 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         subtitle: '${widget.record.nameEn} · Documents',
         onClose: uploading ? () {} : null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        children: [
-          const FieldLabel('Document type', required: true),
-          DropdownButtonFormField<String>(
-            initialValue: _type,
-            isExpanded: true,
-            style: recordInputStyle,
-            decoration: _dense,
-            items: [
-              for (final type in _types)
-                DropdownMenuItem(
-                  value: type,
-                  child: Text(
-                    documentTypeLabels[type] ?? type,
-                    style: recordInputStyle,
-                  ),
-                ),
-            ],
-            onChanged: uploading
-                ? null
-                : (type) => setState(() => _type = type ?? _type),
-          ),
-          const SizedBox(height: 12),
-          if (!_yearly) ...[
-            const FieldLabel('Name', required: true),
-            TextField(
-              controller: _title,
-              enabled: !uploading,
-              maxLength: 150,
-              style: recordInputStyle,
-              decoration: _dense.copyWith(
-                hintText: 'For example Registration certificate',
-                counterText: '',
-                errorText: _submitted && _title.text.trim().isEmpty
-                    ? 'Give the document a name.'
-                    : null,
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (_yearly) const FieldLabel('Financial year', required: true),
-          if (_yearly)
-            DropdownButtonFormField<int>(
-              initialValue: _year,
+      body: MotionEntrance(
+        id: 'upload.${widget.record.id}.${widget.documentType}',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          children: [
+            const FieldLabel('Document type', required: true),
+            DropdownButtonFormField<String>(
+              initialValue: _type,
               isExpanded: true,
               style: recordInputStyle,
               decoration: _dense,
               items: [
-                for (final year in _years)
+                for (final type in _types)
                   DropdownMenuItem(
-                    value: year.startYear,
-                    child: Text(year.label),
+                    value: type,
+                    child: Text(
+                      documentTypeLabels[type] ?? type,
+                      style: recordInputStyle,
+                    ),
                   ),
               ],
               onChanged: uploading
                   ? null
-                  : (year) => setState(() => _year = year ?? _year),
+                  : (type) => setState(() => _type = type ?? _type),
             ),
-          const SizedBox(height: 12),
-          const FieldLabel('File', required: true),
-          Semantics(
-            button: true,
-            label: file == null ? 'Choose a PDF or photo' : 'Change the file',
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: uploading ? null : _choose,
-              child: RecordCard(
-                padding: const EdgeInsets.all(12),
-                borderColor: (_submitted && file == null) || _fileError != null
-                    ? AppColors.danger
-                    : AppColors.line,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.insert_drive_file_outlined,
-                        size: 20,
-                        color: AppColors.inkSoft,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              file?.name ?? 'Choose a PDF or photo',
-                              style: RecordStyle.value,
-                            ),
-                            if (file != null)
-                              Text(
-                                '${file.contentType == 'application/pdf' ? 'PDF' : 'Photo'} · ${formatFileSize(file.sizeBytes)}',
-                                style: RecordStyle.caption,
-                              ),
-                            if (uploading) ...[
-                              const SizedBox(height: 7),
-                              // A real loading state: a small spinner and text, no bar.
-                              const Row(
-                                children: [
-                                  SizedBox.square(
-                                    dimension: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.forest,
-                                    ),
-                                  ),
-                                  SizedBox(width: 7),
-                                  Text(
-                                    'Uploading…',
-                                    style: RecordStyle.caption,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        uploading
-                            ? '${(_progress! * 100).round()}%'
-                            : file == null
-                            ? 'Choose'
-                            : 'Change',
-                        style: uploading
-                            ? RecordStyle.caption
-                            : RecordStyle.link,
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 12),
+            if (!_yearly) ...[
+              const FieldLabel('Name', required: true),
+              TextField(
+                controller: _title,
+                enabled: !uploading,
+                maxLength: 150,
+                style: recordInputStyle,
+                decoration: _dense.copyWith(
+                  hintText: 'For example Registration certificate',
+                  counterText: '',
+                  errorText: _submitted && _title.text.trim().isEmpty
+                      ? 'Give the document a name.'
+                      : null,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_yearly) const FieldLabel('Financial year', required: true),
+            if (_yearly)
+              DropdownButtonFormField<int>(
+                initialValue: _year,
+                isExpanded: true,
+                style: recordInputStyle,
+                decoration: _dense,
+                items: [
+                  for (final year in _years)
+                    DropdownMenuItem(
+                      value: year.startYear,
+                      child: Text(year.label),
+                    ),
                 ],
+                onChanged: uploading
+                    ? null
+                    : (year) => setState(() => _year = year ?? _year),
+              ),
+            const SizedBox(height: 12),
+            const FieldLabel('File', required: true),
+            Semantics(
+              button: true,
+              label: file == null ? 'Choose a PDF or photo' : 'Change the file',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: uploading ? null : _choose,
+                child: RecordCard(
+                  padding: const EdgeInsets.all(12),
+                  borderColor:
+                      (_submitted && file == null) || _fileError != null
+                      ? AppColors.danger
+                      : AppColors.line,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.insert_drive_file_outlined,
+                          size: 20,
+                          color: AppColors.inkSoft,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                file?.name ?? 'Choose a PDF or photo',
+                                style: RecordStyle.value,
+                              ),
+                              if (file != null)
+                                Text(
+                                  '${file.contentType == 'application/pdf' ? 'PDF' : 'Photo'} · ${formatFileSize(file.sizeBytes)}',
+                                  style: RecordStyle.caption,
+                                ),
+                              if (uploading) ...[
+                                const SizedBox(height: 7),
+                                // A real loading state: a small spinner and text, no bar.
+                                const Row(
+                                  children: [
+                                    SizedBox.square(
+                                      dimension: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.forest,
+                                      ),
+                                    ),
+                                    SizedBox(width: 7),
+                                    Text(
+                                      'Uploading…',
+                                      style: RecordStyle.caption,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          uploading
+                              ? '${(_progress! * 100).round()}%'
+                              : file == null
+                              ? 'Choose'
+                              : 'Change',
+                          style: uploading
+                              ? RecordStyle.caption
+                              : RecordStyle.link,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            _fileError ??
-                (_submitted && file == null
-                    ? 'Choose the file to upload.'
-                    : 'PDF or photo, up to 10 MB. You need a connection to upload.'),
-            style: _fileError != null || (_submitted && file == null)
-                ? RecordStyle.caption.copyWith(
-                    color: AppColors.danger,
-                    fontWeight: FontWeight.w600,
-                  )
-                : RecordStyle.caption,
-          ),
-          const SizedBox(height: 12),
-          RecordCard(
-            padding: const EdgeInsets.all(12),
-            children: [
-              KeyValueGrid([
-                KeyValue('Uploaded by', store.user?.displayName ?? '—'),
-                KeyValue('Upload date', formatDate(store.now)),
-              ]),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const RecordNote(
-            icon: Icons.info_outline,
-            message:
-                'HQ can open and download this report from the society record.',
-          ),
-          if (_uploadError != null) ...[
+            const SizedBox(height: 5),
+            Text(
+              _fileError ??
+                  (_submitted && file == null
+                      ? 'Choose the file to upload.'
+                      : 'PDF or photo, up to 10 MB. You need a connection to upload.'),
+              style: _fileError != null || (_submitted && file == null)
+                  ? RecordStyle.caption.copyWith(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w600,
+                    )
+                  : RecordStyle.caption,
+            ),
+            const SizedBox(height: 12),
+            RecordCard(
+              padding: const EdgeInsets.all(12),
+              children: [
+                KeyValueGrid([
+                  KeyValue('Uploaded by', store.user?.displayName ?? '—'),
+                  KeyValue('Upload date', formatDate(store.now)),
+                ]),
+              ],
+            ),
             const SizedBox(height: 10),
-            RecordNote(
-              icon: Icons.error_outline,
-              tone: NoteTone.error,
-              title: 'Not Uploaded',
-              message: _uploadError!,
+            const RecordNote(
+              icon: Icons.info_outline,
+              message: 'HQ can open and download this report from the society record.',
+            ),
+            // Appears at full size at once; only the space opens smoothly.
+            MotionSize(
+              child: _uploadError != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: RecordNote(
+                        icon: Icons.error_outline,
+                        tone: NoteTone.error,
+                        title: 'Not Uploaded',
+                        message: _uploadError!,
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
           ],
-        ],
+        ),
       ),
       bottomNavigationBar: BottomActionBar(
         secondary: OutlinedButton(
           onPressed: uploading ? null : () => Navigator.of(context).maybePop(),
           child: const Text('Cancel'),
         ),
-        primary: FilledButton(
-          onPressed: uploading ? null : _upload,
-          child: Text(uploading ? 'Uploading…' : 'Upload'),
+        primary: MotionPress(
+          enabled: !uploading,
+          child: FilledButton(
+            onPressed: uploading ? null : _upload,
+            child: Text(uploading ? 'Uploading…' : 'Upload'),
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
+import '../motion/app_motion.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../validation/validators.dart';
@@ -183,116 +184,125 @@ class ExcoMemberScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-        children: [
-          if (dm)
-            RecordNote(
-              icon: Icons.lock_outline,
-              title: l.recViewOnlyTitle,
-              message: l.excoDmNote(l.excoAccessNote(record)),
-            )
-          else
-            RecordNote(
-              icon: Icons.shield_outlined,
-              tone: NoteTone.success,
-              message: l.excoPersonal(record.nameEn, l.excoAccessNote(record)),
-            ),
-          const SizedBox(height: 12),
-          RecordCard(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.mint,
-                    child: Text(
-                      initialsOf(member.fullName),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.forest,
+      body: MotionEntrance(
+        id: 'exco.${record.id}.${member.seatNumber}',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+          children: [
+            if (dm)
+              RecordNote(
+                icon: Icons.lock_outline,
+                title: l.recViewOnlyTitle,
+                message: l.excoDmNote(l.excoAccessNote(record)),
+              )
+            else
+              RecordNote(
+                icon: Icons.shield_outlined,
+                tone: NoteTone.success,
+                message: l.excoPersonal(
+                  record.nameEn,
+                  l.excoAccessNote(record),
+                ),
+              ),
+            const SizedBox(height: 12),
+            RecordCard(
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.mint,
+                      child: Text(
+                        initialsOf(member.fullName),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.forest,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(member.fullName, style: RecordStyle.cardTitle),
-                        Text(
-                          l.excoMemberOf(member.seatNumber),
-                          style: RecordStyle.caption,
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(member.fullName, style: RecordStyle.cardTitle),
+                          Text(
+                            l.excoMemberOf(member.seatNumber),
+                            style: RecordStyle.caption,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (member.isOfficeBearer)
-                    RecordChip(l.office(member.position), tone: ChipTone.info),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          RecordCard(
-            title: l.excoNicTitle,
-            children: [
-              NicRevealButton(
-                societyId: record.id,
-                memberId: member.id,
-                masked: member.nicMasked,
-              ),
-              const SizedBox(height: 6),
-              Text(l.excoNicHidden, style: RecordStyle.caption),
-            ],
-          ),
-          const SizedBox(height: 12),
-          RecordCard(
-            children: [
-              KeyValueGrid([
-                KeyValue(
-                  l.excoDob,
-                  born == null ? l.recNotRecorded : _birthDate(l, born),
-                  missing: born == null,
+                    if (member.isOfficeBearer)
+                      RecordChip(
+                        l.office(member.position),
+                        tone: ChipTone.info,
+                      ),
+                  ],
                 ),
-                KeyValue(
-                  l.excoAge,
-                  born != null
-                      ? l.excoAgeCalculated(ageFrom(born, DateTime.now()))
-                      : member.age?.toString() ?? l.recNotRecorded,
-                  missing: born == null && member.age == null,
-                ),
-                KeyValue(
-                  l.recAddress,
-                  member.addressLine ?? l.recNotRecorded,
-                  missing: member.addressLine == null,
-                ),
-                KeyValue(
-                  l.excoProfession,
-                  member.profession ?? l.recNotRecorded,
-                  missing: member.profession == null,
-                ),
-                KeyValue(
-                  l.excoPhone,
-                  member.phone ?? l.recNotRecorded,
-                  missing: member.phone == null,
-                ),
-              ]),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (canEdit)
-            OutlinedButton.icon(
-              onPressed: () => _confirmReplace(context),
-              icon: const Icon(Icons.sync, size: 18),
-              label: Text(l.excoReplaceMember),
-            )
-          else if (dm)
-            Text(
-              l.excoDmNicOnly(record.districtName),
-              style: RecordStyle.caption,
+              ],
             ),
-        ],
+            const SizedBox(height: 12),
+            RecordCard(
+              title: l.excoNicTitle,
+              children: [
+                NicRevealButton(
+                  societyId: record.id,
+                  memberId: member.id,
+                  masked: member.nicMasked,
+                ),
+                const SizedBox(height: 6),
+                Text(l.excoNicHidden, style: RecordStyle.caption),
+              ],
+            ),
+            const SizedBox(height: 12),
+            RecordCard(
+              children: [
+                KeyValueGrid([
+                  KeyValue(
+                    l.excoDob,
+                    born == null ? l.recNotRecorded : _birthDate(l, born),
+                    missing: born == null,
+                  ),
+                  KeyValue(
+                    l.excoAge,
+                    born != null
+                        ? l.excoAgeCalculated(ageFrom(born, DateTime.now()))
+                        : member.age?.toString() ?? l.recNotRecorded,
+                    missing: born == null && member.age == null,
+                  ),
+                  KeyValue(
+                    l.recAddress,
+                    member.addressLine ?? l.recNotRecorded,
+                    missing: member.addressLine == null,
+                  ),
+                  KeyValue(
+                    l.excoProfession,
+                    member.profession ?? l.recNotRecorded,
+                    missing: member.profession == null,
+                  ),
+                  KeyValue(
+                    l.excoPhone,
+                    member.phone ?? l.recNotRecorded,
+                    missing: member.phone == null,
+                  ),
+                ]),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (canEdit)
+              OutlinedButton.icon(
+                onPressed: () => _confirmReplace(context),
+                icon: const Icon(Icons.sync, size: 18),
+                label: Text(l.excoReplaceMember),
+              )
+            else if (dm)
+              Text(
+                l.excoDmNicOnly(record.districtName),
+                style: RecordStyle.caption,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -375,6 +385,8 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
   }
 
   Future<void> _save() async {
+    // One submission at a time, whichever control started it.
+    if (_saving) return;
     setState(() => _error = null);
     if (!_form.currentState!.validate()) return;
     if (_born == null) {
@@ -476,132 +488,144 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
           ],
         ),
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          children: [
-            RecordNote(
-              icon: Icons.shield_outlined,
-              tone: NoteTone.success,
-              message: l.excoPersonal(
-                widget.record.nameEn,
-                l.excoAccessNote(widget.record),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _field(
-              l.excoNicField,
-              _nic,
-              validator: _validateNic,
-              keyboard: TextInputType.text,
-              helper: widget.replace || member.nicMasked == null
-                  ? l.excoNicHintNew
-                  : l.excoNicHintKeep(member.nicMasked!),
-            ),
-            _field(
-              l.excoFullName,
-              _name,
-              validator: (value) => Validators.personName(value, l),
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FieldLabel(l.excoDob, required: true),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          alignment: Alignment.centerLeft,
-                          backgroundColor: AppColors.surface,
-                        ),
-                        onPressed: _pickBirthDate,
-                        icon: const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 18,
-                        ),
-                        label: Text(
-                          born == null ? l.excoChooseDate : _birthDate(l, born),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FieldLabel(l.excoAge),
-                      ReadOnlyField(
-                        born == null ? '—' : '${ageFrom(born, DateTime.now())}',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 14),
-              child: Text(l.excoAgeWorkedOut, style: RecordStyle.caption),
-            ),
-            _field(
-              l.recAddress,
-              _address,
-              validator: (value) => Validators.addressLine(value, l),
-            ),
-            _field(
-              l.excoProfession,
-              _profession,
-              validator: (value) => Validators.required(
-                value,
-                'profession',
-                l.valProfessionRequired,
-              ),
-            ),
-            _field(
-              l.excoPhoneNumber,
-              _phone,
-              validator: (value) => Validators.sriLankanPhone(value, l),
-              keyboard: TextInputType.phone,
-            ),
-            FieldLabel(l.excoRole, required: true),
-            DropdownButtonFormField<String>(
-              initialValue: officeBearers.contains(_office)
-                  ? _office
-                  : 'Member',
-              items: [
-                for (final office in [...officeBearers, 'Member'])
-                  DropdownMenuItem(
-                    value: office,
-                    child: Text(l.office(office)),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _office = value!),
-            ),
-            if (officeBearers.contains(_office) &&
-                _office != member.position &&
-                widget.record.exco.any((other) => other.position == _office))
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  l.excoStaysMember(l.office(_office)),
-                  style: RecordStyle.caption,
-                ),
-              ),
-            if (_error != null) ...[
-              const SizedBox(height: 14),
+      body: MotionEntrance(
+        id: 'excoForm.${widget.record.id}.${widget.member.seatNumber}',
+        child: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
               RecordNote(
-                icon: Icons.error_outline,
-                tone: NoteTone.error,
-                message: _error!,
+                icon: Icons.shield_outlined,
+                tone: NoteTone.success,
+                message: l.excoPersonal(
+                  widget.record.nameEn,
+                  l.excoAccessNote(widget.record),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _field(
+                l.excoNicField,
+                _nic,
+                validator: _validateNic,
+                keyboard: TextInputType.text,
+                helper: widget.replace || member.nicMasked == null
+                    ? l.excoNicHintNew
+                    : l.excoNicHintKeep(member.nicMasked!),
+              ),
+              _field(
+                l.excoFullName,
+                _name,
+                validator: (value) => Validators.personName(value, l),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FieldLabel(l.excoDob, required: true),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            backgroundColor: AppColors.surface,
+                          ),
+                          onPressed: _pickBirthDate,
+                          icon: const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 18,
+                          ),
+                          label: Text(
+                            born == null
+                                ? l.excoChooseDate
+                                : _birthDate(l, born),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FieldLabel(l.excoAge),
+                        ReadOnlyField(
+                          born == null
+                              ? '—'
+                              : '${ageFrom(born, DateTime.now())}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 14),
+                child: Text(l.excoAgeWorkedOut, style: RecordStyle.caption),
+              ),
+              _field(
+                l.recAddress,
+                _address,
+                validator: (value) => Validators.addressLine(value, l),
+              ),
+              _field(
+                l.excoProfession,
+                _profession,
+                validator: (value) => Validators.required(
+                  value,
+                  'profession',
+                  l.valProfessionRequired,
+                ),
+              ),
+              _field(
+                l.excoPhoneNumber,
+                _phone,
+                validator: (value) => Validators.sriLankanPhone(value, l),
+                keyboard: TextInputType.phone,
+              ),
+              FieldLabel(l.excoRole, required: true),
+              DropdownButtonFormField<String>(
+                initialValue: officeBearers.contains(_office)
+                    ? _office
+                    : 'Member',
+                items: [
+                  for (final office in [...officeBearers, 'Member'])
+                    DropdownMenuItem(
+                      value: office,
+                      child: Text(l.office(office)),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _office = value!),
+              ),
+              if (officeBearers.contains(_office) &&
+                  _office != member.position &&
+                  widget.record.exco.any((other) => other.position == _office))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    l.excoStaysMember(l.office(_office)),
+                    style: RecordStyle.caption,
+                  ),
+                ),
+              // Appears at full size at once; only the space opens smoothly.
+              MotionSize(
+                child: _error != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: RecordNote(
+                          icon: Icons.error_outline,
+                          tone: NoteTone.error,
+                          message: _error!,
+                        ),
+                      )
+                    : const SizedBox(width: double.infinity),
               ),
             ],
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -619,9 +643,12 @@ class _ExcoMemberFormScreenState extends State<ExcoMemberFormScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: Text(_saving ? l.recSaving : l.excoSaveMember),
+                child: MotionPress(
+                  enabled: !_saving,
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: Text(_saving ? l.recSaving : l.excoSaveMember),
+                  ),
                 ),
               ),
             ],
@@ -658,6 +685,8 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
   String? _error;
 
   Future<void> _save() async {
+    // One submission at a time, whichever control started it.
+    if (_saving) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -699,61 +728,69 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
         .firstOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(l.excoChooseOfficeTitle(office))),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-        children: [
-          Text(
-            l.excoChooseOfficeIntro,
-            style: const TextStyle(color: AppColors.inkBody),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: InputDecoration(
-              hintText: l.excoSearch25,
-              prefixIcon: const Icon(Icons.search),
+      body: MotionEntrance(
+        id: 'excoOffice.${widget.record.id}.${widget.office}',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+          children: [
+            Text(
+              l.excoChooseOfficeIntro,
+              style: const TextStyle(color: AppColors.inkBody),
             ),
-            onChanged: (value) => setState(() => _query = value),
-          ),
-          const SizedBox(height: 8),
-          RadioGroup<int>(
-            groupValue: _seat,
-            onChanged: (value) => setState(() => _seat = value),
-            child: Column(
-              children: [
-                for (final member in shown)
-                  RadioListTile<int>(
-                    value: member.seatNumber,
-                    title: Text(member.fullName),
-                    subtitle: Text(
-                      [
-                        l.excoMemberNumber(member.seatNumber),
-                        if (member.profession != null) member.profession!,
-                        if (member.isOfficeBearer) l.office(member.position),
-                      ].join(' · '),
+            const SizedBox(height: 12),
+            TextField(
+              decoration: InputDecoration(
+                hintText: l.excoSearch25,
+                prefixIcon: const Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+            const SizedBox(height: 8),
+            RadioGroup<int>(
+              groupValue: _seat,
+              onChanged: (value) => setState(() => _seat = value),
+              child: Column(
+                children: [
+                  for (final member in shown)
+                    RadioListTile<int>(
+                      value: member.seatNumber,
+                      title: Text(member.fullName),
+                      subtitle: Text(
+                        [
+                          l.excoMemberNumber(member.seatNumber),
+                          if (member.profession != null) member.profession!,
+                          if (member.isOfficeBearer) l.office(member.position),
+                        ].join(' · '),
+                      ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          if (current != null &&
-              chosen != null &&
-              current.seatNumber != chosen.seatNumber)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                l.excoNameStaysMember(current.fullName),
-                style: RecordStyle.caption,
+                ],
               ),
             ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            RecordNote(
-              icon: Icons.error_outline,
-              tone: NoteTone.error,
-              message: _error!,
+            if (current != null &&
+                chosen != null &&
+                current.seatNumber != chosen.seatNumber)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l.excoNameStaysMember(current.fullName),
+                  style: RecordStyle.caption,
+                ),
+              ),
+            // Appears at full size at once; only the space opens smoothly.
+            MotionSize(
+              child: _error != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: RecordNote(
+                        icon: Icons.error_outline,
+                        tone: NoteTone.error,
+                        message: _error!,
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
           ],
-        ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -770,12 +807,16 @@ class _ChooseOfficeBearerScreenState extends State<ChooseOfficeBearerScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton(
-                  onPressed:
-                      _saving || _seat == null || _seat == current?.seatNumber
-                      ? null
-                      : _save,
-                  child: Text(_saving ? l.recSaving : l.excoMake(office)),
+                child: MotionPress(
+                  enabled:
+                      !_saving && _seat != null && _seat != current?.seatNumber,
+                  child: FilledButton(
+                    onPressed:
+                        _saving || _seat == null || _seat == current?.seatNumber
+                        ? null
+                        : _save,
+                    child: Text(_saving ? l.recSaving : l.excoMake(office)),
+                  ),
                 ),
               ),
             ],

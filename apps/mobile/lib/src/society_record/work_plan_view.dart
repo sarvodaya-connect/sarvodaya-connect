@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion/app_motion.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
 import 'activity_screens.dart';
@@ -293,55 +294,64 @@ class _Calendar extends StatelessWidget {
             );
           },
         ),
-        if (chosen != null) ...[
-          const SizedBox(height: 12),
-          RecordCard(
-            title: monthNames[chosen - 1],
-            trailing: Text(
-              '${inMonth.length} ${inMonth.length == 1 ? 'activity' : 'activities'}',
-              style: RecordStyle.caption,
-            ),
-            children: [
-              if (inMonth.isEmpty)
-                const Text('Nothing planned.', style: RecordStyle.body),
-              for (final activity in inMonth)
-                InkWell(
-                  onTap: () => onOpen(activity),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(activity.name, style: RecordStyle.value),
-                              Text(
-                                [
-                                  ?activity.datesLabel,
-                                  ?activity.sector,
-                                ].join(' · '),
-                                style: RecordStyle.caption,
-                              ),
-                            ],
+        // Appears at full size at once; only the space opens smoothly.
+        MotionSize(
+          child: chosen != null
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: RecordCard(
+                    title: monthNames[chosen - 1],
+                    trailing: Text(
+                      '${inMonth.length} ${inMonth.length == 1 ? 'activity' : 'activities'}',
+                      style: RecordStyle.caption,
+                    ),
+                    children: [
+                      if (inMonth.isEmpty)
+                        const Text('Nothing planned.', style: RecordStyle.body),
+                      for (final activity in inMonth)
+                        InkWell(
+                          onTap: () => onOpen(activity),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        activity.name,
+                                        style: RecordStyle.value,
+                                      ),
+                                      Text(
+                                        [
+                                          ?activity.datesLabel,
+                                          ?activity.sector,
+                                        ].join(' · '),
+                                        style: RecordStyle.caption,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  formatLkr(activity.allocatedCost),
+                                  style: RecordStyle.value,
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: AppColors.muted,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        Text(
-                          formatLkr(activity.allocatedCost),
-                          style: RecordStyle.value,
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          size: 18,
-                          color: AppColors.muted,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ),
-            ],
-          ),
-        ],
+                )
+              : const SizedBox(width: double.infinity),
+        ),
         const SizedBox(height: 10),
         Text(
           'Allocated in the plan: ${formatLkr(plan.totalAllocated)} across ${plan.activities.length} activities. Planning figures only.',
@@ -380,7 +390,10 @@ class _MonthTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
-        child: Container(
+        // The selected border changes over the shared selection time.
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.state),
+          curve: AppMotion.curve,
           constraints: const BoxConstraints(minHeight: 76),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
