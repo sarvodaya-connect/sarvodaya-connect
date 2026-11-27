@@ -354,23 +354,8 @@ function Hero() {
               </span>
               <span className="rise block" style={delay(220)}>
                 For Every{" "}
-                <span className="relative inline-block whitespace-nowrap text-green-leaf">
+                <span className="whitespace-nowrap">
                   Village Society.
-                  <svg
-                    aria-hidden="true"
-                    className="absolute -bottom-2 left-0 h-3 w-full md:-bottom-3 md:h-4"
-                    fill="none"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 400 16"
-                  >
-                    <path
-                      className="draw"
-                      d="M3 11 C 90 3, 210 3, 397 9"
-                      stroke="var(--orange-splash)"
-                      strokeLinecap="round"
-                      strokeWidth="5"
-                    />
-                  </svg>
                 </span>
               </span>
             </h1>
