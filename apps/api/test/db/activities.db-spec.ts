@@ -282,6 +282,48 @@ describe('V5 PR 4 activities, UN SDGs and Registrar documents (PostgreSQL)', () 
     expect(dmPlan.body.permissions.canAddActivities).toBe(false);
   });
 
+  it('refuses an approval for a version the SPC did not review', async () => {
+    const { body } = await api(tokens.so!.token)
+      .post(`/societies/${societyId}/activities`, {
+        ...activity,
+        name: 'Fictional reading workshop',
+      })
+      .expect(201);
+    const id = body.id as string;
+    const reviewed = body.submittedAt as string;
+    const classification = { dimensions: ['SOCIAL'], categories: ['COMMUNITY_EDUCATION'] };
+
+    // The officer changes the activity while the SPC is choosing.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const edited = await api(tokens.so!.token)
+      .put(`/societies/${societyId}/activities/${id}`, {
+        ...activity,
+        name: 'Fictional road repairs',
+      })
+      .expect(200);
+    expect(edited.body.submittedAt).not.toBe(reviewed);
+
+    const stale = await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, { sdgs: [4], ...classification, reviewedSubmittedAt: reviewed })
+      .expect(409);
+    expect(stale.body.error.message).toMatch(/changed while you were reviewing/);
+    const unchanged = await db.workPlanActivity.findUniqueOrThrow({ where: { id } });
+    expect(unchanged).toMatchObject({ status: 'WAITING_FOR_SPC', spcCategories: [] });
+    expect(await db.workPlanActivitySdg.count({ where: { activityId: id } })).toBe(0);
+
+    await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, { sdgs: [4], ...classification, reviewedSubmittedAt: 'yesterday' })
+      .expect(400);
+    const approved = await api(tokens.spc!.token)
+      .post(`/activities/${id}/approve`, {
+        sdgs: [9],
+        ...classification,
+        reviewedSubmittedAt: edited.body.submittedAt,
+      })
+      .expect(200);
+    expect(approved.body).toMatchObject({ status: 'APPROVED', name: 'Fictional road repairs', sdgs: [9] });
+  });
+
   it('lets only the assigned SPC approve, with at least one UN SDG, once', async () => {
     const { body } = await api(tokens.so!.token)
       .post(`/societies/${societyId}/activities`, {
