@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 const privacyEmail = "info@sarvodayaconnect.com";
@@ -12,9 +13,19 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 text-ink md:px-6 md:py-16">
-      <Link className="text-sm font-semibold text-green-pine underline underline-offset-4" href="/">
-        Back to Sarvodaya Connect
-      </Link>
+      <header className="flex items-center justify-between gap-4">
+        <Image
+          alt="Sarvodaya Connect"
+          className="h-10 w-auto md:h-12"
+          height={453}
+          priority
+          src="/brand/sarvodaya-connect-wordmark.png"
+          width={1178}
+        />
+        <Link className="text-right text-sm font-semibold text-green-pine underline underline-offset-4" href="/">
+          Back to Sarvodaya Connect
+        </Link>
+      </header>
 
       <article className="mt-6 rounded-card border border-line bg-surface p-5 sm:p-8">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Sarvodaya Connect Privacy Policy</h1>
