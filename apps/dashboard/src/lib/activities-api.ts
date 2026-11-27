@@ -9,7 +9,7 @@ import type {
   WorkPlanActivity,
 } from "@sarvodaya-connect/api-contracts";
 
-import { isDemoMode, platformApi } from "./platform-api";
+import { isDemoMode, platformApi, PlatformApiError } from "./platform-api";
 
 /** Demonstration mode only: SPC pages read as the fictional SPC. */
 const asSpc = (): RequestInit => (isDemoMode() ? { headers: { "X-Demo-User": "demo-programme-coordinator" } } : {});
@@ -27,11 +27,11 @@ export function getActivityQueue(): Promise<ActivityQueue> {
 }
 
 /** SP07. Activities outside the user's scope are reported by the API as not found. */
-export async function getActivity(id: string): Promise<ActivityDetail> {
+export async function getActivity(id: string, init?: RequestInit): Promise<ActivityDetail> {
   try {
-    return await platformApi(`/activities/${id}`, asSpc());
+    return await platformApi(`/activities/${id}`, init);
   } catch (error) {
-    if (error instanceof Error && error.message === "Activity not found") notFound();
+    if (error instanceof PlatformApiError && (error.status === 404 || error.status === 403)) notFound();
     throw error;
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/record_l10n.dart';
 import '../theme/app_theme.dart';
 import 'record_widgets.dart';
 import 'society_record_models.dart';
@@ -149,9 +151,10 @@ class SdgChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = programmeSdgLabel(context.l10n, sdg);
     final colour = sdgColour(sdg);
     return Semantics(
-      label: 'SDG $sdg: ${sdgTitle(sdg)}',
+      label: 'SDG $sdg: $title',
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(2, 2, 9, 2),
@@ -178,7 +181,7 @@ class SdgChip extends StatelessWidget {
             const SizedBox(width: 5),
             Flexible(
               child: Text(
-                sdgTitle(sdg),
+                title,
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
