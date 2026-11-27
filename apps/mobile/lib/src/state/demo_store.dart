@@ -9,6 +9,7 @@ import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
 import '../incidents/assessment_queue.dart';
+import '../release/release_notes.dart';
 import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
@@ -97,13 +98,19 @@ class DemoStore extends ChangeNotifier {
     IdentityApi? identityApi,
     LanguagePreference? languagePreference,
     List<AppLanguage>? languages,
+    ReleaseInfo? release,
+    WhatsNewPreference? whatsNewPreference,
+    bool usedBefore = false,
   }) : _languagePreference = languagePreference ?? MemoryLanguagePreference(),
+       release = release ?? ReleaseInfo.fromEnvironment(),
+       _whatsNew = whatsNewPreference ?? MemoryWhatsNewPreference(),
        languages = languages ?? availableLanguages(),
        isDemo = demo ?? demoMode,
        identityApi = identityApi ?? IdentityApi(),
        _clock = clock ?? DateTime.now {
     this.identityApi.onUnauthorized = signOut;
     _restoreLanguage();
+    _decideWhatsNew(usedBefore);
     _authService =
         authService ??
         (isDemo
@@ -286,6 +293,52 @@ class DemoStore extends ChangeNotifier {
       selectedLanguage = languages.single;
       languageChosen = true;
     }
+  }
+
+  /// Issue #161: this build's release and notes, or null without metadata.
+  final ReleaseInfo? release;
+  final WhatsNewPreference _whatsNew;
+
+  /// True while the installed release's notes should be shown once, at the
+  /// next safe point after sign-in.
+  bool whatsNewPending = false;
+
+  void _decideWhatsNew(bool usedBefore) {
+    final installed = release;
+    final acknowledged = _whatsNew.acknowledged();
+    whatsNewPending = shouldShowWhatsNew(
+      release: installed,
+      acknowledged: acknowledged,
+      usedBefore: usedBefore,
+    );
+    // A fresh installation is not an update: record the release as seen, so
+    // only later updates ask. Its notes stay under More → What's new.
+    if (installed != null && acknowledged == null && !usedBefore) {
+      unawaited(_saveWhatsNewAcknowledgement(installed.id));
+    }
+  }
+
+  /// Continue on What's new: not shown again for this installed release.
+  /// The screen closes at once; saving happens in the background.
+  Future<bool> acknowledgeWhatsNew() {
+    final installed = release;
+    if (installed == null) return Future.value(true);
+    whatsNewPending = false;
+    notifyListeners();
+    return _saveWhatsNewAcknowledgement(installed.id);
+  }
+
+  /// Saving the acknowledgement on the phone can fail (for example a full
+  /// disk). It is retried a few times without blocking start-up or the
+  /// screen. If it still fails, the user simply sees the same notes once
+  /// more at the next launch; they are never re-shown in this session.
+  static const whatsNewSaveAttempts = 3;
+
+  Future<bool> _saveWhatsNewAcknowledgement(String releaseId) async {
+    for (var attempt = 0; attempt < whatsNewSaveAttempts; attempt++) {
+      if (await _whatsNew.acknowledge(releaseId)) return true;
+    }
+    return false;
   }
 
   void finishSplash() {

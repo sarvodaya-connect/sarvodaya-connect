@@ -45,7 +45,7 @@ gh secret set APPLE_DISTRIBUTION_P12_PASSWORD --env testflight-internal
 ## Release an update
 
 1. Merge the app changes into `main` and confirm that any API or database changes the build needs have reached TEST.
-2. Open **Actions → iOS internal release → Run workflow** on `main`. Enter a version such as `0.1.0`, a build number higher than the previous iOS uploads, and short tester notes. Version and build number are independent of Android. Start with **Publish** off for the first signing check.
+2. Open **Actions → iOS internal release → Run workflow** on `main`. Enter a version such as `0.1.0`, a build number higher than the previous iOS uploads, and short tester notes (also shown once in the app after the update; see [mobile-whats-new.md](mobile-whats-new.md)). Version and build number are independent of Android. Start with **Publish** off for the first signing check.
 3. Download the run's signed IPA if needed. To deliver to Apple, run with **Publish** on. If Apple has already accepted an upload with this version and build number, use a new build number for the next upload.
 4. After Apple processes the build, check **TestFlight** for export compliance questions or provisioning errors. Copy the run's `What to Test.txt` into the build's TestFlight details and assign the build to your internal group if automatic distribution is off. Install through TestFlight and verify sign-in and the changed workflows on an iPhone.
 

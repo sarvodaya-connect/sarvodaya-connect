@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from release_metadata import release_defines, validated_notes  # noqa: E402
+
 BUNDLE_ID = 'org.sarvodayaconnect.sarvodayaConnectMobile'
 
 
@@ -31,13 +34,11 @@ def write_base64(path, name):
 def prepare_build(directory):
     version = required('VERSION_NAME')
     number = required('BUILD_NUMBER')
-    notes = required('RELEASE_NOTES').strip()
+    notes = validated_notes(required('RELEASE_NOTES'))
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version) or len(version) > 30:
         raise SystemExit('Version must be major.minor.patch, e.g. 0.1.1.')
     if not re.fullmatch(r'[1-9][0-9]{0,3}', number):
         raise SystemExit('Build number must be a positive integer of up to four digits.')
-    if not notes or len(notes) > 500:
-        raise SystemExit('Release notes must contain 1-500 characters.')
     url = required('API_BASE_URL')
     parsed = urlsplit(url)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
@@ -55,6 +56,8 @@ def prepare_build(directory):
         'COGNITO_CLIENT_ID': client,
         'SC_DEMO_MODE': 'false',
         'SC_SHOW_UNREVIEWED_TRANSLATIONS': required('TRANSLATION_REVIEW'),
+        # Issue #161: the same notes as What to Test, shown once in the app.
+        **release_defines(version, number, notes),
     }
     if os.environ.get('MAPBOX_TOKEN'):
         config['MAPBOX_TOKEN'] = os.environ['MAPBOX_TOKEN']

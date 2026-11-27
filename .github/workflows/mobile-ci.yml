@@ -36,3 +36,8 @@ jobs:
 
       - name: Run Flutter tests
         run: flutter test
+
+      # Issue #161: the release notes the workflows embed for What's new.
+      - name: Check release metadata scripts
+        working-directory: .
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'

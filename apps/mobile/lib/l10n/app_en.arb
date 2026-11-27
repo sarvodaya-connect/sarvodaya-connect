@@ -3607,5 +3607,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "moreWhatsNew": "What's New",
+  "whatsNewTitle": "What's New",
+  "whatsNewUpdated": "Sarvodaya Connect was updated.",
+  "whatsNewVersion": "Version {version} · build {build}",
+  "@whatsNewVersion": {"placeholders": {"version": {"type": "String"}, "build": {"type": "String"}}},
+  "whatsNewChanges": "What changed",
+  "whatsNewEnglishOnly": "These notes are in English.",
+  "whatsNewContinue": "Continue",
+  "whatsNewNoneTitle": "No Release Notes in This Build",
+  "whatsNewNoneBody": "Release notes come with builds made by the release workflow. This build was made without them."
 }
