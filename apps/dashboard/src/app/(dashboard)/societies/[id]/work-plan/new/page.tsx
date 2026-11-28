@@ -7,6 +7,7 @@ import { getSocietyRecord, getWorkPlan } from "@/lib/society-record-api";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
 import { createActivity } from "../../record-actions";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 /** V5 D05w "Add activity" (M09a–M09c on the desktop). */
 export default async function NewActivityPage({ params }: PageProps<"/societies/[id]/work-plan/new">) {
@@ -15,7 +16,7 @@ export default async function NewActivityPage({ params }: PageProps<"/societies/
   const [record, plan] = await Promise.all([getSocietyRecord(id), getWorkPlan(id)]);
   if (!plan.permissions?.canAddActivities) {
     return (
-      <section className="mt-4 rounded-card border border-line bg-surface">
+      <section className={`mt-4 ${surface.card}`}>
         <NoAccessState
           action={<Link className={secondaryButtonClass} href={`/societies/${id}/work-plan`}>Back to the Work Plan</Link>}
           description="You can view this work plan but cannot add activities to it."

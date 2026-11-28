@@ -11,6 +11,7 @@ import { demoSocietyAccess, societiesVisibleTo } from "@/lib/society-access";
 import { isSocietyRecordId } from "@/lib/society-record-format";
 
 import { RecordOverviewPage } from "./record-overview-page";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 // Authenticated records and query-driven panels must render per request.
 // An empty generateStaticParams list made new UUID records use static fallback.
@@ -59,7 +60,7 @@ export default async function SocietyPage({ params, searchParams }: PageProps<"/
         <span aria-current="page">{shortName}</span>
       </nav>
 
-      <section className="mb-5 mt-3 rounded-card border border-line bg-surface px-5 py-4">
+      <section className={`mb-5 mt-3 ${surface.card} px-5 py-4`}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-mint text-brand-forest">

@@ -5,6 +5,7 @@ import type { SocietyRecord } from "@sarvodaya-connect/api-contracts";
 import { primaryButtonClass, secondaryButtonClass } from "../data-states";
 import { Icon } from "../icon";
 import { Pill } from "../ui/pill";
+import surface from "../ui/surface.module.css";
 import { ENGLISH } from "@/i18n/english";
 import { excoBadge, recordDate, statusName } from "@/i18n/society-record";
 import type { Translator } from "@/i18n/translate";
@@ -47,7 +48,7 @@ export function RecordHeader({
         <span aria-current="page">{record.nameEn}</span>
       </nav>
 
-      <section className="mb-4 mt-3 rounded-card border border-line bg-surface px-5 py-4">
+      <section className={`${surface.card} mb-4 mt-3 px-5 py-4`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span

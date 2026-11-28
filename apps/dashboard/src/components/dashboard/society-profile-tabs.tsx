@@ -6,6 +6,7 @@ import type { SocietyDetails } from "@sarvodaya-connect/api-contracts";
 
 import { Pill } from "./ui/pill";
 import { StatusPill } from "./status-pill";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 const tabs = [
   "Overview",
@@ -197,7 +198,7 @@ export function SocietyProfileTabs({
       )}
 
       {activeTab === "Membership" && (
-        <div className="mt-4 grid gap-6 rounded-card border border-line bg-surface p-6 lg:grid-cols-[1.2fr_1fr]">
+        <div className={`mt-4 grid gap-6 ${surface.card} p-6 lg:grid-cols-[1.2fr_1fr]`}>
           <div>
             <h3 className="text-[11px] font-semibold tracking-[0.14em] text-muted">Total Membership</h3>
             <p className="mt-2 text-[32px] font-bold text-ink">{members.toLocaleString("en-GB")}</p>
@@ -234,7 +235,7 @@ export function SocietyProfileTabs({
       )}
 
       {activeTab === "Executive Council" && (
-        <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface p-6">
+        <div className={`mt-4 overflow-x-auto ${surface.card} p-6`}>
           <table className="w-full min-w-[680px] text-left">
             <thead className="text-[11px] tracking-[0.08em] text-muted">
               <tr>
@@ -267,7 +268,7 @@ export function SocietyProfileTabs({
       )}
 
       {activeTab === "Documents" && (
-        <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface p-6">
+        <div className={`mt-4 overflow-x-auto ${surface.card} p-6`}>
           <table className="w-full min-w-[680px] text-left">
             <thead className="text-[11px] tracking-[0.08em] text-muted">
               <tr>
@@ -314,7 +315,7 @@ export function SocietyProfileTabs({
       )}
 
       {activeTab === "History" && (
-        <div className="mt-4 space-y-0 rounded-card border border-line bg-surface p-6">
+        <div className={`mt-4 space-y-0 ${surface.card} p-6`}>
           {society.history.map((event, index) => (
             <div className="grid grid-cols-[24px_1fr] gap-3" key={event.id}>
               <div className="flex flex-col items-center">
@@ -335,7 +336,7 @@ export function SocietyProfileTabs({
 
 function Card({ action, children, title }: { action?: React.ReactNode; children: React.ReactNode; title: string }) {
   return (
-    <section className="rounded-card border border-line bg-surface px-5 py-4">
+    <section className={`${surface.card} px-5 py-4`}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-[13px] font-bold text-ink">{title}</h3>
         {action}
@@ -347,7 +348,7 @@ function Card({ action, children, title }: { action?: React.ReactNode; children:
 
 function Kpi({ label, note, value }: { label: string; note: React.ReactNode; value: string }) {
   return (
-    <article className="rounded-card border border-line bg-surface px-4 py-3.5">
+    <article className={`${surface.card} px-4 py-3.5`}>
       <p className="text-[11px] text-muted">{label}</p>
       <strong className="mt-1 block text-[20px] font-bold tracking-[-0.01em] text-ink">{value}</strong>
       <p className="mt-0.5 text-[11px] text-muted">{note}</p>

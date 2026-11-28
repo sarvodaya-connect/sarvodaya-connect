@@ -1,38 +1,32 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useI18n } from "@/i18n/provider";
 
+import { TabLinks } from "../ui/nav-segments";
+
 export type RecordTab = { count?: number; href: string; label: string };
 
-/** D05 tab row: Overview, Exco, Work plan, Documents, Grade and History. */
+/**
+ * D05 tab row: Overview, Exco, Work plan, Documents, Grade and History.
+ * Issue #179: the role homes' tabs, whose indicator moves to the chosen tab
+ * at once while the page loads (no slide under reduced motion).
+ */
 export function RecordTabs({ tabs }: { tabs: RecordTab[] }) {
   const pathname = usePathname();
   const { t } = useI18n();
   return (
-    <nav aria-label={t("sr.tabsLabel")} className="flex overflow-x-auto border-b border-line">
-      {tabs.map((tab, index) => {
-        const active = index === 0 ? pathname === tab.href : pathname.startsWith(tab.href);
-        return (
-          <Link
-            aria-current={active ? "page" : undefined}
-            className={`-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[12px] transition ${
-              active
-                ? "border-brand-forest font-semibold text-ink"
-                : "border-transparent text-ink-soft hover:text-brand-forest"
-            }`}
-            href={tab.href}
-            key={tab.href}
-          >
-            {tab.label}
-            {typeof tab.count === "number" && (
-              <span className="rounded-full bg-[#eef1ec] px-1.5 text-[10px] font-bold text-ink-soft">{tab.count}</span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <TabLinks
+      items={tabs.map((tab, index) => ({
+        href: tab.href,
+        key: tab.href,
+        label: tab.label,
+        count: typeof tab.count === "number" ? tab.count : undefined,
+        current: index === 0 ? pathname === tab.href : pathname.startsWith(tab.href),
+      }))}
+      label={t("sr.tabsLabel")}
+      loadingLabel={t("st.loading")}
+    />
   );
 }

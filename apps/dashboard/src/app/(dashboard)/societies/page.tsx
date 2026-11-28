@@ -8,7 +8,10 @@ import { GradeBadge, GradeLine } from "@/components/dashboard/national/parts";
 import { Pagination } from "@/components/dashboard/national/links";
 import { count, first } from "@/components/dashboard/national/format";
 import { DataTable, Tbody, Td, Th, Thead, Tr } from "@/components/dashboard/ui/data-table";
+import { TabLinks } from "@/components/dashboard/ui/nav-segments";
 import { Pill } from "@/components/dashboard/ui/pill";
+import { fieldClass } from "@/components/dashboard/ui/section-card";
+import surface from "@/components/dashboard/ui/surface.module.css";
 import type { MessageKey } from "@/i18n/messages/en";
 import { getT } from "@/i18n/server";
 import { localeTag, type Translator } from "@/i18n/translate";
@@ -35,7 +38,7 @@ const FILTER_LABELS: Record<(typeof FILTER_KEYS)[number], MessageKey> = {
   gradeRequest: "s.filterRequest",
 };
 
-const selectClass = "rounded-button border border-line bg-surface px-3 py-2 text-[12px]";
+const selectClass = fieldClass;
 
 function updatedLabel(value: string, t: Translator) {
   const date = new Date(value);
@@ -100,33 +103,34 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
         </div>
       </div>
 
-      <nav aria-label={t("s.lists")} className="mt-4 flex flex-wrap gap-1 border-b border-line">
-        {VIEWS.map((item) => (
-          <Link
-            aria-current={item.key === view ? "page" : undefined}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold ${
-              item.key === view ? "border-brand-forest text-ink" : "border-transparent text-ink-soft hover:text-ink"
-            }`}
-            href={href({ view: item.key })}
-            key={item.key}
-          >
-            {t(item.label)}
-            <span className="rounded-full bg-[#eef0eb] px-1.5 text-[10px] text-muted">{count(directory.views[item.key])}</span>
-          </Link>
-        ))}
-      </nav>
+      <div className="mt-4">
+        <TabLinks
+          items={VIEWS.map((item) => ({
+            href: href({ view: item.key }),
+            key: item.key,
+            label: t(item.label),
+            count: count(directory.views[item.key]),
+            current: item.key === view,
+          }))}
+          label={t("s.lists")}
+          loadingLabel={t("st.loading")}
+        />
+      </div>
 
-      <form className="mt-3 flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3" method="get" role="search">
+      <form className={`${surface.filters} mt-3`} method="get" role="search">
         {view !== "all" && <input name="view" type="hidden" value={view} />}
-        <label className="sr-only" htmlFor="society-search">{t("s.nameOrNumber")}</label>
-        <input className="w-56 rounded-button border border-line bg-surface px-3 py-2 text-[12px]" defaultValue={filters.q} id="society-search" name="q" placeholder={t("s.nameOrNumber")} />
+        <label className="relative min-w-[220px] flex-1" htmlFor="society-search">
+          <span className="sr-only">{t("s.nameOrNumber")}</span>
+          <Icon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
+          <input className={`${fieldClass} w-full pl-8`} defaultValue={filters.q} id="society-search" name="q" placeholder={t("s.nameOrNumber")} type="search" />
+        </label>
         <label className="sr-only" htmlFor="filter-district">{t("mb.district")}</label>
         <select className={selectClass} defaultValue={filters.districtId ?? ""} id="filter-district" name="districtId">
           <option value="">{t("s.districtAll")}</option>
           {districts.map((item) => <option key={item.id} value={item.id}>{t("s.districtOf", { name: item.nameEn })}</option>)}
         </select>
         <label className="sr-only" htmlFor="filter-ds">{t("s.dsDivision")}</label>
-        <input className="w-40 rounded-button border border-line bg-surface px-3 py-2 text-[12px]" defaultValue={filters.dsDivision} id="filter-ds" name="dsDivision" placeholder={t("s.dsAll")} />
+        <input className={`${fieldClass} w-40`} defaultValue={filters.dsDivision} id="filter-ds" name="dsDivision" placeholder={t("s.dsAll")} />
         <label className="sr-only" htmlFor="filter-grade">{t("home.grade")}</label>
         <select className={selectClass} defaultValue={filters.grade ?? ""} id="filter-grade" name="grade">
           <option value="">{t("s.gradeAll")}</option>
@@ -156,7 +160,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
           <option value="waiting">{t("s.requestWaiting")}</option>
           <option value="none">{t("s.requestNone")}</option>
         </select>
-        <button className={secondaryButtonClass} type="submit">{t("r.apply")}</button>
+        <button className={`${secondaryButtonClass} h-9 ${surface.press}`} type="submit">{t("r.apply")}</button>
         {active.length > 0 && (
           <Link className="text-[11px] font-semibold text-brand-forest underline" href={view === "all" ? "/societies" : `/societies?view=${view}`}>
             {t("s.clearFilters")}
@@ -166,7 +170,7 @@ export default async function SocietiesPage({ searchParams }: PageProps<"/societ
 
       <div className="mt-3">
         {directory.data.length === 0 ? (
-          <section className="rounded-card border border-line bg-surface px-6 py-10 text-center" role="status">
+          <section className={`${surface.card} px-6 py-10 text-center`} role="status">
             <Icon className="mx-auto size-8 text-brand-forest" name="search" />
             <h2 className="mt-2 text-[16px] font-bold text-ink">{t("s.noMatch")}</h2>
             <p className="mt-1 text-[12px] text-ink-soft">{t("s.noMatchHelp")}</p>

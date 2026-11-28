@@ -10,6 +10,7 @@ import type { MessageKey } from "@/i18n/messages/en";
 import { useI18n } from "@/i18n/provider";
 import { officeList, officeName } from "@/i18n/society-record";
 import type { Translator } from "@/i18n/translate";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 export const OFFICE_BEARERS = ["President", "Secretary", "Treasurer"] as const;
 
@@ -245,7 +246,7 @@ export function ExcoEditor({
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
       <input name={name} type="hidden" value={payload} />
-      <section className="overflow-hidden rounded-card border border-line bg-surface">
+      <section className={`overflow-hidden ${surface.card}`}>
         <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.title")}</h3>
           <button className="text-[12px] text-ink-soft underline underline-offset-2" onClick={() => setShowAll((all) => !all)} type="button">
@@ -349,7 +350,7 @@ export function ExcoEditor({
         <p className="border-t border-line-soft px-4 py-2 text-[11px] text-ink-soft">{t("sr.ee.footer")}</p>
       </section>
       <aside className="flex flex-col gap-4">
-        <section className="rounded-card border border-line bg-surface p-4">
+        <section className={`${surface.card} p-4`}>
           <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.progress")}</h3>
           <p className={`mt-2 text-[26px] font-bold ${stillMissing.length === 0 ? "text-brand-action" : "text-[#b8860b]"}`}>{filled} / 25</p>
           {/* V5 PR 10: the count as words, never a progress bar. */}
@@ -366,7 +367,7 @@ export function ExcoEditor({
             </>
           )}
         </section>
-        <section className="rounded-card border border-line bg-surface p-4">
+        <section className={`${surface.card} p-4`}>
           <h3 className="text-[15px] font-bold text-ink">{t("sr.ee.officeBearers")}</h3>
           <ul className="mt-2 space-y-1 text-[12.5px]">
             {OFFICE_BEARERS.map((office) => {

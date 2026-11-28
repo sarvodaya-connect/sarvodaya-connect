@@ -6,6 +6,7 @@ import { Icon } from "../icon";
 import { SdgChips } from "../sdg/sdg-chip";
 import { Pill } from "../ui/pill";
 import { actorLabel, formatDate, formatLkr, MONTHS } from "@/lib/society-record-format";
+import surface from "@/components/dashboard/ui/surface.module.css";
 
 /** V5 statuses: only approved activities count in the dashboards. */
 export function ActivityStatusPill({ activity }: { activity: Pick<WorkPlanActivity, "status"> }) {
@@ -47,7 +48,7 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
         </p>
       )}
 
-      <ol aria-label={`Activities per month in ${plan.year}`} className="mt-3 grid grid-cols-6 gap-2 rounded-card border border-line bg-surface p-3 md:grid-cols-12">
+      <ol aria-label={`Activities per month in ${plan.year}`} className={`mt-3 grid grid-cols-6 gap-2 ${surface.card} p-3 md:grid-cols-12`}>
         {MONTHS.map((month, index) => (
           <li
             className={`rounded-lg px-2 py-1.5 text-center ${perMonth[index] ? "bg-brand-mint text-brand-forest" : "bg-[#f4f5f2] text-[#a3aba5]"}`}
@@ -60,11 +61,11 @@ export function WorkPlanOverview({ plan, societyId }: { plan: WorkPlan; societyI
       </ol>
 
       {plan.activities.length === 0 ? (
-        <p className="mt-3 rounded-card border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
+        <p className={`mt-3 ${surface.card} px-5 py-8 text-center text-[12px] text-muted`}>
           No activities are planned for {plan.year} yet. The Society Officer adds them from the phone app; the SPC approves them.
         </p>
       ) : (
-        <div className="mt-3 overflow-x-auto rounded-card border border-line bg-surface">
+        <div className={`mt-3 overflow-x-auto ${surface.card}`}>
           <table className="w-full min-w-[980px] text-left text-[11px]">
             <thead className="bg-[#f6f7f4] text-[10px] text-muted">
               <tr>
