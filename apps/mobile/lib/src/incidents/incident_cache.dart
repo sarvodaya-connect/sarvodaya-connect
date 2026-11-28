@@ -198,6 +198,12 @@ class IncidentCache {
   var _requests = 0;
   final _committed = <String, int>{};
 
+  /// The request whose refusal last cleared the whole saved copy, and the
+  /// request whose refusal last removed each incident. A save from a request
+  /// that started before a refusal never brings the refused data back.
+  var _listRefused = 0;
+  final _pageRefused = <String, int>{};
+
   /// Accounts whose saved copy may still hold something the API refused,
   /// because removing it from the phone failed. Their saved copy is never
   /// read until a save succeeds.
@@ -230,6 +236,7 @@ class IncidentCache {
         },
         // The list is refused only when the account lost disaster access.
         refused: (saved) => saved.clear(),
+        onRefused: (request) => _listRefused = request,
       );
 
   /// One incident's page: from the API when it answers (and saved), else
@@ -261,6 +268,7 @@ class IncidentCache {
             (incident) => (incident as Map)['id'] == id,
           );
         },
+        onRefused: (request) => _pageRefused[id] = request,
       );
 
   Future<Loaded<T>> _load<T>(
@@ -269,6 +277,7 @@ class IncidentCache {
     required void Function(Map<String, dynamic> saved, T value) save,
     required Loaded<T>? Function(Map<String, dynamic> saved) read,
     required void Function(Map<String, dynamic> saved) refused,
+    required void Function(int request) onRefused,
   }) async {
     // The account and scope the request is made for. What comes back is
     // saved only for that same account and scope.
@@ -291,14 +300,10 @@ class IncidentCache {
       if (user == null) rethrow;
       if (!canUseSavedCopy(error)) {
         if (error.status == 403 || error.status == 404) {
-          await _change(
-            user,
-            scope!,
-            resource,
-            request,
-            refused,
-            refusal: true,
-          );
+          await _change(user, scope!, resource, request, (saved) {
+            refused(saved);
+            onRefused(request);
+          }, refusal: true);
         }
         rethrow;
       }
@@ -364,11 +369,23 @@ class IncidentCache {
     if (!_still(user, scope)) return;
     // A later request for the same list or page was saved already.
     if ((_committed[resource] ?? 0) > request) return;
+    // The whole copy was refused after this request started.
+    if (!refusal && _listRefused > request) return;
     _committed[resource] = request;
     final saved =
         await _read(user, scope) ??
         {'v': 1, 'scope': scope, 'details': <String, dynamic>{}};
     change(saved);
+    // Incidents refused after this request started stay out of the copy.
+    final details = saved['details'] as Map<String, dynamic>?;
+    final list = saved['list'] as Map<String, dynamic>?;
+    _pageRefused.forEach((id, refusedBy) {
+      if (refusedBy <= request) return;
+      details?.remove(id);
+      (list?['incidents'] as List?)?.removeWhere(
+        (incident) => (incident as Map)['id'] == id,
+      );
+    });
     try {
       await _storage.write(user.id, jsonEncode(saved));
       // The copy on the phone is now exactly what was meant to be saved.

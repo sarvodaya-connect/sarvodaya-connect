@@ -288,6 +288,51 @@ void main() {
     },
   );
 
+  test('a page that answers after a later list refusal is not saved', () async {
+    await cache.incidents(api);
+    final page = await api.detail('incident-demo');
+    final held = _HeldApi(clock: () => now);
+    final first = cache.incident(held, 'incident-demo');
+
+    api.failure = const IncidentException('no', status: 403);
+    await expectLater(cache.incidents(api), throwsA(isA<IncidentException>()));
+    held.page.complete(page);
+    expect((await first).cached, isFalse);
+
+    api.failure = _offline;
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(same(_offline)),
+    );
+    await expectLater(cache.incidents(api), throwsA(same(_offline)));
+
+    // A request made after the refusal is saved again.
+    api.failure = null;
+    await cache.incident(api, 'incident-demo');
+    api.failure = _offline;
+    expect((await cache.incident(api, 'incident-demo')).cached, isTrue);
+  });
+
+  test(
+    'a list that answers after a later page refusal leaves it out',
+    () async {
+      final full = await api.active();
+      final held = _HeldApi(clock: () => now);
+      final first = cache.incidents(held);
+
+      api.failure = const IncidentException('no', status: 404);
+      await expectLater(
+        cache.incident(api, 'incident-demo'),
+        throwsA(isA<IncidentException>()),
+      );
+      held.list.complete(full);
+      expect((await first).value, hasLength(1));
+
+      api.failure = _offline;
+      expect((await cache.incidents(api)).value, isEmpty);
+    },
+  );
+
   test('a refusal that cannot be saved still hides the refused copy', () async {
     final failing = _FailingStorage();
     cache = IncidentCache(storage: failing, user: () => user, clock: () => now);
@@ -530,4 +575,17 @@ class _FailingStorage extends MemoryIncidentCacheStorage {
     if (failDeletes) throw const FileSystemException('disk full');
     return super.delete(accountId);
   }
+}
+
+/// Holds the list and page answers until the test completes them.
+class _HeldApi extends DemoIncidentApi {
+  _HeldApi({required super.clock});
+  final list = Completer<List<IncidentSummary>>();
+  final page = Completer<IncidentDetail>();
+
+  @override
+  Future<List<IncidentSummary>> active() => list.future;
+
+  @override
+  Future<IncidentDetail> detail(String id) => page.future;
 }
