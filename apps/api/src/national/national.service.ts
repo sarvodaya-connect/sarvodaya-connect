@@ -21,9 +21,15 @@ import {
   period,
 } from './national-rules.js';
 import {
+  type ClassificationFilters,
   NationalRepository,
+  NO_CLASSIFICATION_FILTERS,
   type SocietyScope,
 } from './national.repository.js';
+import {
+  ActivityCategory,
+  ActivityDimension,
+} from '../generated/prisma/enums.js';
 import { delegationEndsAt, programmeScopeFor } from './programme-scope.js';
 
 const TOP_SDGS = 6;
@@ -77,6 +83,40 @@ function dimensionTotals(
       planned: row?.planned ?? 0,
       completed: row?.completed ?? 0,
     };
+  });
+}
+
+/**
+ * Issue #173: the filters as asked for, each value once and in the
+ * contract's order, so the answer says exactly which filters it used.
+ */
+export function classificationFilters(query: {
+  dimension?: ActivityDimension[];
+  category?: ActivityCategory[];
+}): ClassificationFilters {
+  return {
+    dimensions: Object.values(ActivityDimension).filter((value) =>
+      query.dimension?.includes(value),
+    ),
+    categories: Object.values(ActivityCategory).filter((value) =>
+      query.category?.includes(value),
+    ),
+  };
+}
+
+/** Every bucket in the contract's order, zero where nothing was counted. */
+function buckets<K extends string, V extends string>(
+  key: K,
+  values: readonly V[],
+  rows: ({ planned: number; completed: number } & Record<K, string>)[],
+) {
+  return values.map((value) => {
+    const row = rows.find((entry) => (entry[key] as string) === value);
+    return {
+      [key]: value,
+      planned: row?.planned ?? 0,
+      completed: row?.completed ?? 0,
+    } as Record<K, V> & { planned: number; completed: number };
   });
 }
 
@@ -314,8 +354,17 @@ export class NationalService {
     };
   }
 
-  async programmes(year: number | undefined, now = new Date()) {
-    return this.programmeFigures(chosenProgrammeYear(year, now), now);
+  async programmes(
+    year: number | undefined,
+    now = new Date(),
+    filters: ClassificationFilters = NO_CLASSIFICATION_FILTERS,
+  ) {
+    return this.programmeFigures(
+      chosenProgrammeYear(year, now),
+      now,
+      undefined,
+      filters,
+    );
   }
 
   /**
@@ -327,11 +376,12 @@ export class NationalService {
     principal: Principal,
     year: number | undefined,
     now = new Date(),
+    filters: ClassificationFilters = NO_CLASSIFICATION_FILTERS,
   ) {
     const startYear = chosenProgrammeYear(year, now);
     const { kind, ...within } = programmeScopeFor(principal, now);
     const [figures, summary] = await Promise.all([
-      this.programmeFigures(startYear, now, within),
+      this.programmeFigures(startYear, now, within, filters),
       this.repository.scopeSummary(within),
     ]);
     return {
@@ -352,18 +402,27 @@ export class NationalService {
     };
   }
 
+  /**
+   * Issue #173: with classification filters, every figure (totals, sectors,
+   * dimensions, UN SDGs and recent activities) counts only the approved
+   * activities the SPC classified to match. `classification` adds the V6
+   * breakdowns and the older approvals that have no classification.
+   */
   private async programmeFigures(
     startYear: number,
     now: Date,
     within?: SocietyScope,
+    filters: ClassificationFilters = NO_CLASSIFICATION_FILTERS,
   ) {
-    const [activities, recent] = await Promise.all([
-      this.repository.activities(startYear, now, within),
+    const [activities, recent, classification] = await Promise.all([
+      this.repository.activities(startYear, now, within, filters),
       this.repository.recentApprovedActivities(
         startYear,
         RECENT_ACTIVITIES,
         within,
+        filters,
       ),
+      this.repository.classification(startYear, now, within, filters),
     ]);
     const planned = activities.sectors.reduce(
       (sum, row) => sum + row.planned,
@@ -390,6 +449,21 @@ export class NationalService {
         })),
       byDimension: dimensionTotals(activities.dimensions),
       sdgs: rankSdgs(activities.sdgs),
+      classification: {
+        filters,
+        classified: classification.classified,
+        unclassified: classification.unclassified,
+        byDimension: buckets(
+          'dimension',
+          Object.values(ActivityDimension),
+          classification.dimensions,
+        ),
+        byCategory: buckets(
+          'category',
+          Object.values(ActivityCategory),
+          classification.categories,
+        ),
+      },
       recent: recent.map((activity) => ({
         id: activity.id,
         name: activity.name,

@@ -7,7 +7,7 @@
  * approved records. No list here carries a NIC, and financial data is only
  * the yearly total profit and total expenses.
  */
-import type { ActivityClassification, ActivityDimension, RegistrarDocumentType } from "./activities.js";
+import type { ActivityCategory, ActivityClassification, ActivityDimension, RegistrarDocumentType } from "./activities.js";
 import type { SocietyStatus } from "./registry.js";
 
 export interface FinancialYearPeriod {
@@ -187,7 +187,52 @@ export interface NationalMembership {
   profile: ProfileMembership;
 }
 
-/** D07 / M63: done vs planned by sector, dimension and UN SDG. */
+/** Issue #173: planned (approved for the year) and completed (their month has ended). */
+export interface ProgrammeCount {
+  planned: number;
+  completed: number;
+}
+
+/**
+ * Issue #173: the V6 SPC classification filters a Programmes answer used, each
+ * value once in contract order. Within a list any value matches; when both
+ * lists are given an activity must match both. Empty lists filter nothing.
+ * Asked for with `?dimension=SOCIAL&category=HEALTH_AND_NUTRITION` (repeat a
+ * parameter, or separate values with commas, for more than one).
+ */
+export interface ProgrammeClassificationFilters {
+  dimensions: ActivityDimension[];
+  categories: ActivityCategory[];
+}
+
+/**
+ * Issue #173: approved activities by the SPC's V6 classification. Only
+ * approved activities count. Each counts once in `classified` and once in
+ * every dimension and category the SPC chose, so the breakdowns overlap and
+ * can add up to more than `classified`: they are not additive.
+ */
+export interface ProgrammeClassification {
+  filters: ProgrammeClassificationFilters;
+  /** Approved activities with an SPC classification (that match the filters). */
+  classified: ProgrammeCount;
+  /**
+   * Approved activities in the year and scope with no classification recorded
+   * (approved before V6). Counted in the overall totals when no filter is set,
+   * but never in a breakdown or a filtered result. Not affected by filters.
+   */
+  unclassified: ProgrammeCount;
+  /** All three dimensions, in contract order, zero where none. */
+  byDimension: ({ dimension: ActivityDimension } & ProgrammeCount)[];
+  /** All ten categories, in contract order, zero where none. */
+  byCategory: ({ category: ActivityCategory } & ProgrammeCount)[];
+}
+
+/**
+ * D07 / M63: done vs planned by sector, dimension and UN SDG. Issue #173: with
+ * classification filters, every figure counts only the matching classified
+ * activities; `sectors` and `byDimension` stay the officer's own sector and
+ * dimension.
+ */
 export interface NationalProgrammes {
   /** `inProgress` (issue #131): the year has not ended, so completed counts only months that have. */
   financialYear: FinancialYearPeriod & { inProgress?: boolean };
@@ -197,6 +242,8 @@ export interface NationalProgrammes {
   byDimension: DimensionCount[];
   /** All 17 goals, ranked by completed activities; goals with none come last. */
   sdgs: SdgCount[];
+  /** Issue #173. Missing from APIs before #173. */
+  classification?: ProgrammeClassification;
   recent: {
     id: string;
     name: string;
