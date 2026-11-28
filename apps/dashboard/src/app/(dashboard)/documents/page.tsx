@@ -10,7 +10,9 @@ import { Pill } from "@/components/dashboard/ui/pill";
 import { getRegistrarTotals } from "@/lib/activities-api";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { isDemoMode, platformApi } from "@/lib/platform-api";
-import { formatDate } from "@/lib/society-record-format";
+import { getT } from "@/i18n/server";
+import { recordDate } from "@/i18n/society-record";
+import { formatNumber } from "@/i18n/translate";
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -37,6 +39,8 @@ type LibraryDocument = {
 /** V5 D12 Documents (HQ only): the four Registrar documents first, then every uploaded file. */
 export default async function DocumentsPage({ searchParams }: PageProps<"/documents">) {
   await getCurrentViewer();
+  const t = await getT();
+  const number = (value: number) => formatNumber(t.locale, value);
   const params = await searchParams;
   const type = ALL_TYPES.includes(first(params.type) ?? "") ? first(params.type)! : undefined;
   const page = Math.max(1, Number(first(params.page)) || 1);
@@ -59,31 +63,31 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-bold text-ink">Documents</h1>
-          <p className="text-[12px] text-ink-soft">The 4 Registrar documents come first</p>
+          <h1 className="text-[22px] font-bold text-ink">{t("nav.documents")}</h1>
+          <p className="text-[12px] text-ink-soft">{t("rd.registrarFirst")}</p>
         </div>
-        {isDemoMode() && <Pill tone="preview">Sample Data · Demonstration Mode</Pill>}
+        {isDemoMode() && <Pill tone="preview">{t("rd.sample")}</Pill>}
       </div>
 
       <section aria-labelledby="registrar-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-[10px] font-bold tracking-[0.12em] text-ink-soft" id="registrar-heading">
-            Annual Documents to the Registrar · {totals.financialYear.label}
+            {t("rd.registrarYear", { year: totals.financialYear.label })}
           </h2>
-          <p className="text-[12px] text-ink-soft">{allFourLabel(totals)}</p>
+          <p className="text-[12px] text-ink-soft">{allFourLabel(totals, t)}</p>
         </div>
-        <RegistrarTotalsCards totals={totals} />
+        <RegistrarTotalsCards t={t} totals={totals} />
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <nav aria-label="Document Types" className="h-fit rounded-card border border-line bg-surface p-2">
+        <nav aria-label={t("rd.types")} className="h-fit rounded-card border border-line bg-surface p-2">
           <ul className="space-y-0.5 text-[12px]">
             {[undefined, ...ALL_TYPES].map((value, index) => {
               const active = value === type;
               const count = value ? (counts.get(value as never) ?? 0) : allCount;
               const label = value
-                ? `${index <= REGISTRAR_DOCUMENT_TYPES.length ? `${index} · ` : ""}${documentTypeLabel(value)}`
-                : "All Documents";
+                ? `${index <= REGISTRAR_DOCUMENT_TYPES.length ? `${number(index)} · ` : ""}${documentTypeLabel(value, t)}`
+                : t("rd.all");
               return (
                 <li key={value ?? "all"}>
                   <Link
@@ -92,7 +96,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
                     href={href({ type: value })}
                   >
                     <span>{label}</span>
-                    <span>{count.toLocaleString("en-GB")}</span>
+                    <span>{number(count)}</span>
                   </Link>
                 </li>
               );
@@ -100,12 +104,12 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
           </ul>
         </nav>
 
-        <section aria-label="Documents List" className="rounded-card border border-line bg-surface">
+        <section aria-label={t("rd.list")} className="rounded-card border border-line bg-surface">
           {list.data.length === 0 ? (
             <EmptyState
-              description={type ? `No ${documentTypeLabel(type).toLowerCase()} files have been uploaded yet.` : "No documents have been uploaded yet."}
+              description={t(type ? "rd.emptyType" : "rd.empty")}
               icon="document"
-              title="No Documents"
+              title={t("rd.emptyTitle")}
             />
           ) : (
             <>
@@ -113,8 +117,8 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
                 <table className="w-full min-w-[640px] text-left text-[12px]">
                   <thead className="bg-[#f2f4f0] text-[11px] text-muted">
                     <tr>
-                      {["Name", "Society", "Version", "Updated", ""].map((heading) => (
-                        <th className="px-3 py-2.5 font-medium" key={heading} scope="col">{heading}</th>
+                      {(["rd.name", "rd.society", "rd.version", "rd.updatedHeading", ""] as const).map((heading) => (
+                        <th className="px-3 py-2.5 font-medium" key={heading} scope="col">{heading && t(heading)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -126,15 +130,15 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
                             <Icon className="size-4 text-ink-soft" name={doc.accessLevel === "REVIEWERS_ONLY" ? "lock" : "document"} />
                             {doc.title}
                           </span>
-                          <span className="block pl-6 text-[10px] text-muted">{doc.fileName} · {formatSize(doc.sizeBytes)} · {doc.uploadedBy}</span>
+                          <span className="block pl-6 text-[10px] text-muted">{doc.fileName} · {formatSize(doc.sizeBytes, t)} · {doc.uploadedBy}</span>
                         </td>
                         <td className="px-3 py-3">
                           <Link className="text-brand-forest underline underline-offset-2" href={`/societies/${doc.societyId}/documents`}>
                             {doc.society.nameEn}
                           </Link>
                         </td>
-                        <td className="px-3 py-3 text-ink-soft">v{doc.version}</td>
-                        <td className="px-3 py-3 text-ink-soft">{formatDate(doc.uploadedAt ?? doc.updatedAt)}</td>
+                        <td className="px-3 py-3 text-ink-soft">v{number(doc.version)}</td>
+                        <td className="px-3 py-3 text-ink-soft">{recordDate(t, doc.uploadedAt ?? doc.updatedAt)}</td>
                         <td className="px-3 py-3 text-right">
                           {doc.uploadedAt ? (
                             <a
@@ -142,10 +146,10 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
                               download={doc.fileName}
                               href={`/societies/${doc.societyId}/documents/${doc.id}/download`}
                             >
-                              Download<span className="sr-only">: {doc.title}</span>
+                              {t("rd.download")}<span className="sr-only">: {doc.title}</span>
                             </a>
                           ) : (
-                            <span className="text-muted">Uploading</span>
+                            <span className="text-muted">{t("rd.uploading")}</span>
                           )}
                         </td>
                       </tr>
@@ -154,11 +158,11 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
                 </table>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-3 py-2.5 text-[11px] text-muted">
-                <span>Showing {list.data.length} of {list.meta.totalItems.toLocaleString("en-GB")}</span>
+                <span>{t("rd.showing", { shown: number(list.data.length), total: number(list.meta.totalItems) })}</span>
                 <span className="flex gap-3">
-                  {page > 1 && <Link className="font-semibold text-brand-forest underline" href={href({ type, page: page - 1 })}>Previous</Link>}
-                  <span>Page {page} of {Math.max(1, list.meta.totalPages)}</span>
-                  {page < list.meta.totalPages && <Link className="font-semibold text-brand-forest underline" href={href({ type, page: page + 1 })}>Next</Link>}
+                  {page > 1 && <Link className="font-semibold text-brand-forest underline" href={href({ type, page: page - 1 })}>{t("rd.previous")}</Link>}
+                  <span>{t("rd.page", { page: number(page), total: number(Math.max(1, list.meta.totalPages)) })}</span>
+                  {page < list.meta.totalPages && <Link className="font-semibold text-brand-forest underline" href={href({ type, page: page + 1 })}>{t("rd.next")}</Link>}
                 </span>
               </div>
             </>
@@ -167,8 +171,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/docume
       </div>
       <p className="mt-4 flex items-start gap-2 rounded-card border border-line bg-surface px-4 py-3 text-[12px] text-ink-soft">
         <Icon className="mt-0.5 size-4 shrink-0" name="help" />
-        Documents are uploaded by the Society Officer or SPC on the society record. HQ can open and download them; the signed
-        members list is visible only to District Managers and HQ.
+        {t("rd.permissions")}
       </p>
     </>
   );

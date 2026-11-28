@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../format.dart';
 import '../l10n/l10n.dart';
 import '../l10n/l10n_format.dart';
 import '../l10n/record_l10n.dart';
@@ -732,6 +731,7 @@ class _AnnualSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final summary = record.annualSummary;
     final permissions = record.permissions;
     final report = summary.auditReport;
@@ -768,7 +768,7 @@ class _AnnualSummaryCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    value == null ? 'Not added yet' : formatLkr(value),
+                    value == null ? l.rdNotAddedYet : l.recordMoney(value),
                     style: TextStyle(
                       fontSize: value == null ? 13 : 16,
                       fontWeight: FontWeight.w800,
@@ -794,31 +794,31 @@ class _AnnualSummaryCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Annual Financial Summary · ${summary.financialYear.label}',
+                l.rdAnnualCardTitle(summary.financialYear.label),
                 style: RecordStyle.cardTitle,
               ),
             ),
             if (figuresMissing)
-              const RecordChip('Not added', tone: ChipTone.warning)
+              RecordChip(l.rdNotAddedBadge, tone: ChipTone.warning)
             else if (permissions.canEditAnnualSummary)
               Semantics(
                 button: true,
-                label: 'Edit the yearly figures',
+                label: l.rdEditFigures,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(6),
                   onTap: () => open(AnnualSummaryScreen(record: record)),
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.edit_outlined,
                           size: 13,
                           color: AppColors.leaf,
                         ),
-                        SizedBox(width: 3),
-                        Text('Edit', style: RecordStyle.link),
+                        const SizedBox(width: 3),
+                        Text(l.recEdit, style: RecordStyle.link),
                       ],
                     ),
                   ),
@@ -831,17 +831,9 @@ class _AnnualSummaryCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              tile(
-                'Total Profit for the Year',
-                summary.totalProfit,
-                profit: true,
-              ),
+              tile(l.rdProfit, summary.totalProfit, profit: true),
               const SizedBox(width: 8),
-              tile(
-                'Total Expenses for the Year',
-                summary.totalExpenses,
-                profit: false,
-              ),
+              tile(l.rdExpenses, summary.totalExpenses, profit: false),
             ],
           ),
         ),
@@ -859,13 +851,13 @@ class _AnnualSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Audit Report ${summary.financialYear.label}',
+                    l.rdAuditCard(summary.financialYear.label),
                     style: RecordStyle.value,
                   ),
                   Text(
                     report == null
-                        ? 'Not uploaded yet'
-                        : '${report.fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Photo'} · uploaded ${formatWhen(report.uploadedAt, now)} by ${report.uploadedBy.displayName}',
+                        ? l.rdNotUploadedYet
+                        : '${report.fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : l.rdPhoto} · ${l.rdUploadedBy(l.recordWhen(report.uploadedAt, now), report.uploadedBy.displayName)}',
                     style: RecordStyle.caption,
                   ),
                 ],
@@ -873,8 +865,8 @@ class _AnnualSummaryCard extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             report == null
-                ? const RecordChip('Missing', tone: ChipTone.danger)
-                : const RecordChip('Uploaded', tone: ChipTone.success),
+                ? RecordChip(l.rdMissing, tone: ChipTone.danger)
+                : RecordChip(l.roleAuditsUploaded, tone: ChipTone.success),
           ],
         ),
         if ((figuresMissing && permissions.canEditAnnualSummary) ||
@@ -889,7 +881,7 @@ class _AnnualSummaryCard extends StatelessWidget {
                   style: compactFilledStyle,
                   onPressed: () => open(AnnualSummaryScreen(record: record)),
                   icon: const Icon(Icons.add, size: 15),
-                  label: const Text('Add figures'),
+                  label: Text(l.rdAddFigures),
                 ),
               if (report == null && permissions.canUploadAuditReport)
                 OutlinedButton.icon(
@@ -901,7 +893,7 @@ class _AnnualSummaryCard extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.upload_outlined, size: 15),
-                  label: const Text('Upload audit report'),
+                  label: Text(l.rdUploadAudit),
                 ),
             ],
           ),
@@ -911,7 +903,10 @@ class _AnnualSummaryCard extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 8),
           Text(
-            'Updated by ${summary.lastChange!.updatedBy.label} · ${formatDate(summary.lastChange!.updatedAt)} · two yearly totals only',
+            l.rdLastUpdated(
+              l.actor(summary.lastChange!.updatedBy),
+              l.date(summary.lastChange!.updatedAt),
+            ),
             style: RecordStyle.caption,
           ),
         ],
@@ -1313,6 +1308,7 @@ class _DocumentsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final now = DemoScope.of(context).now;
     final canUpload = uploadableDocumentTypes(record.permissions).isNotEmpty;
     return _AsyncTab<(RegistrarDocuments, List<RecordDocument>)>(
@@ -1320,8 +1316,8 @@ class _DocumentsTab extends StatelessWidget {
         await api.fetchRegistrarDocuments(record.id),
         await api.fetchDocuments(record.id),
       ),
-      loadingLabel: 'Loading documents',
-      errorTitle: "Couldn't load documents",
+      loadingLabel: l.rdLoadingDocs,
+      errorTitle: l.rdDocumentsError,
       builder: (context, data, reload) {
         final (registrar, documents) = data;
         final annualIds = {
@@ -1343,7 +1339,7 @@ class _DocumentsTab extends StatelessWidget {
                     reload();
                   },
                   icon: const Icon(Icons.upload_outlined, size: 15),
-                  label: const Text('Upload'),
+                  label: Text(l.rdUpload),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1352,11 +1348,14 @@ class _DocumentsTab extends StatelessWidget {
               color: const Color(0xFFF3F8F3),
               children: [
                 Text(
-                  'Annual Documents · ${registrar.yearLabel}',
+                  l.rdAnnualDocs(registrar.yearLabel),
                   style: RecordStyle.cardTitle,
                 ),
                 Text(
-                  '${registrar.submitted} of ${registrarDocumentTypes.length} uploaded',
+                  l.rdUploadedCount(
+                    l.number(registrar.submitted),
+                    l.number(registrarDocumentTypes.length),
+                  ),
                   style: RecordStyle.caption,
                 ),
                 const SizedBox(height: 8),
@@ -1385,10 +1384,10 @@ class _DocumentsTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            const Text('All Documents', style: RecordStyle.sectionLabel),
+            Text(l.rdAll, style: RecordStyle.sectionLabel),
             const SizedBox(height: 6),
             if (others.isEmpty)
-              const Text('No other documents yet.', style: RecordStyle.body)
+              Text(l.rdNoOthers, style: RecordStyle.body)
             else
               RecordCard(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1415,11 +1414,9 @@ class _DocumentsTab extends StatelessWidget {
                                 Text(
                                   [
                                     document.financialYearLabel ??
-                                        documentTypeLabels[document
-                                            .documentType] ??
-                                        'Document',
+                                        l.documentType(document.documentType),
                                     if (document.uploadedAt != null)
-                                      formatDate(document.uploadedAt!),
+                                      l.date(document.uploadedAt!),
                                   ].join(' · '),
                                   style: RecordStyle.caption,
                                 ),
@@ -1433,8 +1430,8 @@ class _DocumentsTab extends StatelessWidget {
                 ],
               ),
             const SizedBox(height: 10),
-            const Text(
-              'Uploads are stored privately for the society record. Nothing here needs District approval.',
+            Text(
+              l.rdPrivateDocs,
               style: RecordStyle.caption,
               textAlign: TextAlign.center,
             ),
@@ -1464,6 +1461,7 @@ class _RegistrarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final document = this.document;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -1480,7 +1478,7 @@ class _RegistrarRow extends StatelessWidget {
             radius: 10,
             backgroundColor: AppColors.mint,
             child: Text(
-              '$number',
+              l.number(number),
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
@@ -1493,11 +1491,18 @@ class _RegistrarRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(documentTypeLabels[type]!, style: RecordStyle.value),
+                Text(l.documentType(type), style: RecordStyle.value),
                 Text(
                   document == null
-                      ? 'Not submitted'
-                      : '${document.fileName} · ${formatFileSize(document.sizeBytes)}\nUploaded ${formatWhen(document.uploadedAt, now)} by ${document.uploadedBy.label}${document.canOpen ? '' : '\nOnly the DM and HQ can open this file'}',
+                      ? l.rdSubmitted
+                      : [
+                          '${document.fileName} · ${l.recordFileSize(document.sizeBytes)}',
+                          l.rdUploadedBy(
+                            l.recordWhen(document.uploadedAt, now),
+                            l.actor(document.uploadedBy),
+                          ),
+                          if (!document.canOpen) l.rdOnlyDmHq,
+                        ].join('\n'),
                   style: RecordStyle.caption,
                 ),
                 if (document == null && onUpload != null)
@@ -1507,15 +1512,15 @@ class _RegistrarRow extends StatelessWidget {
                       minimumSize: const Size(0, 32),
                     ),
                     onPressed: onUpload,
-                    child: const Text('Upload'),
+                    child: Text(l.rdUpload),
                   ),
               ],
             ),
           ),
           const SizedBox(width: 6),
           document != null
-              ? const RecordChip('Uploaded', tone: ChipTone.success)
-              : const RecordChip('Not submitted', tone: ChipTone.danger),
+              ? RecordChip(l.roleAuditsUploaded, tone: ChipTone.success)
+              : RecordChip(l.rdSubmitted, tone: ChipTone.danger),
         ],
       ),
     );

@@ -36,8 +36,8 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | D01 | Sign in | All desktop roles | 1 Foundation |
 | Done | D02 | National Dashboard | HQ | 2 Homes, lists and national views |
 | Done | D04 | Societies list | HQ | 2 Homes, lists and national views |
-| Partly done | D05 | Society record: overview | HQ | 3 Society records |
-| Not started | D05m | Summary not added yet | HQ | 4 Records and documents |
+| Done | D05 | Society record: overview | HQ | 3 Society records |
+| Done | D05m | Summary not added yet | HQ | 4 Records and documents |
 | Done | D05e | HQ: edit society information | HQ | 3 Society records |
 | Done | D05x | Society record: Exco | HQ | 3 Society records |
 | Not started | D05w | Society record: work plan | HQ | 5 Activities and work plans |
@@ -49,7 +49,7 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | D16t | Set a new password | HQ | 7 Administration and notifications |
 | Done | D22 | Grade-change queue | HQ | 3 Society records |
 | Done | D22r | Grade-change request | HQ | 3 Society records |
-| Not started | D24 | Change & access log | HQ | 4 Records and documents |
+| Done | D24 | Change & access log | HQ | 4 Records and documents |
 | Done | D21 | Page states | All desktop roles | 3 Society records |
 | Not started | D30 | Incidents: open an incident | HQ | 6 Disaster response |
 | Not started | D31 | Live incident | HQ | 6 Disaster response |
@@ -59,13 +59,13 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | D03 | Map view | HQ | 2 Homes, lists and national views |
 | Done | D03b | District view | HQ | 2 Homes, lists and national views |
 | Done | D08 | Membership | HQ | 2 Homes, lists and national views |
-| Not started | D11 | Audits and AGM | HQ | 4 Records and documents |
+| Done | D11 | Audits and AGM | HQ | 4 Records and documents |
 | Done | D07 | Programmes and activities | HQ; DM, DDM and SPC over their own societies (issue #117) | 5 Activities and work plans |
 | Done | D18 | Search | HQ | 2 Homes, lists and national views |
 | Not started | D19 | Alerts | HQ | 7 Administration and notifications |
 | Done | D13 | Requests and tasks | HQ | 2 Homes, lists and national views |
 | Done | D15 | Reports | HQ | 2 Homes, lists and national views |
-| Not started | D12 | Documents | HQ | 4 Records and documents |
+| Done | D12 | Documents | HQ | 4 Records and documents |
 | Done | D17 | Settings | HQ | 7 Administration and notifications |
 | Not started | D40 | SarvoAI: ask a question | HQ | 8 SarvoAI |
 | Not started | D40b | SarvoAI: question typed | HQ | 8 SarvoAI |
@@ -95,21 +95,21 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | D02x | Dashboard: period with no data yet | HQ | 2 Homes, lists and national views |
 | Done | SP01 | SPC home | SPC | 2 Homes, lists and national views |
 | Done | SP02 | SPC: my societies | SPC | 2 Homes, lists and national views |
-| Partly done | SP03 | SPC: society record | SPC | 3 Society records |
+| Done | SP03 | SPC: society record | SPC | 3 Society records |
 | Done | SP04 | SPC: edit society information | SPC | 3 Society records |
 | Done | SP05 | SPC: request a grade change | SPC | 3 Society records |
 | Done | DD01 | DDM home | DDM | 2 Homes, lists and national views |
 | Done | DD02 | DDM home: temporary district access | DDM | 2 Homes, lists and national views |
 | Done | DD03 | DDM: my societies | DDM | 2 Homes, lists and national views |
 | Done | DD04 | DDM: district societies, view only | DDM | 2 Homes, lists and national views |
-| Partly done | DD05 | DDM: assigned society record | DDM | 3 Society records |
+| Done | DD05 | DDM: assigned society record | DDM | 3 Society records |
 | Done | DD08 | DDM: edit society information | DDM | 3 Society records |
 | Done | DD09 | DDM: request a grade change | DDM | 3 Society records |
-| Partly done | DD06 | DDM: district society, view only | DDM | 3 Society records |
+| Done | DD06 | DDM: district society, view only | DDM | 3 Society records |
 | Done | DD07 | DDM: after temporary access ends | DDM | 2 Homes, lists and national views |
 | Done | DM01 | DM: district overview | DM | 2 Homes, lists and national views |
 | Done | DM02 | DM: societies | DM | 2 Homes, lists and national views |
-| Partly done | DM03 | DM: society record, view only | DM | 3 Society records |
+| Done | DM03 | DM: society record, view only | DM | 3 Society records |
 | Done | DM04 | DM: temporary DDM access | DM | 2 Homes, lists and national views |
 | Done | DM05 | DM: give temporary access | DM | 2 Homes, lists and national views |
 | Not started | IR01 | Live incident (SPC) | SPC | 6 Disaster response |
@@ -149,18 +149,18 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Done | M05m | Home: DM | DM | 2 Homes, lists and national views |
 | Done | M05h | Home: HQ National Dashboard | HQ | 2 Homes, lists and national views |
 | Done | M20 | Society list: filters | DM, HQ | 3 Society records |
-| Partly done | M06 | Society detail (Society Officer) | Society Officer, DM (view only) | 3 Society records |
-| Partly done | M06_SPC | M06 Society detail (SPC) | SPC | 3 Society records |
-| Partly done | M06_DDM | M06 Society detail (DDM) | DDM | 3 Society records |
-| Partly done | M06v | Society detail: view only | Society Officer, DM (view only) | 3 Society records |
+| Done | M06 | Society detail (Society Officer) | Society Officer, DM (view only) | 3 Society records |
+| Done | M06_SPC | M06 Society detail (SPC) | SPC | 3 Society records |
+| Done | M06_DDM | M06 Society detail (DDM) | DDM | 3 Society records |
+| Done | M06v | Society detail: view only | Society Officer, DM (view only) | 3 Society records |
 | Done | M06g | Request a grade change | SPC, DDM | 3 Society records |
 | Done | M06q | Grade-change requests | SPC, DDM | 3 Society records |
 | Done | M06e | Edit society information | Society Officer, SPC, DDM | 3 Society records |
 | Done | M06u | Unsaved changes warning | Society Officer, DM (view only) | 3 Society records |
-| Not started | M06f | Edit annual financial summary | Society Officer, SPC | 4 Records and documents |
-| Not started | M06fx | Summary not added yet | Society Officer, SPC | 4 Records and documents |
-| Not started | M13a | Upload the audit report | Society Officer, SPC | 4 Records and documents |
-| Not started | M13 | Documents | Society Officer, SPC | 4 Records and documents |
+| Done | M06f | Edit annual financial summary | Society Officer, SPC | 4 Records and documents |
+| Done | M06fx | Summary not added yet | Society Officer, SPC | 4 Records and documents |
+| Done | M13a | Upload the audit report | Society Officer, SPC | 4 Records and documents |
+| Done | M13 | Documents | Society Officer, SPC | 4 Records and documents |
 | Done | M06h | Change history | All phone roles | 3 Society records |
 | Done | M07 | Exco members | Society Officer, SPC, DDM, DM (M07d) | 3 Society records |
 | Done | M07s | Exco: 25 seats, incomplete until filled | Society Officer, SPC, DDM, DM (M07d) | 3 Society records |
@@ -213,8 +213,8 @@ Generated from the frames in [`v5-coverage.md`](v5-coverage.md), so each row is 
 | Not started | M51b | SPC: send activity back | SPC | 5 Activities and work plans |
 | Not started | M52 | SPC: activity approved | SPC | 5 Activities and work plans |
 | Done | M61 | HQ: membership | HQ | 2 Homes, lists and national views |
-| Not started | M62 | HQ: audit and AGM | HQ | 4 Records and documents |
-| Not started | M63 | HQ: profit and expenses | HQ | 4 Records and documents |
+| Done | M62 | HQ: audit and AGM | HQ | 4 Records and documents |
+| Done | M63 | HQ: profit and expenses | HQ | 4 Records and documents |
 | Done | M64 | HQ: activities | HQ; DM, DDM and SPC over their own societies (issue #117) | 5 Activities and work plans |
 | Done | M65 | HQ: districts | HQ | 2 Homes, lists and national views |
 | Done | M66 | HQ: societies | HQ | 3 Society records |
@@ -269,8 +269,7 @@ Numbers on the converted screens use the language's digit grouping (Tamil groups
 
 | Text | Where | Why it is still English | Phase |
 |---|---|---|---|
-| The annual financial summary card at the top of the record overview (D05, SP03, DD05, DD06, DM03 on the dashboard; M06, M06_SPC, M06_DDM, M06v on the phone) | `annual-summary-cards.tsx`, `_AnnualSummaryCard` | Yearly figures and the audit report belong to records and documents. This is why those frames are `Partly done`: everything else on them is translated | 4 |
-| The Work Plan and Documents tabs inside the record | Work plan and document screens | Their own frames (D05w, M09, M13) | 4 and 5 |
+| The Work Plan tabs inside the record | Work plan screens | Their own frames (D05w, M09) | 5 |
 | What the API says is still missing from an Exco, such as "No Treasurer chosen yet." | `excoStatus.problems` | Written by the API. The app's own fallback, used when an older API sends none, is translated | 9 |
 | Change-history entries, such as "Society information updated" | `history[].summary` | Written by the API and stored with the record | 9 |
 | Messages the server sends when saving fails, for example a duplicate S number | API errors | Sent as English sentences; the app's own validation and connection messages are translated | 9 |
@@ -282,6 +281,17 @@ Numbers on the converted screens use the language's digit grouping (Tamil groups
 D02o, D02s and D02n (two societies at one place, a society chosen on the map, societies with no location) take their text from the catalogs through #110's map components. This PR checked the code and marks them `Done`; they were not rendered here, because no Mapbox token was set.
 
 Office titles (President, Secretary, Treasurer), seat groups, grades and record statuses are stored in English and sent that way to the API. Only their display labels are translated.
+
+### Phase 4 (records and documents), dashboard and phone
+
+The V5 document lists and upload forms, annual financial summaries, and audit screens use the catalogs for application labels and status text. The dashboard change and access log also translates its filters and known action codes.
+
+| Text | Where | Why it is still English | Phase |
+|---|---|---|---|
+| Audit entry details and API errors | API responses | Written by the API | 9 |
+| Uploaded file names and titles, society names and financial-year labels | Both apps | Stored or supplied with the record | — |
+| Original audit CSV field names and action codes | Dashboard export | The export retains its existing format | — |
+| Older audit checklist and its document picker opened from demonstration notifications | Mobile demo screens | These are outside the V5 records and documents frames | Not planned |
 
 ### Programmes and activities (D07, M64; issue #117), dashboard and phone
 

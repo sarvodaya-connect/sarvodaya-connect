@@ -108,7 +108,7 @@ export function RecordOverview({
 
   return (
     <>
-      <AnnualSummaryCards societyId={record.id} societyName={record.nameEn} staff={record.staff} summary={record.annualSummary} />
+      <AnnualSummaryCards societyId={record.id} societyName={record.nameEn} staff={record.staff} summary={record.annualSummary} t={t} />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-4">

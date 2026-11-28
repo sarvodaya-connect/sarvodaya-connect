@@ -2,53 +2,57 @@ import type { SocietyRegistrarDocuments } from "@sarvodaya-connect/api-contracts
 
 import { Icon } from "../icon";
 import { Pill } from "../ui/pill";
-import { REGISTRAR_LABELS, formatSize } from "./document-labels";
-import { actorLabel, formatDate } from "@/lib/society-record-format";
+import { documentTypeLabel, formatSize } from "./document-labels";
+import { ENGLISH } from "@/i18n/english";
+import { actorName, recordDate } from "@/i18n/society-record";
+import { formatNumber, type Translator } from "@/i18n/translate";
 
 /** V5 M13 / D05 Documents: the four annual Registrar documents, "N of 4 uploaded". */
-export function RegistrarDocumentsList({ registrar, societyId }: { registrar: SocietyRegistrarDocuments; societyId: string }) {
+export function RegistrarDocumentsList({ registrar, societyId, t = ENGLISH }: { registrar: SocietyRegistrarDocuments; societyId: string; t?: Translator }) {
+  const number = (value: number) => formatNumber(t.locale, value);
   return (
     <section aria-labelledby="registrar-heading" className="rounded-card border border-line bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-bold text-ink" id="registrar-heading">
-          Annual Documents to the Registrar · {registrar.financialYear.label}
+          {t("rd.registrarYear", { year: registrar.financialYear.label })}
         </h2>
         <p className="text-[12px] text-ink-soft">
-          <strong className="text-ink">{registrar.submitted} of 4</strong> uploaded
-          {registrar.missing > 0 ? ` · ${registrar.missing} missing` : ""}
+          {t.rich("rd.uploadedTotal", {
+            fraction: <strong className="text-ink">{t("au.xOfY", { x: number(registrar.submitted), y: number(4) })}</strong>,
+          })}
+          {registrar.missing > 0 ? ` · ${t("rd.missingCount", { count: number(registrar.missing) })}` : ""}
         </p>
       </div>
       <ol className="mt-3 divide-y divide-line-soft">
         {registrar.documents.map((entry, index) => {
-          const label = REGISTRAR_LABELS[entry.documentType];
           const doc = entry.document;
           const href = doc && `/societies/${societyId}/documents/${doc.id}/download`;
           return (
             <li className="flex flex-wrap items-center gap-3 py-3" key={entry.documentType}>
               <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#eef1ec] text-[12px] font-bold text-ink-soft">
-                {index + 1}
+                {number(index + 1)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-ink">{label.title}</p>
+                <p className="text-[13px] font-bold text-ink">{documentTypeLabel(entry.documentType, t)}</p>
                 {doc ? (
                   <p className="text-[11px] text-ink-soft">
-                    {doc.fileName} · {formatSize(doc.sizeBytes)} · uploaded {formatDate(doc.uploadedAt)} by {actorLabel(doc.uploadedBy)}
-                    {doc.version > 1 ? ` · version ${doc.version}` : ""}
+                    {doc.fileName} · {formatSize(doc.sizeBytes, t)} · {t("rd.uploadedBy", { date: recordDate(t, doc.uploadedAt), actor: actorName(t, doc.uploadedBy) })}
+                    {doc.version > 1 ? ` · ${t("rd.versionDetail", { version: number(doc.version) })}` : ""}
                   </p>
                 ) : (
-                  <p className="text-[11px] text-muted">{label.note}</p>
+                  <p className="text-[11px] text-muted">{t(`au.note.${entry.documentType}`)}</p>
                 )}
               </div>
-              {doc ? <Pill tone="verified">Uploaded</Pill> : <Pill tone="not-reported">Not submitted</Pill>}
+              {doc ? <Pill tone="verified">{t("au.uploaded")}</Pill> : <Pill tone="not-reported">{t("rd.submitted")}</Pill>}
               {doc && href && (
                 doc.canOpen ? (
                   <span className="flex gap-2 text-[11px]">
-                    <a className="font-semibold text-brand-leaf underline underline-offset-2" href={href} rel="noopener" target="_blank">Open</a>
-                    <a className="font-semibold text-brand-leaf underline underline-offset-2" download={doc.fileName} href={href}>Download</a>
+                    <a className="font-semibold text-brand-leaf underline underline-offset-2" href={href} rel="noopener" target="_blank">{t("rd.open")}</a>
+                    <a className="font-semibold text-brand-leaf underline underline-offset-2" download={doc.fileName} href={href}>{t("rd.download")}</a>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-                    <Icon className="size-3.5" name="lock" /> DM and HQ only
+                    <Icon className="size-3.5" name="lock" /> {t("rd.restricted")}
                   </span>
                 )
               )}

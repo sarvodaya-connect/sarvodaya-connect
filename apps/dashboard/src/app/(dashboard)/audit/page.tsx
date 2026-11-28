@@ -12,13 +12,16 @@ import {
   actionLabel,
   auditQuery,
   parseAuditFilters,
-  roleLabel,
 } from "@/lib/audit-log";
 import { getCurrentViewer } from "@/lib/current-viewer";
 import { platformApi } from "@/lib/platform-api";
 import { ROLE_LABELS } from "@/lib/society-record-format";
+import { getT } from "@/i18n/server";
+import { roleName } from "@/i18n/society-record";
+import { localeTag } from "@/i18n/translate";
+import type { MessageKey } from "@/i18n/messages/en";
+import type { UserRole } from "@sarvodaya-connect/api-contracts";
 
-const when = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Colombo" });
 const selectClass =
   "h-[38px] rounded-[10px] border border-line bg-surface px-3 text-xs text-ink outline-none focus:border-brand-leaf focus:ring-3 focus:ring-brand-mint";
 const chip = {
@@ -31,6 +34,8 @@ const chip = {
 /** V5 D24: who changed, approved or opened what, and when. The API applies the viewer's scope. */
 export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
   await getCurrentViewer();
+  const t = await getT();
+  const when = new Intl.DateTimeFormat(localeTag(t.locale), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Colombo" });
   const filters = parseAuditFilters(await searchParams);
   const query = auditQuery(filters);
   const [{ data }, options]: [{ data: AuditLogEntry[] }, ScopeOptions] = await Promise.all([
@@ -40,68 +45,68 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
 
   return (
     <section className="flex flex-col gap-4">
-      <AdministrationTabs current="log" />
+      <AdministrationTabs current="log" t={t} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-ink">Change &amp; Access Log</h1>
-          <p className="mt-0.5 text-xs text-ink-soft">Who changed, approved or opened what, and when. NICs, passwords and credentials are never shown here.</p>
+          <h1 className="text-xl font-bold text-ink">{t("al.title")}</h1>
+          <p className="mt-0.5 text-xs text-ink-soft">{t("al.intro")}</p>
         </div>
         <a className={secondaryButtonClass} download href={`/audit/export?${query}`}>
           <Icon className="size-4" name="document" strokeWidth={2} />
-          Export log
+          {t("al.export")}
         </a>
       </div>
 
       <form action="/audit" className="flex flex-wrap items-center gap-2.5" role="search">
         <label className="relative w-full max-w-[280px]">
-          <span className="sr-only">Society, User or S Number</span>
+          <span className="sr-only">{t("al.search")}</span>
           <Icon className="absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-[#6a776e]" name="search" strokeWidth={2} />
           <input
             className="h-[38px] w-full rounded-[10px] border border-line bg-surface pl-[34px] pr-3 text-xs outline-none focus:border-brand-leaf focus:ring-3 focus:ring-brand-mint"
             defaultValue={filters.q}
             name="q"
-            placeholder="Society, user or S number"
+            placeholder={t("al.search")}
             type="search"
           />
         </label>
         <label>
-          <span className="sr-only">District</span>
+          <span className="sr-only">{t("al.district")}</span>
           <select className={`${selectClass} ${filters.districtId ? "border-[var(--banner-edit-line)] bg-[var(--banner-edit-bg)] font-semibold text-[var(--banner-edit-text)]" : ""}`} defaultValue={filters.districtId} name="districtId">
-            <option value="">District: All</option>
+            <option value="">{t("al.filter", { field: t("al.district"), value: t("al.all") })}</option>
             {options.districts.map((district) => (
-              <option key={district.id} value={district.id}>District: {district.nameEn}</option>
+              <option key={district.id} value={district.id}>{t("al.filter", { field: t("al.district"), value: district.nameEn })}</option>
             ))}
           </select>
         </label>
         <label>
-          <span className="sr-only">Type</span>
+          <span className="sr-only">{t("rd.type")}</span>
           <select className={selectClass} defaultValue={filters.type} name="type">
-            <option value="">Type: All</option>
+            <option value="">{t("al.filter", { field: t("rd.type"), value: t("al.all") })}</option>
             {Object.entries(AUDIT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>Type: {label}</option>
+              <option key={value} value={value}>{t("al.filter", { field: t("rd.type"), value: value === "EXCO" || value === "ASSISTANT" ? label : t(`al.type.${value}` as MessageKey) })}</option>
             ))}
           </select>
         </label>
         <label>
-          <span className="sr-only">Role</span>
+          <span className="sr-only">{t("al.role")}</span>
           <select className={selectClass} defaultValue={filters.role} name="role">
-            <option value="">Role: All</option>
-            {Object.entries(ROLE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>Role: {label}</option>
+            <option value="">{t("al.filter", { field: t("al.role"), value: t("al.all") })}</option>
+            {Object.keys(ROLE_LABELS).map((value) => (
+              <option key={value} value={value}>{t("al.filter", { field: t("al.role"), value: roleName(t, value as UserRole) })}</option>
             ))}
           </select>
         </label>
         <label>
-          <span className="sr-only">Period</span>
+          <span className="sr-only">{t("al.period")}</span>
           <select className={selectClass} defaultValue={filters.days} name="days">
             {AUDIT_PERIODS.map((period) => (
-              <option key={period.days} value={period.days}>{period.label}</option>
+              <option key={period.days} value={period.days}>{t(`al.period.${period.days}`)}</option>
             ))}
           </select>
         </label>
-        <button className={secondaryButtonClass} type="submit">Apply</button>
+        <button className={secondaryButtonClass} type="submit">{t("r.apply")}</button>
         {(filters.q || filters.districtId || filters.type || filters.role || filters.days !== "30") && (
-          <Link className="text-xs font-semibold text-brand-action underline underline-offset-2" href="/audit">Clear Filters</Link>
+          <Link className="text-xs font-semibold text-brand-action underline underline-offset-2" href="/audit">{t("s.clearFilters")}</Link>
         )}
       </form>
 
@@ -109,11 +114,11 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         {data.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1080px] text-left text-[13px]">
-              <caption className="sr-only">Change and Access Log</caption>
+              <caption className="sr-only">{t("al.title")}</caption>
               <thead className="bg-surface-muted text-[11.5px] text-ink-soft">
                 <tr>
-                  {["When", "Who", "What", "Society or scope", "Details", "Approved by"].map((heading) => (
-                    <th className="px-3 py-3 font-semibold first:pl-4" key={heading} scope="col">{heading}</th>
+                  {(["al.when", "al.who", "al.what", "al.scope", "al.details", "al.approvedBy"] as const).map((heading) => (
+                    <th className="px-3 py-3 font-semibold first:pl-4" key={heading} scope="col">{t(heading)}</th>
                   ))}
                 </tr>
               </thead>
@@ -125,13 +130,13 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
                       <td className="whitespace-nowrap py-3 pl-4 pr-3">{when.format(new Date(entry.createdAt))}</td>
                       <td className="px-3 py-3">
                         {entry.actor.displayName}
-                        {entry.actor.role && <span className="block text-[11.5px] text-ink-soft">{roleLabel(entry.actor.role)}</span>}
+                        {entry.actor.role && <span className="block text-[11.5px] text-ink-soft">{roleName(t, entry.actor.role)}</span>}
                       </td>
                       <td className="px-3 py-3">
                         {tone ? (
-                          <span className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${chip[tone]}`}>● {actionLabel(entry.action)}</span>
+                          <span className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${chip[tone]}`}>● {actionLabel(entry.action, t)}</span>
                         ) : (
-                          actionLabel(entry.action)
+                          actionLabel(entry.action, t)
                         )}
                       </td>
                       <td className="px-3 py-3">
@@ -151,14 +156,14 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
           </div>
         ) : (
           <EmptyState
-            action={<Link className={secondaryButtonClass} href="/audit">Clear Filters</Link>}
-            description="Nothing matches these filters in this period."
+            action={<Link className={secondaryButtonClass} href="/audit">{t("s.clearFilters")}</Link>}
+            description={t("al.empty")}
             icon="search"
-            title="No Log Entries"
+            title={t("al.emptyTitle")}
           />
         )}
       </section>
-      {data.length === 500 && <p className="text-[11.5px] text-ink-soft">Showing the latest 500 entries. Narrow the filters or export to see the rest of this period.</p>}
+      {data.length === 500 && <p className="text-[11.5px] text-ink-soft">{t("al.limit")}</p>}
     </section>
   );
 }

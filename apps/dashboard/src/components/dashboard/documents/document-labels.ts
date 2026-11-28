@@ -1,3 +1,5 @@
+import { ENGLISH } from "@/i18n/english";
+import { localeTag, type Translator } from "@/i18n/translate";
 import type { RegistrarDocumentType } from "@sarvodaya-connect/api-contracts";
 
 /** V5 order and wording of the four annual Registrar documents. */
@@ -8,17 +10,23 @@ export const REGISTRAR_LABELS: Record<RegistrarDocumentType, { title: string; no
   MEMBERS_LIST: { title: "Members List", note: "Signed File · Only DM and HQ Can Open" },
 };
 
-export const OTHER_DOCUMENT_LABELS: Record<string, string> = {
-  REGISTRATION: "Registration",
-  ACTIVITY_EVIDENCE: "Activity Evidence",
-  OTHER: "Other Document",
-  FINANCE: "Finance Document",
-};
+const OTHER_DOCUMENT_KEYS = {
+  REGISTRATION: "rd.registration",
+  ACTIVITY_EVIDENCE: "rd.evidence",
+  FINANCE: "rd.finance",
+  OTHER: "rd.other",
+} as const;
 
-export function documentTypeLabel(type: string) {
-  return REGISTRAR_LABELS[type as RegistrarDocumentType]?.title ?? OTHER_DOCUMENT_LABELS[type] ?? type;
+export function documentTypeLabel(type: string, t: Translator = ENGLISH) {
+  if (Object.hasOwn(REGISTRAR_LABELS, type)) return t(`doc.${type as RegistrarDocumentType}`);
+  const key = Object.hasOwn(OTHER_DOCUMENT_KEYS, type) ? OTHER_DOCUMENT_KEYS[type as keyof typeof OTHER_DOCUMENT_KEYS] : undefined;
+  return key ? t(key) : type;
 }
 
-export function formatSize(bytes: number) {
-  return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`;
+export function formatSize(bytes: number, t: Translator = ENGLISH) {
+  const locale = localeTag(t.locale);
+  if (bytes >= 1_000_000) {
+    return `${(bytes / 1_000_000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })} MB`;
+  }
+  return `${Math.max(1, Math.round(bytes / 1000)).toLocaleString(locale, { useGrouping: false })} KB`;
 }

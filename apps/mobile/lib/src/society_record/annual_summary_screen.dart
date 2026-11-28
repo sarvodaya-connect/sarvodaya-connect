@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../format.dart';
+import '../l10n/l10n.dart';
+import '../l10n/l10n_format.dart';
+import '../l10n/record_l10n.dart';
 import '../state/demo_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/state_views.dart';
@@ -97,11 +99,12 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
     String example, {
     bool loss = false,
   }) {
+    final l = context.l10n;
     if (controller.text.trim().isEmpty) {
-      return _changed ? 'Enter the total, for example $example.' : null;
+      return _changed ? l.rdEnterTotal(example) : null;
     }
     return parseAmount(controller.text, allowNegative: loss) == null
-        ? 'Use numbers only, for example $example.'
+        ? l.rdNumbersOnly(example)
         : null;
   }
 
@@ -113,6 +116,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
     final profit = parseAmount(_profit.text, allowNegative: true);
     final expenses = parseAmount(_expenses.text);
     if (profit == null || expenses == null) return;
+    final l = context.l10n;
     setState(() => _saving = true);
     try {
       await DemoScope.read(context).societyRecords.saveAnnualSummary(
@@ -122,41 +126,35 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
         totalExpenses: expenses,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Saved. The old and new values are in the society history.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.rdSaved)));
       Navigator.of(context).pop(true);
     } on SocietyRecordException catch (error) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _saveError = '${error.message} Your figures are still here.';
+          _saveError = l.rdKeptFigures(l.recordError(error));
         });
       }
     }
   }
 
   Future<void> _confirmLeave() async {
+    final l = context.l10n;
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave Without Saving?'),
-        content: const Text(
-          'You changed the yearly figures. If you leave now, these changes are lost.',
-        ),
+        title: Text(l.rdLeave),
+        content: Text(l.rdLeaveFigures),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
+            child: Text(l.rdKeepEditing),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard changes'),
+            child: Text(l.rdDiscard),
           ),
         ],
       ),
@@ -172,6 +170,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
     String example, {
     bool loss = false,
   }) {
+    final l = context.l10n;
     final changed = _differs(controller, saved);
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -189,10 +188,13 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
             decoration: changedDecoration(
               changed: changed,
               helper: changed && saved != null
-                  ? 'Was ${formatLkr(saved)}'
+                  ? l.rdWas(l.recordMoney(saved))
                   : change == null
                   ? null
-                  : 'Last changed by ${change.updatedBy.label} · ${formatDate(change.updatedAt)}',
+                  : l.rdLastChanged(
+                      l.actor(change.updatedBy),
+                      l.date(change.updatedAt),
+                    ),
               error: _error(controller, example, loss: loss),
             ),
             onChanged: (_) => _changed = true,
@@ -204,6 +206,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final record = widget.record;
     final summary = _summary;
     final user = DemoScope.of(context).user!;
@@ -218,7 +221,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
       child: Scaffold(
         appBar: recordFormAppBar(
           context,
-          title: 'Yearly Summary',
+          title: l.rdYearlySummary,
           subtitle: '${record.nameEn} · ${record.societyCode}',
           actions: [if (_dirty) const UnsavedChip()],
         ),
@@ -231,17 +234,17 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                       icon: Icons.error_outline,
                       tone: StateTone.error,
                       isAlert: true,
-                      title: "Couldn't load the yearly summary",
+                      title: l.rdSummaryError,
                       message: _loadError!.message,
-                      primaryLabel: 'Try again',
+                      primaryLabel: l.rdRetry,
                       onPrimary: _load,
                     )
                   : summary == null
-                  ? const LoadingSkeleton(label: 'Loading the yearly summary')
+                  ? LoadingSkeleton(label: l.rdLoadingSummary)
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                       children: [
-                        const FieldLabel('Financial year', required: true),
+                        FieldLabel(l.rdFinancialYear, required: true),
                         DropdownButtonFormField<int>(
                           initialValue: _year,
                           isExpanded: true,
@@ -258,7 +261,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                               DropdownMenuItem(
                                 value: year.startYear,
                                 child: Text(
-                                  '${year.label} · ${formatDate(year.startsOn).replaceFirst(RegExp(r'^0'), '')} – ${formatDate(year.endsOn)}',
+                                  '${year.label} · ${l.date(year.startsOn).replaceFirst(RegExp(r'^0'), '')} – ${l.date(year.endsOn)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -274,7 +277,7 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                         ),
                         const SizedBox(height: 14),
                         _amountField(
-                          'Total profit for the year (LKR)',
+                          l.rdProfitField,
                           _profit,
                           summary.totalProfit,
                           summary.profitChange,
@@ -282,13 +285,13 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                           loss: true,
                         ),
                         _amountField(
-                          'Total expenses for the year (LKR)',
+                          l.rdExpensesField,
                           _expenses,
                           summary.totalExpenses,
                           summary.expensesChange,
                           '1286000',
                         ),
-                        const FieldLabel('Audit report for this year'),
+                        FieldLabel(l.rdAuditThisYear),
                         RecordCard(
                           padding: const EdgeInsets.all(12),
                           children: [
@@ -301,12 +304,21 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                                     children: [
                                       Text(
                                         summary.auditReport?.fileName ??
-                                            'Not uploaded yet',
+                                            l.rdNotUploadedYet,
                                         style: RecordStyle.value,
                                       ),
                                       if (summary.auditReport != null)
                                         Text(
-                                          'Uploaded ${formatWhen(summary.auditReport!.uploadedAt, DemoScope.of(context).now)} by ${summary.auditReport!.uploadedBy.displayName}',
+                                          l.rdUploadedBy(
+                                            l.recordWhen(
+                                              summary.auditReport!.uploadedAt,
+                                              DemoScope.of(context).now,
+                                            ),
+                                            summary
+                                                .auditReport!
+                                                .uploadedBy
+                                                .displayName,
+                                          ),
                                           style: RecordStyle.caption,
                                         ),
                                     ],
@@ -314,8 +326,8 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 if (summary.auditReport != null)
-                                  const RecordChip(
-                                    'Uploaded',
+                                  RecordChip(
+                                    l.roleAuditsUploaded,
                                     tone: ChipTone.success,
                                   )
                                 else if (record
@@ -347,11 +359,11 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                                       Icons.upload_outlined,
                                       size: 14,
                                     ),
-                                    label: const Text('Upload'),
+                                    label: Text(l.rdUpload),
                                   )
                                 else
-                                  const RecordChip(
-                                    'Missing',
+                                  RecordChip(
+                                    l.rdMissing,
                                     tone: ChipTone.danger,
                                   ),
                               ],
@@ -359,24 +371,24 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const RecordNote(
+                        RecordNote(
                           icon: Icons.info_outline,
                           tone: NoteTone.warning,
                           dashed: true,
-                          message: 'Only two yearly totals are kept, with the audit report. The app records no transactions, loans, savings, payments, sales or accounts.',
+                          message: l.rdAnnualOnly,
                         ),
                         const SizedBox(height: 8),
-                        const RecordNote(
+                        RecordNote(
                           icon: Icons.history,
                           tone: NoteTone.success,
-                          message: 'Saving adds the old and new values to the society history, with your name and the time.',
+                          message: l.rdSavingHistory,
                         ),
                         if (_saveError != null) ...[
                           const SizedBox(height: 8),
                           NoticeBanner(
                             icon: Icons.error_outline,
                             tone: NoticeTone.error,
-                            title: 'Not Saved',
+                            title: l.rdNotSaved,
                             message: _saveError,
                           ),
                         ],
@@ -388,11 +400,11 @@ class _AnnualSummaryScreenState extends State<AnnualSummaryScreen> {
         bottomNavigationBar: BottomActionBar(
           secondary: OutlinedButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+            child: Text(l.rdCancel),
           ),
           primary: FilledButton(
             onPressed: _dirty && valid && !_saving ? _save : null,
-            child: Text(_saving ? 'Saving…' : 'Save'),
+            child: Text(_saving ? l.rdSaving : l.rdSave),
           ),
         ),
       ),

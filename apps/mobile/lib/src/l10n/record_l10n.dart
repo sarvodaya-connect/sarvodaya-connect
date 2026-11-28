@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../models/user.dart';
 import '../society_record/record_widgets.dart' as english;
 import '../society_record/society_record_api.dart';
@@ -10,6 +12,23 @@ import 'l10n_format.dart';
 /// API sends them; only what people read is translated. English keeps the
 /// exact text the app showed before.
 extension RecordL10n on AppLocalizations {
+  /// Format money for display without changing the numeric form input.
+  String recordMoney(num value) => localeName == 'en'
+      ? english.formatLkr(value.toDouble())
+      : 'LKR ${(NumberFormat.decimalPattern(localeName)..maximumFractionDigits = 2).format(value)}';
+
+  String documentType(String type) => switch (type) {
+    'AUDIT_REPORT' => roleAuditsDocAudit,
+    'AGM_MINUTES' => roleAuditsDocAgm,
+    'OFFICE_BEARER_LIST' => roleAuditsDocOfficers,
+    'MEMBERS_LIST' => roleAuditsDocMembers,
+    'REGISTRATION' => rdRegistration,
+    'ACTIVITY_EVIDENCE' => rdEvidence,
+    'FINANCE' => rdFinance,
+    'OTHER' => rdOther,
+    _ => type,
+  };
+
   /// "Society Officer", "SPC", "DDM", "DM" or "HQ". Acronyms stay as they are.
   String recordRole(UserRole role) => switch (role) {
     UserRole.societyOfficer => recRoleSocietyOfficer,
