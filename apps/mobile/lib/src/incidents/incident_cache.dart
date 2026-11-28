@@ -192,10 +192,22 @@ class IncidentCache {
     return result;
   }
 
+  /// Every request gets the next number when it starts. An answer is saved
+  /// only when no later request for the same list or page has been saved
+  /// first, so a slow, older answer never replaces a newer one.
+  var _requests = 0;
+  final _committed = <String, int>{};
+
+  /// Accounts whose saved copy may still hold something the API refused,
+  /// because removing it from the phone failed. Their saved copy is never
+  /// read until a save succeeds.
+  final _untrusted = <String>{};
+
   /// The live incident list: from the API when it answers (and saved), else
   /// the saved list.
   Future<Loaded<List<IncidentSummary>>> incidents(IncidentApi api) =>
       _load<List<IncidentSummary>>(
+        'list',
         api.active,
         save: (saved, incidents) {
           final ids = {for (final incident in incidents) incident.id};
@@ -224,6 +236,7 @@ class IncidentCache {
   /// the saved page.
   Future<Loaded<IncidentDetail>> incident(IncidentApi api, String id) =>
       _load<IncidentDetail>(
+        'detail:$id',
         () => api.detail(id),
         save: (saved, detail) {
           (saved['details'] as Map<String, dynamic>)[id] = {
@@ -251,6 +264,7 @@ class IncidentCache {
       );
 
   Future<Loaded<T>> _load<T>(
+    String resource,
     Future<T> Function() fetch, {
     required void Function(Map<String, dynamic> saved, T value) save,
     required Loaded<T>? Function(Map<String, dynamic> saved) read,
@@ -260,17 +274,31 @@ class IncidentCache {
     // saved only for that same account and scope.
     final user = _user();
     final scope = user == null ? null : incidentScope(user, _clock());
+    final request = ++_requests;
     try {
       final value = await fetch();
       if (user != null) {
-        await _change(user, scope!, (saved) => save(saved, value));
+        await _change(
+          user,
+          scope!,
+          resource,
+          request,
+          (saved) => save(saved, value),
+        );
       }
       return Loaded(value);
     } on IncidentException catch (error) {
       if (user == null) rethrow;
       if (!canUseSavedCopy(error)) {
         if (error.status == 403 || error.status == 404) {
-          await _change(user, scope!, refused);
+          await _change(
+            user,
+            scope!,
+            resource,
+            request,
+            refused,
+            refusal: true,
+          );
         }
         rethrow;
       }
@@ -307,6 +335,7 @@ class IncidentCache {
     AuthenticatedUser user,
     String scope,
   ) async {
+    if (_untrusted.contains(user.id)) return null;
     try {
       final text = await _storage.read(user.id);
       if (text == null) return null;
@@ -325,21 +354,42 @@ class IncidentCache {
   Future<void> _change(
     AuthenticatedUser user,
     String scope,
-    void Function(Map<String, dynamic> saved) change,
-  ) => _serialized(() async {
+    String resource,
+    int request,
+    void Function(Map<String, dynamic> saved) change, {
+    bool refusal = false,
+  }) => _serialized(() async {
     // Signed out, switched account or changed scope since the request: the
     // answer belongs to nobody signed in now, so it is not saved.
     if (!_still(user, scope)) return;
+    // A later request for the same list or page was saved already.
+    if ((_committed[resource] ?? 0) > request) return;
+    _committed[resource] = request;
     final saved =
         await _read(user, scope) ??
         {'v': 1, 'scope': scope, 'details': <String, dynamic>{}};
     change(saved);
     try {
       await _storage.write(user.id, jsonEncode(saved));
+      // The copy on the phone is now exactly what was meant to be saved.
+      _untrusted.remove(user.id);
     } catch (error) {
       // The screen still shows the fresh answer; only the offline copy is
       // older than it.
       debugPrint('Incidents could not be saved on this phone: $error');
+      if (refusal) await _forget(user.id);
     }
   });
+
+  /// A refusal could not be saved, so the old copy on the phone may still
+  /// hold the refused data: delete it, and stop reading it if that fails too.
+  Future<void> _forget(String accountId) async {
+    _untrusted.add(accountId);
+    try {
+      await _storage.delete(accountId);
+      _untrusted.remove(accountId);
+    } catch (error) {
+      debugPrint('Saved incidents could not be deleted: $error');
+    }
+  }
 }

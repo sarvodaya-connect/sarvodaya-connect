@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -263,6 +264,85 @@ void main() {
     expect(storage.saved, isEmpty);
   });
 
+  test(
+    'an older answer that arrives late never replaces a newer one',
+    () async {
+      final full = await api.active();
+      final ordered = _OrderedListApi(clock: () => now);
+      final older = Completer<List<IncidentSummary>>();
+      final newer = Completer<List<IncidentSummary>>();
+      ordered.answers
+        ..add(older)
+        ..add(newer);
+
+      final first = cache.incidents(ordered);
+      final second = cache.incidents(ordered);
+      // The incident closed: the newer answer is empty and is saved first.
+      newer.complete(const []);
+      expect((await second).value, isEmpty);
+      older.complete(full);
+      expect((await first).value, hasLength(1));
+
+      api.failure = _offline;
+      expect((await cache.incidents(api)).value, isEmpty);
+    },
+  );
+
+  test('a refusal that cannot be saved still hides the refused copy', () async {
+    final failing = _FailingStorage();
+    cache = IncidentCache(storage: failing, user: () => user, clock: () => now);
+    await cache.incidents(api);
+    await cache.incident(api, 'incident-demo');
+
+    failing.failWrites = true;
+    api.failure = const IncidentException('no', status: 403);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(isA<IncidentException>()),
+    );
+    api.failure = _offline;
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(same(_offline)),
+    );
+    expect(failing.saved, isEmpty);
+  });
+
+  test('a refusal that can be neither saved nor deleted is never read again '
+      'until a save succeeds', () async {
+    final failing = _FailingStorage();
+    cache = IncidentCache(storage: failing, user: () => user, clock: () => now);
+    await cache.incidents(api);
+    await cache.incident(api, 'incident-demo');
+
+    failing
+      ..failWrites = true
+      ..failDeletes = true;
+    api.failure = const IncidentException('no', status: 404);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(isA<IncidentException>()),
+    );
+    api.failure = _offline;
+    expect(failing.saved, isNotEmpty);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(same(_offline)),
+    );
+    await expectLater(cache.incidents(api), throwsA(same(_offline)));
+
+    // A fresh answer replaces the old copy, and it is read again.
+    failing.failWrites = false;
+    api.failure = null;
+    await cache.incidents(api);
+    api.failure = _offline;
+    expect((await cache.incidents(api)).cached, isTrue);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(same(_offline)),
+    );
+  });
+
   group('on the phone', () {
     late Directory root;
     late MemoryQueueKeyStore keys;
@@ -421,5 +501,33 @@ class _SignOutDuringListApi extends DemoIncidentApi {
     final list = await super.active();
     onList();
     return list;
+  }
+}
+
+/// Answers each list request with the next completer in [answers].
+class _OrderedListApi extends DemoIncidentApi {
+  _OrderedListApi({required super.clock});
+  final answers = <Completer<List<IncidentSummary>>>[];
+  var _next = 0;
+
+  @override
+  Future<List<IncidentSummary>> active() => answers[_next++].future;
+}
+
+/// Memory storage whose writes or deletes fail while asked to.
+class _FailingStorage extends MemoryIncidentCacheStorage {
+  bool failWrites = false;
+  bool failDeletes = false;
+
+  @override
+  Future<void> write(String accountId, String json) async {
+    if (failWrites) throw const FileSystemException('disk full');
+    return super.write(accountId, json);
+  }
+
+  @override
+  Future<void> delete(String accountId) async {
+    if (failDeletes) throw const FileSystemException('disk full');
+    return super.delete(accountId);
   }
 }
