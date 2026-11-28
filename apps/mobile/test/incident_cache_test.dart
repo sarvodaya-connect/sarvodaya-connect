@@ -333,6 +333,28 @@ void main() {
     },
   );
 
+  test(
+    'a page saved after its refusal survives an older list answer',
+    () async {
+      final full = await api.active();
+      final held = _HeldApi(clock: () => now);
+      final first = cache.incidents(held);
+
+      api.failure = const IncidentException('no', status: 403);
+      await expectLater(
+        cache.incident(api, 'incident-demo'),
+        throwsA(isA<IncidentException>()),
+      );
+      api.failure = null;
+      await cache.incident(api, 'incident-demo');
+      held.list.complete(full);
+      await first;
+
+      api.failure = _offline;
+      expect((await cache.incident(api, 'incident-demo')).cached, isTrue);
+    },
+  );
+
   test('a refusal that cannot be saved still hides the refused copy', () async {
     final failing = _FailingStorage();
     cache = IncidentCache(storage: failing, user: () => user, clock: () => now);

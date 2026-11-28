@@ -381,7 +381,9 @@ class IncidentCache {
     final list = saved['list'] as Map<String, dynamic>?;
     _pageRefused.forEach((id, refusedBy) {
       if (refusedBy <= request) return;
-      details?.remove(id);
+      // A page saved after the refusal is current: only the old list entry
+      // is dropped.
+      if ((_committed['detail:$id'] ?? 0) <= refusedBy) details?.remove(id);
       (list?['incidents'] as List?)?.removeWhere(
         (incident) => (incident as Map)['id'] == id,
       );
