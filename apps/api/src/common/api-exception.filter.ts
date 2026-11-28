@@ -20,8 +20,11 @@ export function describeError(error: unknown): string {
   if (typeof error !== 'object' || error === null) return 'unknown error';
   const className = error instanceof Error ? error.constructor?.name || error.name : undefined;
   const parts = [className === undefined ? 'non-Error object' : SAFE_NAME.test(className) ? className : 'Error'];
-  const code = (error as { code?: unknown }).code;
-  if (typeof code === 'string' && (PRISMA_CODE.test(code) || SOCKET_CODE.test(code))) parts.push(code);
+  // A Prisma initialization error carries its code in errorCode, not code.
+  const { code, errorCode } = error as { code?: unknown; errorCode?: unknown };
+  for (const value of [code, errorCode]) {
+    if (typeof value === 'string' && (PRISMA_CODE.test(value) || SOCKET_CODE.test(value)) && !parts.includes(value)) parts.push(value);
+  }
   const kind = driverAdapterKind(error);
   if (kind && ADAPTER_KIND.test(kind)) parts.push(kind);
   return parts.join(' ');

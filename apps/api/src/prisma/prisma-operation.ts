@@ -72,7 +72,15 @@ export function isDatabaseUnavailable(error: unknown, depth = 0): boolean {
   if (!value || depth > 3) return false;
   const name =
     error instanceof Error ? error.constructor.name || error.name : undefined;
-  if (name === 'PrismaClientInitializationError') return true;
+  if (name === 'PrismaClientInitializationError') {
+    // Its code is in errorCode: P1001 or P1002 is an outage, but P1000
+    // (authentication failed) or another set-up failure is not. Without a
+    // code it is treated as an outage, since the client could not start.
+    const errorCode = value.errorCode;
+    return typeof errorCode === 'string'
+      ? CONNECTION_CODES.has(errorCode)
+      : true;
+  }
   const code = value.code;
   if (typeof code === 'string') {
     if (CONNECTION_CODES.has(code) || SOCKET_CODES.has(code)) return true;

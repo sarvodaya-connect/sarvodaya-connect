@@ -90,6 +90,14 @@ describe('executeDatabaseOperation', () => {
       ),
     ],
     [
+      'the client could not reach the database (P1001)',
+      new Prisma.PrismaClientInitializationError(
+        "Can't reach database server",
+        '7.10.1',
+        'P1001',
+      ),
+    ],
+    [
       'the pool timed out connecting',
       new Error('Connection terminated due to connection timeout'),
     ],
@@ -126,6 +134,12 @@ describe('executeDatabaseOperation', () => {
     ] as const) {
       expect(isDatabaseUnavailable(prismaError(code, kind)), code).toBe(false);
     }
+    const badCredentials = new Prisma.PrismaClientInitializationError(
+      'Authentication failed',
+      '7.10.1',
+      'P1000',
+    );
+    expect(isDatabaseUnavailable(badCredentials), 'P1000').toBe(false);
     expect(isDatabaseUnavailable(null)).toBe(false);
     expect(isDatabaseUnavailable('ECONNREFUSED')).toBe(false);
   });

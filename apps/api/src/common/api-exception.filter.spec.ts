@@ -168,4 +168,16 @@ describe('describeError', () => {
     expect(describeError('a string')).toBe('unknown error');
     expect(describeError({ code: 'P2002' })).toBe('non-Error object P2002');
   });
+
+  it('includes the code of a Prisma initialization error', () => {
+    expect(
+      describeError(
+        new Prisma.PrismaClientInitializationError(
+          "Can't reach database server",
+          '7.10.1',
+          'P1001',
+        ),
+      ),
+    ).toBe('PrismaClientInitializationError P1001');
+  });
 });
