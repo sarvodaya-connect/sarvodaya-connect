@@ -9,6 +9,7 @@ import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
 import '../incidents/assessment_queue.dart';
+import '../incidents/incident_cache.dart';
 import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
 import '../society_record/document_picker.dart';
@@ -89,6 +90,7 @@ class DemoStore extends ChangeNotifier {
     DistrictAccessApi? districtAccessApi,
     IncidentApi? incidentApi,
     QueueStorage? assessmentStorage,
+    IncidentCacheStorage? incidentCacheStorage,
     EconomyApi? economyApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
@@ -169,6 +171,16 @@ class DemoStore extends ChangeNotifier {
       api: () => incidents,
       clock: _clock,
     );
+    // Issue #126: the last incidents each account loaded, for offline reading.
+    incidentCache = IncidentCache(
+      storage:
+          incidentCacheStorage ??
+          (isDemo
+              ? MemoryIncidentCacheStorage()
+              : EncryptedFileIncidentCacheStorage()),
+      user: () => _user,
+      clock: _clock,
+    );
     economy =
         economyApi ??
         (isDemo
@@ -233,6 +245,10 @@ class DemoStore extends ChangeNotifier {
 
   /// Issue #125: rapid assessments saved on this phone until the API has them.
   late final AssessmentQueue assessments;
+
+  /// Issue #126: the signed-in account's last loaded incidents, shown with a
+  /// "saved" notice when the phone is offline or the server does not answer.
+  late final IncidentCache incidentCache;
 
   /// Issue #146 Village Economic Profile (#145 API): only the assigned
   /// Society Officer writes on the server.

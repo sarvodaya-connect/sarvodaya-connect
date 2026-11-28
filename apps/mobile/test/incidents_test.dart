@@ -420,7 +420,7 @@ void main() {
     final detail = await DemoIncidentApi(clock: () => demoNow)
         .detail('incident-demo');
     final store = await _pump(tester, const IncidentsScreen(), api: api);
-    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    expect(find.text('No incidents saved on this phone'), findsOneWidget);
     await store.assessments.save(
       incident: detail.incident,
       societyId: detail.assessableSocieties.first.id,
@@ -429,7 +429,7 @@ void main() {
       answers: AssessmentAnswers()..impact = 'CRITICAL',
     );
     await tester.pumpAndSettle();
-    expect(find.text("Couldn't load incidents"), findsOneWidget);
+    expect(find.text('No incidents saved on this phone'), findsOneWidget);
     expect(find.text('1 assessment saved on this phone'), findsOneWidget);
     expect(find.text('Remove from this phone'), findsOneWidget);
     expect(find.text('Retry sending'), findsOneWidget);
@@ -445,7 +445,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text("Can't open this incident"), findsOneWidget);
+    expect(
+      find.text("This incident isn't saved on this phone"),
+      findsOneWidget,
+    );
     expect(find.text('1 assessment saved on this phone'), findsOneWidget);
     expect(find.text('Remove from this phone'), findsOneWidget);
   });
@@ -535,7 +538,7 @@ void main() {
         _DownIncidentApi(clock: () => demoNow),
       );
       await expectAllReachable(tester, store, find.text('Try again'));
-      expect(find.text("Couldn't load incidents"), findsOneWidget);
+      expect(find.text('No incidents saved on this phone'), findsOneWidget);
     });
 
     testWidgets('Disaster Response, while incidents load', (tester) async {
@@ -554,7 +557,10 @@ void main() {
         _DownIncidentApi(clock: () => demoNow),
       );
       await expectAllReachable(tester, store, find.text('Try again'));
-      expect(find.text("Can't open this incident"), findsOneWidget);
+      expect(
+        find.text("This incident isn't saved on this phone"),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the incident page, while it loads', (tester) async {
@@ -577,7 +583,9 @@ void main() {
       expect(store.assessments.items, isEmpty);
       // Centred in the space below the bar, as before.
       final screen = tester.getSize(find.byType(Scaffold));
-      final message = tester.getCenter(find.text("Couldn't load incidents"));
+      final message = tester.getCenter(
+        find.text('No incidents saved on this phone'),
+      );
       expect((message.dy - screen.height / 2).abs(), lessThan(120));
     });
   });
