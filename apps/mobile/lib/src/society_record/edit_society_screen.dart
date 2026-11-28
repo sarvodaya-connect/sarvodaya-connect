@@ -139,8 +139,16 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// The connection failed during Reload record, not Save: Try again reloads.
   bool _retryReload = false;
 
-  /// No typing or pin moves while the draft is read or a save is sent.
-  bool get _locked => _restoring || _saving;
+  /// The draft is being deleted: nothing typed meanwhile could be kept.
+  bool _discarding = false;
+
+  /// Counts discards, so a reload that started before one never puts its
+  /// result into the form or keeps it as a draft again.
+  int _discards = 0;
+
+  /// No typing or pin moves while the draft is read, deleted, or a save is
+  /// sent.
+  bool get _locked => _restoring || _saving || _discarding;
 
   @override
   void initState() {
@@ -241,7 +249,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// Keeps what is typed on the phone; with nothing changed, no draft is kept.
   /// Returns when the current form was saved, or null when it was not.
   Future<DateTime?> _keepDraft() async {
-    if (_applying || _restoring || !mounted) return null;
+    if (_applying || _restoring || _discarding || !mounted) return null;
     final drafts = DemoScope.read(context).drafts;
     final id = widget.record.id;
     if (_changed.isEmpty) {
@@ -268,6 +276,23 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   void _setLocation(GeoLocation location) {
     setState(() => _location = location);
     _keepDraft();
+  }
+
+  /// Deletes the draft with the form locked. On failure the form is unlocked
+  /// as it was, so the person can try again.
+  Future<bool> _deleteDraft() async {
+    setState(() {
+      _discarding = true;
+      _discards++;
+    });
+    final deleted = await DemoScope.read(context).drafts
+        .discard(DraftKind.societyProfile, widget.record.id);
+    if (!mounted) return deleted;
+    if (!deleted) {
+      setState(() => _discarding = false);
+      _showMessage(_l.draftDiscardFailed);
+    }
+    return deleted;
   }
 
   void _showMessage(String message) =>
@@ -299,17 +324,12 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    final deleted = await DemoScope.read(context).drafts
-        .discard(DraftKind.societyProfile, widget.record.id);
-    if (!mounted) return;
-    if (!deleted) {
-      // Still on the phone: the form keeps it, so a retry can delete it.
-      _showMessage(_l.draftDiscardFailed);
-      return;
-    }
+    // Still on the phone after a failure: the form keeps it for a retry.
+    if (!await _deleteDraft() || !mounted) return;
     _draftRequested = false;
     final current = profileValuesOf(_record);
     setState(() {
+      _discarding = false;
       _apply(current, current);
       _draftSavedAt = null;
       _conflicts = const {};
@@ -326,21 +346,23 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// be fetched or may no longer be edited; the draft is kept either way.
   Future<ProfileMerge?> _reload() async {
     final store = DemoScope.read(context);
+    final discards = _discards;
     final SocietyRecord latest;
     try {
       latest = await store.societyRecords.fetchRecord(widget.record.id);
     } on SocietyRecordException catch (error) {
-      if (mounted) setState(() => _showFailure(error));
+      if (mounted && discards == _discards) setState(() => _showFailure(error));
       return null;
     } catch (error) {
       // For example a reply that could not be read: retryable, draft kept.
       debugPrint('The newest record could not be read: $error');
-      if (mounted) {
+      if (mounted && discards == _discards) {
         setState(() => _serverError = _l.recStillHere(_l.errorServer));
       }
       return null;
     }
-    if (!mounted) return null;
+    // Discarded meanwhile: the reload must not bring the draft back.
+    if (!mounted || discards != _discards) return null;
     if (!latest.permissions.canEdit) {
       setState(() => _noLongerAllowed = true);
       return null;
@@ -637,14 +659,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     if (!mounted) return;
     switch (choice) {
       case 'discard':
-        final deleted = await DemoScope.read(context).drafts
-            .discard(DraftKind.societyProfile, widget.record.id);
-        if (!mounted) return;
-        if (deleted) {
-          Navigator.of(context).pop(false);
-        } else {
-          _showMessage(_l.draftDiscardFailed);
-        }
+        if (await _deleteDraft() && mounted) Navigator.of(context).pop(false);
       case 'keepDraft':
         // Leaves only once the form as it is now is on this phone, so the
         // same draft is offered again next time.
