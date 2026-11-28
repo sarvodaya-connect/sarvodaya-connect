@@ -316,16 +316,14 @@ function RedesignedShell({ alerts, children, preview, unreadCount = 0, viewer }:
       <aside className="relative hidden h-screen flex-col overflow-hidden bg-brand-forest text-sidebar-text lg:sticky lg:top-0 lg:flex">
         <Link
           aria-label={t("shell.home")}
-          className="flex h-[104px] shrink-0 items-center justify-center px-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+          className="flex h-[104px] shrink-0 items-center justify-center bg-canvas px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-forest/60"
           href={homeHref}
         >
-          {/* The original logo on its white background. The square image has wide white margins,
-              so the card crops them away without changing the logo's proportions. */}
-          <span className="relative block h-[76px] w-[192px] max-w-full overflow-hidden rounded-[12px] bg-white shadow-[0_6px_16px_-12px_rgb(0_0_0/0.7)]">
-            <Image alt="Sarvodaya Connect" className="object-cover object-[50%_48%]" fill priority sizes="192px" src="/brand/sarvodaya-connect-logo.jpg" />
-          </span>
+          {/* The Sarvodaya Connect wordmark on a light band across the top of the
+              sidebar, the same colour as the page, with the green starting below it. */}
+          <Image alt="Sarvodaya Connect" className="h-auto w-[132px] max-w-full" height={180} priority sizes="132px" src="/brand/sarvodaya-connect-wordmark.png" width={472} />
         </Link>
-        <nav aria-label={t("shell.mainNavigation")} className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4 pt-2" ref={nav}>
+        <nav aria-label={t("shell.mainNavigation")} className="relative flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4 pt-5" ref={nav}>
           {pill && (
             <span
               aria-hidden="true"

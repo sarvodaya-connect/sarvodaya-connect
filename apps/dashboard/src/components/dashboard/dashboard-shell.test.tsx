@@ -92,9 +92,9 @@ describe("Redesigned shell", () => {
   it("gives HQ the redesigned shell with SarvoAI, search, alerts and account", () => {
     renderShell(getViewer("hq-admin"), 2);
 
-    // The original logo on its white background, not the white lettering.
-    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo.jpg");
-    expect(logo().parentElement).toHaveClass("bg-white");
+    // The wordmark on the light band at the top of the sidebar, not the white lettering.
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-wordmark.png");
+    expect(logo().closest("a")).toHaveClass("bg-canvas");
     expect(screen.getByRole("link", { name: /SarvoAI/ })).toHaveAttribute("href", "/sarvoai");
     expect(screen.getByRole("link", { name: "Alerts, 2 New" })).toHaveAttribute("href", "/notifications");
     expect(screen.getByRole("button", { name: "Account: K. Fernando · Sign Out" })).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("Redesigned shell", () => {
   ])("gives the %s the redesigned shell, without HQ-only SarvoAI", (_role, viewer, scope) => {
     renderShell(viewer);
 
-    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-logo.jpg");
+    expect(logo().getAttribute("src")).toContain("sarvodaya-connect-wordmark.png");
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /SarvoAI/ })).not.toBeInTheDocument();
     expect(within(desktopNav()).getByText(scope)).toBeInTheDocument();
