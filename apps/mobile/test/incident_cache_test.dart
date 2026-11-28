@@ -407,6 +407,29 @@ void main() {
     },
   );
 
+  test(
+    'a late offline answer from an old scope keeps the current copy',
+    () async {
+      final held = _HeldApi(clock: () => now);
+      final first = cache.incidents(held);
+
+      // The scope changes and the new scope saves its list.
+      user = const AuthenticatedUser(
+        id: 'user-test-a',
+        displayName: 'Test Officer A',
+        roles: [UserRole.societyOfficer],
+        societyIds: ['society-test-9'],
+      );
+      await cache.incidents(api);
+
+      held.list.completeError(_offline);
+      await expectLater(first, throwsA(same(_offline)));
+
+      api.failure = _offline;
+      expect((await cache.incidents(api)).cached, isTrue);
+    },
+  );
+
   test('a refusal that cannot be saved still hides the refused copy', () async {
     final failing = _FailingStorage();
     cache = IncidentCache(storage: failing, user: () => user, clock: () => now);

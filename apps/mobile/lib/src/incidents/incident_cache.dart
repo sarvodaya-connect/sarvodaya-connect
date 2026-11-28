@@ -306,7 +306,11 @@ class IncidentCache {
         }
         rethrow;
       }
-      final saved = await _serialized(() => _read(user, scope!));
+      // Checked before reading: a request from an old scope must not delete
+      // the copy saved for the current one as a mismatch.
+      final saved = await _serialized(
+        () async => _still(user, scope!) ? _read(user, scope) : null,
+      );
       final copy = saved == null ? null : _safeRead(read, saved);
       if (copy == null || !_still(user, scope!)) rethrow;
       return copy;
