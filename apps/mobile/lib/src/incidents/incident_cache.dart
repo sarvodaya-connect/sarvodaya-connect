@@ -215,15 +215,17 @@ class IncidentCache {
       _load<List<IncidentSummary>>(
         'list',
         api.active,
-        save: (saved, incidents) {
+        save: (saved, incidents, request) {
           final ids = {for (final incident in incidents) incident.id};
           saved['list'] = {
             'savedAt': _clock().toUtc().toIso8601String(),
             'incidents': [for (final incident in incidents) incident.toJson()],
           };
-          // Keep the pages of listed incidents only, so the copy never grows.
+          // Keep the pages of listed incidents only, so the copy never grows,
+          // but never a page saved by a request newer than this list.
           (saved['details'] as Map<String, dynamic>).removeWhere(
-            (id, _) => !ids.contains(id),
+            (id, _) =>
+                !ids.contains(id) && (_committed['detail:$id'] ?? 0) <= request,
           );
         },
         read: (saved) {
@@ -245,7 +247,7 @@ class IncidentCache {
       _load<IncidentDetail>(
         'detail:$id',
         () => api.detail(id),
-        save: (saved, detail) {
+        save: (saved, detail, _) {
           (saved['details'] as Map<String, dynamic>)[id] = {
             'savedAt': _clock().toUtc().toIso8601String(),
             'detail': detail.toJson(),
@@ -274,7 +276,8 @@ class IncidentCache {
   Future<Loaded<T>> _load<T>(
     String resource,
     Future<T> Function() fetch, {
-    required void Function(Map<String, dynamic> saved, T value) save,
+    required void Function(Map<String, dynamic> saved, T value, int request)
+    save,
     required Loaded<T>? Function(Map<String, dynamic> saved) read,
     required void Function(Map<String, dynamic> saved) refused,
     required void Function(int request) onRefused,
@@ -292,7 +295,7 @@ class IncidentCache {
           scope!,
           resource,
           request,
-          (saved) => save(saved, value),
+          (saved) => save(saved, value, request),
         );
       }
       return Loaded(value);

@@ -355,6 +355,32 @@ void main() {
     },
   );
 
+  test('a page saved after its refusal survives an older empty list', () async {
+    final held = _HeldApi(clock: () => now);
+    final first = cache.incidents(held);
+
+    api.failure = const IncidentException('no', status: 403);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(isA<IncidentException>()),
+    );
+    api.failure = null;
+    await cache.incident(api, 'incident-demo');
+    held.list.complete(const []);
+    await first;
+
+    api.failure = _offline;
+    expect((await cache.incident(api, 'incident-demo')).cached, isTrue);
+
+    // A newer list without the incident still drops its page.
+    final empty = _HeldApi(clock: () => now)..list.complete(const []);
+    await cache.incidents(empty);
+    await expectLater(
+      cache.incident(api, 'incident-demo'),
+      throwsA(same(_offline)),
+    );
+  });
+
   test('a refusal that cannot be saved still hides the refused copy', () async {
     final failing = _FailingStorage();
     cache = IncidentCache(storage: failing, user: () => user, clock: () => now);
