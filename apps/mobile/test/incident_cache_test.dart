@@ -381,6 +381,32 @@ void main() {
     );
   });
 
+  test(
+    'another account\'s requests never decide what this one saves',
+    () async {
+      await cache.incident(api, 'incident-demo');
+      final held = _HeldApi(clock: () => now);
+      final first = cache.incidents(held);
+
+      // Account B saves the same incident and a list while A's list waits.
+      user = _officerB;
+      await cache.incident(api, 'incident-demo');
+      await cache.incidents(api);
+
+      user = _officerA;
+      held.list.complete(const []);
+      await first;
+
+      // A's newer, empty list was saved and dropped A's older page.
+      api.failure = _offline;
+      expect((await cache.incidents(api)).value, isEmpty);
+      await expectLater(
+        cache.incident(api, 'incident-demo'),
+        throwsA(same(_offline)),
+      );
+    },
+  );
+
   test('a refusal that cannot be saved still hides the refused copy', () async {
     final failing = _FailingStorage();
     cache = IncidentCache(storage: failing, user: () => user, clock: () => now);

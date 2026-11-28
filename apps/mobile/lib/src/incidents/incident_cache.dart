@@ -192,17 +192,11 @@ class IncidentCache {
     return result;
   }
 
-  /// Every request gets the next number when it starts. An answer is saved
-  /// only when no later request for the same list or page has been saved
-  /// first, so a slow, older answer never replaces a newer one.
+  /// Every request gets the next number when it starts. Request order is
+  /// kept separately for each account and scope, so one account's requests
+  /// never decide what another account's answers may save.
   var _requests = 0;
-  final _committed = <String, int>{};
-
-  /// The request whose refusal last cleared the whole saved copy, and the
-  /// request whose refusal last removed each incident. A save from a request
-  /// that started before a refusal never brings the refused data back.
-  var _listRefused = 0;
-  final _pageRefused = <String, int>{};
+  final _orders = <String, _Order>{};
 
   /// Accounts whose saved copy may still hold something the API refused,
   /// because removing it from the phone failed. Their saved copy is never
@@ -224,8 +218,7 @@ class IncidentCache {
           // Keep the pages of listed incidents only, so the copy never grows,
           // but never a page saved by a request newer than this list.
           (saved['details'] as Map<String, dynamic>).removeWhere(
-            (id, _) =>
-                !ids.contains(id) && (_committed['detail:$id'] ?? 0) <= request,
+            (id, _) => !ids.contains(id) && !request.pageSavedAfter(id),
           );
         },
         read: (saved) {
@@ -238,7 +231,7 @@ class IncidentCache {
         },
         // The list is refused only when the account lost disaster access.
         refused: (saved) => saved.clear(),
-        onRefused: (request) => _listRefused = request,
+        onRefused: (request) => request.order.listRefused = request.number,
       );
 
   /// One incident's page: from the API when it answers (and saved), else
@@ -270,23 +263,26 @@ class IncidentCache {
             (incident) => (incident as Map)['id'] == id,
           );
         },
-        onRefused: (request) => _pageRefused[id] = request,
+        onRefused: (request) => request.order.pageRefused[id] = request.number,
       );
 
   Future<Loaded<T>> _load<T>(
     String resource,
     Future<T> Function() fetch, {
-    required void Function(Map<String, dynamic> saved, T value, int request)
+    required void Function(Map<String, dynamic> saved, T value, _Request r)
     save,
     required Loaded<T>? Function(Map<String, dynamic> saved) read,
     required void Function(Map<String, dynamic> saved) refused,
-    required void Function(int request) onRefused,
+    required void Function(_Request request) onRefused,
   }) async {
     // The account and scope the request is made for. What comes back is
     // saved only for that same account and scope.
     final user = _user();
     final scope = user == null ? null : incidentScope(user, _clock());
-    final request = ++_requests;
+    final request = _Request(
+      ++_requests,
+      scope == null ? _Order() : _orders.putIfAbsent(scope, _Order.new),
+    );
     try {
       final value = await fetch();
       if (user != null) {
@@ -363,7 +359,7 @@ class IncidentCache {
     AuthenticatedUser user,
     String scope,
     String resource,
-    int request,
+    _Request request,
     void Function(Map<String, dynamic> saved) change, {
     bool refusal = false,
   }) => _serialized(() async {
@@ -371,10 +367,12 @@ class IncidentCache {
     // answer belongs to nobody signed in now, so it is not saved.
     if (!_still(user, scope)) return;
     // A later request for the same list or page was saved already.
-    if ((_committed[resource] ?? 0) > request) return;
+    final order = request.order;
+    final number = request.number;
+    if ((order.committed[resource] ?? 0) > number) return;
     // The whole copy was refused after this request started.
-    if (!refusal && _listRefused > request) return;
-    _committed[resource] = request;
+    if (!refusal && order.listRefused > number) return;
+    order.committed[resource] = number;
     final saved =
         await _read(user, scope) ??
         {'v': 1, 'scope': scope, 'details': <String, dynamic>{}};
@@ -382,11 +380,13 @@ class IncidentCache {
     // Incidents refused after this request started stay out of the copy.
     final details = saved['details'] as Map<String, dynamic>?;
     final list = saved['list'] as Map<String, dynamic>?;
-    _pageRefused.forEach((id, refusedBy) {
-      if (refusedBy <= request) return;
+    order.pageRefused.forEach((id, refusedBy) {
+      if (refusedBy <= number) return;
       // A page saved after the refusal is current: only the old list entry
       // is dropped.
-      if ((_committed['detail:$id'] ?? 0) <= refusedBy) details?.remove(id);
+      if ((order.committed['detail:$id'] ?? 0) <= refusedBy) {
+        details?.remove(id);
+      }
       (list?['incidents'] as List?)?.removeWhere(
         (incident) => (incident as Map)['id'] == id,
       );
@@ -414,4 +414,24 @@ class IncidentCache {
       debugPrint('Saved incidents could not be deleted: $error');
     }
   }
+}
+
+/// Request order for one account and scope: the last saved request for the
+/// list and each page, and the requests whose refusals last cleared the
+/// whole copy or removed each incident. A save from a request that started
+/// before a refusal never brings the refused data back.
+class _Order {
+  final committed = <String, int>{};
+  var listRefused = 0;
+  final pageRefused = <String, int>{};
+}
+
+class _Request {
+  _Request(this.number, this.order);
+  final int number;
+  final _Order order;
+
+  /// Whether a page request newer than this one has been saved for [id].
+  bool pageSavedAfter(String id) =>
+      (order.committed['detail:$id'] ?? 0) > number;
 }
