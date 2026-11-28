@@ -8,6 +8,7 @@ import '../society_admin/society_admin_api.dart'
 import '../sarvoai/sarvoai_api.dart';
 import '../district_access/district_access_api.dart';
 import '../incidents/demo_incident_api.dart';
+import '../drafts/draft_store.dart';
 import '../incidents/assessment_queue.dart';
 import '../incidents/incident_api.dart';
 import '../society_record/demo_society_record_api.dart';
@@ -89,6 +90,7 @@ class DemoStore extends ChangeNotifier {
     DistrictAccessApi? districtAccessApi,
     IncidentApi? incidentApi,
     QueueStorage? assessmentStorage,
+    DraftStorage? draftStorage,
     EconomyApi? economyApi,
     DocumentPicker? documentPicker,
     this.showSplash = true,
@@ -169,6 +171,14 @@ class DemoStore extends ChangeNotifier {
       api: () => incidents,
       clock: _clock,
     );
+    // Issue #127: unfinished society forms, per account and society.
+    drafts = DraftStore(
+      storage:
+          draftStorage ??
+          (isDemo ? MemoryDraftStorage() : EncryptedFileDraftStorage()),
+      user: () => _user,
+      clock: _clock,
+    );
     economy =
         economyApi ??
         (isDemo
@@ -233,6 +243,9 @@ class DemoStore extends ChangeNotifier {
 
   /// Issue #125: rapid assessments saved on this phone until the API has them.
   late final AssessmentQueue assessments;
+
+  /// Issue #127: the signed-in account's unfinished society forms.
+  late final DraftStore drafts;
 
   /// Issue #146 Village Economic Profile (#145 API): only the assigned
   /// Society Officer writes on the server.

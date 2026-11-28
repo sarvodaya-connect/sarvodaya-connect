@@ -226,7 +226,9 @@ void main() {
     await _save(tester);
     expect(api.attempts, 1);
     expect(find.text('Edit Society Information'), findsOneWidget);
-    expect(find.text('Not Saved'), findsOneWidget);
+    // Issue #127: offline, the changes stay on the phone as a draft.
+    expect(find.text('Connection required'), findsOneWidget);
+    expect(find.text('Saved on this phone'), findsOneWidget);
     expect(find.widgetWithText(TextField, '25'), findsOneWidget);
     expect(find.widgetWithText(TextField, '17'), findsOneWidget);
     expect(_total(tester), '42');

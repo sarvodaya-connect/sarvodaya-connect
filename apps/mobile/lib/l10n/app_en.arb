@@ -1321,7 +1321,7 @@
   "editLandlineFormat": "Enter a 10-digit number, for example 037 000 0000, or leave it empty.",
   "editSaved": "Saved. The change is in the society history.",
   "editLeaveTitle": "Leave Without Saving?",
-  "editLeaveBody": "{count, plural, =1{You changed 1 field: {fields}. If you leave now, these changes are lost.} other{You changed {count} fields: {fields}. If you leave now, these changes are lost.}}",
+  "editLeaveBody": "{count, plural, =1{You changed 1 field: {fields}. Keep the draft to finish later on this phone, save it to the record now, or discard the change.} other{You changed {count} fields: {fields}. Keep the draft to finish later on this phone, save them to the record now, or discard the changes.}}",
   "@editLeaveBody": {
     "placeholders": {
       "count": {
@@ -3607,6 +3607,53 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "draftSavedTitle": "Saved on this phone",
+  "draftSavedMessage": "Last saved {time}. Your changes stay here until you save them to the record or discard them.",
+  "@draftSavedMessage": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "draftReload": "Reload record",
+  "draftDiscard": "Discard draft",
+  "draftKeep": "Keep draft",
+  "draftDiscardTitle": "Discard this draft?",
+  "draftDiscardBody": "Your unsaved changes to this society will be deleted from this phone.",
+  "draftKeepLeave": "Keep draft and leave",
+  "draftChangedTitle": "Someone else changed this society",
+  "draftConflictMessage": "Your changes are kept. {count, plural, =1{1 field you edited was also changed. Check the marked field, then save again.} other{{count} fields you edited were also changed. Check the marked fields, then save again.}}",
+  "@draftConflictMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "draftNewerMessage": "Your changes are kept. Newer values were filled in for the fields you had not changed.",
+  "draftConflictField": "Also changed by someone else. Now: {value}",
+  "@draftConflictField": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "draftConnectionTitle": "Connection required",
+  "draftConnectionMessage": "Your changes are saved on this phone, not yet in the record. Try again when you're online.",
+  "draftNoAccessTitle": "You can no longer edit this society",
+  "draftNoAccessMessage": "Nothing was sent. Your draft is kept on this phone until you discard it. Ask your DM or HQ if this is wrong.",
+  "draftDiscardFailed": "The draft could not be deleted from this phone. Your changes are still here. Try again.",
+  "draftKeepFailed": "Your latest changes could not be saved on this phone. Stay here and try again, or discard them.",
+  "draftLocationConflict": "Pin also moved by someone else. Now: {value}",
+  "@draftLocationConflict": {
+    "placeholders": {
+      "value": {
+        "type": "String"
       }
     }
   }

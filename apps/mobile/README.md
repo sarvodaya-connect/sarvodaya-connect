@@ -93,6 +93,22 @@ Open **Demo options** (sliders icon on Home) to show these states during a demon
 | Locked during review | Submit the Council update, then use **Start review** on its tracker page |
 | Changes requested | After **Start review**, use **Return start date** |
 
+### Offline drafts (issue #127)
+
+Unfinished forms are kept on the phone, so leaving the screen, losing the connection, a failed save or an app restart does not lose what was typed.
+
+| Form | Offline draft |
+| --- | --- |
+| **Edit society information** (M06e) | Yes. Saved as you type and shown as **Saved on this phone**. A failed save shows **Connection required** with **Try again**. Before saving, the newest record is fetched: fields you did not change take the newer values, and fields changed both here and on the server are marked for review before anything is sent. **Reload record** does the same at any time. **Discard draft** asks first |
+| Council and Exco updates | Not yet (planned in a later part of #127) |
+| Activity reports | Not yet (planned in a later part of #127) |
+| Document upload choices | Not yet (planned in a later part of #127) |
+
+- Each draft belongs to one signed-in account and one society, and is encrypted on the phone under that account's own key. Another account on the same phone cannot read it.
+- After sign-out a draft stays encrypted on the phone, so the same person finds it after signing in again. It is deleted once the server confirms the save, or when it is discarded.
+- Nothing is sent from a draft on its own: the person sends it. Before sending, the app checks again that the account may still edit the society.
+- The app does not keep the sign-in after a restart, so signing in again needs a connection. Offline sign-in is not part of #127.
+
 ### Code structure
 
 - `lib/src/models` — Dart versions of the shared API contracts in `packages/api-contracts`; `audit.dart` and `notification.dart` are UI models until audits and notifications are added to the contracts
