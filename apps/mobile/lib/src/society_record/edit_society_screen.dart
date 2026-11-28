@@ -150,6 +150,9 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// sent.
   bool get _locked => _restoring || _saving || _discarding;
 
+  /// Saving, reloading or discarding: none of them starts while another runs.
+  bool get _busy => _saving || _reloading || _discarding;
+
   @override
   void initState() {
     super.initState();
@@ -395,7 +398,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   }
 
   Future<void> _reloadRecord() async {
-    if (_saving || _reloading) return;
+    if (_busy) return;
     setState(() {
       _reloading = true;
       _retryReload = true;
@@ -482,7 +485,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   ].every((error) => error == null);
 
   Future<bool> _save() async {
-    if (_saving || _reloading) return false;
+    if (_busy) return false;
     setState(() {
       _retryReload = false;
       _submitted = true;
@@ -809,7 +812,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
                 style: compactOutlinedStyle,
-                onPressed: _saving || _reloading
+                onPressed: _busy
                     ? null
                     : (_retryReload ? _reloadRecord : _save),
                 icon: const Icon(Icons.refresh, size: 16),
@@ -841,7 +844,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               children: [
                 OutlinedButton(
                   style: compactOutlinedStyle,
-                  onPressed: _saving || _reloading ? null : _reloadRecord,
+                  onPressed: _busy ? null : _reloadRecord,
                   child: Text(l.draftReload),
                 ),
                 TextButton(
@@ -850,7 +853,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                       AppColors.danger,
                     ),
                   ),
-                  onPressed: _saving || _reloading ? null : _discardDraft,
+                  onPressed: _busy ? null : _discardDraft,
                   child: Text(l.draftDiscard),
                 ),
               ],
@@ -1062,9 +1065,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
             child: Text(l.editCancel),
           ),
           primary: FilledButton(
-            onPressed: dirty && !_saving && !_reloading && _valid
-                ? _save
-                : null,
+            onPressed: dirty && !_busy && _valid ? _save : null,
             child: Text(_saving ? l.recSaving : l.editSave),
           ),
         ),
