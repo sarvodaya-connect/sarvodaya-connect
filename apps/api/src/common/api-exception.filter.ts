@@ -1,6 +1,35 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
+
+import { driverAdapterKind } from '../prisma/prisma-operation.js';
+
+const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+const PRISMA_CODE = /^P\d{4}$/;
+const SOCKET_CODE = /^E[A-Z_]{2,20}$/;
+const ADAPTER_KIND = /^[A-Za-z]{1,40}$/;
+
+/**
+ * Issue #157: what failed, for the log. Only the error's class name, a
+ * Prisma code (such as P2002) or socket code (such as ECONNREFUSED) and the
+ * database adapter's error kind (such as UniqueConstraintViolation). Each is
+ * checked against a fixed pattern, so no message, value, query, request body
+ * or header can reach the log through it.
+ */
+export function describeError(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'unknown error';
+  const className = error instanceof Error ? error.constructor?.name || error.name : undefined;
+  const parts = [className === undefined ? 'non-Error object' : SAFE_NAME.test(className) ? className : 'Error'];
+  // A Prisma initialization error carries its code in errorCode, not code.
+  const { code, errorCode } = error as { code?: unknown; errorCode?: unknown };
+  for (const value of [code, errorCode]) {
+    if (typeof value === 'string' && (PRISMA_CODE.test(value) || SOCKET_CODE.test(value)) && !parts.includes(value)) parts.push(value);
+  }
+  const kind = driverAdapterKind(error);
+  if (kind && ADAPTER_KIND.test(kind)) parts.push(kind);
+  return parts.join(' ');
+}
+
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger('ApiExceptionFilter');
@@ -25,13 +54,19 @@ export class ApiExceptionFilter implements ExceptionFilter {
               ? 'CONFLICT'
               : status === 429
                 ? 'LIMIT_REACHED'
-                : 'INTERNAL_ERROR';
+                : status === 503
+                  ? 'SERVICE_UNAVAILABLE'
+                  : 'INTERNAL_ERROR';
     const message = Array.isArray(messages) ? 'Request validation failed' : typeof messages === 'string' ? messages : status === 500 ? 'Internal server error' : 'Request failed';
     const details = Array.isArray(messages) ? messages.map((m: unknown) => ({ field: typeof m === 'string' ? m.split(' ')[0] : 'request', messages: [String(m)] })) : undefined;
     const header = request.headers['x-request-id'];
     const requestId = typeof header === 'string' && header.length <= 128 ? header : randomUUID();
-    // Unexpected failures are logged with the error name, route and request id only: never the request body or headers.
-    if (status >= 500) this.logger.error(`${request.method} ${request.route?.path ?? 'unmatched route'} failed with ${status} (${exception instanceof Error ? exception.name : 'unknown error'}); requestId ${requestId}`);
+    // Unexpected failures are logged with the error and its cause (class name and Prisma code only), the route and the request id: never a message, value, request body or header.
+    if (status >= 500) {
+      const cause = exception instanceof HttpException ? exception.cause : undefined;
+      const what = cause === undefined ? describeError(exception) : `${describeError(exception)}; cause ${describeError(cause)}`;
+      this.logger.error(`${request.method} ${request.route?.path ?? 'unmatched route'} failed with ${status} (${what}); requestId ${requestId}`);
+    }
     response.status(status).json({ error: { code, message, requestId, ...(details ? { details } : {}) } });
   }
 }

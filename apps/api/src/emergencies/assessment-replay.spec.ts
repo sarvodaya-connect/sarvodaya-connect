@@ -190,7 +190,10 @@ describe('sending the same assessment again (issue #125)', () => {
       id: SOCIETY,
       districtId: 'district-1',
     }));
-    prisma.$transaction.mockRejectedValueOnce(new Error('connection lost'));
+    // Issue #157: a lost connection is still a 503 (other database errors are 500).
+    prisma.$transaction.mockRejectedValueOnce(
+      new Error('Connection terminated unexpectedly'),
+    );
     await expect(
       svc.sendAssessment(INCIDENT, input, officer),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);

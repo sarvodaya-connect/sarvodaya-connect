@@ -1,6 +1,6 @@
 import { findDemoPrincipal } from '../auth/demo-principals.js';
 const hq = findDemoPrincipal('demo-hq-admin')!;
-import { ServiceUnavailableException } from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -109,8 +109,9 @@ describe('SocietiesRepository', () => {
 
     const call = repository.findById('29000000-0000-4000-8000-000000000101');
 
-    await expect(call).rejects.toBeInstanceOf(ServiceUnavailableException);
-    await expect(call).rejects.toThrow('Database temporarily unavailable');
+    // Issue #157: not an outage, so a 500, still without database details.
+    await expect(call).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(call).rejects.toThrow('Internal server error');
     await expect(call).rejects.not.toThrow('private-user');
   });
 });
