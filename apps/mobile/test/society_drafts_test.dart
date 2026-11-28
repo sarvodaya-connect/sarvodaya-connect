@@ -64,6 +64,13 @@ class _Api extends DemoSocietyRecordApi {
       super.updateRecord(_pahala, changes);
 }
 
+/// A phone whose drafts cannot be deleted.
+class _FailingDelete extends MemoryDraftStorage {
+  @override
+  Future<void> delete(String accountId, String key) async =>
+      throw const FileSystemException('read only');
+}
+
 const _a = AuthenticatedUser(
   id: 'user-test-a',
   displayName: 'Test A',
@@ -167,6 +174,28 @@ void main() {
       final discard = drafts.discard(DraftKind.societyProfile, _pahala);
       await Future.wait([save, discard]);
       expect(await drafts.read(DraftKind.societyProfile, _pahala), isNull);
+    });
+
+    test(
+      'a save after a discard is kept, even before the queue runs',
+      () async {
+        final first = drafts.save(DraftKind.societyProfile, _pahala, {'x': 1});
+        final discard = drafts.discard(DraftKind.societyProfile, _pahala);
+        final second = drafts.save(DraftKind.societyProfile, _pahala, {'x': 2});
+        expect(await first, isNull);
+        expect(await discard, isTrue);
+        expect(await second, isNotNull);
+        expect((await drafts.read(DraftKind.societyProfile, _pahala))!.data, {
+          'x': 2,
+        });
+      },
+    );
+
+    test('a draft that cannot be deleted is reported', () async {
+      final failing = DraftStore(storage: _FailingDelete(), user: () => user);
+      await failing.save(DraftKind.societyProfile, _pahala, {'x': 1});
+      expect(await failing.discard(DraftKind.societyProfile, _pahala), isFalse);
+      expect(await failing.read(DraftKind.societyProfile, _pahala), isNotNull);
     });
 
     group('on the phone', () {
@@ -344,6 +373,26 @@ void main() {
       expect(find.text('Edit Society Information'), findsNothing);
       expect(storage.saved, isEmpty);
       expect((await api.fetchRecord(_pahala)).nameEn, 'Offline Name SSS');
+    });
+
+    testWidgets('Reload record offline: Try again reloads, never saves', (
+      tester,
+    ) async {
+      await pump(tester);
+      await openEdit(tester);
+      await tester.enterText(box(0), 'Reload Only SSS');
+      await tester.pumpAndSettle();
+
+      api.offline = true;
+      await tap(tester, find.widgetWithText(OutlinedButton, 'Reload record'));
+      expect(find.text('Connection required'), findsOneWidget);
+
+      api.offline = false;
+      await tap(tester, find.widgetWithText(OutlinedButton, 'Try again'));
+      expect(api.sent, isEmpty);
+      expect(find.text('Connection required'), findsNothing);
+      expect(find.text('Edit Society Information'), findsOneWidget);
+      expect(text(tester, 0), 'Reload Only SSS');
     });
 
     testWidgets('a newer record: untouched fields update, overlaps are '

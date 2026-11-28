@@ -124,6 +124,24 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   /// again as typing.
   bool _applying = false;
 
+  /// The saved draft is still being read: the form is read only until it is
+  /// in, so nothing typed meanwhile is replaced by it.
+  bool _restoring = true;
+
+  /// A Reload record is in progress. Saving waits for it, so a save never
+  /// overlaps a reload and every overlap found is reviewed first.
+  bool _reloading = false;
+
+  /// A draft write was asked for since the last discard, even if it has not
+  /// finished yet. Going back to the original values then deletes it.
+  bool _draftRequested = false;
+
+  /// The connection failed during Reload record, not Save: Try again reloads.
+  bool _retryReload = false;
+
+  /// No typing or pin moves while the draft is read or a save is sent.
+  bool get _locked => _restoring || _saving;
+
   @override
   void initState() {
     super.initState();
@@ -172,48 +190,89 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     _applying = false;
   }
 
+  /// Overlaps still waiting for review: the ones [merge] found, and earlier
+  /// ones the person has not changed back (issue #127).
+  static Set<String> _openConflicts(
+    ProfileMerge merge,
+    Iterable<String> kept,
+  ) => {
+    ...merge.conflicts,
+    for (final field in kept)
+      if ((merge.values[field] ?? '') != (merge.base[field] ?? '')) field,
+  };
+
   /// Issue #127: reopens a draft saved earlier, checked against this record.
   Future<void> _restoreDraft() async {
-    final store = DemoScope.read(context);
-    final draft = await store.drafts.read(
-      DraftKind.societyProfile,
-      widget.record.id,
-    );
+    final drafts = DemoScope.read(context).drafts;
+    final Draft? draft;
+    try {
+      draft = await drafts.read(DraftKind.societyProfile, widget.record.id);
+    } finally {
+      if (mounted) setState(() => _restoring = false);
+    }
     if (draft == null || !mounted) return;
     final merge = mergeProfileDraft(
       base: Map<String, String>.from(draft.data['base'] as Map),
       values: Map<String, String>.from(draft.data['values'] as Map),
       latest: profileValuesOf(_record),
     );
+    if (profileDraftFields.every(
+      (field) => merge.values[field] == merge.base[field],
+    )) {
+      // The record already has everything in it: nothing left to finish.
+      drafts.discard(DraftKind.societyProfile, widget.record.id);
+      return;
+    }
+    final stored = draft.data['conflicts'];
+    final savedAt = draft.savedAt;
     setState(() {
       _apply(merge.base, merge.values);
-      _draftSavedAt = draft.savedAt;
-      _conflicts = merge.conflicts;
+      _draftSavedAt = savedAt;
+      _conflicts = _openConflicts(
+        merge,
+        stored is List ? stored.whereType<String>() : const [],
+      );
       _tookNewer = merge.tookNewer.isNotEmpty;
     });
+    _draftRequested = true;
     if (merge.changedOnServer) _keepDraft();
   }
 
   /// Keeps what is typed on the phone; with nothing changed, no draft is kept.
-  void _keepDraft() {
-    if (_applying || !mounted) return;
+  /// Returns when the current form was saved, or null when it was not.
+  Future<DateTime?> _keepDraft() async {
+    if (_applying || _restoring || !mounted) return null;
     final drafts = DemoScope.read(context).drafts;
     final id = widget.record.id;
     if (_changed.isEmpty) {
-      if (_draftSavedAt != null) {
+      if (_draftSavedAt != null || _draftRequested) {
+        _draftRequested = false;
         drafts.discard(DraftKind.societyProfile, id);
         setState(() => _draftSavedAt = null);
       }
-      return;
+      return null;
     }
-    drafts
-        .save(DraftKind.societyProfile, id, {'base': _base, 'values': _values})
-        .then((savedAt) {
-          if (savedAt != null && mounted && _changed.isNotEmpty) {
-            setState(() => _draftSavedAt = savedAt);
-          }
-        });
+    _draftRequested = true;
+    final savedAt = await drafts.save(DraftKind.societyProfile, id, {
+      'base': _base,
+      'values': _values,
+      // Overlaps not reviewed yet are marked again when the draft reopens.
+      'conflicts': _conflicts.toList(),
+    });
+    if (savedAt != null && mounted && _changed.isNotEmpty) {
+      setState(() => _draftSavedAt = savedAt);
+    }
+    return savedAt;
   }
+
+  void _setLocation(GeoLocation location) {
+    setState(() => _location = location);
+    _keepDraft();
+  }
+
+  void _showMessage(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _discardDraft() async {
     final l = _l;
@@ -240,9 +299,15 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    await DemoScope.read(context).drafts
+    final deleted = await DemoScope.read(context).drafts
         .discard(DraftKind.societyProfile, widget.record.id);
     if (!mounted) return;
+    if (!deleted) {
+      // Still on the phone: the form keeps it, so a retry can delete it.
+      _showMessage(_l.draftDiscardFailed);
+      return;
+    }
+    _draftRequested = false;
     final current = profileValuesOf(_record);
     setState(() {
       _apply(current, current);
@@ -265,16 +330,13 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     try {
       latest = await store.societyRecords.fetchRecord(widget.record.id);
     } on SocietyRecordException catch (error) {
+      if (mounted) setState(() => _showFailure(error));
+      return null;
+    } catch (error) {
+      // For example a reply that could not be read: retryable, draft kept.
+      debugPrint('The newest record could not be read: $error');
       if (mounted) {
-        setState(() {
-          if (error.offline || error.status == null) {
-            _connectionRequired = true;
-          } else if (error.status == 403 || error.status == 404) {
-            _noLongerAllowed = true;
-          } else {
-            _serverError = _l.recStillHere(_l.recordError(error));
-          }
-        });
+        setState(() => _serverError = _l.recStillHere(_l.errorServer));
       }
       return null;
     }
@@ -291,20 +353,39 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     setState(() {
       _record = latest;
       _apply(merge.base, merge.values);
-      _conflicts = merge.conflicts;
+      // Overlaps found earlier stay marked until the person has seen them.
+      _conflicts = _openConflicts(merge, _conflicts);
       _tookNewer = merge.tookNewer.isNotEmpty;
     });
     _keepDraft();
     return merge;
   }
 
+  /// A failed fetch or save: what the person can do next.
+  void _showFailure(SocietyRecordException error) {
+    if (error.offline || error.status == null) {
+      _connectionRequired = true;
+    } else if (error.status == 403 || error.status == 404) {
+      _noLongerAllowed = true;
+    } else {
+      _serverError = _l.recStillHere(_l.recordError(error));
+    }
+  }
+
   Future<void> _reloadRecord() async {
+    if (_saving || _reloading) return;
     setState(() {
+      _reloading = true;
+      _retryReload = true;
       _connectionRequired = false;
       _noLongerAllowed = false;
       _serverError = null;
     });
-    await _reload();
+    try {
+      await _reload();
+    } finally {
+      if (mounted) setState(() => _reloading = false);
+    }
   }
 
   @override
@@ -379,8 +460,9 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
   ].every((error) => error == null);
 
   Future<bool> _save() async {
-    if (_saving) return false;
+    if (_saving || _reloading) return false;
     setState(() {
+      _retryReload = false;
       _submitted = true;
       _serverError = null;
       _connectionRequired = false;
@@ -436,13 +518,16 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
       if (mounted) {
         setState(() {
           _saving = false;
-          if (error.offline || error.status == null) {
-            _connectionRequired = true;
-          } else if (error.status == 403 || error.status == 404) {
-            _noLongerAllowed = true;
-          } else {
-            _serverError = _l.recStillHere(_l.recordError(error));
-          }
+          _showFailure(error);
+        });
+      }
+      return false;
+    } catch (error) {
+      debugPrint('The society could not be saved: $error');
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _serverError = _l.recStillHere(_l.errorServer);
         });
       }
       return false;
@@ -453,7 +538,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     final location = await Navigator.of(context).push<GeoLocation>(
       MaterialPageRoute(builder: (_) => ManualPinScreen(initial: _location)),
     );
-    if (location != null && mounted) setState(() => _location = location);
+    if (location != null && mounted) _setLocation(location);
   }
 
   /// M06u: names the fields that would be lost.
@@ -552,12 +637,24 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
     if (!mounted) return;
     switch (choice) {
       case 'discard':
-        await DemoScope.read(context).drafts
+        final deleted = await DemoScope.read(context).drafts
             .discard(DraftKind.societyProfile, widget.record.id);
-        if (mounted) Navigator.of(context).pop(false);
+        if (!mounted) return;
+        if (deleted) {
+          Navigator.of(context).pop(false);
+        } else {
+          _showMessage(_l.draftDiscardFailed);
+        }
       case 'keepDraft':
-        // The draft stays on this phone and is offered again next time.
-        Navigator.of(context).pop(false);
+        // Leaves only once the form as it is now is on this phone, so the
+        // same draft is offered again next time.
+        final savedAt = await _keepDraft();
+        if (!mounted) return;
+        if (savedAt != null) {
+          Navigator.of(context).pop(false);
+        } else {
+          _showMessage(_l.draftKeepFailed);
+        }
       case 'save':
         await _save();
     }
@@ -579,6 +676,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
         FieldLabel(label, required: required),
         TextField(
           controller: field.controller,
+          readOnly: _locked,
           keyboardType: keyboard,
           maxLines: maxLines,
           minLines: 1,
@@ -610,6 +708,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
         FieldLabel(label, required: !_keepsOldTotal),
         TextField(
           controller: field.controller,
+          readOnly: _locked,
           keyboardType: TextInputType.number,
           style: recordInputStyle,
           decoration: changedDecoration(
@@ -695,7 +794,9 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
                 style: compactOutlinedStyle,
-                onPressed: _saving ? null : _save,
+                onPressed: _saving || _reloading
+                    ? null
+                    : (_retryReload ? _reloadRecord : _save),
                 icon: const Icon(Icons.refresh, size: 16),
                 label: Text(l.commonTryAgain),
               ),
@@ -725,7 +826,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
               children: [
                 OutlinedButton(
                   style: compactOutlinedStyle,
-                  onPressed: _saving ? null : _reloadRecord,
+                  onPressed: _saving || _reloading ? null : _reloadRecord,
                   child: Text(l.draftReload),
                 ),
                 TextButton(
@@ -734,7 +835,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                       AppColors.danger,
                     ),
                   ),
-                  onPressed: _saving ? null : _discardDraft,
+                  onPressed: _saving || _reloading ? null : _discardDraft,
                   child: Text(l.draftDiscard),
                 ),
               ],
@@ -871,8 +972,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                       SocietyStreetMap(
                         height: 110,
                         location: _location,
-                        onPick: (location) =>
-                            setState(() => _location = location),
+                        onPick: _locked ? null : _setLocation,
                         semanticLabel: _location == null
                             ? l.editNoLocation
                             : l.editLocationAt(
@@ -892,7 +992,7 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                               Size(0, 30),
                             ),
                           ),
-                          onPressed: _movePin,
+                          onPressed: _locked ? null : _movePin,
                           icon: const Icon(Icons.place_outlined, size: 14),
                           label: Text(l.editMovePin),
                         ),
@@ -911,6 +1011,22 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
                           ),
                     style: RecordStyle.caption,
                   ),
+                  if (_conflicts.contains('location'))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        l.draftLocationConflict(
+                          _baseLocation == null
+                              ? l.editNoLocation
+                              : '${_baseLocation!.latitude.toStringAsFixed(4)}, '
+                                    '${_baseLocation!.longitude.toStringAsFixed(4)}',
+                        ),
+                        style: RecordStyle.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   if (_serverError != null) ...[
                     const SizedBox(height: 12),
                     NoticeBanner(
@@ -931,7 +1047,9 @@ class _EditSocietyScreenState extends State<EditSocietyScreen> {
             child: Text(l.editCancel),
           ),
           primary: FilledButton(
-            onPressed: dirty && !_saving && _valid ? _save : null,
+            onPressed: dirty && !_saving && !_reloading && _valid
+                ? _save
+                : null,
             child: Text(_saving ? l.recSaving : l.editSave),
           ),
         ),

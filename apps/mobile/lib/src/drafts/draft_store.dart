@@ -168,6 +168,10 @@ class DraftStore {
   final _latest = <String, Map<String, dynamic>>{};
   final _queued = <String, Future<DateTime?>>{};
 
+  /// Bumped by [discard]: a write queued before a discard never runs after
+  /// it, and a save made after the discard gets its own turn of the queue.
+  final _generation = <String, int>{};
+
   Future<T> _serialized<T>(Future<T> Function() action) {
     final result = _lock.then((_) => action());
     _lock = result.then<void>((_) {}, onError: (Object _) {});
@@ -220,8 +224,12 @@ class DraftStore {
     // A write for this draft is already waiting: it will take this data.
     final waiting = _queued[id];
     if (waiting != null) return waiting;
-    return _queued[id] = _serialized(() async {
-      _queued.remove(id);
+    final generation = _generation[id] ?? 0;
+    late final Future<DateTime?> slot;
+    slot = _serialized(() async {
+      // Discarded after this write was queued: a later save has its own turn.
+      if ((_generation[id] ?? 0) != generation) return null;
+      if (identical(_queued[id], slot)) _queued.remove(id);
       final latest = _latest.remove(id);
       // Discarded meanwhile, or signed out: nothing to write.
       if (latest == null || _user()?.id != account) return null;
@@ -244,19 +252,26 @@ class DraftStore {
         return null;
       }
     });
+    return _queued[id] = slot;
   }
 
-  /// Deletes the draft, for example once it is sent or the person discards it.
-  Future<void> discard(DraftKind kind, String societyId) {
+  /// Deletes the draft, for example once it is sent or the person discards
+  /// it. Returns false when it could not be deleted, so it is still kept.
+  Future<bool> discard(DraftKind kind, String societyId) {
     final account = _user()?.id;
-    if (account == null) return Future.value();
+    if (account == null) return Future.value(true);
     final key = _key(kind, societyId);
-    _latest.remove('$account/$key');
+    final id = '$account/$key';
+    _latest.remove(id);
+    _queued.remove(id);
+    _generation[id] = (_generation[id] ?? 0) + 1;
     return _serialized(() async {
       try {
         await _storage.delete(account, key);
+        return true;
       } catch (error) {
         debugPrint('A draft could not be deleted yet: $error');
+        return false;
       }
     });
   }
